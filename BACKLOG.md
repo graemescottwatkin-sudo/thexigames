@@ -423,6 +423,17 @@ sides, rather than each asking separately. Not done here: it wants a careful
 look at how many suites do the same thing, and it should not ride along with a
 URL migration.
 
+**Wider than recorded, found 6 Sep 2026 at 00:45 BST.** It is not only the
+midnight straddle. The suite reads the day from `Date.now()` against a UTC
+epoch; the PAGE falls back to LOCAL calendar days whenever it has no server
+clock to trust, which is every offline run. So on a UK machine in BST the two
+disagree for the whole hour between local midnight and UTC midnight — 23:00 to
+00:00 UTC, every night, with no straddle needed. Proved rather than reasoned:
+red on the wall clock, `TZ=UTC node football/crossword/save_test.mjs` green on
+the same tree, same minute, 19 passed 0 failed. CI has never seen it because
+the runner's local time IS UTC, which is also why the straddle is the only form
+CI can ever produce. The one-reading fix closes both.
+
 Worth checking at the same time: any suite that computes a day, a board number
 or a schedule position independently of the server it is testing.
 

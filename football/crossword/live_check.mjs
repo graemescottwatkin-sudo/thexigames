@@ -22,8 +22,12 @@ import { gamePath } from "../../functions/_lib/permalink.js";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 
-const SITE = "https://www.thexigames.com/crossword";
 const HUB = "https://www.thexigames.com";
+/* The game, from the one place that says where a game lives. It was the
+   literal "/crossword" and it kept passing: that path 301s to the new one
+   and fetch follows redirects, so a stale address checked the right file
+   through a hop and said nothing about being stale. */
+const SITE = HUB + gamePath("crossword").replace(/\/$/, "");
 const OLD = "https://crossword.thexigames.com";
 const want = (() => {
   const i = process.argv.indexOf("--expect");

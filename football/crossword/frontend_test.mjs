@@ -25,6 +25,10 @@ import { onRequestPost as apiVerify } from "../../functions/api/verify.js";
 import { onRequestPost as apiFinish } from "../../functions/api/finish.js";
 import { onRequestPost as apiReveal } from "../../functions/api/reveal.js";
 import { onRequestGet as apiStatus } from "../../functions/api/status.js";
+/* Where a game lives is ONE fact and this is the file that holds it. The
+   checks below wrote the address out by hand, which is how one of them came
+   to defend a subdomain the game had already left. */
+import { gamePath } from "../../functions/_lib/permalink.js";
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 let pass = 0, fail = 0;
@@ -1019,10 +1023,48 @@ server.listen(0, "127.0.0.1", async () => {
     /* The old text had none: somebody read "Arsenal finished 1st, 106/114" and
        had no way to reach the game. */
     const js = fs.readFileSync(path.join(DIR, "js/game.js"), "utf8");
-    return /SHARE_URL = "https:\/\/crossword\.thexigames\.com"/.test(js) &&
-      /var invite = board\.kind === "daily" \? SHARE_URL/.test(js) &&
+    return /var invite = board\.kind === "daily" \? SHARE_URL/.test(js) &&
       /name \+ "\\n" \+ line \+ "\\n" \+ invite/.test(js);
   })());
+  t("and that link is the game's real address, RUN rather than read", (() => {
+    /* THIS CHECK USED TO BE THE STALE FACT. It asserted the literal
+       "https://crossword.thexigames.com", so the theme move could not break
+       it: every share, challenge and campaign link the game built named a
+       subdomain that from then on only answered with a 301, and the suite
+       stood guard over it. A check that pins a value cannot notice the value
+       going wrong — only that it changed.
+
+       So it no longer holds an address. It lifts the expression game.js
+       actually ships and EXECUTES it against the documents that exist: the
+       game's own page, and the same page reached as .../index.html. Both must
+       come out at the address gamePath() says the game lives at, which is the
+       one place that fact is kept. A permalink page lands here too — the
+       permalink route injects <base href="/football/crossword/"> so its
+       relative assets resolve, and that base is what document.baseURI reads.
+       The last clause ties the composed form to the server: that exact string
+       is what clubs_test asserts a club door redirects to. */
+    const js = fs.readFileSync(path.join(DIR, "js/game.js"), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "");
+    const m = /var SHARE_URL = ([^;]+);/.exec(js);
+    if (!m) return false;
+    const at = (baseURI) => {
+      try { return new Function("document", "return (" + m[1] + ");")({ baseURI }); }
+      catch (e) { return "threw: " + e.message; }
+    };
+    const ORIGIN = "https://www.thexigames.com";
+    const dir = ORIGIN + gamePath("crossword");           // .../football/crossword/
+    const want = dir.replace(/\/$/, "");                  // every use below adds its own
+    return at(dir) === want && at(dir + "index.html") === want &&
+      at(dir) + "/?t=arsenal-1" === dir + "?t=arsenal-1";
+  })());
+  t("and no page address is written down in game.js at all", (() => {
+    /* The second copy is the bug, not the wrong value inside it. Comments are
+       stripped first: a comment naming the host would satisfy a grep meant to
+       refuse one, which this project has been caught by three times. */
+    const js = fs.readFileSync(path.join(DIR, "js/game.js"), "utf8")
+      .replace(/\/\*[\s\S]*?\*\//g, "");
+    return !/thexigames\.com/.test(js);
+  })(), "the address is read off the document it is served from");
   t("and a picture that gives nothing away", (() => {
     /* Ten squares: how much of the 114 was kept. Recognisable at a glance,
        spoils no answer, and claims nothing.
@@ -1090,7 +1132,7 @@ server.listen(0, "127.0.0.1", async () => {
      two failed on correct behaviour, which is the least useful way for a test
      to fail. The address is one fact; it belongs in one place, so the next
      move changes a line rather than hunting assertions. */
-  const HOME = "https://www.thexigames.com/football/crossword/";
+  const HOME = "https://www.thexigames.com" + gamePath("crossword");
   t("the page says which address is canonical", (() => {
     const link = d.querySelector('link[rel="canonical"]');
     return !!link && link.getAttribute("href") === HOME;

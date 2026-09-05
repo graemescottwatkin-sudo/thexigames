@@ -286,7 +286,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v002y";
+  var BUILD = "v002z";
   try {
     window.CROSSWORDXI_BUILD = BUILD;
     console.log("Crossword XI build " + BUILD);
@@ -5345,7 +5345,20 @@
      game. It also had no picture. Wordle's grid works because it is instantly
      recognisable and gives nothing away; the season record is this game's
      equivalent, and it is already what the scoreboard is built around. */
-  var SHARE_URL = "https://crossword.thexigames.com";
+  /* THE GAME'S OWN ADDRESS, READ OFF THE PAGE RATHER THAN RESTATED.
+     This was the literal "https://crossword.thexigames.com" — the subdomain the
+     game lived on before the theme move — so every link it built named a host
+     that now only answers with a 301, and a shared board opened in two hops on
+     an address the player was told was old. Where a game lives is ONE fact and
+     permalink.js owns it; a browser cannot import that file, but it does not
+     need to — this page IS served at the game's home, and a permalink page
+     carries that same home in the <base> the permalink route injects so its
+     relative assets resolve. So the address is read from the document instead
+     of written down a second time, and the second place that could go stale
+     stops existing. new URL(".") takes the containing directory, which is the
+     game whether the page came from /football/crossword/ or from a permalink;
+     the trailing slash goes because every use below adds its own. */
+  var SHARE_URL = new URL(".", document.baseURI).href.replace(/\/+$/, "");
 
   function shareStrip(score) {
     /* Ten squares: how much of the 114 was kept.
