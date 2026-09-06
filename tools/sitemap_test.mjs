@@ -23,6 +23,7 @@ import fs from "node:fs";
    test converts — through the same function the route converts with, since a
    second copy of the arithmetic is the thing this whole file guards. */
 import { dailyNoForDay } from "../functions/_lib/daily.js";
+import { GAMES, BUILT } from "../functions/_lib/games.js";
 
 let pass = 0, fail = 0;
 const t = (n, ok, d) => { ok ? pass++ : fail++; console.log(`${ok ? "  ok  " : "FAIL  "}${n}${d ? "  — " + d : ""}`); };
@@ -136,7 +137,14 @@ console.log("\nAnd what it must never carry");
   t("nor are the boards from before a scheduled game began",
     ![1, 2, 3, 4, 5, 6, 7, 8].some((n) =>
       locs.includes("https://www.thexigames.com" + permalinkPath("hilo", String(n)))));
-  const UNRELEASED = ["quickfire", "missing", "transfer", "kit", "manager", "stadium"];
+  /* DERIVED, not written down — the same fix chrome_test needed on the same
+     day and for the same reason. This list named quickfire and five ideas, and
+     Grid XI got a bank, two endpoints and a page without ever joining it, so
+     the check that keeps an unreleased game out of the sitemap was not
+     watching the newest one. BUILT minus GAMES is exactly "built and not
+     launched"; the ideas stay written down because they are not code. */
+  const UNRELEASED = [...BUILT.filter((g) => GAMES.indexOf(g) === -1),
+                      "missing", "transfer", "kit", "manager", "stadium"];
   t("no unreleased game appears",
     !UNRELEASED.some((g) => locs.some((u) => u.includes("/" + g + "/"))));
 }

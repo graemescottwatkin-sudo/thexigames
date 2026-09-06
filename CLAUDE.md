@@ -56,9 +56,12 @@ hub. A 301 there would have to be un-cached from every browser that ever saw it.
 
 1. `rmdir /s /q node_modules` if present — **gates must run with no
    node_modules, no package.json, no .wrangler in the tree** (the gate checks).
-2. Every game's gate, and there are six — five live plus QuickFire:
-   `node football\crossword\deploy_check.mjs` and the same for `wordsearch`,
-   `scrambled`, `hilo`, `vowels`, `quickfire`. Expect **0 failed** on each.
+2. Every game's gate, and there are SEVEN — five live plus QuickFire and
+   Grid XI: `node football\crossword\deploy_check.mjs` and the same for
+   `wordsearch`, `scrambled`, `hilo`, `vowels`, `quickfire`, `grid`. Expect
+   **0 failed** on each. Grid XI's also refuses the things a LAUNCH would have
+   to change — its absence from GAMES, from the squad and from the sitemap —
+   so the game cannot go live by drift.
 3. **Run the suites, CI-shaped.** There was no step 3 here for months and the
    gap was exactly this — on 5 Sep 2026 a push went out on green gates alone,
    and CI caught a suite the gates never run. Gates check the SHAPE of the
