@@ -11,7 +11,7 @@ import {
   consonantsPublic,
 } from "../../_lib/sc-board.js";
 import { dailyNumber } from "../../_lib/daily.js";
-import { mayOpenArchive, archiveRefusal, FREE_ARCHIVE_DAYS } from "../../_lib/archive.js";
+import { mayOpenArchive, archiveRefusal, backForBoard, FREE_ARCHIVE_DAYS } from "../../_lib/archive.js";
 
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
@@ -33,9 +33,14 @@ export async function onRequestGet({ request, env }) {
   /* And how far back it is. A board number is a day here, the same as the
      crossword's, so the distance is subtraction. The finals are not asked
      this at all — they are a catalogue rather than a back issue, and they
-     come through /api/scrambled/iconic. */
-  if (!(await mayOpenArchive(request, env, today - no))) {
-    return json(archiveRefusal(today - no), 401);
+     come through /api/scrambled/iconic.
+     BOARDS 1 TO 6 ARE NOT BACK ISSUES EITHER, and until 6 September 2026 they
+     were charged for as though they were: Scrambled launched on #7, the ring
+     answers to every number below it, and its calendar offers them. Same rule
+     as the finals, asked through backForBoard. */
+  const back = backForBoard("scrambled", no, today);
+  if (!(await mayOpenArchive(request, env, back))) {
+    return json(archiveRefusal(back), 401);
   }
 
   /* D1 when bound, the generated module when not. `source` rides in the

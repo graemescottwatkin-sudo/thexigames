@@ -10,7 +10,7 @@
 import { publicPuzzle, json, bad } from "../_lib/puzzle.js";
 import { getDailyPuzzle, makeToken } from "../_lib/db.js";
 import { dailyNumber, ANSWERS_AFTER_DAYS } from "../_lib/daily.js";
-import { mayOpenArchive, archiveRefusal, FREE_ARCHIVE_DAYS } from "../_lib/archive.js";
+import { mayOpenArchive, archiveRefusal, backForBoard, FREE_ARCHIVE_DAYS } from "../_lib/archive.js";
 
 export async function onRequestGet({ request, env }) {
   /* ?no= asks for an earlier board. Without it you get today's.
@@ -43,9 +43,15 @@ export async function onRequestGet({ request, env }) {
 
   /* HOW FAR BACK IS THIS. Board numbers ARE days here — #1 is the epoch and
      each one after it is a day later — so the distance is subtraction, and no
-     date arithmetic is needed to ask the shared question. */
-  if (!(await mayOpenArchive(request, env, today - no))) {
-    return json(archiveRefusal(today - no), 401);
+     date arithmetic is needed to ask the shared question. Asked through
+     backForBoard, which also answers "never a daily at all" for a board from
+     before the game launched; the crossword launched on #1, so for this
+     endpoint the answer never changes, and it is asked the same way as the
+     others so that a game which launches later cannot be the one place the
+     question is skipped. */
+  const back = backForBoard("crossword", no, today);
+  if (!(await mayOpenArchive(request, env, back))) {
+    return json(archiveRefusal(back), 401);
   }
 
   const stored = await getDailyPuzzle(env, no);

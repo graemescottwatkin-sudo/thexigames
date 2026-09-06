@@ -16,10 +16,11 @@
  *   node tools/gating_test.mjs        (from the repo root)
  */
 import {
-  FREE_ARCHIVE_DAYS, beyondFreeArchive, daysBack, accountsOffered,
+  FREE_ARCHIVE_DAYS, beyondFreeArchive, daysBack, accountsOffered, backForBoard,
   mayOpenArchive, archiveRefusal,
 } from "../functions/_lib/archive.js";
 import { ANSWERS_AFTER_DAYS, dailyNumber, utcDay } from "../functions/_lib/daily.js";
+import { launchNumber } from "../functions/_lib/games.js";
 import { onRequestGet as crosswordDaily } from "../functions/api/daily.js";
 import { onRequestGet as scrambledDaily } from "../functions/api/scrambled/daily.js";
 import { onRequestGet as hiloDaily } from "../functions/api/hilo/daily.js";
@@ -101,6 +102,40 @@ t("something that is not a day is not a number",
   daysBack("", "2026-09-04") === null && daysBack("last tuesday", "2026-09-04") === null &&
   daysBack(null, "2026-09-04") === null);
 
+console.log("\nDays back, from a board number");
+{
+  /* A BOARD THAT NEVER RAN HAS NO AGE, which the rule at the top of archive.js
+     has always said and three endpoints did not ask. A ring generates a board
+     for every number, so Scrambled answers to #1-#6 and Vowels to #1-#9 —
+     days before either game existed — and the gate charged an account for
+     them. The word search had the same fault through a schedule that starts
+     eight months before the game did: on 6 Sep 2026, 238 of its 374 free-play
+     boards told a signed-out player to register for a board never played. */
+  const today = 20;
+  for (const g of ["crossword", "scrambled", "vowels", "hilo", "wordsearch"]) {
+    const from = launchNumber(g);
+    /* THE DETAIL PRINTS WHAT IT GOT, not what it wanted. Written the other way
+       first, and the failure line then read "#6 -> null" while the whole
+       reason it was failing was that #6 came back as a number. A detail that
+       restates the assertion is a detail that lies on the day it matters. */
+    t(`${g}: a board from before #${from} is not a back issue`,
+      from === 1 || backForBoard(g, from - 1, today) === null,
+      from === 1 ? "launched on day one, so there is no before"
+                 : "#" + (from - 1) + " -> " + backForBoard(g, from - 1, today));
+    t(`${g}: and the board it launched on is ${today - from} days back`,
+      backForBoard(g, from, today) === today - from,
+      "#" + from + " -> " + backForBoard(g, from, today));
+  }
+  t("a game that has not launched has no back issues at all",
+    backForBoard("grid", 5, today) === null && backForBoard("quickfire", 5, today) === null,
+    "null must not be read as day one");
+  /* AND THE ANSWER FEEDS THE GATE UNCHANGED: null is not gated, which is the
+     line above about a board with no day. */
+  t("and a board with no age passes the gate",
+    !beyondFreeArchive(backForBoard("scrambled", 1, today)),
+    "#1 is nine days before Scrambled launched");
+}
+
 console.log("\nWhen the gate is up at all");
 t("not without a database — there is nowhere to put a user",
   accountsOffered({ GOOGLE_CLIENT_ID: "x" }) === false);
@@ -151,7 +186,18 @@ console.log("\nWhat a refusal says");
 
 console.log("\nAll four doors, onto the one rule");
 const today = dailyNumber();
-const old = Math.max(1, today - (FREE_ARCHIVE_DAYS + 5));
+/* THE OLDEST BOARD THAT IS BEYOND THE WINDOW AND THAT THE GAME ACTUALLY RAN.
+   It used to be `today - (FREE_ARCHIVE_DAYS + 5)` clamped at 1, which for a
+   young family meant board 1 — and board 1 is before three of the five games
+   launched, so once "a board that never ran is not a back issue" landed, the
+   fixture was asking for an UNGATED board and calling the 200 a failure of
+   the gate. A game can legitimately be too young to have one, and that is
+   said out loud below rather than clamped away. */
+const oldFor = (game) => {
+  const from = launchNumber(game) || 1;
+  const newestGated = today - (FREE_ARCHIVE_DAYS + 1);
+  return newestGated >= from ? newestGated : null;
+};
 const recent = Math.max(1, today - 1);
 
 async function ask(fn, url, env, request) {
@@ -168,12 +214,14 @@ const signedIn = (url) => new Request(url, { headers: { Cookie: "cxi_session=abc
 const DOORS = [
   {
     game: "crossword",
-    oldOne: (env, who) => ask(crosswordDaily, "https://x/api/daily?no=" + old, env, who("https://x/api/daily?no=" + old)),
+    old: oldFor("crossword"),
+    oldOne: (env, who) => ask(crosswordDaily, "https://x/api/daily?no=" + oldFor("crossword"), env, who("https://x/api/daily?no=" + oldFor("crossword"))),
     recentOne: (env, who) => ask(crosswordDaily, "https://x/api/daily?no=" + recent, env, who("https://x/api/daily?no=" + recent)),
   },
   {
     game: "scrambled",
-    oldOne: (env, who) => ask(scrambledDaily, "https://x/api/scrambled/daily?no=" + old, env, who("https://x/api/scrambled/daily?no=" + old)),
+    old: oldFor("scrambled"),
+    oldOne: (env, who) => ask(scrambledDaily, "https://x/api/scrambled/daily?no=" + oldFor("scrambled"), env, who("https://x/api/scrambled/daily?no=" + oldFor("scrambled"))),
     recentOne: (env, who) => ask(scrambledDaily, "https://x/api/scrambled/daily?no=" + recent, env, who("https://x/api/scrambled/daily?no=" + recent)),
   },
   {
@@ -207,6 +255,24 @@ function dayAgo(n) {
 for (const door of DOORS) {
   const guestEnv = { ...withAccounts(), __in: false };
   const memberEnv = { ...withAccounts({ signedIn: true }), __in: true };
+
+  /* A GAME CAN BE TOO YOUNG TO HAVE A GATED BOARD, and saying so is not the
+     same as skipping. Scrambled launched on board 7 and Vowels on board 10;
+     until a game has been out longer than the free window there is nothing
+     behind the wall, and asserting that a guest is refused would be asserting
+     something false. So the reason is checked instead — every board the game
+     has is inside the window — and the day that stops being true this branch
+     stops being taken, without anyone editing the suite. */
+  if (door.old === null) {
+    t(`${door.game}: is too young to have a board beyond the window`,
+      today - (launchNumber(door.game) || 1) <= FREE_ARCHIVE_DAYS,
+      `launched #${launchNumber(door.game)}, today #${today}`);
+    const fresh0 = await door.recentOne(guestEnv, signedOut);
+    t(`${door.game}: and every board it has is open to a guest`,
+      fresh0.status !== 401 && !(fresh0.body && fresh0.body.needsAccount),
+      "status " + fresh0.status);
+    continue;
+  }
 
   const refused = await door.oldOne(guestEnv, signedOut);
   t(`${door.game}: a guest is refused a board beyond the window`,
@@ -251,6 +317,7 @@ for (const door of DOORS) {
 
 console.log("\nAnd with no accounts configured, every door stays open");
 for (const door of DOORS) {
+  if (door.old === null) continue;      // nothing old enough to be refused yet
   const bare = { __in: false };
   const r = await door.oldOne(bare, signedOut);
   t(`${door.game}: an old board is served when nobody could register`,

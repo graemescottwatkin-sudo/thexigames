@@ -324,6 +324,39 @@ if (d && d.puzzle) {
     d.puzzle.answers.every((a) => refText.indexOf(a.display) === -1));
 }
 
+/* ---- free play is free ------------------------------------------------- */
+/* THE MIRROR OF THE SEAL, and the offline suite cannot see it either: the
+   gate asks how far back a board was the daily, ws_schedule holds two years
+   of inventory from 1 January 2026, and so a catalogue board that has never
+   run once read as 122 days old. On 6 September 2026, 238 of the 374 boards
+   in free play answered a signed-out player with "That board is more than 7
+   days old. Sign in to play the full archive." The suite stubs D1 and hands
+   the gate a date directly, so it can only prove the arithmetic; this is
+   where the QUERY is proved.
+
+   Derived rather than pinned: a board is behind the wall only if it RAN more
+   than the free window ago, and a board that ran that long ago is published
+   in the answers index by the same window. So a board in the catalogue that
+   the answers index does not list, and that is not today's, must open. */
+{
+  const cat = await get("/api/wordsearch/catalog");
+  const body = cat.status === 200 ? await cat.json() : null;
+  const ids = ((body && body.boards) || []).map((b) => b.id);
+  const published = new Set(listed);
+  const candidates = ids.filter((id) => !published.has(id) &&
+    !(d && d.puzzle && id === d.puzzle.id)).slice(0, 6);
+  t("the free-play catalogue is served", ids.length > 0, ids.length + " boards");
+  if (candidates.length) {
+    const codes = [];
+    for (const id of candidates) codes.push((await get("/api/wordsearch/puzzle?id=" + id)).status);
+    t("and a board it lists that has never run opens without an account",
+      codes.every((c) => c === 200),
+      candidates.map((id, i) => id + " -> " + codes[i]).join(", "));
+  } else {
+    t("there is a catalogue board to try", false, "every board is published or today's");
+  }
+}
+
 /* ---- the themes pages --------------------------------------------------- */
 /* The same shape as the crossword's clubs: an index, a page per category, and
    a board address that is a door into the game. Rendered from the catalog, so

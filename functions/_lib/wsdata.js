@@ -103,13 +103,23 @@ export async function firstRunDay(env, id) {
  * what the archive gate is about. */
 export async function lastScheduledDay(env, id, now) {
   const today = utcDayKey(now);
+  const from = LAUNCHED.wordsearch || "0000-01-01";
   if (!hasDB(env)) {
     const first = sampleFirstDay(id);
-    return first && first <= today ? first : null;
+    return first && first <= today && first >= from ? first : null;
   }
+  /* BOUNDED BELOW BY THE LAUNCH, and without it this was the leak's mirror
+     image. The days before 27 August are not days the board was the daily, so
+     a catalogue board's "age" was measured from a row in March — and the
+     comment above says a board that never had a day is not gated, while the
+     query handed the gate an age of 122 days. On 6 September 2026, 238 of the
+     374 boards in free play answered a signed-out player with "That board is
+     more than 7 days old. Sign in to play the full archive." for a board that
+     had never run. Same missing fact as the seal, pointing the other way:
+     one let too much out, this locked too much away. */
   const row = await env.DB.prepare(
-    `SELECT MAX(day) AS d FROM ws_schedule WHERE puzzle_id = ? AND day <= ?`)
-    .bind(id, today).first();
+    `SELECT MAX(day) AS d FROM ws_schedule WHERE puzzle_id = ? AND day <= ? AND day >= ?`)
+    .bind(id, today, from).first();
   return row && row.d ? row.d : null;
 }
 

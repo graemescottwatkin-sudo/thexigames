@@ -20,6 +20,7 @@
  * in every payload so a live check can refuse a run that quietly fell back.
  */
 import { HL_SAMPLE_BOARDS, HL_SAMPLE_SCHEDULE } from "./hl-sample.js";
+import { LAUNCHED } from "./games.js";
 import { utcDay } from "./daily.js";
 
 export function hasDB(env) { return !!(env && env.DB); }
@@ -268,7 +269,17 @@ export function clubCatalog(bank) {
 export function archive(bank, now) {
   const today = todayKey(now);
   const s = bank.schedule || {};
-  return Object.keys(s).filter((d) => d < today).sort().reverse().map((day) => {
+  /* BOUNDED BELOW BY THE LAUNCH, and today that bound changes nothing —
+     hl_schedule's first day IS 3 September 2026, the day HiLo launched. It is
+     here because that is luck rather than design: the word search's schedule
+     was pre-filled with two years of inventory from eight months before it
+     launched, every reader of it assumed "scheduled and past" meant "ran",
+     and the result was 238 phantom entries in this same list plus a page of
+     answers for boards nobody had played. A re-import that reaches further
+     back would do it to HiLo, and the reader would be as wrong as the word
+     search's was. One fact, asked. */
+  const from = LAUNCHED.hilo || "0000-01-01";
+  return Object.keys(s).filter((d) => d < today && d >= from).sort().reverse().map((day) => {
     const b = boardById(bank, s[day]);
     return { day, id: String(s[day]), category: b ? b.category : null, subtitle: b ? b.subtitle : null };
   }).filter((e) => e.category);

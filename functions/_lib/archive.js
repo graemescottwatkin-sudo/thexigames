@@ -28,6 +28,8 @@
  */
 import { currentUser } from "./auth.js";
 import { utcDay } from "./daily.js";
+/* WHEN EACH GAME LAUNCHED, from the one place it is written. */
+import { launchNumber } from "./games.js";
 
 /* Today plus this many days behind it are free. Seven, so a player who missed
    a week can catch the week up. */
@@ -59,6 +61,33 @@ export function daysBack(then, now) {
    as `accounts`, and reads it from here so the two cannot disagree. */
 export function accountsOffered(env) {
   return !!(env && env.DB && env.GOOGLE_CLIENT_ID);
+}
+
+/* HOW FAR BACK A NUMBERED BOARD IS, or null if it was never a daily at all.
+ *
+ * For a game counted in board numbers the distance is subtraction — #1 is the
+ * epoch and each number after it is a day later — and three endpoints did that
+ * subtraction inline. What none of them asked is whether the board ever RAN.
+ * A ring generates a board for any number, so Scrambled answers to #1 through
+ * #6 and Vowels to #1 through #9, and those are days before either game
+ * existed. Charging an account for them contradicts the rule at the top of
+ * this file in its own words: what is gated is the daily archive, and a board
+ * that never had a day is not a back issue.
+ *
+ * Null flows straight through beyondFreeArchive, which is not gated — the same
+ * answer the word search's catalogue boards get, and for the same reason.
+ *
+ * ONE INACCURACY, NAMED RATHER THAN HIDDEN: /api/scrambled/daily serves the
+ * ring that BOTH Scrambled and Vowels read, and the request does not say which
+ * game is asking. So it asks Scrambled's launch, and Vowels boards 7 to 9 are
+ * still treated as back issues. Three boards, wrong in the direction of asking
+ * for an account rather than giving a board away, and the alternative is a
+ * game parameter on a shared endpoint that would have to be added to a client
+ * to be believed. */
+export function backForBoard(game, no, today) {
+  const from = launchNumber(game);
+  if (!from || Number(no) < from) return null;
+  return Number(today) - Number(no);
 }
 
 /* The one question an endpoint asks. True means serve the board.

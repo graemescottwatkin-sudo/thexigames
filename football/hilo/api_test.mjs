@@ -6,6 +6,8 @@
  * judge against tomorrow's board.
  */
 import { onRequestGet as daily, onRequestHead as dailyHead } from "../../functions/api/hilo/daily.js";
+import { archive as hlArchive } from "../../functions/_lib/hl-board.js";
+import { LAUNCHED } from "../../functions/_lib/games.js";
 import { onRequestGet as board } from "../../functions/api/hilo/board.js";
 import { onRequestPost as call } from "../../functions/api/hilo/call.js";
 import { onRequestGet as catalog } from "../../functions/api/hilo/catalog.js";
@@ -99,6 +101,19 @@ console.log("\n=== The catalogue and the archive ===");
   const a = await json(await archive({ env }));
   t("the archive is yesterday and nothing after", a.body.days.length === 1 && a.body.days[0].day === shift(-1) && a.body.today === today);
   t("and names no board of tomorrow", !JSON.stringify(a.body).includes("Secret"));
+  /* NOR A DAY FROM BEFORE THE GAME LAUNCHED. HiLo's real schedule begins on
+     the day it launched, so this costs nothing today — and that is exactly
+     why it is checked. The word search's schedule was pre-filled from eight
+     months before ITS launch, every reader assumed a past scheduled day was a
+     day the game ran, and the same list on that game showed 238 days that
+     never happened. A re-import reaching further back is all it would take
+     here; the bound means it would not matter. */
+  const early = "2026-01-05";                    // months before HiLo launched
+  const bankBack = { boards: [{ id: "D0", category: "Old", subtitle: "x", chain: [] }],
+                     schedule: { [early]: "D0" }, source: "test" };
+  t("and no day from before HiLo launched",
+    hlArchive(bankBack, Date.now()).length === 0,
+    `${early} is before ${LAUNCHED.hilo}`);
 }
 
 console.log("\n=== Without a database ===");

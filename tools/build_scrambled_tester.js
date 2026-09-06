@@ -118,6 +118,11 @@ if (fs.existsSync(bankDir)) {
 const libs = [
   "functions/_lib/sc-names.js",
   "functions/_lib/daily.js",
+  /* games.js before archive.js, which now asks it when each game launched —
+     a board from before a game's launch was never a daily and so is not a back
+     issue, and backForBoard() reads LAUNCHED at call time. It also reads
+     dailyNoForDay at load, so it comes after daily.js. */
+  "functions/_lib/games.js",
   "functions/_lib/archive.js",
   "functions/_lib/sc-board.js",
   /* sc-round.js reaches for SCX_SCORING and SCX_CONFIG, which are inlined

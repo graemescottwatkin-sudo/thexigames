@@ -402,6 +402,38 @@ automatically after every deploy so the window closes itself.
 
 ## Shipped
 
+- **The schedule-assumption sweep** — 6 Sep, straight after the answers leak.
+  The question asked of every date-keyed read: what does this table mean, and
+  does the reader believe it? Four answers were wrong, all the same shape and
+  two of them live.
+  **1. The word search's free play was walled by phantom days.** `lastScheduledDay`
+  measured a board's age from the newest row on or before today, in a table
+  that starts eight months before the game launched — so a catalogue board
+  that had never run read as 122 days old and the archive gate charged an
+  account for it. 238 of 374 boards answered a signed-out player with "That
+  board is more than 7 days old. Sign in to play the full archive." The
+  seal let too much out; this locked too much away, from one missing fact.
+  **2. Ring games charged for boards from before they launched.** A ring
+  generates a board for any number, so Scrambled answers to #1-#6 and Vowels
+  to #1-#9, and the gate did `today - no` without asking whether the board had
+  ever been a daily. `backForBoard()` in archive.js now answers null for those,
+  which flows through `beyondFreeArchive` as "not gated" — the rule that file
+  already stated in words. One inaccuracy is named in the code rather than
+  hidden: `/api/scrambled/daily` serves the ring both games read and the
+  request does not say which is asking, so Vowels #7-#9 are still treated as
+  back issues.
+  **3. HiLo's archive list had the same assumption and got away with it.**
+  Its schedule begins on its launch day, so the bug could not fire — luck, not
+  design. Bounded anyway: a re-import reaching further back is all it would
+  have taken.
+  **4. Grid XI's calendar is a placeholder** starting on the day of the import,
+  which is the same wrong meaning waiting to happen. `tools/import_grid.js`
+  now reads `LAUNCHED.grid`, so the launch day is written once.
+  Checks in `tools/gating_test.mjs` (a board that never ran has no age, per
+  game, derived from LAUNCHED) and `football/hilo/api_test.mjs`; both sabotaged.
+  The word search's live_check gained the proof the offline suite cannot give,
+  since it stubs D1: six catalogue boards that have never run must open without
+  an account. All six answered 401 before this deployed.
 - **When each game launched, and the leak it was hiding** — 6 Sep. Three
   pages were reasoning about "before this game existed" with nothing to ask,
   so `LAUNCHED` now lives in `functions/_lib/games.js` beside the family list:
