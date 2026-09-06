@@ -113,12 +113,19 @@ and diagnose before anything ships. Never push past a red gate.
 - `results`/`plays` sanity via wrangler if relevant:
   `npx wrangler d1 execute crosswordxi --remote --command="..."`.
   **Never run a migration that is already applied** — `ALTER TABLE` is not
-  idempotent. Migration state: **001–032 all applied** (002 was applied late,
+  idempotent. Migration state: **001–033 all applied** (002 was applied late,
   27 Aug; there is no 022 in the tree — the numbering skips it). Verified 5 Sep
   2026 against the live database: every table each migration creates exists,
   and `results.game` and `plays.game` are present for the two that only ALTER.
   031 (`ws_round`, `ws_find`, `ws_foul`) and 032 (`season_play`) confirmed
-  present the same day.
+  present the same day. 033 (Grid XI: `gd_board`, `gd_schedule`, `gd_round`,
+  `gd_guess`, `gd_hint`) applied 6 Sep 2026 and all five confirmed present; it
+  is seven `CREATE ... IF NOT EXISTS` and nothing else, so it is safe to re-run.
+  236 boards and 236 days imported the same day by `tools/import_grid.js`, and
+  the calendar runs 2026-09-06 to 2027-04-29. THAT CALENDAR IS A PLACEHOLDER:
+  it starts on the day of the import because the game has no page yet, and it
+  must be re-imported with `--from=<launch day>` when Grid XI launches — the
+  SQL clears `gd_schedule` first, so re-running it is the whole fix.
 - HEAD on `/api/daily` and every game's `/…/answers/` answers 200, empty body,
   and `/api/*` carries `X-Robots-Tag: noindex`.
 

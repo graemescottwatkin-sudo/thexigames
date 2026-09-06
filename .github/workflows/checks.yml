@@ -267,6 +267,10 @@ jobs:
           # answers would only prove the handler calls it. The check the rest
           # of it exists for: no letter of any answer reaches a browser.
           node football/grid/api_test.mjs
+          # The importer's gate, on the committed sample — because there is no
+          # bank on a runner and a check that passes when it finds no problems
+          # also passes when it finds nothing at all.
+          node tools/import_grid.js --check
           # Whose clock says what day it is. The page syncs to the Date header of
           # its own response and counts UTC days from it; the device's calendar
           # is a fallback for when there is no server to ask. The sync lands

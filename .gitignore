@@ -9,6 +9,9 @@ data/clues-production.sql
 data/puzzles-production.sql
 data/*-production.sql
 data/ws-production.sql
+# Grid XI's boards. The grid starts EMPTY, so every letter in one is an
+# answer and a board committed here is a board solved. D1 is the only copy.
+data/gd-production.sql
 # The themed build plan: every board with its answer list. It exists to be read
 # before import and must never be committed, for the same reason the generated
 # SQL must not be — it is the clue bank with the answers attached.
