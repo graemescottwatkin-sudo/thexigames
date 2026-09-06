@@ -13,6 +13,7 @@
  *   node crossword/chrome_test.mjs        (from the repo root)
  */
 import { gameDir } from "../../functions/_lib/permalink.js";
+import { GAMES, BUILT, LABELS } from "../../functions/_lib/games.js";
 import fs from "node:fs";
 import { JSDOM } from "jsdom";
 
@@ -87,7 +88,22 @@ console.log("\nAn unreleased game is never named");
 /* The standing rule, and live_check enforces it on the hub only — which is how
    the crossword's landing footer named QuickFire XI and Scrambled XI, and
    privacy.html named five, on live indexed pages. */
-const UNRELEASED = ["QuickFire", "Missing XI", "Transfer XI",
+/* THIS LIST WENT STALE THE DAY IT WAS WRITTEN, and it took until 6 September
+   2026 to notice: Grid XI got a page, a bank and two endpoints without ever
+   being added, so the guard that stops an unreleased game being named was not
+   watching the newest one. A hardcoded roster of things to refuse is the same
+   fault as a hardcoded roster of things to run, which the suite walk already
+   had to be rescued from.
+
+   So the BUILT games are derived — functions/_lib/games.js knows which games
+   exist and functions/_lib/games.js knows which have launched, and everything
+   in the first list and not the second is a game that must not be named. The
+   drawing-board names stay written down because there is nowhere to derive
+   them from: they are not code, they are ideas. */
+const BUILT_NOT_RELEASED = BUILT.filter((g) => GAMES.indexOf(g) === -1)
+  .map((g) => LABELS[g] || g);
+const UNRELEASED = [...BUILT_NOT_RELEASED,
+                    "Missing XI", "Transfer XI",
                     "Player Chain", "Link XI", "Odd One Out"];
 for (const [label, file] of [
   ["the crossword page", "football/crossword/index.html"],

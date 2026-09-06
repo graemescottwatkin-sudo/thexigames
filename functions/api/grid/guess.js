@@ -20,7 +20,7 @@
 import { json, bad } from "../../_lib/puzzle.js";
 import { csrfOk } from "../../_lib/auth.js";
 import {
-  loadBank, boardById, boardToken, entryOf, judge, dayOf,
+  loadBank, boardById, boardToken, entryOf, judge, dayOf, answersOf,
 } from "../../_lib/gd-board.js";
 import {
   startRound, recordGuess, roundState, confirmedCells,
@@ -61,7 +61,8 @@ export async function onRequestPost({ request, env }) {
      playing. Served as a verdict rather than an error: the page has something
      true to render, and a 403 would look like a fault. */
   if (before && before.over) {
-    return json({ over: true, ...before, marks: null, correct: false, confirms: [] });
+    return json({ over: true, ...before, marks: null, correct: false, confirms: [],
+                  answers: answersOf(board) });
   }
   if (before && before.solvedEntries.includes(Number(entry.n))) {
     return bad("That entry is already solved.");
@@ -92,6 +93,17 @@ export async function onRequestPost({ request, env }) {
       turns: after.turns, misses: after.misses, over: after.over,
       solved: after.solved, solvedEntries: after.solvedEntries,
       score: after.score,
+      /* AT FULL TIME, AND ONLY AT FULL TIME, THE ANSWERS. The board is over —
+         solved out or out of turns — so there is nothing left to give away and
+         a player who failed should see what it was. Sent from here rather than
+         fetched separately, because a second endpoint that hands out answers is
+         a second door to guard; this one can only open when the round the
+         server has been counting says it is finished.
+
+         A player CAN reach it by spending fifteen turns deliberately. That is
+         the same bargain every game in the family makes at full time, and what
+         they get is the board they have just lost. */
+      ...(after.over ? { answers: answersOf(board) } : {}),
     } : { scored: false }),
   });
 }

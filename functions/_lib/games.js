@@ -127,6 +127,13 @@ export const LABELS = {
   vowels: "Vowels XI",
   quickfire: "QuickFire XI",
   hilo: "HiLo XI",
+  /* Grid XI is in BUILT and not GAMES, like QuickFire — and it needs a label
+     for a reason beyond the report menu. chrome_test derives the names that
+     must appear in no served markup from BUILT minus GAMES, and a game with no
+     label falls back to its ID: "grid", which matches every CSS grid rule on
+     every page. A bare word is not a name, and a guard that cannot tell them
+     apart refuses correct markup. */
+  grid: "Grid XI",
 };
 
 /* The games the funnel can report on, named, for the panel to build itself

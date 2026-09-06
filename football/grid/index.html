@@ -1,0 +1,101 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
+<meta name="theme-color" content="#F4F5F2">
+<title>Grid XI — the daily football grid | The XI Games</title>
+<meta name="description" content="Eleven footballers locked into one grid, with no clues but the title. Type a full name into an entry and every letter comes back marked; solve one and its letters cross into the next. Fifteen turns, 114 points. A new grid every day from The XI Games.">
+<link rel="canonical" href="https://www.thexigames.com/football/grid/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://www.thexigames.com/football/grid/">
+<meta property="og:title" content="Grid XI — the daily football grid">
+<meta property="og:description" content="Eleven names, one grid, no clues but the title. Solve one and its letters cross into the next.">
+<meta property="og:site_name" content="The XI Games">
+<meta property="og:image" content="https://www.thexigames.com/football/grid/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Grid XI — the daily football grid">
+<meta name="twitter:description" content="Eleven names, one grid, no clues but the title.">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication",
+ "name":"Grid XI","applicationCategory":"Game",
+ "url":"https://www.thexigames.com/football/grid/",
+ "operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"GBP"},
+ "publisher":{"@type":"Organization","name":"The XI Games","url":"https://www.thexigames.com/"}}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/shared/xi-tokens.css?v=v25">
+<link rel="stylesheet" href="/shared/xi-chrome.css?v=v25">
+<script src="/shared/xi-theme.js?v=v25"></script>
+<link rel="stylesheet" href="css/style.css?v=v001">
+</head>
+<body>
+
+<!-- The shared bar. The burger and the wordmark are inserted by
+     shared/xi-chrome.js; only this game's own control is written here. -->
+<header class="xic-bar">
+  <div class="xic-right">
+    <button class="xic-ghost" id="gdHowTo" data-optional>How to play</button>
+  </div>
+</header>
+
+<main class="gd-wrap">
+
+  <!-- ONE H1, first in the body, saying what the game is. The masthead is
+       furniture; this is the heading a screen reader and a crawler read. -->
+  <h1 class="sr-only">Grid XI &mdash; the daily football grid</h1>
+
+  <!-- THE BOARD'S IDENTITY, AND IT IS THE WHOLE CLUE. There is nothing else on
+       the page to work from: no definitions, no enumeration beyond the length
+       of each entry, and nothing revealed at the start. The owner's ruling,
+       6 September 2026 — "it should just be the title, i.e. what are we trying
+       to solve". -->
+  <section class="gd-ident" id="gdIdent">
+    <p class="gd-kicker" id="gdKicker">TODAY</p>
+    <h2 class="gd-title" id="gdTitle">&mdash;</h2>
+    <p class="gd-sub" id="gdSub">Eleven names. Type a full name into an entry.</p>
+  </section>
+
+  <!-- THE TURNS. Shared across the board, not three per entry: a wrong answer
+       spends one and a right answer hands one back, so knowing the board keeps
+       you playing and guessing is what the count presses on. -->
+  <section class="gd-budget" aria-live="polite">
+    <div class="gd-bar" id="gdBar"><i></i></div>
+    <p class="gd-count"><span id="gdTurns">&mdash;</span> <small>turns left</small></p>
+  </section>
+
+  <div class="gd-boardwrap"><div class="gd-board" id="gdBoard"></div></div>
+
+  <!-- THE SAME STATE, BIGGER. The grid is small enough on a phone that a mark
+       on a cell is hard to read; this row is the selected entry alone, at a
+       size that can be read at a glance. It is a second RENDERING of one
+       state, never a second copy of it. -->
+  <p class="gd-lbl" id="gdSlotCap">&mdash;</p>
+  <div class="gd-slots" id="gdSlots"></div>
+
+  <p class="gd-lbl" id="gdKbdCap">Letters</p>
+  <div class="gd-kbd" id="gdKbd"></div>
+
+  <p class="gd-msg" id="gdMsg" role="status" aria-live="polite"></p>
+
+  <p class="gd-lbl">The eleven</p>
+  <div class="gd-entries" id="gdEntries"></div>
+
+  <div class="gd-hist" id="gdHist"></div>
+
+  <!-- Full time. Written by the page when the server says the round is over. -->
+  <section class="gd-ft" id="gdFullTime" hidden></section>
+
+</main>
+
+<!-- THE SHARED FOOTER, AT TOP LEVEL. It carries the family disclaimer. -->
+<footer class="xic-foot"></footer>
+
+<script src="/shared/xi-chrome.js?v=v25"></script>
+<script src="js/rules.js?v=v001"></script>
+<script src="/shared/xi-plays.js?v=v25"></script>
+<script src="js/game.js?v=v001"></script>
+</body>
+</html>

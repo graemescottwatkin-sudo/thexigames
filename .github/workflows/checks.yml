@@ -271,6 +271,11 @@ jobs:
           # bank on a runner and a check that passes when it finds no problems
           # also passes when it finds nothing at all.
           node tools/import_grid.js --check
+          # And the page, played from boot to full time through the real
+          # handlers. api_test proves the endpoints; this proves the FILE
+          # between them does not paint a letter it was never given and does
+          # not compute a score of its own.
+          node football/grid/journey_test.mjs
           # Whose clock says what day it is. The page syncs to the Date header of
           # its own response and counts UTC days from it; the device's calendar
           # is a fallback for when there is no server to ask. The sync lands
