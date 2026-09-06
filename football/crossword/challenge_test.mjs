@@ -6,6 +6,8 @@
  * is shown to another, so it is the only place where a trusted number matters.
  */
 import fs from "node:fs";
+import { onRequestPost as challengePost } from "../../functions/api/challenge/index.js";
+import { onRequestPost as entryPost } from "../../functions/api/challenge/entry.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 const DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -85,10 +87,108 @@ t("and the creator's result seeds every table they make", (() => {
 })());
 
 console.log("\nA result cannot be posted to the wrong board");
-t("the play's board must match the challenge's",
-  /String\(play\.theme_key\) !== c\.theme_id \+ "-" \+ c\.board_no/.test(src.entry));
+/* EXECUTED, NOT MATCHED. This read the source for the exact expression
+   `String(play.theme_key) !== c.theme_id + "-" + c.board_no`, which is a
+   check that defends a spelling rather than a rule: the day the comparison
+   became (game, board key) — so that a challenge can belong to a game other
+   than the crossword — this went red while the rule it names was working
+   perfectly, and it would have stayed green through any rewrite that kept the
+   old line and stopped using it. So the endpoint is run instead, with a play
+   from the wrong board, a play from another game, and the right play. */
+{
+  const chal = { id: "abc123", theme_id: "arsenal", board_no: 1, play_id: "seed" };
+  const PLAYS = {
+    seed:  { play_id: "seed",  game: "crossword", board_key: "arsenal-1" },
+    right: { play_id: "right", game: "crossword", board_key: "arsenal-1", theme_key: "arsenal-1",
+             srv_score: 88, started_at: "2026-09-06 10:00:00", ended_at: "2026-09-06 10:05:00",
+             srv_verified_at: "2026-09-06 10:05:00", srv_elapsed_secs: 300 },
+    other: { play_id: "other", game: "crossword", board_key: "spurs-2", theme_key: "spurs-2",
+             srv_score: 99, started_at: "2026-09-06 10:00:00", ended_at: "2026-09-06 10:05:00",
+             srv_verified_at: "2026-09-06 10:05:00", srv_elapsed_secs: 300 },
+    /* The same board key, a different game. Impossible today and the reason
+       the comparison carries the game at all: a key is only unique inside the
+       game that issued it. */
+    alien: { play_id: "alien", game: "scrambled", board_key: "arsenal-1", theme_key: "arsenal-1",
+             srv_score: 99, started_at: "2026-09-06 10:00:00", ended_at: "2026-09-06 10:05:00",
+             srv_verified_at: "2026-09-06 10:05:00", srv_elapsed_secs: 300 },
+  };
+  const env = { DB: { prepare: (sql) => ({
+    bind: (...args) => ({
+      first: async () => {
+        if (/FROM challenges/.test(sql)) return chal;
+        if (/FROM plays/.test(sql)) return PLAYS[args[0]] || null;
+        return null;
+      },
+      run: async () => ({}),
+      all: async () => ({ results: [] }),
+    }),
+  }) } };
+  const post = (playId) => entryPost({
+    request: new Request("https://x/api/challenge/entry", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-XI-Games": "1" },
+      body: JSON.stringify({ id: "abc123", playId, name: "Tester", entrantKey: "k".repeat(12) }),
+    }),
+    env,
+  });
+  const wrong = await post("other");
+  const alien = await post("alien");
+  const right = await post("right");
+  t("a result from another board is refused", wrong.status === 409, String(wrong.status));
+  t("and so is one from another game on the same key", alien.status === 409, String(alien.status));
+  t("while the board's own result is taken", right.status === 200, String(right.status));
+}
 t("and an unverified play cannot enter at all",
   /srv_score === null/.test(src.entry) && /has not been verified/.test(src.entry));
+
+console.log("\nWhich boards can be challenged, in any game");
+{
+  /* The rule used to be `mode !== "theme"`, which is the crossword's word for
+     a board that is not today's daily. Every game built since calls the same
+     thing "free" — Scrambled's finals, HiLo's club boards, the word search's
+     catalogue — and all of them now write the server score a table is made of.
+     So the rule is the shape rather than the word: a board from the archive,
+     never today's daily, whichever game it belongs to. */
+  const made = [];
+  const env = (play) => ({ DB: { prepare: (sql) => ({
+    bind: (...args) => ({
+      first: async () => (/FROM plays/.test(sql) ? play : null),
+      run: async () => { if (/INSERT INTO challenges/.test(sql)) made.push(args); return {}; },
+      all: async () => ({ results: [] }),
+    }),
+  }) } });
+  const play = (over) => ({
+    play_id: "p1", srv_score: 90, started_at: "2026-09-06 10:00:00",
+    ended_at: "2026-09-06 10:05:00", srv_verified_at: "2026-09-06 10:05:00",
+    ...over,
+  });
+  const create = (p2) => challengePost({
+    request: new Request("https://x/api/challenge", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "X-XI-Games": "1" },
+      body: JSON.stringify({ playId: "p1", name: "Tester", entrantKey: "k".repeat(12) }),
+    }),
+    env: env(p2),
+  });
+
+  const daily = await create(play({ game: "crossword", mode: "daily", board_key: "daily:12" }));
+  t("today's daily cannot start a challenge", daily.status === 400, String(daily.status));
+
+  const theme = await create(play({ game: "crossword", mode: "theme",
+                                    board_key: "arsenal-1", theme_key: "arsenal-1" }));
+  t("a crossword theme board still can", theme.status === 200, String(theme.status));
+
+  const club = await create(play({ game: "hilo", mode: "free", board_key: "hlb:296" }));
+  t("and so can a board from a game that is not the crossword",
+    club.status === 200, "hilo hlb:296 -> " + club.status);
+  /* THE CROSSWORD'S TWO COLUMNS ARE STILL WRITTEN, because its own page reads
+     them; for another game the board key is the whole identity and the number
+     is 0, which is what "this game does not number a board separately" looks
+     like in a NOT NULL column. */
+  const last = made[made.length - 1] || [];
+  t("the board key is stored whole for a game that has no theme and number",
+    last.indexOf("hlb:296") > -1 && last.indexOf(0) > -1, JSON.stringify(last.slice(1, 4)));
+}
 
 console.log("\nPublished names");
 t("names are cleaned before they are stored", /cleanName/.test(src.entry) && /cleanName/.test(src.challenge));

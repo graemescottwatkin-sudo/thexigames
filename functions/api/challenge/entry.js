@@ -5,6 +5,7 @@
  * number into.
  */
 import { json, bad } from "../../_lib/puzzle.js";
+import { boardOfChallenge } from "./index.js";
 import { hasDB } from "../../_lib/db.js";
 import { currentUser, newId, csrfOk } from "../../_lib/auth.js";
 import { cleanName, validEntrantKey, accountDisplayName , entrantKeyFor } from "../../_lib/names.js";
@@ -21,21 +22,27 @@ export async function onRequestPost({ request, env }) {
   const id = /^[a-z0-9]{6,16}$/.test(String(body.id || "")) ? String(body.id) : null;
   if (!id) return bad("Unknown challenge.", 404);
   const c = await env.DB.prepare(
-    `SELECT id, theme_id, board_no FROM challenges WHERE id = ? AND hidden = 0`)
+    `SELECT id, theme_id, board_no, play_id FROM challenges WHERE id = ? AND hidden = 0`)
     .bind(id).first();
   if (!c) return bad("Unknown challenge.", 404);
+  const board = await boardOfChallenge(env, c);
+  if (!board) return bad("Unknown challenge.", 404);
 
   const play = await env.DB.prepare(
-    `SELECT play_id, theme_key, srv_score, started_at, ended_at, srv_verified_at,
-            srv_elapsed_secs,
+    `SELECT play_id, game, board_key, theme_key, srv_score, started_at, ended_at,
+            srv_verified_at, srv_elapsed_secs,
             srv_checks, srv_check_alls, srv_reveal_letters, srv_reveal_answers
        FROM plays WHERE play_id = ? LIMIT 1`).bind(String(body.playId || "")).first();
   if (!play || play.srv_score === null || play.srv_score === undefined) {
     return bad("That game has not been verified.", 409);
   }
-  /* The right board. Otherwise a good score on an easy board could be posted to
-     a challenge on a hard one. */
-  if (String(play.theme_key) !== c.theme_id + "-" + c.board_no) {
+  /* THE RIGHT BOARD, IN THE RIGHT GAME. Otherwise a good score on an easy
+     board could be posted to a challenge on a hard one — and, once challenges
+     are not the crossword's alone, a score from another game entirely.
+     Compared as (game, board key), which is what a play row records, rather
+     than rebuilt from the crossword's two columns as this used to be. */
+  const playKey = play.board_key || play.theme_key;
+  if (String(play.game || "crossword") !== board.game || String(playKey) !== board.boardKey) {
     return bad("That result is from a different board.", 409);
   }
 

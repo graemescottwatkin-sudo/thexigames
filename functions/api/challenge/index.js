@@ -26,12 +26,59 @@ const okId = (v) => (/^[a-z0-9]{6,16}$/.test(String(v || "")) ? String(v) : null
    is the whole reason a challenge table can be shown to other people. */
 async function verifiedPlay(env, playId) {
   const row = await env.DB.prepare(
-    `SELECT play_id, theme_key, mode, srv_score, srv_verified_at, started_at, ended_at,
+    `SELECT play_id, game, board_key, theme_key, mode, srv_score, srv_verified_at,
+            started_at, ended_at,
             srv_checks, srv_check_alls, srv_reveal_letters, srv_reveal_answers,
             challenge_id
        FROM plays WHERE play_id = ? LIMIT 1`).bind(String(playId || "")).first();
   if (!row || row.srv_score === null || row.srv_score === undefined) return null;
   return row;
+}
+
+/* ---- WHICH BOARD A CHALLENGE IS ABOUT, IN ANY GAME ----------------------
+ *
+ * This file was written when the crossword was the only game with a server
+ * score, and it shows: a challenge stored theme_id and board_no, the entry
+ * route rebuilt "arsenal-1" from them by hand, and creating one was refused
+ * unless mode was "theme". None of that is wrong for the crossword and all of
+ * it is a second statement of something `plays` already records — every play
+ * row carries the game it belongs to and that game's own board key.
+ *
+ * So the board is DERIVED from the play the challenge was created from, and
+ * nothing new is stored. A challenge on Scrambled's finals or a HiLo club
+ * board needs no column, no migration and no second name for a board.
+ *
+ * WHICH BOARDS MAY BE CHALLENGED, and the rule generalises rather than being
+ * listed per game: any board that is not today's daily. The crossword calls
+ * those "theme", every game built since calls them "free", and both mean the
+ * same thing — a board from the catalogue, playable whenever. A daily is
+ * refused because everybody is already playing the same board on the same day
+ * and the result has a table of its own. */
+const CHALLENGEABLE = ["theme", "free"];
+
+export async function boardOfChallenge(env, challenge) {
+  if (challenge.game && challenge.board_key) {
+    return { game: challenge.game, boardKey: challenge.board_key };
+  }
+  const p = await env.DB.prepare(
+    "SELECT game, board_key FROM plays WHERE play_id = ? LIMIT 1")
+    .bind(String(challenge.play_id || "")).first();
+  if (p && p.game && p.board_key) return { game: p.game, boardKey: p.board_key };
+  /* A crossword challenge from before plays carried a board key: rebuilt from
+     the two columns that have always been there, which is exactly what the
+     entry route used to do for every challenge. */
+  if (challenge.theme_id && Number(challenge.board_no) > 0) {
+    return { game: "crossword", boardKey: challenge.theme_id + "-" + challenge.board_no };
+  }
+  return null;
+}
+
+/* The token a game's own routes want for that board. Every game built since
+   the crossword puts its prefix in the board key already — hlb:296, sc:41 —
+   so the key IS the token. The crossword's theme boards are the exception:
+   its key is "arsenal-1" and its token has always been "theme:arsenal-1". */
+export function tokenFor(game, boardKey) {
+  return game === "crossword" ? "theme:" + boardKey : boardKey;
 }
 
 function boardOf(themeKey) {
@@ -55,9 +102,11 @@ export async function onRequestGet({ request, env }) {
   if (!id) return bad("Unknown challenge.", 404);
 
   const c = await env.DB.prepare(
-    `SELECT id, theme_id, board_no, creator_name, group_name, created_at
+    `SELECT id, theme_id, board_no, creator_name, group_name, created_at, play_id
        FROM challenges WHERE id = ? AND hidden = 0`).bind(id).first();
   if (!c) return bad("Unknown challenge.", 404);
+  const board = await boardOfChallenge(env, c);
+  if (!board) return bad("Unknown challenge.", 404);
 
   const counts = await env.DB.prepare(
     `SELECT (SELECT COUNT(*) FROM challenge_starts  WHERE challenge_id = ?) AS started,
@@ -67,9 +116,14 @@ export async function onRequestGet({ request, env }) {
   /* Social proof, and nothing that could be worked backwards into a target. */
   return json({
     id: c.id,
+    /* The game this challenge belongs to, so a link can open the right one.
+       themeId and boardNo stay for the crossword's page, which has read them
+       since the feature shipped and is not part of this change. */
+    game: board.game,
+    boardKey: board.boardKey,
     themeId: c.theme_id,
     boardNo: c.board_no,
-    token: "theme:" + c.theme_id + "-" + c.board_no,
+    token: tokenFor(board.game, board.boardKey),
     creatorName: c.creator_name,
     groupName: c.group_name || null,
     started: (counts && counts.started) || 0,
@@ -85,11 +139,25 @@ export async function onRequestPost({ request, env }) {
 
   const play = await verifiedPlay(env, body.playId);
   if (!play) return bad("That game has not been verified, so it cannot start a challenge.", 409);
-  if (play.mode !== "theme" || !play.theme_key) {
-    return bad("Challenges are for themed boards.", 400);
+  /* NOT "themed", WHICH WAS THE CROSSWORD'S WORD FOR IT. Any board that is
+     not today's daily: see CHALLENGEABLE above. */
+  if (CHALLENGEABLE.indexOf(String(play.mode)) === -1) {
+    return bad("Challenges are for boards from the archive, not today's daily.", 400);
   }
-  const board = boardOf(play.theme_key);
-  if (!board) return bad("Unknown board.", 400);
+  const boardKey = play.board_key || play.theme_key;
+  if (!boardKey) return bad("Unknown board.", 400);
+  /* The crossword's two columns are still written, because its own page reads
+     them and because a challenge should stay readable in the database without
+     a join. For every other game they are the board key and null, which says
+     "this game does not divide a board into a theme and a number". */
+  const board = play.game === "crossword"
+    ? (boardOf(boardKey) || { theme_id: boardKey, board_no: 0 })
+    /* board_no is NOT NULL in the schema and 0 is the only honest value: this
+       game does not divide a board into a theme and a number, and the board
+       key in theme_id is the whole of its identity. Nothing reads the pair
+       back for these games — boardOfChallenge asks the play row, and its
+       fallback refuses to rebuild a key from a 0. */
+    : { theme_id: boardKey, board_no: 0 };
 
   const user = await currentUser(request, env);
   /* Two names, not one. The creator is a person — from the account where there

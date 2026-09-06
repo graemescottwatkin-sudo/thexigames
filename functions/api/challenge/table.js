@@ -6,6 +6,7 @@
  * other that deters more than any validation.
  */
 import { json, bad } from "../../_lib/puzzle.js";
+import { boardOfChallenge } from "./index.js";
 import { hasDB } from "../../_lib/db.js";
 import { currentUser } from "../../_lib/auth.js";
 import { entrantKeyFor } from "../../_lib/names.js";
@@ -60,10 +61,14 @@ export async function onRequestGet({ request, env }) {
    already scored asking how it is going. */
 async function tableFor(env, id) {
   const c = await env.DB.prepare(
-    `SELECT id, theme_id, board_no, creator_name, group_name
+    `SELECT id, theme_id, board_no, creator_name, group_name, play_id
        FROM challenges WHERE id = ? AND hidden = 0`)
     .bind(id).first();
   if (!c) return null;
+  /* Which game, so a table can be read by a page that is not the crossword's
+     and a link can say where it goes. Derived from the play the challenge was
+     created from — see boardOfChallenge — rather than stored twice. */
+  const board = await boardOfChallenge(env, c);
 
   /* Score first, then the faster of two equal scores. */
   const rows = await env.DB.prepare(
@@ -81,6 +86,8 @@ async function tableFor(env, id) {
     id: c.id,
     creatorName: c.creator_name,
     groupName: c.group_name || null,
+    game: board ? board.game : "crossword",
+    boardKey: board ? board.boardKey : null,
     boardNo: c.board_no,
     themeId: c.theme_id,
     started: (started && started.n) || 0,

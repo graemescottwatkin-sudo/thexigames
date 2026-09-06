@@ -355,8 +355,28 @@ on the service — the one traffic pattern worth being able to block cleanly.
 
 ### 6. Challenge tables, switched on per game
 
-As each game's score becomes the server's. HiLo and Scrambled now write
-`plays.srv_score`, which is what every challenge endpoint already reads.
+**The server half is done, 6 Sep.** A challenge no longer belongs to the
+crossword: the board it is about is derived from the play it was created from
+— `plays` already records `(game, board_key)` for every game — the entry check
+compares that pair rather than rebuilding `theme_id + "-" + board_no`, and what
+may be challenged is "any board from the archive, never today's daily" rather
+than the crossword's word `theme`. No migration: nothing new is stored.
+
+**What is left is the client half, and two decisions are the owner's.**
+Nothing offers a challenge in any game but the crossword. Switching one on is
+a Challenge button at full time, the `?c=` link opening that game, and the
+standings panel — which should be built ONCE in the shared layer, using the
+`.xic-panel` component lifted the same day, rather than copied into four
+games. The questions:
+
+- **Which games.** Scrambled and HiLo are the natural first two: their
+  catalogue boards (the finals, the club boards) are the ones somebody would
+  send a friend, and both already write the server score.
+- **What the table shows.** The crossword's columns are score, time and help
+  taken. HiLo's help is a different thing from the crossword's checks and
+  reveals, and the word search's is different again. Either the table carries
+  three fixed columns and some games leave one empty, or each game names its
+  own third column.
 
 ### 9. A universal admin panel
 
