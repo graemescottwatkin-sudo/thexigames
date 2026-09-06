@@ -38,8 +38,11 @@ function memDB(bank) {
   const rounds = new Map();
   const solves = new Map();
   const plays = new Map();
+  /* Which game each play belongs to. One engine serves two — Scrambled and
+     Vowels — and the row says which, exactly as the real table does. */
+  const playRows = new Map();
   return {
-    _rounds: rounds, _solves: solves, _plays: plays,
+    _rounds: rounds, _solves: solves, _plays: plays, _playRows: playRows,
     prepare(sql) {
       return {
         /* loadBoards asks straight off the prepare, with nothing bound. An
@@ -82,7 +85,22 @@ function memDB(bank) {
                 if (!solves.has(key)) solves.set(key, row);
                 else if (/DO UPDATE/i.test(sql)) solves.set(key, row);
               } else if (/UPDATE plays/.test(sql)) {
-                plays.set(a[2], { srv_score: a[0], srv_elapsed_secs: a[1] });
+                /* THE GAME CLAUSE IS MODELLED, because the fault it hides is
+                   the one this stub was blind to for a month: the statement
+                   read `AND game = 'scrambled'` and a Vowels play — same
+                   engine, same bank, `game` of "vowels" — matched nothing, so
+                   no Vowels finish was ever verified while the endpoint
+                   answered `verified: true`. A fake that ignores the WHERE is
+                   a fake that says every UPDATE worked. args are
+                   [score, elapsed, playId, ...games]. */
+                const want = a.slice(3).map(String);
+                const row = playRows.get(a[2]);
+                const game = row ? row.game : "scrambled";
+                if (want.length === 0 || want.indexOf(game) > -1) {
+                  plays.set(a[2], { srv_score: a[0], srv_elapsed_secs: a[1], game: game });
+                  return { meta: { changes: 1 } };
+                }
+                return { meta: { changes: 0 } };
               }
               return {};
             },
@@ -316,6 +334,42 @@ console.log("\nThe endpoints, called for real");
     r.status === 200 && r.body.verified === false && r.body.score === undefined);
   const bare = await read(await post(finishPost, {}, { playId: "p", slots: 11 }));
   t("and so is a site with no database", bare.body.verified === false);
+}
+
+console.log("\nBoth games this engine serves");
+{
+  /* VOWELS IS SCRAMBLED'S BOARD READ HALF A TURN ROUND: same bank, same routes
+     under /api/scrambled/, and its own rows in plays with game "vowels". The
+     UPDATE here pinned `game = 'scrambled'`, so every Vowels finish updated
+     nothing at all — 20 plays and 0 scores on production — and the endpoint
+     still answered `verified: true`. Found on 6 September 2026 when the owner
+     asked for challenges in every game, because a challenge table is made of
+     verified scores and Vowels had never produced one. */
+  const env = { DB: memDB() };
+  const TOKEN2 = "sc:1";
+  for (const [play, game] of [["play-scrambled", "scrambled"], ["play-vowels", "vowels"], ["play-hilo", "hilo"]]) {
+    env.DB._playRows.set(play, { game });
+    await startRound(env, play, TOKEN2, 1000);
+    const t0 = env.DB._rounds.get(play).started_ms;
+    for (let i = 1; i <= 11; i++) await recordSolve(env, play, "s" + i, "solved", t0 + 60000);
+  }
+  const sc = await read(await post(finishPost, env, { playId: "play-scrambled" }));
+  const vw = await read(await post(finishPost, env, { playId: "play-vowels" }));
+  const hl = await read(await post(finishPost, env, { playId: "play-hilo" }));
+
+  t("a Scrambled finish is scored, as it always was",
+    sc.body.verified === true && !!env.DB._plays.get("play-scrambled"), JSON.stringify(sc.body.score));
+  t("and a Vowels finish is scored too",
+    vw.body.verified === true && !!env.DB._plays.get("play-vowels"),
+    "same engine, its own game in the row");
+  /* AND NOT A GAME THIS ENGINE DOES NOT SERVE. The clause is narrowed to the
+     two on purpose: a play id is unique, but a route that will write any row
+     it is handed is a route with no opinion about what it is scoring. */
+  t("a play from another game is not scored by this route",
+    !env.DB._plays.get("play-hilo"), "hilo goes through its own finish");
+  t("and the answer says so rather than reporting a write that never happened",
+    hl.body.verified === false,
+    "a silent no-op reported as success is how the Vowels fault survived");
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

@@ -418,6 +418,16 @@ automatically after every deploy so the window closes itself.
 
 ## Shipped
 
+- **Vowels XI had never had a score verified** — 6 Sep, found while checking
+  every game could carry a challenge. `/api/scrambled/finish` serves both games
+  (Vowels is Scrambled's board read half a turn round) and ended its write with
+  `AND game = 'scrambled'`, so a Vowels play — whose row says "vowels" —
+  matched nothing. 20 plays, 0 scores on production, and the endpoint answered
+  `verified: true` every time, which is why it survived. Now scoped to
+  `ENGINE_GAMES.scrambled` in games.js, and it answers `verified: false` when
+  the write changed nothing. The suite could not see it because its in-memory
+  database ignored the WHERE clause: it models the game now, and four checks
+  cover both games, a game the engine does not serve, and the honest answer.
 - **10. The shared sheet/calendar CSS lift** — 6 Sep. The overlay, the card
   and the seven-column month grid were written out in the crossword's
   stylesheet and again in Scrambled's, with a third copy in Vowels because

@@ -57,6 +57,34 @@ export const LAUNCHED = {
   grid: null,
 };
 
+/* ---- WHICH GAMES SHARE AN ENGINE -----------------------------------------
+ *
+ * Vowels XI is Scrambled XI's board read half a turn round: the same bank, the
+ * same eleven names, the same server routes under /api/scrambled/. Its plays
+ * are its own — `game` is "vowels" in every row — and that is the trap this
+ * constant exists for. /api/scrambled/finish wrote
+ *
+ *     UPDATE plays SET srv_score = ... WHERE play_id = ? AND game = 'scrambled'
+ *
+ * which matched nothing for a Vowels play, so NO Vowels finish was ever
+ * verified — 20 plays, 0 scored, on production on 6 September 2026 — while
+ * the endpoint answered `verified: true` and the page believed it. A game
+ * with no verified score cannot have a season row it can prove, cannot show a
+ * verified badge, and cannot join a challenge table, which is what turned it
+ * up: the owner asked for challenges in every game.
+ *
+ * Named here rather than in the endpoint so the next route that scopes by game
+ * has one place to ask, and so the day a third game reads the same bank there
+ * is one line to change. */
+export const ENGINE_GAMES = {
+  scrambled: ["scrambled", "vowels"],
+  crossword: ["crossword"],
+  wordsearch: ["wordsearch"],
+  hilo: ["hilo"],
+  grid: ["grid"],
+  quickfire: ["quickfire"],
+};
+
 /* The launch as a board NUMBER, which is what every list is counted in.
    Null for a game that has not launched, so a caller cannot quietly treat
    "not launched" as "launched on day one" — which is exactly the reading
