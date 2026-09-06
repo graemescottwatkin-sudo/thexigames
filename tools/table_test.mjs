@@ -301,5 +301,134 @@ console.log("\nWhich games have one, and which do not");
     stray.length === 0, stray.join(", ") || "QuickFire is unreleased");
 }
 
+
+console.log("\n=== THE SEASON LADDER, before the season is over ===");
+{
+  /* A league table is a thing you have after 38 games, and the hub wants one
+     from day one. The honest way is not to divide: the PLAYER has whatever
+     they have — after a day that is 0, 1 or 3, because a day is a match — and
+     the historical sides are put on what they would have had after the same
+     number of days. */
+  const T = XITable;
+
+  console.log("\nWhat a score can be");
+  t("after one game a season holds 0, 1 or 3 points, and nothing else",
+    T.reachablePoints(1).join(",") === "0,1,3", T.reachablePoints(1).join(","));
+  t("after two, five is still impossible",
+    T.reachablePoints(2).join(",") === "0,1,2,3,4,6", T.reachablePoints(2).join(","));
+  /* MY EXPECTATION HERE WAS WRONG AND THE CODE WAS RIGHT, which is worth
+     leaving in the file rather than quietly correcting: 0 to 114 is 115
+     numbers and only 114 of them can be had. 113 is the one that cannot —
+     thirty-seven wins and two draws is 113 points and THIRTY-NINE matches,
+     and there are only 38. A perfect season is 114 and the next thing below it
+     is 112. */
+  t("a full season can hold 114 totals, and 113 is not one of them",
+    T.reachablePoints(38).length === 114 &&
+    T.reachablePoints(38).indexOf(113) === -1 &&
+    T.reachablePoints(38).indexOf(114) !== -1 &&
+    T.reachablePoints(38).indexOf(112) !== -1,
+    "37 wins and 2 draws is 39 matches");
+  t("nothing is reachable in no games but nothing",
+    T.reachablePoints(0).join(",") === "0");
+
+  console.log("\nThe owner's example, exactly");
+  /* "a team on 76 points over 38 is on 2 after one but 2 isn't possible so
+     it's 3" — the case this whole function exists for. */
+  t("a side on 76 over 38 shows 3 after one day, not 2",
+    T.snapToReachable(76 / 38, 1) === 3, String(T.snapToReachable(76 / 38, 1)));
+  t("and 2 is genuinely what dividing gives, so the snap is doing the work",
+    76 / 38 === 2);
+  t("TIES GO UP: 2 sits between 1 and 3, and the answer is 3",
+    T.snapToReachable(2, 1) === 3);
+  t("but a clear nearest still wins, in both directions",
+    T.snapToReachable(0.4, 1) === 0 && T.snapToReachable(2.7, 1) === 3 &&
+    T.snapToReachable(1.1, 1) === 1);
+
+  console.log("\nAnd the ladder it builds");
+  const season = { season: "1995/96", table: [
+    { club: "Manchester United", points: 82 },
+    { club: "Newcastle United", points: 78 },
+    { club: "Liverpool", points: 71 },
+    { club: "Arsenal", points: 63 },
+    { club: "Everton", points: 61 },
+  ] };
+  const day1 = T.seasonTable("Arsenal", 3, 1, season);
+  /* THE PLAYER IS NOT SCALED, and this cannot be proved by sabotage — which
+     is worth saying rather than leaving as an untested-looking line. Snapping
+     the player's own total is a no-op for every input that can occur, because
+     a total they actually earned is by construction reachable in the games
+     they played. The two behaviours only differ on a number no player can
+     hold. So what is asserted is the value, and the reason it is safe is that
+     there is nothing to get wrong. */
+  t("the player keeps their REAL points, unscaled",
+    day1.find((r) => r.isPlayer).points === 3);
+  t("and every other club is on a total that day could have produced",
+    day1.filter((r) => !r.isPlayer)
+      .every((r) => T.reachablePoints(1).indexOf(r.points) !== -1),
+    day1.map((r) => r.club.slice(0, 3) + " " + r.points).join(", "));
+  t("the player takes their own club's slot rather than appearing twice",
+    day1.filter((r) => r.club === "Arsenal").length === 1);
+  t("a win on day one puts the player level with the champions",
+    T.playerPosition(day1) === 1, "everyone reachable is on 3, and the player wins ties");
+  /* AND THE SHAPE IS buildTable's, so renderRows draws it unchanged and the
+     hub gets the "three teams visible" view for free through `around`. */
+  t("the rows are the shape renderRows already takes",
+    day1.every((r) => "club" in r && "points" in r && "pos" in r && "isPlayer" in r));
+
+  console.log("\nHow many rows are worth showing");
+  {
+    /* The owner: "in the short term no team can show 0 points so maybe best to
+       only show their team for 1-3 games then 2 surrounding teams after". With
+       one game played every club in the division snaps to 0, 1 or 3 — so the
+       clubs either side of you are on the same points as half the league, and
+       the rows say nothing at all. */
+    t("the player's row alone for the first three days",
+      [1, 2, 3].every((d) => T.neighboursFor(d) === 0));
+    t("and the clubs either side from the fourth",
+      [4, 5, 10, 38].every((d) => T.neighboursFor(d) === 1));
+    /* AND renderRows HAS TO BE ABLE TO DRAW THAT. It floored the window at
+       one, so "the player alone" could not be asked for at all: the call went
+       through and quietly drew three rows. */
+    const rows = T.seasonTable("Arsenal", 3, 1, season);
+    const cell = { innerHTML: "" };
+    const near = (html) => (html.match(/<tr class="(?![^"]*faroff)[^"]*"/g) || []).length;
+    T.renderRows(cell, rows, 0);
+    t("asking for the player alone draws exactly one row", near(cell.innerHTML) === 1,
+      near(cell.innerHTML) + " rows not marked far off");
+    /* AT THE TOP OF THE TABLE THERE IS NO ROW ABOVE, so "one either side" is
+       two rows and not three. Expected three here at first and the code was
+       right: on day one the player is on 3 and wins ties, which puts them
+       first. Worth asserting rather than quietly avoiding — the hub draws this
+       exact case every time somebody wins their opening day. */
+    T.renderRows(cell, rows, 1);
+    t("one either side is two rows when the player is top", near(cell.innerHTML) === 2,
+      near(cell.innerHTML) + " rows — there is nothing above first");
+    /* And three when there is a club on each side of them. */
+    const mid = T.seasonTable("Arsenal", 63, 38, season);
+    T.renderRows(cell, mid, 1);
+    t("and three when they are somewhere in the middle", near(cell.innerHTML) === 3,
+      "position " + T.playerPosition(mid) + " of " + mid.length);
+    T.renderRows(cell, mid);
+    t("a caller that passes nothing still gets the old behaviour",
+      near(cell.innerHTML) === 3, "every game already passes nothing or one");
+  }
+  console.log("\nAt full time the table is the real one");
+  const full = T.seasonTable("Arsenal", 63, 38, season);
+  t("after 38 days every club is back on its historical points",
+    full.find((r) => r.club === "Manchester United").points === 82 &&
+    full.find((r) => r.club === "Liverpool").points === 71);
+  t("and a player who matched Arsenal's real season sits where Arsenal sat",
+    full.find((r) => r.isPlayer).points === 63);
+
+  console.log("\nWhich year it is, withheld until it is over");
+  /* The owner's ruling. Knowing you are playing 1995/96 from day one turns a
+     ladder into a quiz about a table anybody can look up. */
+  t("the year is not given away on day one", T.seasonYear(season, 1) === null);
+  t("nor on day thirty-seven", T.seasonYear(season, 37) === null);
+  t("and is revealed when the 38 are done", T.seasonYear(season, 38) === "1995/96");
+  t("null rather than an empty string, so it cannot be printed by accident",
+    T.seasonYear(season, 1) === null && T.seasonYear(null, 38) === null);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

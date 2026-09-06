@@ -68,9 +68,9 @@
      own — the team sheet and the kit colours. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared/xi-tokens.css?v=v27">
-<link rel="stylesheet" href="shared/xi-chrome.css?v=v27">
-<script src="shared/xi-theme.js?v=v27"></script>
+<link rel="stylesheet" href="shared/xi-tokens.css?v=v28">
+<link rel="stylesheet" href="shared/xi-chrome.css?v=v28">
+<script src="shared/xi-theme.js?v=v28"></script>
 <style>
 :root{
 
@@ -176,6 +176,19 @@ body{
   border-color:rgba(255,255,255,.45);color:rgba(255,255,255,.7)}
 .season .mark.now::after{content:"";}
 .season .form{align-items:flex-start}
+.season-tbl{width:100%;max-width:330px;border-collapse:collapse;margin:13px 0 0;
+  font-family:var(--disp);font-size:14px;letter-spacing:.04em}
+.season-tbl td{padding:4px 0;border-bottom:1px solid rgba(255,255,255,.13);
+  color:rgba(255,255,255,.62)}
+.season-tbl td.pos{width:26px;color:rgba(255,255,255,.4)}
+.season-tbl td.pts{text-align:right;width:38px;font-weight:700}
+.season-tbl tr.you td{color:#fff;font-weight:700}
+/* THREE ROWS: the player and the club either side. renderRows draws the whole
+   ladder and marks the rest, so it is complete to a screen reader and hidden
+   to everyone else — the same arrangement the games' own tables use. */
+.season-tbl tr.faroff{display:none}
+.season-year{font-family:var(--disp);font-size:11px;letter-spacing:.14em;
+  text-transform:uppercase;color:rgba(255,255,255,.45);margin:8px 0 0}
 .season .today-note{display:block;font-size:11px;letter-spacing:.1em;
   color:rgba(255,255,255,.5);margin:7px 0 0}
 
@@ -291,6 +304,16 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
     <div class="season" id="season" hidden>
       <p class="season-line" id="seasonLine"></p>
       <div class="form" id="seasonForm" aria-hidden="true"></div>
+      <!-- THE LADDER. A league table is a thing you have after 38 games, and
+           this shows one from day one — by putting every historical side on
+           what IT would have had after the same number of days, snapped to a
+           total that many matches could actually produce. See
+           shared/xi-table.js seasonTable, which is where the rule lives.
+           Three rows: the player and the club either side of them. -->
+      <table class="season-tbl" id="seasonTable" hidden>
+        <tbody id="seasonTableBody"></tbody>
+      </table>
+      <p class="season-year" id="seasonYear"></p>
     </div>
   </div>
 </section>
@@ -479,8 +502,8 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
      and the one page list, so the front door's footer and every game's are
      the same footer. -->
 <footer class="xic-foot"></footer>
-<script src="shared/xi-season.js?v=v27"></script>
-<script src="shared/xi-chrome.js?v=v27"></script>
+<script src="shared/xi-season.js?v=v28"></script>
+<script src="shared/xi-chrome.js?v=v28"></script>
 
 <script>
 /* Progressive enhancement only: everything above renders complete without
@@ -700,6 +723,7 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
       /* Today, as it stands, and marked as unsettled. It is not counted into
          P W D L above — a defeat with hours left in it can still become a
          draw, and a season that banked it would take the point back. */
+      drawLadder(s);
       if (s.inFlight) {
         form.appendChild(mark(s.inFlight.provisional, true));
         /* SAID IN WORDS, because the shape alone was not enough. The strip is
@@ -722,6 +746,86 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
         if (box && box.appendChild) box.appendChild(note);
       }
       box.hidden = false;
+    }
+
+    /* ---- THE LADDER ------------------------------------------------------
+       A league table is a thing you have after 38 games, and this draws one on
+       day one. Not by dividing the player's score — the player has whatever
+       they have, and after a day that is 0, 1 or 3 because a day is a match.
+       The historical SIDES are put on what they would have had after the same
+       number of days, and then snapped to a total that many matches could
+       actually produce: 76 over 38 is 2 after one day, 2 is not a score
+       anybody can hold after one game, so it shows 3.
+
+       The rule is shared/xi-table.js seasonTable and is not restated here. */
+    /* LOADED ONLY WHEN THERE IS A LADDER TO DRAW. xi-seasons.js is thirty
+       historical tables and sixty-six kilobytes, and this is the front door —
+       the page a first-time visitor lands on, who has no season, no club and
+       no ladder. So it is fetched on demand rather than in the head, and
+       somebody arriving for the first time never pays for it. Once, and
+       remembered: a second call while the first is in flight waits on it. */
+    var ladderLibs = null;
+    function needLadder() {
+      if (window.XITable && window.XI_SEASONS) return Promise.resolve(true);
+      if (ladderLibs) return ladderLibs;
+      ladderLibs = new Promise(function (done) {
+        var left = 2, ok = true;
+        ["shared/xi-seasons.js?v=v28", "shared/xi-table.js?v=v28"].forEach(function (src) {
+          var el = document.createElement("script");
+          el.src = src;
+          el.onload = function () { if (!--left) done(ok); };
+          el.onerror = function () { ok = false; if (!--left) done(false); };
+          document.head.appendChild(el);
+        });
+      });
+      return ladderLibs;
+    }
+
+    function drawLadder(s) {
+      var tbl = document.getElementById("seasonTable");
+      var body = document.getElementById("seasonTableBody");
+      var yearEl = document.getElementById("seasonYear");
+      if (!tbl || !body) return;
+      if (!s || !s.played) { tbl.hidden = true; if (yearEl) yearEl.textContent = ""; return; }
+      needLadder().then(function (ok) { if (ok) paintLadder(s); });
+    }
+
+    function paintLadder(s) {
+      var tbl = document.getElementById("seasonTable");
+      var body = document.getElementById("seasonTableBody");
+      var yearEl = document.getElementById("seasonYear");
+      if (!tbl || !body || !window.XITable || !window.XI_SEASONS) return;
+      var club = window.XITable.savedClub();
+      /* NO CLUB, NO LADDER. A table needs somebody's slot to take, and the
+         player picks their club inside a game. Hidden rather than guessed at:
+         putting them in as "You" against nineteen real clubs would be a
+         different thing from the ladder every game already shows them. */
+      if (!club) { tbl.hidden = true; if (yearEl) yearEl.textContent = ""; return; }
+
+      /* WHICH SEASON, AND IT MUST NOT MOVE UNDER THE PLAYER. Seeded on the
+         club and on which 38-day block this is, so it is the same ladder every
+         day of a season and a different one when the next begins. */
+      var block = Math.floor(s.played / window.XITable.SEASON_LENGTH);
+      var season = window.XITable.pickSeason(club, club + ":" + block);
+      if (!season) { tbl.hidden = true; return; }
+
+      var rows = window.XITable.seasonTable(club, s.points, s.played, season);
+      /* THE PLAYER ALONE FOR THE FIRST THREE DAYS, then the clubs either side.
+         With one game played every side snaps to 0, 1 or 3, so a neighbour is
+         a club on the same points as half the division and the row says
+         nothing. The rule is xi-table's, not the hub's. */
+      window.XITable.renderRows(body, rows, window.XITable.neighboursFor(s.played));
+      tbl.hidden = false;
+
+      /* THE YEAR, WITHHELD UNTIL THE 38 ARE DONE — the owner's ruling. Knowing
+         it from day one turns a ladder into a quiz about a table anybody can
+         look up. */
+      var year = window.XITable.seasonYear(season, s.played);
+      if (yearEl) {
+        yearEl.textContent = year
+          ? "The season was " + year
+          : "The season is revealed after 38 days";
+      }
     }
 
     fetch("/api/season", { headers: { accept: "application/json" } })

@@ -91,6 +91,105 @@
     return rows;
   }
 
+  /* ---- THE SEASON TABLE, before the season is over ---------------------
+   *
+   * A league table is a thing you have after 38 games. The hub wants to show
+   * one from day one, and the honest way is not to divide.
+   *
+   * THE TEAMS ARE SCALED, NOT THE PLAYER. The player has whatever they have —
+   * after one day that is 0, 1 or 3, because a day is a match and a match pays
+   * three, one or none. So a historical side on 76 points over 38 is put on
+   * what IT would have after the same number of days: 76 x 1/38 = 2.
+   *
+   * AND 2 IS NOT A SCORE ANYBODY CAN HAVE AFTER ONE GAME. That is the whole
+   * point of this function. A table where the player is on 3 and the team above
+   * them is on 2 is a table comparing a real number with an average, and the
+   * player can see it is not a real number. So the pro-rated figure is snapped
+   * to the nearest total that IS reachable in that many games — 3w + draws,
+   * with w + draws no more than the days played — and 2 becomes 3.
+   *
+   * TIES GO UP, on the owner's ruling: 2 sits exactly between 1 and 3 and the
+   * answer is 3. Which is also the kinder reading — a table that rounded the
+   * opposition down would flatter the player, and a ladder you are climbing
+   * has to be worth climbing.
+   */
+  function reachablePoints(days) {
+    var d = Math.max(0, Math.floor(Number(days) || 0));
+    var out = {}, w, dr;
+    for (w = 0; w <= d; w++) {
+      for (dr = 0; w + dr <= d; dr++) out[3 * w + dr] = true;
+    }
+    return Object.keys(out).map(Number).sort(function (a, b) { return a - b; });
+  }
+
+  function snapToReachable(target, days) {
+    var opts = reachablePoints(days);
+    if (!opts.length) return 0;
+    var best = opts[0], bestDist = Math.abs(opts[0] - target);
+    for (var i = 1; i < opts.length; i++) {
+      var dist = Math.abs(opts[i] - target);
+      /* Strictly nearer wins; equally near and HIGHER wins. */
+      if (dist < bestDist - 1e-9 || (Math.abs(dist - bestDist) < 1e-9 && opts[i] > best)) {
+        best = opts[i]; bestDist = dist;
+      }
+    }
+    return best;
+  }
+
+  var SEASON_LENGTH = 38;
+
+  /* HOW MANY NEIGHBOURS ARE WORTH SHOWING, which changes with the season.
+   *
+   * In the opening days the ladder is not yet a ladder: after one game every
+   * club in the division is on 0, 1 or 3, so the two rows either side of the
+   * player are two clubs on identical points and the comparison is empty. The
+   * owner's ruling — show the player's own row for the first three days, and
+   * the clubs around them after that, once the totals have spread out enough
+   * to mean something.
+   *
+   * Three is where the spread starts: after three games a side can hold any of
+   * 0 to 7 or 9, which is enough for a neighbour to be a different team from
+   * you rather than the same score under another name. */
+  var SPREAD_AFTER = 3;
+  function neighboursFor(played) {
+    return (Number(played) || 0) > SPREAD_AFTER ? 1 : 0;
+  }
+
+  /* The ladder as it stands on day `played`, with the player's real points and
+     every other club's pro-rated and snapped. Same shape buildTable returns,
+     so renderRows draws it unchanged. */
+  function seasonTable(club, points, played, season) {
+    if (!season) return [];
+    var d = Math.max(0, Math.min(SEASON_LENGTH, Math.floor(Number(played) || 0)));
+    var rows = [], replaced = false;
+    season.table.forEach(function (r) {
+      if (r.club === club && !replaced) { replaced = true; return; }
+      rows.push({
+        club: r.club,
+        points: snapToReachable(r.points * d / SEASON_LENGTH, d),
+        isPlayer: false,
+      });
+    });
+    if (!replaced) rows.pop();
+    rows.push({ club: club, points: Math.max(0, Number(points) || 0), isPlayer: true });
+    rows.sort(function (a, b) {
+      if (b.points !== a.points) return b.points - a.points;
+      return (b.isPlayer ? 1 : 0) - (a.isPlayer ? 1 : 0);
+    });
+    rows.forEach(function (r, i) { r.pos = i + 1; });
+    return rows;
+  }
+
+  /* WHICH YEAR IT IS, WITHHELD UNTIL THE 38 ARE DONE. The owner's ruling: the
+     season is revealed at the end, not at the start. Knowing you are playing
+     1995/96 from day one turns a ladder into a quiz about a table somebody can
+     look up; not knowing keeps it a ladder. Returned as null rather than as an
+     empty string so a caller cannot print it by accident. */
+  function seasonYear(season, played) {
+    if (!season) return null;
+    return (Number(played) || 0) >= SEASON_LENGTH ? season.season : null;
+  }
+
   function playerPosition(table) {
     for (var i = 0; i < table.length; i++) if (table[i].isPlayer) return table[i].pos;
     return table.length;
@@ -132,7 +231,14 @@
   function renderRows(tbody, table, around) {
     if (!tbody) return;
     var pos = playerPosition(table);
-    var near = Math.max(1, Number(around) || 1);
+    /* ZERO IS A REAL ANSWER, and it used to be floored away. The hub asks for
+       the player's row ALONE in the opening days: with one game played every
+       side in the division snaps to 0, 1 or 3, so "the teams either side of
+       you" are two clubs on the same points as forty others and the row says
+       nothing. Math.max(1, ...) made that impossible to ask for. Undefined
+       still means one, which is what every existing caller passes. */
+    var near = (around === 0 || around === "0") ? 0
+      : Math.max(1, Number(around) || 1);
     var html = "";
     table.forEach(function (r) {
       var far = Math.abs(r.pos - pos) > near;
@@ -237,6 +343,12 @@
     seasonsForClub: seasonsForClub,
     pickSeason: pickSeason,
     buildTable: buildTable,
+    /* The season ladder, and the two rules it is built on. Exported so the
+       suite can drive them directly rather than inferring them from a table. */
+    seasonTable: seasonTable, seasonYear: seasonYear,
+    neighboursFor: neighboursFor, SPREAD_AFTER: SPREAD_AFTER,
+    reachablePoints: reachablePoints, snapToReachable: snapToReachable,
+    SEASON_LENGTH: SEASON_LENGTH,
     playerPosition: playerPosition,
     savedClub: savedClub,
     saveClub: saveClub,
