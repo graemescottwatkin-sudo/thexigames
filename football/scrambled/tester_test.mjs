@@ -283,11 +283,22 @@ console.log("\n=== Opened with no board asked for, which is how it is opened ===
     !!testerTitles[picked - 1] && testerTitles[picked - 1] === onScreen,
     `picker says #${picked} (${testerTitles[picked - 1]}), screen says "${onScreen}"`);
   t("and it is today's board, derived from the same rotation the server uses",
-    /* Compared case-insensitively: the landing sets the kicker in caps the
-       way the other two games do, and what is asserted is WHICH board is
-       named rather than how the shell shouts it. */
-    d.getElementById("startKicker").textContent.toUpperCase() === "TODAY",
-    d.getElementById("startKicker").textContent);
+    (() => {
+      /* THIS CHECK DID NOT CHECK ITS OWN NAME. It asserted the kicker read
+         exactly "TODAY", which says the card is today's and says NOTHING about
+         the rotation — the half the name claims. So when the kicker started
+         naming the board as well, on 6 September 2026, an equality against one
+         word went red on correct behaviour, which is the least useful way for
+         a test to fail.
+         What it asserts now is the claim: the card says today, AND the number
+         it names is the one the picker independently resolved. Two sources for
+         the same board, which is what "derived from the same rotation" means.
+         Compared case-insensitively, because how the shell shouts it is the
+         shell's business. */
+      const said = d.getElementById("startKicker").textContent.toUpperCase();
+      return said.startsWith("TODAY") && said.includes("#" + picked);
+    })(),
+    d.getElementById("startKicker").textContent + `, picker #${picked}`);
   plain.window.close();
 }
 

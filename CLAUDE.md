@@ -65,6 +65,15 @@ hub. A 301 there would have to be un-cached from every browser that ever saw it.
    tree; suites check its BEHAVIOUR, and neither substitutes for the other.
    `npm install -D jsdom acorn --no-save`, run every `*_test.mjs` from the
    repo root, then `rmdir /s /q node_modules` before going back to step 1.
+   **The workflow's BUILD steps come first, and the roster is not the whole
+   job.** `checks.yml` runs `tools/build_vowels.js --check`,
+   `tools/build_scrambled_tester.js`, `tools/build_scrambled.js --check` and
+   `tools/import_hilo.js --check` before or among the suites, and one of them
+   WRITES: `scrambled-tester.html` is gitignored and rebuilt from Scrambled's
+   files every run. On 6 Sep 2026 a green local sweep and a red CI differed by
+   exactly that — the suite read a stale tester from a previous build while CI
+   read a fresh one. Running the suites without the generators is not a
+   CI-shaped run, it is a run against yesterday's artefacts.
    The browser suites (`render_test`, `journey_test`, `signin_test`) do not
    run offline; CI is where they are proved.
 4. Stage BY NAME, then commit and push. Not `git add -A`: other sessions edit
