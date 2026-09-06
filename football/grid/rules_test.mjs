@@ -162,28 +162,33 @@ console.log("\nThe turn budget — shared, and it can grow");
     R.MISS_SCALE === R.TURNS_START + R.ENTRIES - 1, String(R.MISS_SCALE));
 }
 
-console.log("\nThe opening reveal — one rule, the same board for everyone");
+console.log("\nNothing is given — the title is the whole clue");
 {
-  const entries = [
-    { n: 1, cells: ["0,0", "0,1", "0,2"] },
-    { n: 2, cells: ["0,1", "1,1", "2,1"] },
-  ];
-  const open = R.opening(entries);
-  /* THE FIRST LETTER, NOT A RANDOM ONE. The prototype measured both and found
-     them equal by elimination — and elimination is not recall. Memory is
-     indexed by the start of a word. */
-  t("every entry opens with one letter given", open.length === 2);
-  t("and it is the first", open.every((o) => o.index === 0),
-    JSON.stringify(open.map((o) => o.index)));
-  t("named by cell, so the server sends it and the page does not derive it",
-    open[0].cell === "0,0" && open[1].cell === "0,1");
-  /* NO DIFFICULTY MODES. The prototype offered easy, medium and hard by
-     varying this; the owner's ruling is one universal board, because three
-     difficulties is three different boards wearing one date. */
-  t("there is no mode to pass, and no way to ask for a different one",
-    R.opening.length === 1 && !("MODES" in R) && !("MODE" in R),
-    "one board, the same for everyone");
+  /* THE OWNER'S RULING, 6 September: "it should just be the title, i.e. what
+     are we trying to solve". This file briefly asserted the opposite — that
+     every entry opened with its first letter — carried over from the
+     prototype's "easy" default, which existed only to make three difficulties
+     differ. With difficulty gone the reveal was a leftover, not a decision.
+
+     Asserted as an ABSENCE, which is the awkward kind of check: there is no
+     call to make, so what is proved is that the module offers no way to give a
+     letter away and no board-shaped hook for one. Sabotaged by putting
+     opening() back — the first clause goes red the moment it exists. */
+  t("the module offers no opening reveal at all",
+    typeof R.opening === "undefined" && typeof R.given === "undefined",
+    "a rule that gives nothing needs no code, and a hook invites a filling");
+  t("and no constant sets how much is given",
+    !Object.keys(R).some((k) => /GIVEN|REVEAL|OPENING|MODE/i.test(k)),
+    Object.keys(R).join(", "));
+  /* AND THE WAY IN IS THE CROSSING, not a handout: an entry solved hands its
+     letters to every entry it crosses, which is what makes eleven interlocked
+     words a different problem from eleven separate ones. Proved by the
+     propagation block above; named here so the absence above does not read as
+     "the player is given nothing to work with". */
+  t("what the player gets instead is the crossing, free and immediate",
+    R.propagate({ n: 1, cells: ["0,0", "0,1"], answer: "OK" }, [C, C], {}).length === 2);
 }
+
 
 console.log("\nThe score, out of 114");
 {

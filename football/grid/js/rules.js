@@ -83,27 +83,30 @@
   var PTS_EFFICIENCY = 26;
   var MAX_SCORE = ENTRIES * PTS_SOLVED + PTS_EFFICIENCY;   // 114, the family's
 
-  /* ---- the opening reveal ---------------------------------------------- */
+  /* ---- nothing is given ------------------------------------------------ */
 
-  /* ONE LETTER OF EVERY ENTRY, AND IT IS THE FIRST. The prototype tried three
-     settings and the measurement that mattered was not the one it started
-     with: scored by how many candidates a revealed letter eliminates, a first
-     letter and a random letter are worth the same — 1.00 against 1.03 to 1.15.
-     That is elimination, and human recall is not elimination. Memory is indexed
-     by the START of a word: eleven letters beginning O is Old Trafford, eleven
-     letters with an A somewhere in the middle is nothing at all, though it
-     eliminates just as much. Grounds make it starkest because the names run
-     together — OLDTRAFFORD, STJAMESPARK — and a middle letter lands deep inside
-     a long string where it cues nothing.
+  /* THE TITLE IS THE WHOLE CLUE, and there is no opening reveal. This file
+     briefly had one — the first letter of every entry — carried over from the
+     prototype, which defaulted to its "easy" setting. That setting existed to
+     make three difficulties differ from one another; with difficulty gone on
+     the owner's ruling of 6 September, the reveal was a leftover rather than a
+     decision, and it started every board with eleven letters already on it.
    *
-   * Returned as indices so the server decides and sends them; nothing here is
-   * derivable from a public board, so changing this rule is a server change and
-   * never a client one. */
-  function opening(entries) {
-    return (entries || []).map(function (e) {
-      return { n: e.n, index: 0, cell: e.cells ? e.cells[0] : null };
-    });
-  }
+   * The owner, asked directly: "it should just be the title, i.e. what are we
+   * trying to solve". Which is section 3 of the spec as written, before the
+   * prototype explored around it: "Bolton Wanderers 2011/12", and nothing else.
+   *
+   * SO THERE IS NO FUNCTION HERE. A rule that gives nothing needs no code, and
+   * an opening() returning an empty list would be a hook inviting somebody to
+   * fill it. If a reveal is ever wanted it is a server decision per board,
+   * deliberately not derivable from anything the browser holds, so it would
+   * arrive as data on the board and not as a function restored here.
+   *
+   * THE PLAYER IS NOT LEFT WITH NOTHING. Crossings are the way in: an entry
+   * solved hands its letters to every entry it crosses, free and immediately,
+   * which is what propagate() below is for and why the emitter refuses a board
+   * that is a bare tree. Eleven words that share letters is a different problem
+   * from eleven words that do not. */
 
   var CORRECT = "correct", PRESENT = "present", ABSENT = "absent";
 
@@ -263,7 +266,7 @@
     PTS_EFFICIENCY: PTS_EFFICIENCY, MAX_SCORE: MAX_SCORE,
     CORRECT: CORRECT, PRESENT: PRESENT, ABSENT: ABSENT,
     mark: mark, isSolved: isSolved,
-    turnsAfter: turnsAfter, isOver: isOver, opening: opening,
+    turnsAfter: turnsAfter, isOver: isOver,
     propagate: propagate, knownFor: knownFor,
     letterBank: letterBank, score: score,
   };
