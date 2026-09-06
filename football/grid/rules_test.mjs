@@ -138,23 +138,88 @@ console.log("\n§8 — the letter bank is display only");
   t("and an unguessed letter has no state", bank.Z === undefined);
 }
 
-console.log("\n§9 — the score, out of 114");
+console.log("\nThe turn budget — shared, and it can grow");
 {
-  const all = (n) => Array(11).fill(n);
-  t("eleven on the first attempt is a perfect 114",
-    R.score(all(1)) === 114, String(R.score(all(1))));
-  t("eleven on the second is 66 plus the bonus", R.score(all(2)) === 70);
-  t("eleven on the third is 33 plus the bonus", R.score(all(3)) === 37);
-  t("nothing solved is nothing", R.score(all(0)) === 0);
-  /* THE BONUS IS FOR ALL ELEVEN, not for ten. */
-  const ten = all(1); ten[10] = 0;
-  t("ten on the first attempt misses the bonus",
-    R.score(ten) === 100, String(R.score(ten)));
-  t("and the maximum is exactly the family's 114",
-    R.MAX_SCORE === 114 && 11 * R.BY_ATTEMPT[1] + R.ALL_ELEVEN === 114);
-  t("an entry that spent all three and failed scores nothing",
-    R.score([1, 1, 1, 1, 1, 1, 1, 1, 1, 1, 0]) === R.score([1, 1, 1, 1, 1, 1, 1, 1, 1, 1]) );
+  /* NOT THREE ATTEMPTS PER ENTRY. The first version of this file scored an
+     entry by which of three attempts it fell on; the owner had already
+     iterated past that in the prototype, to one pool of turns for the board.
+     These are the cases that tell the two apart. */
+  t("a wrong answer spends a turn", R.turnsAfter(15, false) === 14);
+  t("and a right one gives it back",
+    R.turnsAfter(14, true) === 15,
+    "eleven correct answers must not cost eleven of fifteen");
+  t("fifteen to start", R.TURNS_START === 15);
+  t("the board ends when the turns are gone",
+    R.isOver({ solved: 4, turns: 0 }) === true);
+  t("and when all eleven are solved, whatever is left",
+    R.isOver({ solved: 11, turns: 9 }) === true);
+  t("and not before either", R.isOver({ solved: 10, turns: 1 }) === false);
+  /* THE SCALE IS DERIVED, NOT WRITTEN DOWN. The worst a finished board can
+     carry is the starting budget plus the turns the ten right answers before
+     the last one handed back. Asserted against the constants rather than
+     against 25, so moving TURNS_START moves this with it. */
+  t("the miss scale follows the budget",
+    R.MISS_SCALE === R.TURNS_START + R.ENTRIES - 1, String(R.MISS_SCALE));
 }
+
+console.log("\nThe opening reveal — one rule, the same board for everyone");
+{
+  const entries = [
+    { n: 1, cells: ["0,0", "0,1", "0,2"] },
+    { n: 2, cells: ["0,1", "1,1", "2,1"] },
+  ];
+  const open = R.opening(entries);
+  /* THE FIRST LETTER, NOT A RANDOM ONE. The prototype measured both and found
+     them equal by elimination — and elimination is not recall. Memory is
+     indexed by the start of a word. */
+  t("every entry opens with one letter given", open.length === 2);
+  t("and it is the first", open.every((o) => o.index === 0),
+    JSON.stringify(open.map((o) => o.index)));
+  t("named by cell, so the server sends it and the page does not derive it",
+    open[0].cell === "0,0" && open[1].cell === "0,1");
+  /* NO DIFFICULTY MODES. The prototype offered easy, medium and hard by
+     varying this; the owner's ruling is one universal board, because three
+     difficulties is three different boards wearing one date. */
+  t("there is no mode to pass, and no way to ask for a different one",
+    R.opening.length === 1 && !("MODES" in R) && !("MODE" in R),
+    "one board, the same for everyone");
+}
+
+console.log("\nThe score, out of 114");
+{
+  const S = (solved, misses, hints) => R.score({ solved, misses, hints });
+  /* A PERFECT BOARD IS THE FAMILY'S 114: eleven solved is 88, and efficiency
+     is the remaining 26, whole only when nothing was missed. */
+  t("eleven solved with no miss and no hint is 114",
+    S(11, 0, 0).total === 114, JSON.stringify(S(11, 0, 0)));
+  t("and that is the maximum the constants allow",
+    R.MAX_SCORE === 114 &&
+    R.ENTRIES * R.PTS_SOLVED + R.PTS_EFFICIENCY === R.MAX_SCORE);
+  t("solving is most of the score, not efficiency",
+    R.ENTRIES * R.PTS_SOLVED > R.PTS_EFFICIENCY,
+    "88 against 26 — a careful player still scores well");
+  t("nothing solved is nothing", S(0, 0, 0).total === 0);
+  /* EFFICIENCY IS SCALED BY BOTH FACTORS, multiplied rather than added: three
+     entries taken cleanly earns three elevenths of the bonus, not all of it. */
+  t("a partly solved board earns only its share of the efficiency",
+    S(3, 0, 0).eff === Math.round(26 * (3 / 11)), String(S(3, 0, 0).eff));
+  t("and misses eat it", S(11, 12, 0).eff < S(11, 0, 0).eff,
+    `${S(11, 12, 0).eff} against ${S(11, 0, 0).eff}`);
+  t("a board solved with every turn spent keeps the 88 and little of the 26",
+    S(11, 25, 0).base === 88 && S(11, 25, 0).eff === 0,
+    JSON.stringify(S(11, 25, 0)));
+  /* HINTS COME OFF THE TOTAL. Four each, and they never spend a turn — a hint
+     that could end a board punishes asking rather than charging for it. */
+  t("a revealed letter costs four", R.PTS_LETTER === 4);
+  t("and comes off the total, not the base",
+    S(11, 0, 12).base === 88 && S(11, 0, 12).total === 114 - 12,
+    JSON.stringify(S(11, 0, 12)));
+  t("a board played entirely on hints scores nothing, never a debt",
+    S(1, 0, 999).total === 0, String(S(1, 0, 999).total));
+  t("and no arrangement of them can exceed the family's maximum",
+    [[11, 0, 0], [11, 0, -5], [99, 0, 0]].every((a) => S(a[0], a[1], a[2]).total <= 114));
+}
+
 
 console.log("\nThe client is given no way to mark anything");
 {

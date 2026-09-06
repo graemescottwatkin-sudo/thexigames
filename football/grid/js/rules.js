@@ -1,4 +1,4 @@
-/* rules.js — Grid XI's marking, propagation and score.
+/* rules.js — Grid XI's marking, propagation, turns and score.
  *
  * A small densely-interlocked grid with NO CLUES. The only information given is
  * the board's title — "Bolton Wanderers 2011/12" — and the player types a full
@@ -16,20 +16,94 @@
  * against, and it is this project's oldest bug shape: a value computed on the
  * server and again in the client, drifting apart. The client paints the
  * response and computes nothing.
+ *
+ * ---------------------------------------------------------------------------
+ * WHY THIS FILE WAS REWRITTEN, 6 September 2026.
+ *
+ * The first version implemented the WRITTEN spec: three attempts per entry, an
+ * entry scoring 10, 6 or 3 depending on which attempt it fell on, and four for
+ * all eleven. It was coherent, it was tested, and it was not the game. The
+ * owner had already iterated the mechanic nine times in a standalone prototype
+ * — gridxi-demo-v2.html — and settled somewhere else entirely: a SHARED pool of
+ * turns, a hint that costs points, and a score built from efficiency rather
+ * than from which attempt happened to land.
+ *
+ * Both totalled 114, which is the family's maximum and the only thing they had
+ * in common. A spec and a prototype disagreeing is not a tie: the prototype is
+ * the one that has been played, and its comments carry the evidence — turns
+ * were measured and found not to be the difficulty dial, and a first letter was
+ * found to be worth far more than a random one because memory is indexed by the
+ * start of a word and elimination counting cannot see that.
+ *
+ * MARKING AND PROPAGATION SURVIVED UNCHANGED. Both versions had them identical,
+ * down to the reasoning in the comments, which is the strongest evidence either
+ * had that they were right.
+ *
+ * DIFFICULTY MODES ARE NOT HERE. The prototype offered easy, medium and hard by
+ * varying what is revealed at the start; the owner's ruling on 6 September is
+ * one universal board — "One a day, the same for everyone" is the family's
+ * promise on the hero of every game, and three difficulties is three different
+ * boards wearing one date. So the opening reveal is a single rule, below.
  */
 (function (root) {
   "use strict";
 
-  /* ---- §5: the attempt budget ---------------------------------------- */
-  /* Per ENTRY, not pooled. Burning three on one name must not cost you the
-     other ten — the board is eleven puzzles that share letters, not one. */
-  var ATTEMPTS = 3;
   var ENTRIES = 11;
 
-  /* ---- §9: the score, out of 114 -------------------------------------- */
-  var BY_ATTEMPT = { 1: 10, 2: 6, 3: 3 };
-  var ALL_ELEVEN = 4;
-  var MAX_SCORE = 114;                       // 11 x 10 + 4
+  /* ---- the turn budget ------------------------------------------------- */
+
+  /* SHARED, NOT PER ENTRY. Fifteen for the board, a turn spent on a wrong
+     answer and a turn RETURNED for a right one — so a player who knows the
+     board never runs out, and a player who is guessing is the one the count
+     presses on. The prototype measured this: turns from 12 to 18 moved
+     "finished with two names forgotten" from 36% to 41%, which is to say the
+     count is not the difficulty dial and there is no cliff to tune. Fifteen is
+     simply a number that does not feel mean. */
+  var TURNS_START = 15;
+
+  /* What a revealed letter costs. It never spends a turn: a hint must not be
+     able to end a board, or a player is punished for asking rather than
+     charged for it. */
+  var PTS_LETTER = 4;
+
+  /* THE WORST A FINISHED BOARD CAN CARRY, which is what efficiency is measured
+     against. A board ends when the turns run out or all eleven are solved, so
+     the most misses a player can accumulate is the starting budget plus the
+     turns won back by the ten entries that were right before the last one
+     failed. Derived rather than written down: it moves if TURNS_START does. */
+  var MISS_SCALE = TURNS_START + ENTRIES - 1;
+
+  /* ---- the score, out of 114 ------------------------------------------- */
+  /* Eight a solved entry is 88, and efficiency is the remaining 26. The split
+     matters: SOLVING is most of the score, so a careful player who takes the
+     board apart slowly still scores well, and efficiency rewards knowing it
+     rather than gates the board behind knowing it. Both factors are needed —
+     eleven solved with every turn spent earns the 88 and little of the 26. */
+  var PTS_SOLVED = 8;
+  var PTS_EFFICIENCY = 26;
+  var MAX_SCORE = ENTRIES * PTS_SOLVED + PTS_EFFICIENCY;   // 114, the family's
+
+  /* ---- the opening reveal ---------------------------------------------- */
+
+  /* ONE LETTER OF EVERY ENTRY, AND IT IS THE FIRST. The prototype tried three
+     settings and the measurement that mattered was not the one it started
+     with: scored by how many candidates a revealed letter eliminates, a first
+     letter and a random letter are worth the same — 1.00 against 1.03 to 1.15.
+     That is elimination, and human recall is not elimination. Memory is indexed
+     by the START of a word: eleven letters beginning O is Old Trafford, eleven
+     letters with an A somewhere in the middle is nothing at all, though it
+     eliminates just as much. Grounds make it starkest because the names run
+     together — OLDTRAFFORD, STJAMESPARK — and a middle letter lands deep inside
+     a long string where it cues nothing.
+   *
+   * Returned as indices so the server decides and sends them; nothing here is
+   * derivable from a public board, so changing this rule is a server change and
+   * never a client one. */
+  function opening(entries) {
+    return (entries || []).map(function (e) {
+      return { n: e.n, index: 0, cell: e.cells ? e.cells[0] : null };
+    });
+  }
 
   var CORRECT = "correct", PRESENT = "present", ABSENT = "absent";
 
@@ -44,7 +118,7 @@
   function mark(guess, answer) {
     var g = String(guess || "").toUpperCase().replace(/[^A-Z]/g, "");
     var a = String(answer || "").toUpperCase().replace(/[^A-Z]/g, "");
-    if (!g.length || g.length !== a.length) return null;   // §5: length must match
+    if (!g.length || g.length !== a.length) return null;   // length must match
 
     var out = new Array(g.length);
     var pool = {};
@@ -69,11 +143,29 @@
     return !!marks && marks.length > 0 && marks.every(function (m) { return m === CORRECT; });
   }
 
+  /* ---- what a submission costs ----------------------------------------- */
+
+  /* A TURN BACK FOR A RIGHT ANSWER. Not merely "no cost": the budget has to be
+     able to GROW, or eleven correct answers still spend eleven of fifteen and
+     the last few entries are played under a pressure the player earned their
+     way out of. */
+  function turnsAfter(turns, correct) {
+    return Number(turns || 0) + (correct ? 1 : -1);
+  }
+
+  /* The board is over when every entry is solved or the turns are gone. Both
+     conditions, in one place, because a game that can end two ways ends
+     inconsistently when the two are written apart. */
+  function isOver(state) {
+    var s = state || {};
+    return (Number(s.solved || 0) >= ENTRIES) || (Number(s.turns || 0) <= 0);
+  }
+
   /* ---- §6: propagation, stated precisely ------------------------------- */
 
   /* GREEN PROPAGATES. A letter confirmed correct at a cell is confirmed in the
-     crossing entry at that same cell, immediately and without an attempt: it is
-     a fact about the CELL, and the cell belongs to both entries.
+     crossing entry at that same cell, immediately and without a turn: it is a
+     fact about the CELL, and the cell belongs to both entries.
    *
    * AMBER DOES NOT. "Present" means "this letter is somewhere in THIS answer,
    * and not here" — a claim scoped to the entry that was guessed. It says
@@ -81,7 +173,7 @@
    *
    * GREY DOES NOT, for the same reason. Absence is absence from one answer.
    *
-   * The aggregate letter bank (§8) is display only and is never read here.
+   * The aggregate letter bank is display only and is never read here.
    *
    * Returns the cells this guess newly confirms: [{ cell, letter }]. */
   function propagate(entry, marks, known) {
@@ -109,7 +201,7 @@
     return out;
   }
 
-  /* ---- §8: the letter bank, display only ------------------------------- */
+  /* ---- the letter bank, display only ----------------------------------- */
 
   /* Green if confirmed correct anywhere. Amber if it has come back present in
      any entry and is not placed. Grey ONLY if it came back absent in EVERY
@@ -138,26 +230,40 @@
     return bank;
   }
 
-  /* ---- §9: the score ---------------------------------------------------- */
+  /* ---- the score ------------------------------------------------------- */
 
-  /* `solvedOn` is an array of eleven: the attempt an entry was solved on, or 0
-     for unsolved. An entry that spent all three and never solved scores
-     nothing, and its letters still show at Full Time. */
-  function score(solvedOn) {
-    var list = solvedOn || [], total = 0, solved = 0, i;
-    for (i = 0; i < ENTRIES; i++) {
-      var n = Number(list[i]) || 0;
-      if (BY_ATTEMPT[n]) { total += BY_ATTEMPT[n]; solved++; }
-    }
-    if (solved === ENTRIES) total += ALL_ELEVEN;
-    return Math.min(MAX_SCORE, total);
+  /* `state` is { solved, misses, hints } — entries solved, wrong submissions,
+     and points already charged for revealed letters.
+   *
+   * EFFICIENCY IS SCALED BY BOTH. `solved/11` and `spare/MISS_SCALE` multiply
+   * rather than add, so a player who solves three entries cleanly does not
+   * collect the efficiency of a player who solved eleven: the bonus is for
+   * taking the WHOLE board economically, and three-elevenths of a board taken
+   * economically is three-elevenths of the bonus.
+   *
+   * Hints come off the total, never off the base, and the total floors at zero
+   * — a board played entirely on hints scores nothing rather than a debt. */
+  function score(state) {
+    var s = state || {};
+    var solved = Math.max(0, Math.min(ENTRIES, Number(s.solved) || 0));
+    var misses = Math.max(0, Number(s.misses) || 0);
+    var hints = Math.max(0, Number(s.hints) || 0);
+    var base = solved * PTS_SOLVED;
+    var spare = Math.max(0, MISS_SCALE - misses);
+    var eff = Math.round(PTS_EFFICIENCY * (solved / ENTRIES) * (spare / MISS_SCALE));
+    return {
+      solved: solved, base: base, eff: eff, hints: hints,
+      total: Math.max(0, Math.min(MAX_SCORE, base + eff - hints)),
+    };
   }
 
   var api = {
-    ATTEMPTS: ATTEMPTS, ENTRIES: ENTRIES, MAX_SCORE: MAX_SCORE,
-    BY_ATTEMPT: BY_ATTEMPT, ALL_ELEVEN: ALL_ELEVEN,
+    ENTRIES: ENTRIES, TURNS_START: TURNS_START, PTS_LETTER: PTS_LETTER,
+    MISS_SCALE: MISS_SCALE, PTS_SOLVED: PTS_SOLVED,
+    PTS_EFFICIENCY: PTS_EFFICIENCY, MAX_SCORE: MAX_SCORE,
     CORRECT: CORRECT, PRESENT: PRESENT, ABSENT: ABSENT,
     mark: mark, isSolved: isSolved,
+    turnsAfter: turnsAfter, isOver: isOver, opening: opening,
     propagate: propagate, knownFor: knownFor,
     letterBank: letterBank, score: score,
   };
