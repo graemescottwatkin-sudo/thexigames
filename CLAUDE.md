@@ -74,6 +74,14 @@ hub. A 301 there would have to be un-cached from every browser that ever saw it.
    exactly that — the suite read a stale tester from a previous build while CI
    read a fresh one. Running the suites without the generators is not a
    CI-shaped run, it is a run against yesterday's artefacts.
+   **And a runner has no BANK beside it.** `..\scrambledxi-source` and
+   `..\crosswordxi-source` exist on the owner's machines and nowhere else, so
+   generators fall back to the four-board sample in CI and a suite can pass
+   here and fail there on nothing but board COUNT — the scrambled tester wraps
+   the ring modulo its own set, resolving #12 with the bank and #4 without.
+   To reproduce a runner: `git archive HEAD | tar -x -C <tmp>` and run there,
+   where no bank is beside the checkout. Two red CI runs on 6 Sep 2026 were the
+   same fix attempted twice without doing this once.
    The browser suites (`render_test`, `journey_test`, `signin_test`) do not
    run offline; CI is where they are proved.
 4. Stage BY NAME, then commit and push. Not `git add -A`: other sessions edit

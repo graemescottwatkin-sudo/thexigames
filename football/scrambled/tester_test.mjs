@@ -282,23 +282,36 @@ console.log("\n=== Opened with no board asked for, which is how it is opened ===
   t("the picker names the board the engine loaded",
     !!testerTitles[picked - 1] && testerTitles[picked - 1] === onScreen,
     `picker says #${picked} (${testerTitles[picked - 1]}), screen says "${onScreen}"`);
-  t("and it is today's board, derived from the same rotation the server uses",
+  t("and the card says this is the daily, not a board out of the archive",
     (() => {
-      /* THIS CHECK DID NOT CHECK ITS OWN NAME. It asserted the kicker read
-         exactly "TODAY", which says the card is today's and says NOTHING about
-         the rotation — the half the name claims. So when the kicker started
-         naming the board as well, on 6 September 2026, an equality against one
-         word went red on correct behaviour, which is the least useful way for
-         a test to fail.
-         What it asserts now is the claim: the card says today, AND the number
-         it names is the one the picker independently resolved. Two sources for
-         the same board, which is what "derived from the same rotation" means.
-         Compared case-insensitively, because how the shell shouts it is the
-         shell's business. */
+      /* THE NAME USED TO BE BROADER THAN THE BEHAVIOUR, and then I made it
+         worse. It read "derived from the same rotation the server uses" while
+         asserting only that the kicker said exactly "TODAY" — which says the
+         card is today's and says nothing about any rotation. When the kicker
+         began naming its board too, that equality went red on correct
+         behaviour, and the fix I reached for was to compare the number with
+         the PICKER's. That is false by construction, and the comment fifteen
+         lines above says why: the tester wraps the ring modulo its own board
+         count —
+
+             var todaysNo = ((dailyNumber() - 1) % SC_BOARDS.length) + 1;
+
+         — so with the bank present it resolves #12 and on a runner with only
+         the four-board sample it resolves #4, while the kicker shows the
+         SERVER's ring number either way. Two numbers that are equal only when
+         the tester happens to carry the whole bank. CI said so within the hour.
+
+         So this asserts what is true of both: the card says TODAY, so the
+         engine opened the daily rather than an archive board, and it names a
+         board rather than having quietly stopped. Which board the picker
+         resolved is the check above, where it belongs — that one compares the
+         picker with the SCREEN, two things the tester really does derive from
+         one source. */
       const said = d.getElementById("startKicker").textContent.toUpperCase();
-      return said.startsWith("TODAY") && said.includes("#" + picked);
+      return said.startsWith("TODAY") && /#\d+/.test(said);
     })(),
-    d.getElementById("startKicker").textContent + `, picker #${picked}`);
+    d.getElementById("startKicker").textContent);
+
   plain.window.close();
 }
 
