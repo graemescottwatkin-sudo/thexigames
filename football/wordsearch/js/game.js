@@ -15,7 +15,7 @@
      the family more time than any layout question: the footer line, the
      console, and the named window variable. If this is not the build just
      deployed, the deploy has not landed — do not start debugging the game. */
-  var BUILD = "v002l";
+  var BUILD = "v002m";
   window.WORDSEARCHXI_BUILD = BUILD;
   try { console.log("Wordsearch XI build " + BUILD); } catch (e) {}
 
@@ -1241,11 +1241,27 @@
     if (!permaWaiting || !serverDay || !archiveDays) return;
     var key = permaWaiting;
     permaWaiting = null;
-    /* Today's permalink is today's board, which this page is already
-       opening. Nothing to do, and nothing to say. */
+    /* TODAY'S PERMALINK OPENS TODAY'S BOARD, and for a while it did not.
+       The comment here read "today's board, which this page is already
+       opening" — and the page was not: it was showing the landing screen with
+       a Kick off, the way it does for somebody who typed the address. So
+       /daily/11 dropped you into yesterday's puzzle and /daily/12 dropped you
+       on the front page, which is the opposite way round from useful.
+
+       It matters more than tidiness. A daily thread links /daily/12 the
+       moment it is posted, and the whole point of a permalink is that the
+       link is right on the day AND right forever after: on the day it must
+       BE the live puzzle, counting towards a run, and only afterwards become
+       an archive board that does not. Anything else means either linking a
+       moving address and repairing it next morning, or sending everyone who
+       arrives on the day to a page they have to click through.
+
+       The address goes back to the plain one because for today that IS the
+       canonical address — see xi-chrome permaClear, which is deliberate. */
     var no = Number(key);
     if (no === serverNo) {
       if (window.XIChrome && window.XIChrome.permalink) window.XIChrome.permalink.clear("wordsearch");
+      if (window.__daily) { setPrematchMode("daily"); startDaily(window.__daily); }
       return;
     }
     /* THE ARCHIVE ROW CARRIES ITS OWN NUMBER, from the server. Matching on it

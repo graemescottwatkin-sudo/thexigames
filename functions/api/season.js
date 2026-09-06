@@ -22,7 +22,7 @@
  */
 import { utcDay } from "../_lib/daily.js";
 import { season, NO_SEASON_YET } from "../_lib/season.js";
-import { daysFor, seasonUser, hasDB } from "../_lib/season-store.js";
+import { daysFor, seasonUser, hasDB, gamesFinishedOn } from "../_lib/season-store.js";
 
 const json = (body, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -50,6 +50,14 @@ export async function onRequestGet({ request, env }) {
 
   const days = await daysFor(env, user);
   const s = season(days, today);
+  /* WHICH GAMES THIS ACCOUNT FINISHED TODAY, by name. The hub lit its shirts
+     from localStorage and so did every game's "you have played today" check —
+     device-local by construction, so a player signed in on two devices saw a
+     shirt on one and not the other, and could play today's board twice. The
+     account knew; nothing asked it. Asked here because this endpoint already
+     authenticates and already reads season_play, so it costs one more query
+     and no new door. */
+  const todayGames = await gamesFinishedOn(env, user, today);
   return json({
     account: true,
     today,
@@ -63,5 +71,8 @@ export async function onRequestGet({ request, env }) {
     /* Today, as it stands. Shown as provisional and not counted: a loss can
        still become a draw before midnight. */
     inFlight: s.inFlight,
+    /* Names, not a count: the caller is asking "which", and a number would
+       send it back to localStorage to find out. */
+    todayGames,
   });
 }

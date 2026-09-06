@@ -959,8 +959,42 @@
   /* Exposed for the games and the suites. account.user() is the session as
      the chrome last heard it; account.say() puts a line in the open sheet,
      which is how a game reports what it carried over after a sign-in. */
+  /* ---- WHAT THE ACCOUNT SAYS HAS BEEN PLAYED TODAY ----------------------
+   *
+   * ONE FETCH, ONE ANSWER, FOR THE WHOLE FAMILY. Every game asked its own
+   * localStorage whether today's board had been played, and the hub lit its
+   * shirts the same way — which is device-local by construction. A player
+   * signed in on a phone and a laptop saw a shirt on one and not the other,
+   * and could play today's board twice: the second device had never heard of
+   * the first, so it offered the board, banked a score the account then
+   * refused, and went on showing a number nobody else could see.
+   *
+   * The account knew all along. /api/season already authenticates and already
+   * reads season_play; it names the games now, and this is the one place that
+   * asks. Cached for the life of the page, because the answer cannot change
+   * without this device being the one that changed it.
+   *
+   * NULL IS NOT AN EMPTY LIST, and the difference is the whole point: null
+   * means "not signed in, or could not ask", and a caller must then fall back
+   * to its own storage rather than conclude nothing has been played. An empty
+   * ARRAY means the account answered and today is untouched.
+   */
+  var playedPromise = null;
+  function playedToday(force) {
+    if (playedPromise && !force) return playedPromise;
+    playedPromise = fetch("/api/season", { headers: { accept: "application/json" } })
+      .then(function (r) { return r.json(); })
+      .then(function (d) {
+        if (!d || !d.account) return null;      // no account: the device is all there is
+        return { today: d.today, games: d.todayGames || [] };
+      })
+      .catch(function () { return null; });     // a season that cannot be read decides nothing
+    return playedPromise;
+  }
+
   window.XIChrome = { init: init, squad: SQUAD, pages: PAGES, close: close,
     formChips: formChips, formBand: band, FORM_LENGTH: FORM_LENGTH,
+    playedToday: playedToday,
     /* A BOARD THE PLAYER HAS TO REGISTER FOR, asked for once and answered the
        same way in every game. The archive is open for today and the week
        behind it; older boards need an account — see functions/_lib/archive.js,

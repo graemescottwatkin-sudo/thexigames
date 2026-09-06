@@ -80,6 +80,31 @@ export async function daysFor(env, user, limit = 120) {
   } catch (e) { return []; }
 }
 
+/* WHICH GAMES THIS ACCOUNT HAS FINISHED TODAY, by name rather than by count.
+ *
+ * daysFor above aggregates a day into two numbers, which is all the season
+ * rule needs and is exactly what is missing when the question is "has this
+ * player already played HiLo today". The hub answered that from localStorage
+ * and so did every game, which is device-local by construction — so a player
+ * signed in on two devices saw a shirt lit on one and dark on the other, and
+ * could start today's board a second time on the device that had not heard.
+ * The account knew all along; nothing asked it.
+ *
+ * FINISHED, not started. A board opened and abandoned is not a board played,
+ * and refusing a second attempt on a round somebody never completed would take
+ * the day away from them.
+ */
+export async function gamesFinishedOn(env, user, day) {
+  if (!hasDB(env) || !user || !user.id || !day) return [];
+  try {
+    const { results } = await env.DB.prepare(
+      `SELECT game FROM season_play
+        WHERE user_id = ? AND day = ? AND finished_at IS NOT NULL
+        ORDER BY game`).bind(String(user.id), String(day)).all();
+    return (results || []).map((r) => String(r.game)).filter(Boolean);
+  } catch (e) { return []; }
+}
+
 /* Convenience for the endpoints: the signed-in player, or null. Kept here so
    the two callers do not each decide what "signed in" means. */
 export async function seasonUser(request, env) {

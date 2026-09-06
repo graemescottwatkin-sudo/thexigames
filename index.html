@@ -68,9 +68,9 @@
      own — the team sheet and the kit colours. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared/xi-tokens.css?v=v25">
-<link rel="stylesheet" href="shared/xi-chrome.css?v=v25">
-<script src="shared/xi-theme.js?v=v25"></script>
+<link rel="stylesheet" href="shared/xi-tokens.css?v=v26">
+<link rel="stylesheet" href="shared/xi-chrome.css?v=v26">
+<script src="shared/xi-theme.js?v=v26"></script>
 <style>
 :root{
 
@@ -464,8 +464,8 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
      and the one page list, so the front door's footer and every game's are
      the same footer. -->
 <footer class="xic-foot"></footer>
-<script src="shared/xi-season.js?v=v25"></script>
-<script src="shared/xi-chrome.js?v=v25"></script>
+<script src="shared/xi-season.js?v=v26"></script>
+<script src="shared/xi-chrome.js?v=v26"></script>
 
 <script>
 /* Progressive enhancement only: everything above renders complete without
@@ -573,13 +573,29 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
       catch (e) { return []; }
     };
 
+    /* WHAT THE ACCOUNT SAYS, ASKED ONCE FOR ALL FIVE. The shirts were lit from
+       localStorage alone, which is device-local by construction: a player
+       signed in on a phone and a laptop saw HiLo and Vowels lit on one and
+       dark on the other, and the dark one then offered today's board a second
+       time. The account knew; nothing asked it. Null means no account or no
+       answer, and then this device's own record is all there is — which is
+       exactly right for a player who has never signed in. */
+    var fromAccount = (window.XIChrome && window.XIChrome.playedToday)
+      ? window.XIChrome.playedToday()
+      : Promise.resolve(null);
+
     GAMES.forEach(function (g) {
-      fetch(g.api, { headers: { accept: "application/json", "X-XI-Games": "1" } })
-        .then(function (r) { return r.json(); })
-        .then(function (payload) {
+      Promise.all([
+        fetch(g.api, { headers: { accept: "application/json", "X-XI-Games": "1" } })
+          .then(function (r) { return r.json(); }),
+        fromAccount,
+      ])
+        .then(function (both) {
+          var payload = both[0], account = both[1];
           var t = payload && g.today(payload);
           if (t === undefined || t === null) return;
-          var done = listOf(g.key).some(function (r) { return r && g.done(r, t); });
+          var done = listOf(g.key).some(function (r) { return r && g.done(r, t); }) ||
+            !!(account && account.games.indexOf(g.id) !== -1);
           if (!done) return;
           markDone("shirt" + g.n, g.name);
           played.push(g.n);

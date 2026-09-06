@@ -10,7 +10,7 @@
  * more, 114 the ceiling. This file is the page: the landing the family
  * shares, the ladder of two rows, the clock, the answers list, the share.
  */
-var BUILD = "v001x";
+var BUILD = "v001y";
 
 (function () {
   "use strict";
@@ -838,9 +838,35 @@ var BUILD = "v001x";
       if (!todayBoard) { toast("No board today — try the clubs"); return; }
       var had = todayResult();
       if (had) { toast("Today's board is played — " + had.score + " pts"); return; }
+      /* AND WHAT THE ACCOUNT SAYS, not only this device. todayResult() reads
+         localStorage, which a device that has never synced does not have — so
+         a player signed in on a phone and a laptop could start today's board
+         twice, bank a score the account then refused, and go on seeing a
+         number nobody else could see. The pull that would have corrected it
+         runs on boot and does not finish before this button is clickable, so
+         checking harder here rather than racing it.
+
+         The answer is cached for the page, so this costs one fetch. Null means
+         no account or no answer, and then the device's own record is all there
+         is and stands — refusing on a question nobody answered would lock a
+         signed-out player out of their own board. */
+      if (window.XIChrome && window.XIChrome.playedToday) {
+        window.XIChrome.playedToday().then(function (a) {
+          if (a && a.games.indexOf("hilo") !== -1) {
+            toast("Today's board is played", "You finished it on another device.");
+            syncAccount();
+            return;
+          }
+          startToday();
+        });
+        return;
+      }
+      startToday();
+    };
+    function startToday() {
       startRound(todayBoard, "daily",
         { day: serverDay, kicker: todayNo ? "TODAY · #" + todayNo : "TODAY" });
-    };
+    }
     $("homeFeatured").onclick = function () {
       if (!featured) { toast("No board this week"); return; }
       openBoard(featured.id, "BOARD OF THE WEEK " + DOT + " " + featured.club.toUpperCase());
