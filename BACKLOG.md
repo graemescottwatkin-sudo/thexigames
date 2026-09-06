@@ -18,6 +18,26 @@ moving the items, not by renumbering them.
 
 ## Waiting on the owner
 
+### The numbering resets to 1 when the next games land
+
+Decided 6 Sep 2026, with the site at zero users. Every game is addressed by the
+family's day number from 26 August 2026, so today is #12 in all five — one
+epoch, one function, no per-game constant to keep. The owner's intent is that
+when the next few games roll out, ALL of them reset to day 1 together, so the
+family shares a genuine first day rather than the crossword's.
+
+**This has to happen before there are users.** A reset renumbers every
+permalink, and a permalink that moves is the one thing this whole scheme exists
+to prevent. It is free today and it is a broken promise the day somebody has
+posted a link. Whoever ships the next launch does the reset in the same
+release: it is EPOCH in functions/_lib/daily.js and DAILY_EPOCH in
+football/crossword/js/engine.js, which epoch_test pins together, and it moves
+results keys with it — daily:N, sc:N and vw:N are all counted from the same
+day, so they renumber too, and the rows for them will have to be migrated or
+cleared. That last part is why this is cheap now and expensive later.
+
+
+
 Nothing. Every open question has been answered — the last was where the source
 press counts get read, and the answer was a table and a query until the admin
 panel (item 9) has somewhere to show them.

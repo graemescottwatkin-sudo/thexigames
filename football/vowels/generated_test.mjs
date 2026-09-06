@@ -131,9 +131,14 @@ t("a board with no number banks nothing, in this game as in the other",
 console.log("\n=== It is in the family's registries, by name ===");
 t("the games list carries it", GAMES.includes("vowels"));
 t("it is labelled Vowels XI", LABELS.vowels === "Vowels XI");
-t("its permalink is a board number, like Scrambled's",
-  !!PERMA_GAMES.vowels && PERMA_GAMES.vowels.kind === "number" &&
-  PERMA_GAMES.vowels.name === "Vowels XI");
+t("its permalink is a board number, like every game's now",
+  !!PERMA_GAMES.vowels && PERMA_GAMES.vowels.schedule === "ring" &&
+  PERMA_GAMES.vowels.name === "Vowels XI" &&
+  /* ONE SHAPE ACROSS THE FAMILY since 6 September 2026. This asserted that
+     Vowels was numbered "like Scrambled's" while two games were keyed by
+     date; the family agrees now, so the claim worth making is that ALL of
+     them do, which fails if any game reverts. */
+  Object.values(PERMA_GAMES).every((g) => !("kind" in g)));
 t("and the route that serves that permalink exists",
   fs.existsSync(path.join(ROOT, "functions/football/vowels/daily/[[path]].js")));
 t("the squad list gives it the fifth shirt, and QuickFire is no longer wearing it",

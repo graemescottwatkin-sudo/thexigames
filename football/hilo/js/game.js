@@ -10,7 +10,7 @@
  * more, 114 the ceiling. This file is the page: the landing the family
  * shares, the ladder of two rows, the clock, the answers list, the share.
  */
-var BUILD = "v001v";
+var BUILD = "v001w";
 
 (function () {
   "use strict";
@@ -380,15 +380,26 @@ var BUILD = "v001v";
     $("screenGame").classList.add("covered");
     show("screenGame");
   }
-  function openDay(day, kicker) {
-    api("daily?day=" + encodeURIComponent(day)).then(function (r) {
+  /* `which` is a day for the archive list, which is keyed by day, or
+     { no: n } for a permalink, which is a board number. The server resolves
+     either — see functions/api/hilo/daily.js — and answers with BOTH, so this
+     never converts one into the other. */
+  function openDay(which, kicker) {
+    var q = which && which.no !== undefined
+      ? "daily?no=" + encodeURIComponent(which.no)
+      : "daily?day=" + encodeURIComponent(which);
+    api(q).then(function (r) {
+      var day = r.day;
       if (typeof r.freeArchiveDays === "number") freeArchiveDays = r.freeArchiveDays;
       if (!r.board) { toast("No board that day"); return; }
       coverBoard(r.board, day === serverDay ? "daily" : "free", { day: day === serverDay ? day : null, kicker: kicker });
-      /* The address follows the board, and today's keeps the plain one. */
+      /* The address follows the board, and today's keeps the plain one. It is
+         the board NUMBER since 6 September 2026 — one address shape for the
+         family — and the number comes from the server's answer rather than
+         from any arithmetic here. */
       if (window.XIChrome && window.XIChrome.permalink) {
         if (day === serverDay) window.XIChrome.permalink.clear("hilo");
-        else window.XIChrome.permalink.show("hilo", day);
+        else window.XIChrome.permalink.show("hilo", String(r.no));
       }
     }, function (err) {
       /* A BOARD THAT NEEDS AN ACCOUNT IS NOT A FAILURE. Reached by following
@@ -870,16 +881,22 @@ var BUILD = "v001v";
          clock waiting for Kick off. Only a released board answers. */
       var q = (location.search.match(/[?&]b=([A-Za-z0-9_-]{1,40})/) || [])[1];
       if (q) openBoard(q, "FROM THE CLUBS");
-      /* The permalink names a day. Opened as a previous puzzle, which is what
-         it is unless it is today's; what counts towards a run is decided
-         where it always was. */
+      /* THE PERMALINK NAMES A BOARD NUMBER. It named a day until 6 September
+         2026, when the family settled on one address shape; the old date form
+         still lands, because the server 301s it to the number before this page
+         is ever served. Opened as a previous puzzle, which is what it is
+         unless it is today's; what counts towards a run is decided where it
+         always was.
+         Nothing here turns the number into a day: openDay asks the server
+         with ?no= and the server answers with the day, which is the same rule
+         the rest of this file keeps about what day it is. */
       var perma = permalinkKey();
-      if (perma && /^\d{4}-\d{2}-\d{2}$/.test(perma)) {
-        openDay(perma, perma === serverDay
-          ? "TODAY" : "PREVIOUS PUZZLE " + DOT + " " + dayLabel(perma).toUpperCase());
+      if (perma && /^[0-9]{1,6}$/.test(perma)) {
+        var pn = Number(perma);
+        openDay({ no: pn }, pn === r.todayNo
+          ? "TODAY" : "PREVIOUS PUZZLE " + DOT + " BOARD #" + pn);
         if (window.XIChrome && window.XIChrome.permalink) {
-          window.XIChrome.permalink.aged("hilo",
-            Math.round((Date.parse(serverDay) - Date.parse(perma)) / 86400000));
+          window.XIChrome.permalink.aged("hilo", (r.todayNo || 0) - pn);
         }
       }
     }, function () {

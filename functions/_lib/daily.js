@@ -32,6 +32,29 @@ export function dailyDayKey(no) {
   return new Date(EPOCH + (Math.floor(n) - 1) * 86400000).toISOString().slice(0, 10);
 }
 
+/* THE TRUE INVERSE OF dailyDayKey: which board number a day is, or null if the
+   day is before day one. dailyNumber() cannot answer this — it clamps at 1, so
+   every day in the eight months before the epoch comes back as #1, which is
+   right for "what is today" and wrong for "what number is this day". The
+   permalinks need the strict form: a day the family had not started is not
+   board one, it is not a board at all, and a redirect that sent all of them to
+   #1 would be hundreds of URLs claiming to be the same board.
+
+   Beside dailyDayKey deliberately and built from the same EPOCH, for the same
+   reason that one is: two directions of one arithmetic must not be able to
+   disagree about when day one was. */
+export function dailyNoForDay(day) {
+  const s = String(day || "");
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  const t = Date.parse(s + "T00:00:00Z");
+  if (!Number.isFinite(t)) return null;
+  /* And the day it CLAIMS to be: 2026-02-31 parses to March, and a redirect
+     built on that would move somebody to a board they did not ask for. */
+  if (new Date(t).toISOString().slice(0, 10) !== s) return null;
+  const n = Math.round((t - EPOCH) / 86400000) + 1;
+  return n >= 1 ? n : null;
+}
+
 /* A token names a stored puzzle, and check-answer and reveal will read answers
    out of it. For daily puzzles that has to be pinned to today: the puzzles
    table holds a year of pre-generated dailies, so without this guard a player

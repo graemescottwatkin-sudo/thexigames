@@ -6,14 +6,18 @@
  * carries nothing about the run-in: the one secret this game has is which
  * board is tomorrow's, and a list that stops at yesterday cannot say. */
 import { archive, utcDayKey } from "../../_lib/wsdata.js";
+/* The board number beside the day — see the HiLo archive, same reason: the
+   schedule is keyed by day and the address is a number, so the row says both
+   and the page does no arithmetic about when day one was. */
+import { dailyNoForDay } from "../../_lib/daily.js";
 
 export async function onRequestGet({ env }) {
   /* One clock reading for both the list and the day it is measured from, so
      a request straddling midnight cannot say "today" is a day the list has
      already moved past. */
   const now = Date.now();
-  const days = await archive(env, now);
-  return new Response(JSON.stringify({ today: utcDayKey(now), days }), {
+  const days = (await archive(env, now)).map((d) => ({ ...d, no: dailyNoForDay(d.day) }));
+  return new Response(JSON.stringify({ today: utcDayKey(now), todayNo: dailyNoForDay(utcDayKey(now)), days }), {
     headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
   });
 }

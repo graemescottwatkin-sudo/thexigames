@@ -12,6 +12,7 @@
 import { dailyBoard } from "../../_lib/wsdata.js";
 import { publicPuzzle } from "../../_lib/ws-public.js";
 import { FREE_ARCHIVE_DAYS } from "../../_lib/archive.js";
+import { dailyNoForDay } from "../../_lib/daily.js";
 
 const json = (body, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -28,6 +29,9 @@ export async function onRequestGet({ env }) {
   /* THROUGH publicPuzzle, WHICH IS THE POINT OF THIS ENDPOINT NOW. It sent
      `puzzle` whole: every answer's exact placement and the secret bonus word,
      to every player, before a single word was found. See _lib/ws-public.js. */
-  return json({ day, puzzle: publicPuzzle(puzzle), source: sample ? "sample" : "d1",
-    freeArchiveDays: FREE_ARCHIVE_DAYS });
+  /* THE BOARD NUMBER WITH THE DAY. A permalink says /daily/12 now, in every
+     game, and the page writes that address — so the number comes from here,
+     where the day is decided, rather than from arithmetic in a browser. */
+  return json({ day, no: dailyNoForDay(day), puzzle: publicPuzzle(puzzle),
+    source: sample ? "sample" : "d1", freeArchiveDays: FREE_ARCHIVE_DAYS });
 }

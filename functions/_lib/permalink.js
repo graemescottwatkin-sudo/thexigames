@@ -44,19 +44,31 @@
  * paid to keep an unbounded URL space off the index. The numbered games ask
  * nothing, because for them there was never a question.
  */
-import { dailyNumber, dailyDayKey, utcDay } from "./daily.js";
+import { dailyNumber, dailyDayKey, dailyNoForDay } from "./daily.js";
 
-/* THE GAMES, and the one thing that differs between them: what a board is
-   called. `kind` decides the shape of the key, how today's is computed and
-   how a day is said out loud. */
+/* THE GAMES. Every one of them is addressed by a BOARD NUMBER counted from the
+   family's day one, 26 August 2026 — /football/<game>/daily/12 is 6 September
+   2026 in all five, and the number means the same thing everywhere.
+
+   It did not, until 6 September 2026. Two games count a ring and two schedule
+   by date, so the permalinks took each game's own key: numbers for three,
+   YYYY-MM-DD for the word search and HiLo. That was defensible and it was
+   still wrong — the owner had never been asked, one address shape is worth
+   more than a key that mirrors a storage decision, and a bot rotating through
+   the games had to know each one's shape to build a link.
+
+   `schedule` is what remains of the difference, and it is now about STORAGE
+   rather than address: a "ring" game generates a board for any number, so
+   every number up to today resolves; a "day" game has a schedule table and
+   must be asked whether it ran on the day that number stands for. */
 export const PERMA_GAMES = {
-  crossword: { name: "Crossword XI", kind: "number" },
-  wordsearch: { name: "Wordsearch XI", kind: "date" },
-  scrambled: { name: "Scrambled XI", kind: "number" },
-  hilo: { name: "HiLo XI", kind: "date" },
-  /* The same ring as Scrambled read half a turn round, so the same key shape
-     and a different board behind every number. */
-  vowels: { name: "Vowels XI", kind: "number" },
+  crossword: { name: "Crossword XI", schedule: "ring" },
+  wordsearch: { name: "Wordsearch XI", schedule: "day" },
+  scrambled: { name: "Scrambled XI", schedule: "ring" },
+  hilo: { name: "HiLo XI", schedule: "day" },
+  /* The same ring as Scrambled read half a turn round, so the same board
+     number and a different board behind it. */
+  vowels: { name: "Vowels XI", schedule: "ring" },
 };
 
 /* WHAT A BOARD IS CALLED OUT LOUD: the day it ran, in every game.
@@ -70,7 +82,7 @@ export const PERMA_GAMES = {
 export function keyLabel(game, key) {
   const g = PERMA_GAMES[game];
   if (!g) return String(key);
-  return dayLabel(g.kind === "number" ? dailyDayKey(key) : key);
+  return dayLabel(dailyDayKey(key));
 }
 
 const MONTHS = ["January", "February", "March", "April", "May", "June", "July",
@@ -85,12 +97,10 @@ function dayLabel(key) {
   return month ? `${Number(d)} ${month} ${y}` : key;
 }
 
-/* Today's key for a game, from the SERVER's clock. The same rule the game
-   itself uses: a matchday number from the family epoch, or the UTC day. */
+/* Today's key for a game, from the SERVER's clock. One rule for all five now:
+   the family's board number. */
 export function todayKeyFor(game, now = Date.now()) {
-  const g = PERMA_GAMES[game];
-  if (!g) return null;
-  return g.kind === "number" ? String(dailyNumber(now)) : utcDay(now);
+  return PERMA_GAMES[game] ? String(dailyNumber(now)) : null;
 }
 
 /* Is this a key this game could ever have had, and is it not in the future?
@@ -98,39 +108,51 @@ export function todayKeyFor(game, now = Date.now()) {
    and "7" would otherwise be two URLs for one board, which is the whole
    thing this file exists to prevent. */
 export function validKey(game, raw, now = Date.now()) {
-  const g = PERMA_GAMES[game];
-  if (!g || raw == null) return null;
+  if (!PERMA_GAMES[game] || raw == null) return null;
   const s = String(raw).trim();
-  const today = todayKeyFor(game, now);
-  if (g.kind === "number") {
-    /* Leading zeros are accepted and then corrected by the 301 in the route:
-       a bot that pads its numbers gets one board at one address rather than
-       "07" and "7" both serving matchday seven. */
-    if (!/^0*[1-9][0-9]{0,5}$/.test(s)) return null;
-    const n = Number(s);
-    return n <= Number(today) ? String(n) : null;
-  }
-  if (!/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
-  /* A real date, and the one it claims to be: 2026-02-31 parses to March. */
-  const d = new Date(s + "T00:00:00Z");
-  if (Number.isNaN(d.getTime()) || d.toISOString().slice(0, 10) !== s) return null;
-  return s <= today ? s : null;
+  /* Leading zeros are accepted and then corrected by the 301 in the route:
+     a bot that pads its numbers gets one board at one address rather than
+     "07" and "7" both serving board seven. */
+  if (!/^0*[1-9][0-9]{0,5}$/.test(s)) return null;
+  const n = Number(s);
+  return n <= dailyNumber(now) ? String(n) : null;
+}
+
+/* A DATE IS NOT A KEY ANY MORE, AND IT USED TO BE. The word search and HiLo
+   were addressed as /daily/2026-09-06 until 6 September 2026, and those links
+   are somebody's — the same rule the theme move kept when a hundred paths
+   moved under /football/. Returns the number that date is now called, or null
+   if it is not a day this family has had.
+
+   Only ever a redirect, never a second way in: two addresses for one board is
+   what this file exists to prevent, so the date form resolves and then moves
+   on rather than serving anything itself. */
+export function keyForOldDate(raw, now = Date.now()) {
+  const n = dailyNoForDay(String(raw || "").trim());
+  return n !== null && n <= dailyNumber(now) ? String(n) : null;
 }
 
 /* ---- AND DID THE GAME ACTUALLY RUN THAT DAY? ----
  *
  * validKey above answers "could this key ever have been a board, and is it not
- * in the future". For a numbered game that is the whole question: the ring
- * wraps, so every number from 1 to today resolves to a board. For a game keyed
- * by DATE it is not, and the gap was an unbounded set of crawlable pages —
- * /football/wordsearch/daily/2020-01-01 and /football/hilo/daily/1999-12-31 both answered 200
- * with a self-referencing canonical, for any past date anybody typed. Hundreds
- * of thousands of near-identical pages, each claiming to be the permanent
- * address of a board that never existed. Worse for search than having no board
- * links at all, because crawl budget is finite and those pages would spend it.
+ * in the future". For a RING game that is the whole question: the ring wraps,
+ * so every number from 1 to today resolves to a board. For a game with a
+ * SCHEDULE TABLE it is not, and the gap was an unbounded set of crawlable
+ * pages — /football/wordsearch/daily/2020-01-01 and /football/hilo/daily/
+ * 1999-12-31 both answered 200 with a self-referencing canonical, for any past
+ * date anybody typed. Hundreds of thousands of near-identical pages, each
+ * claiming to be the permanent address of a board that never existed.
  *
- * The route's own 404 already said it refused a key that was "simply not a
- * board". It did not. This is that sentence made true.
+ * Moving to numbers bounded that space by itself — 1 to today is a few dozen
+ * addresses, not every date in history — but the question is still real and is
+ * still worth asking. HiLo's schedule starts on 3 September 2026, which is
+ * board 9; boards 1 to 8 are days it had not launched, and a page saying "3
+ * September 2026 · HiLo XI" for board 1 would be a page about nothing.
+ *
+ * THE NUMBER IS TRANSLATED BACK TO THE DAY THE SCHEDULE IS KEYED ON. The
+ * address changed; the storage did not, and it should not have to — a board's
+ * identity in its own table is that table's business. dailyDayKey is the same
+ * arithmetic the number was built from, so the two cannot disagree.
  *
  * Asked of each game's own schedule, because the schedule is where the answer
  * lives. Without a database there is nothing to ask, and the honest answer is
@@ -139,26 +161,26 @@ export function validKey(game, raw, now = Date.now()) {
 export async function ranOn(env, game, key) {
   const g = PERMA_GAMES[game];
   if (!g) return false;
-  if (g.kind === "number") return true;
+  if (g.schedule === "ring") return true;
   if (!env || !env.DB) return true;
+  const day = dailyDayKey(key);
+  if (!day) return false;
+  const TABLE = { wordsearch: "ws_schedule", hilo: "hl_schedule" };
+  const table = TABLE[game];
+  if (!table) return true;
   try {
-    if (game === "wordsearch") {
-      const row = await env.DB.prepare("SELECT 1 AS n FROM ws_schedule WHERE day = ?")
-        .bind(String(key)).first();
-      return !!row;
-    }
-    if (game === "hilo") {
-      const row = await env.DB.prepare("SELECT 1 AS n FROM hl_schedule WHERE day = ?")
-        .bind(String(key)).first();
-      return !!row;
-    }
+    /* The table name is not interpolated from anything a request can reach:
+       it comes from the map above, keyed by a game name this route has already
+       matched against PERMA_GAMES. The DAY is bound. */
+    const row = await env.DB.prepare(
+      `SELECT 1 AS n FROM ${table} WHERE day = ?`).bind(day).first();
+    return !!row;
   } catch (e) {
     /* The table is absent or unreadable. Refusing every board on a database
        error would take an entire game's archive off the site for a fault that
        has nothing to do with the board asked for. */
     return true;
   }
-  return true;
 }
 
 /* ---- WHERE A GAME LIVES ----
@@ -251,6 +273,27 @@ export async function permalinkRoute({ request, env, params }, game) {
      without following anything. */
   const asked = parts.length === 0 ? todayKeyFor(game) : parts[0];
   if (parts.length > 1) return notFound();
+
+  /* THE OLD DATE FORM, KEPT WORKING. Two games were addressed by day until 6
+     September 2026 and those links do not stop being links. Sent on with a 301
+     to the number that day is now called, so there is still one address per
+     board and the old one names it — the same thing the theme move did to a
+     hundred paths rather than the thing it refused to do.
+
+     Before validKey, because validKey no longer knows what a date is: to it a
+     date is simply a malformed key, and a 404 here would break every link
+     posted while the date form was live. A date the family never had — the
+     word search's schedule reaches back to 1 January 2026, months before day
+     one — resolves to nothing and gets the same refusal everything else does,
+     rather than being bent to board 1. */
+  if (parts.length === 1 && /^\d{4}-\d{2}-\d{2}$/.test(String(parts[0]))) {
+    const moved = keyForOldDate(parts[0]);
+    if (!moved) return notFound();
+    return new Response(null, {
+      status: 301,
+      headers: { Location: permalinkPath(game, moved), "Cache-Control": "no-store" },
+    });
+  }
 
   const key = validKey(game, asked);
   if (!key) return notFound();

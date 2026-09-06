@@ -19,11 +19,12 @@
  *   unreleased games          an unbuilt game is named nowhere served
  *
  * ONE RULE, ASKED NOT RESTATED. Which boards are public is permalink.js's
- * answer — todayKeyFor for the numbered games, the schedule for the dated ones
- * — and this calls it rather than keeping a second copy that would drift the
- * first time either changed.
+ * answer — todayKeyFor for the count, the schedule for whether a game ran that
+ * day — and this calls it rather than keeping a second copy that would drift
+ * the first time either changed.
  */
 import { PERMA_GAMES, todayKeyFor, permalinkPath } from "./_lib/permalink.js";
+import { dailyDayKey } from "./_lib/daily.js";
 
 const SITE = "https://www.thexigames.com";
 
@@ -67,18 +68,29 @@ async function ranDays(env, game, today) {
 }
 
 /* A board's own address for every game, in one place.
-   A numbered game runs 1..today; a dated game gets the days it ran. */
+
+   Every game is numbered 1..today now. A RING game contributes all of them,
+   because the ring generates a board for any number. A SCHEDULED game
+   contributes only the numbers whose day it actually ran: HiLo's schedule
+   begins on 3 September 2026, which is board 9, so boards 1 to 8 are days it
+   had not launched and the route refuses them. Listing those would put eight
+   404s in the sitemap, which this file's own rule forbids.
+
+   The schedule is read ONCE per game and turned into a set of days, rather
+   than asking ranOn per board: that is one query instead of one per day of the
+   game's life, and the number of those grows by one every morning. */
 async function boardPaths(env) {
   const out = [];
   for (const game of Object.keys(PERMA_GAMES)) {
-    const kind = PERMA_GAMES[game].kind;
-    const today = todayKeyFor(game);
-    if (kind === "number") {
-      const n = Number(today);
-      if (!Number.isFinite(n) || n < 1) continue;
-      for (let i = 1; i <= n; i++) out.push(permalinkPath(game, String(i)));
-    } else {
-      for (const day of await ranDays(env, game, today)) out.push(permalinkPath(game, day));
+    const today = Number(todayKeyFor(game));
+    if (!Number.isFinite(today) || today < 1) continue;
+    if (PERMA_GAMES[game].schedule === "ring") {
+      for (let i = 1; i <= today; i++) out.push(permalinkPath(game, String(i)));
+      continue;
+    }
+    const ran = new Set(await ranDays(env, game, dailyDayKey(today)));
+    for (let i = 1; i <= today; i++) {
+      if (ran.has(dailyDayKey(i))) out.push(permalinkPath(game, String(i)));
     }
   }
   return out;

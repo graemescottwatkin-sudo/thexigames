@@ -14,7 +14,7 @@
  */
 import { gameDir } from "../functions/_lib/permalink.js";
 import fs from "node:fs";
-import { PERMA_GAMES, todayKeyFor, validKey, permalinkPath, permalinkRoute, gamePath }
+import { PERMA_GAMES, todayKeyFor, validKey, keyForOldDate, permalinkPath, permalinkRoute, gamePath }
   from "../functions/_lib/permalink.js";
 
 let pass = 0, fail = 0;
@@ -130,11 +130,20 @@ console.log("\nWhat a share preview says names the board");
   })());
   t("and its social description says the same",
     /property="og:description" content="[^"]*30 August 2026/.test(html));
-  const w = await call("wordsearch", "2026-09-01");
+  /* AND A GAME WITH A SCHEDULE TABLE SAYS THE SAME KIND OF THING, at the same
+     kind of address. Board 7 is 1 September 2026 in every game — the number is
+     the family's day count, so it names the same day whichever game is asked,
+     which is the whole reason the two date-keyed games moved onto it. */
+  const w = await call("wordsearch", "7");
   const wh = await w.text();
-  t("and a game that schedules by date says the same kind of thing",
+  t("and a game with a schedule says the same kind of thing",
     /<title>1 September 2026 · Wordsearch XI<\/title>/.test(wh),
     (wh.match(/<title>([^<]*)</) || [])[1]);
+  t("and board 7 is the same DAY in every game, which is the point of one scheme",
+    (await Promise.all(GAMES.map(async (g) =>
+      ((await (await call(g, "7")).text()).match(/<title>([^<]*)</) || [])[1])))
+      .every((title) => /^1 September 2026 · /.test(title)),
+    "every game's board 7 must be titled 1 September 2026");
 }
 
 console.log("\nOne board, one address");
@@ -150,23 +159,65 @@ console.log("\nOne board, one address");
 console.log("\nThe future is refused, and so is nonsense");
 {
   const today = Number(todayKeyFor("crossword", NOW));
-  t("tomorrow's matchday is not a page", validKey("crossword", String(today + 1), NOW) === null);
-  t("today's is", validKey("crossword", String(today), NOW) === String(today));
-  t("yesterday's is", validKey("crossword", String(today - 1), NOW) === String(today - 1));
-  t("tomorrow's day is not a page", validKey("hilo", "2026-09-04", NOW) === null);
-  t("a day that does not exist is not a page", validKey("hilo", "2026-02-31", NOW) === null);
-  t("a day in the wrong shape is not a page",
-    validKey("hilo", "3-9-2026", NOW) === null && validKey("hilo", "2026-9-3", NOW) === null);
+  /* ONE SHAPE, ALL FIVE. Until 6 September 2026 the crossword took a number
+     and HiLo took a date, and validKey refused the other for each. The owner
+     asked for one shape while the site still had no users; this is that,
+     asserted for every game rather than for the two that happened to have it. */
+  for (const game of GAMES) {
+    t(`${game}: today's number is a page`,
+      validKey(game, String(today), NOW) === String(today));
+    t(`${game}: yesterday's is`,
+      validKey(game, String(today - 1), NOW) === String(today - 1));
+    t(`${game}: tomorrow's is not`,
+      validKey(game, String(today + 1), NOW) === null);
+    /* THE DATE FORM IS NOT A KEY ANY MORE — not for the games that never took
+       one, and not for the two that did. It resolves through keyForOldDate and
+       a 301, and nowhere else, because two ways in is two addresses. */
+    t(`${game}: and a date is not a key, for any game now`,
+      validKey(game, "2026-09-01", NOW) === null);
+  }
   t("zero and negative are not board numbers",
     validKey("crossword", "0", NOW) === null && validKey("crossword", "-1", NOW) === null);
   t("nor is a number with anything else in it",
     validKey("crossword", "5x", NOW) === null && validKey("crossword", "5 6", NOW) === null);
-  t("a date is not a key for a game that counts matchdays",
-    validKey("crossword", "2026-09-01", NOW) === null);
-  t("and a number is not a key for a game that schedules by date",
-    validKey("hilo", "5", NOW) === null);
 }
 
+/* ---- THE OLD DATE FORM, WHICH IS SOMEBODY'S LINK ----
+ *
+ * The word search and HiLo were addressed as /daily/2026-09-06 until 6
+ * September 2026. The project's law is that old paths 301 and always will —
+ * /crossword/daily/5 is somebody's link — so these do too, onto the number
+ * that day is now called. */
+console.log("\nThe date form a link was posted with still lands");
+{
+  /* 3 September 2026 is board 9: the epoch is 26 August and the count starts
+     at one. Read from the resolver rather than written down, so this cannot
+     drift from the arithmetic it is checking. */
+  const nine = keyForOldDate("2026-09-03", NOW);
+  t("a date resolves to the number that day is called", nine === "9", String(nine));
+  for (const game of GAMES) {
+    const r = await call(game, "2026-09-03");
+    t(`${game}: the date form 301s to the number`,
+      r.status === 301 && r.headers.get("Location") === `${gamePath(game)}daily/9`,
+      `${r.status} -> ${r.headers.get("Location")}`);
+  }
+  /* A DAY BEFORE THE FAMILY EXISTED IS NOT BENT TO BOARD ONE. The word
+     search's schedule reaches back to 1 January 2026, eight months before day
+     one, and every one of those days would otherwise redirect to the same
+     board — hundreds of addresses claiming to be board 1. */
+  t("a day before day one resolves to nothing",
+    keyForOldDate("2026-08-25", NOW) === null &&
+    keyForOldDate("2026-01-01", NOW) === null);
+  const early = await call("wordsearch", "2026-01-01");
+  t("and is refused rather than redirected", early.status === 404, String(early.status));
+  t("a day that does not exist resolves to nothing",
+    keyForOldDate("2026-02-31", NOW) === null);
+  t("a day in the wrong shape is not a date at all",
+    keyForOldDate("3-9-2026", NOW) === null && keyForOldDate("2026-9-3", NOW) === null);
+  const future = await call("hilo", "2099-01-01");
+  t("and a date after today is refused, not redirected",
+    future.status === 404, String(future.status));
+}
 console.log("\nA refusal says nothing about what it refused");
 {
   const future = await call("crossword", "99999");
@@ -181,17 +232,29 @@ console.log("\nA refusal says nothing about what it refused");
 
 /* ---- A DAY THE GAME DID NOT RUN IS NOT A BOARD ----
  *
- * /football/wordsearch/daily/2020-01-01 and /football/hilo/daily/1999-12-31 both answered 200
- * with a self-referencing canonical, for any past date at all: an unbounded
- * set of near-identical pages each claiming to be the permanent address of a
- * board that never existed.
+ * /football/wordsearch/daily/2020-01-01 and /football/hilo/daily/1999-12-31
+ * both answered 200 with a self-referencing canonical, for any past date at
+ * all: an unbounded set of near-identical pages each claiming to be the
+ * permanent address of a board that never existed.
  *
- * The env above has no DB, which is how every check before this one passes —
- * and it is also why none of them could see this. Without a database there is
- * no schedule to ask and the honest answer is yes, so proving the rule needs a
- * database that answers. */
-console.log("\n=== A date with no board ===");
+ * Numbering bounded that space by itself — 1 to today is a few dozen
+ * addresses, not every date in history — but it did NOT answer the question,
+ * and moving to numbers made the question louder rather than quieter. HiLo's
+ * schedule begins on 3 September 2026, which is board 9. Boards 1 to 8 are
+ * days it had not launched, and a page reading "27 August 2026 · HiLo XI" for
+ * board 2 would be a page about a board that never was.
+ *
+ * So the number is translated back to the day the schedule is keyed on and the
+ * schedule is asked. The env above has no DB, which is how every check before
+ * this one passes — and it is also why none of them could see this. Without a
+ * database there is no schedule to ask and the honest answer is yes, so
+ * proving the rule needs a database that answers. */
+console.log("\n=== A board whose day the game never ran ===");
 {
+  /* Both games ran on 3 September 2026, which is board 9, and on nothing else.
+     Written as the DAY because that is what a schedule table holds: the
+     translation from board number back to day is the thing under test, so
+     stating the fixture in numbers would have assumed it. */
   const RAN = { wordsearch: ["2026-09-03"], hilo: ["2026-09-03"] };
   const dbEnv = {
     ASSETS: env.ASSETS,
@@ -214,15 +277,18 @@ console.log("\n=== A date with no board ===");
   }, game);
 
   for (const game of ["wordsearch", "hilo"]) {
-    const ran = await callDb(game, "2026-09-03");
-    t(`${game}: a day it DID run is served`, ran.status === 200, String(ran.status));
-    const never = await callDb(game, "2020-01-01");
-    t(`${game}: a well-formed past day it never ran is refused`,
+    /* Board 9 IS 3 September 2026, the one day the fixture ran. */
+    const ran = await callDb(game, "9");
+    t(`${game}: a board whose day it DID run is served`, ran.status === 200, String(ran.status));
+    /* Board 2 is 27 August 2026 — a real, past, well-formed board number that
+       this game has no board behind, which is exactly HiLo's first eight. */
+    const never = await callDb(game, "2");
+    t(`${game}: a past board whose day it never ran is refused`,
       never.status === 404, String(never.status));
     /* The SAME refusal a future key gets, so a probe cannot tell a day with no
        board from a day that has not come — the rule the answers pages keep. */
-    const future = await callDb(game, "2099-01-01");
-    t(`${game}: and refused identically to a day that has not come`,
+    const future = await callDb(game, "99999");
+    t(`${game}: and refused identically to a board that has not come`,
       never.status === future.status &&
       never.headers.get("X-Robots-Tag") === future.headers.get("X-Robots-Tag") &&
       never.headers.get("Cache-Control") === future.headers.get("Cache-Control"),

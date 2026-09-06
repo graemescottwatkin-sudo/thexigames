@@ -933,9 +933,19 @@
     bar.parentNode.insertBefore(box, bar.nextSibling);
   }
 
+  /* THE GAME'S PATH, ASKED OF THE SQUAD — the same fix permaAged already
+     carried and these two were missed by. They built "/" + game + "/daily/",
+     which was the address until the games moved under a theme on 5 September
+     2026, so opening an archive board rewrote a correct
+     /football/hilo/daily/9 into /hilo/daily/9: an address that still works,
+     because old paths 301, but that is the OLD one, shown in the bar for
+     copying and put into history for the back button. A redirect is not a
+     name. Found while moving the permalinks onto board numbers; the theme
+     move's own sweep could not see it because neither line writes the path
+     literally. */
   function permaShow(game, key) {
     if (!game || !key) return;
-    permaWrite("/" + game + "/daily/" + encodeURIComponent(key));
+    permaWrite(pathOfGame(game) + "daily/" + encodeURIComponent(key));
   }
   /* Off a numbered address and back to the game's own. Called when today's
      board is opened, and does nothing anywhere else — leaving /<game>/daily
@@ -943,7 +953,7 @@
   function permaClear(game) {
     if (!game || !PERMA.test(location.pathname || "")) return;
     if (!permaRead()) return;
-    permaWrite("/" + game + "/");
+    permaWrite(pathOfGame(game));
   }
 
   /* Exposed for the games and the suites. account.user() is the session as

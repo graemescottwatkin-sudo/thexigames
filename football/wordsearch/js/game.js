@@ -15,7 +15,7 @@
      the family more time than any layout question: the footer line, the
      console, and the named window variable. If this is not the build just
      deployed, the deploy has not landed — do not start debugging the game. */
-  var BUILD = "v002j";
+  var BUILD = "v002k";
   window.WORDSEARCHXI_BUILD = BUILD;
   try { console.log("Wordsearch XI build " + BUILD); } catch (e) {}
 
@@ -39,6 +39,11 @@
   /* ---- state ----------------------------------------------------------- */
   var mode = "daily";           // daily | free
   var puzzle = null, serverDay = null, catalogBoards = [];
+  /* THE BOARD NUMBER THE SERVER GAVE FOR TODAY. The address is a number since
+     6 September 2026 and this page schedules by day, so the two are held
+     together rather than converted: the server sends both and nothing here
+     works out when day one was. */
+  var serverNo = null;
   var found = new Set(), bonusFound = false;
   /* WHERE EACH FOUND WORD SITS, learned one word at a time.
      The daily's board no longer travels with its placements — the server
@@ -1225,7 +1230,10 @@
   var permaWaiting = null;
   function openPermalink() {
     var key = permalinkKey();
-    if (!key || !/^\d{4}-\d{2}-\d{2}$/.test(key)) return;
+    /* A BOARD NUMBER. It was a day until 6 September 2026, when the family
+       settled on one address shape; a link posted in the old form still lands,
+       because the server 301s it to the number before this page is served. */
+    if (!key || !/^[0-9]{1,6}$/.test(key)) return;
     permaWaiting = key;
     tryPermalink();
   }
@@ -1235,18 +1243,21 @@
     permaWaiting = null;
     /* Today's permalink is today's board, which this page is already
        opening. Nothing to do, and nothing to say. */
-    if (key === serverDay) {
+    var no = Number(key);
+    if (no === serverNo) {
       if (window.XIChrome && window.XIChrome.permalink) window.XIChrome.permalink.clear("wordsearch");
       return;
     }
-    var entry = archiveDays.find(function (e) { return e.day === key; });
+    /* THE ARCHIVE ROW CARRIES ITS OWN NUMBER, from the server. Matching on it
+       rather than converting the number back to a day keeps the epoch in one
+       place, which is the server. */
+    var entry = archiveDays.find(function (e) { return e.no === no; });
     if (!entry) { toast("That board is not available"); return; }
     if (window.XIChrome && window.XIChrome.permalink) {
       window.XIChrome.permalink.show("wordsearch", key);
-      window.XIChrome.permalink.aged("wordsearch",
-        Math.round((Date.parse(serverDay) - Date.parse(key)) / 86400000));
+      window.XIChrome.permalink.aged("wordsearch", (serverNo || 0) - no);
     }
-    openBoard(entry, "PREVIOUS PUZZLE \u00b7 " + dayLabel(key).toUpperCase(),
+    openBoard(entry, "PREVIOUS PUZZLE \u00b7 " + dayLabel(entry.day).toUpperCase(),
       "Free play — only today's board keeps a run going.");
   }
 
@@ -1541,9 +1552,14 @@
         }
         return;
       }
-      /* Opened from the list: the address says which day, so it can be
-         copied out of the bar or shared from the browser's own menu. */
-      if (window.XIChrome && window.XIChrome.permalink) window.XIChrome.permalink.show("wordsearch", day);
+      /* Opened from the list: the address says which board, so it can be
+         copied out of the bar or shared from the browser's own menu. The
+         row's own number, which the server put there — see
+         functions/api/wordsearch/archive.js — because the address is a board
+         number now and this game's schedule is keyed by day. */
+      if (window.XIChrome && window.XIChrome.permalink) {
+        window.XIChrome.permalink.show("wordsearch", String(entry.no));
+      }
       openBoard(entry, "PREVIOUS PUZZLE · " + dayLabel(day).toUpperCase(),
         "Free play — only today's board keeps a run going.");
     };
@@ -1600,7 +1616,7 @@
     /* The server decides the day and hands over the board; the catalog fills
        the browser. Neither response contains a schedule. */
     api("daily").then(function (r) {
-      serverDay = r.day; window.__daily = r.puzzle;
+      serverDay = r.day; serverNo = r.no; window.__daily = r.puzzle;
       if (typeof r.freeArchiveDays === "number") freeArchiveDays = r.freeArchiveDays;
       /* THE TABLE WAITS FOR THE SERVER'S DAY. Mounted here rather than at
          start-up because the day is what picks the season, and picking one

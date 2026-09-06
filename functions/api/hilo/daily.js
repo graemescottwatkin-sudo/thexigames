@@ -1,5 +1,6 @@
 /* GET /api/hilo/daily            today's board
    GET /api/hilo/daily?day=YYYY-MM-DD   a past day's board, as free play
+   GET /api/hilo/daily?no=9             the same board, said the family's way
 
    The SERVER decides what day it is, in UTC. A day sent up is checked against
    today here rather than trusted: the past is open so a missed day can be
@@ -7,6 +8,12 @@
    The board leaves through publicBoard(): names and context for the twelve,
    the first value only, no sources. */
 import { json, bad } from "../../_lib/puzzle.js";
+/* The board NUMBER, which is what a permalink says since 6 September 2026.
+   The page must not do this arithmetic: the server decides what day it is and
+   therefore what board a number means, and a browser that worked it out for
+   itself would be a second answer to that question. So the number comes in and
+   the day goes back out, both through here. */
+import { dailyDayKey, dailyNoForDay } from "../../_lib/daily.js";
 import { loadBank, boardById, todayKey, publicBoard, dayToken } from "../../_lib/hl-board.js";
 import {
   mayOpenArchive, archiveRefusal, daysBack, FREE_ARCHIVE_DAYS,
@@ -15,8 +22,20 @@ import {
 export async function onRequestGet({ request, env }) {
   const url = new URL(request.url);
   const today = todayKey();
-  const asked = url.searchParams.get("day");
-  const day = asked === null ? today : String(asked);
+  /* A BOARD NUMBER OR A DAY, and the number is what the address uses now. Both
+     are accepted: the archive list still works in days, because a schedule
+     does, and a permalink works in numbers, because the family does. They
+     resolve to the same day here rather than in two places. */
+  const askedNo = url.searchParams.get("no");
+  const askedDay = url.searchParams.get("day");
+  let day;
+  if (askedNo !== null) {
+    if (!/^0*[1-9][0-9]{0,5}$/.test(String(askedNo))) return bad("Not a board number.");
+    day = dailyDayKey(Number(askedNo));
+    if (!day) return bad("Not a board number.");
+  } else {
+    day = askedDay === null ? today : String(askedDay);
+  }
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return bad("Not a day.");
   if (day > today) return bad("That day has not come.", 403);
 
@@ -35,8 +54,14 @@ export async function onRequestGet({ request, env }) {
   /* No row for the day: the calendar has run out or has not begun. Said
      plainly, with no board, so the page degrades to the club boards rather
      than to an error. */
-  if (!board) return json({ day, today, board: null, source: bank.source, freeArchiveDays: FREE_ARCHIVE_DAYS });
-  return json({ day, today, board: publicBoard(board, dayToken(day)), source: bank.source, freeArchiveDays: FREE_ARCHIVE_DAYS });
+  /* THE NUMBER GOES BACK WITH THE DAY, so the page can write the address
+     without knowing when day one was. `todayNo` too, because the page's other
+     question is "is this today's board", and asking it in the same units as
+     the address is one comparison rather than two. */
+  const no = dailyNoForDay(day);
+  const todayNo = dailyNoForDay(today);
+  if (!board) return json({ day, no, today, todayNo, board: null, source: bank.source, freeArchiveDays: FREE_ARCHIVE_DAYS });
+  return json({ day, no, today, todayNo, board: publicBoard(board, dayToken(day)), source: bank.source, freeArchiveDays: FREE_ARCHIVE_DAYS });
 }
 
 export async function onRequestHead(ctx) {

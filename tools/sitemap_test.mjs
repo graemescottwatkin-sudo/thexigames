@@ -18,6 +18,11 @@ import { onRequestGet as sitemap } from "../functions/sitemap.xml.js";
 import { permalinkRoute, todayKeyFor, PERMA_GAMES, gamePath, permalinkPath }
   from "../functions/_lib/permalink.js";
 import fs from "node:fs";
+/* The fixture below states which DAYS each schedule holds, because that is
+   what a schedule table holds. The addresses are board numbers now, so the
+   test converts — through the same function the route converts with, since a
+   second copy of the arithmetic is the thing this whole file guards. */
+import { dailyNoForDay } from "../functions/_lib/daily.js";
 
 let pass = 0, fail = 0;
 const t = (n, ok, d) => { ok ? pass++ : fail++; console.log(`${ok ? "  ok  " : "FAIL  "}${n}${d ? "  — " + d : ""}`); };
@@ -74,10 +79,13 @@ t("and no url is listed twice", new Set(locs).size === locs.length,
 
 console.log("\nComplete: every board that exists is in it");
 for (const game of Object.keys(PERMA_GAMES)) {
-  const kind = PERMA_GAMES[game].kind;
-  const want = kind === "number"
+  /* A RING game contributes every board from 1 to today. A SCHEDULED one
+     contributes only the boards whose day it ran — the days in RAN, said as
+     numbers, which is what the address is now. */
+  const want = PERMA_GAMES[game].schedule === "ring"
     ? Array.from({ length: Number(todayKeyFor(game)) }, (_, i) => String(i + 1))
-    : RAN[game === "wordsearch" ? "ws_schedule" : "hl_schedule"];
+    : RAN[game === "wordsearch" ? "ws_schedule" : "hl_schedule"]
+        .map((day) => String(dailyNoForDay(day)));
   const missing = want.filter((k) => !locs.includes(`https://www.thexigames.com${permalinkPath(game, k)}`));
   t(`${game}: all ${want.length} of its boards are listed`, missing.length === 0,
     missing.length ? "missing " + missing.slice(0, 4).join(", ") : want.length + " boards");
@@ -110,15 +118,24 @@ console.log("\nAnd what it must never carry");
 {
   const future = Object.keys(PERMA_GAMES).map((g) => {
     const k = todayKeyFor(g);
-    return `https://www.thexigames.com${permalinkPath(g,
-      PERMA_GAMES[g].kind === "number" ? String(Number(k) + 1) : "2099-01-01")}`;
+    return `https://www.thexigames.com${permalinkPath(g, String(Number(k) + 1))}`;
   });
   t("tomorrow's board is not named", future.every((u) => !locs.includes(u)),
     "the future is shut, and a sitemap naming it leaks the schedule");
   /* A day inside the range but not scheduled: the hole in RAN above. */
-  t("a day a dated game did not run is not named",
-    !locs.includes("https://www.thexigames.com/football/wordsearch/daily/2026-09-02"),
-    "2026-09-02 sits between two days that DID run");
+  /* THE HOLE IN THE SCHEDULE. 2026-09-02 sits between two days the fixture
+     DID run, so it is a board number in range with nothing behind it — the
+     case that separates "lists 1..today" from "lists what exists". Named by
+     its day and converted, so the fixture and the assertion cannot drift. */
+  const hole = permalinkPath("wordsearch", String(dailyNoForDay("2026-09-02")));
+  t("a board whose day a scheduled game did not run is not named",
+    !locs.includes("https://www.thexigames.com" + hole), hole);
+  /* AND THE BOARDS BEFORE A GAME LAUNCHED. HiLo's fixture runs on one day
+     only, so boards 1 to 8 are days it had no board — eight 404s a sitemap
+     would otherwise invite a crawler to spend its budget on. */
+  t("nor are the boards from before a scheduled game began",
+    ![1, 2, 3, 4, 5, 6, 7, 8].some((n) =>
+      locs.includes("https://www.thexigames.com" + permalinkPath("hilo", String(n)))));
   const UNRELEASED = ["quickfire", "missing", "transfer", "kit", "manager", "stadium"];
   t("no unreleased game appears",
     !UNRELEASED.some((g) => locs.some((u) => u.includes("/" + g + "/"))));
