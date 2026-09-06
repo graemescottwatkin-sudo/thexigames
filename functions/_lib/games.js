@@ -15,11 +15,56 @@
 /* Released games only. An id here is a value that can reach the database, so
    an unreleased game must not appear — the same rule the hub and live_check
    already keep about naming unbuilt games. */
-import { dailyKey, dailyDayKey } from "./daily.js";
+import { dailyKey, dailyDayKey, dailyNoForDay } from "./daily.js";
 
 export const GAMES = ["crossword", "wordsearch", "scrambled", "hilo", "vowels"];
 
 export const DEFAULT_GAME = "crossword";
+
+/* ---- WHEN EACH GAME LAUNCHED, and it is one fact in one place -----------
+ *
+ * WHY IT HAD TO BE WRITTEN DOWN. Three separate pages were reasoning about
+ * "before this game existed" and none of them could ask anything:
+ *
+ *   - the word search's "previous puzzles" list offered 238 boards from
+ *     before the game was built, because ws_schedule was pre-filled with two
+ *     years of inventory from 1 January 2026 and the query read every day
+ *     before today as a day the game had run;
+ *   - its ANSWERS pages published 233 boards on the same reasoning, and 233
+ *     of those are scheduled to run in the FUTURE — full placements and the
+ *     secret bonus word, for boards nobody has played yet;
+ *   - every game's archive index and the sitemap listed boards from 1 to
+ *     today, which for Vowels (launched on the 4th) is ten boards from days
+ *     the game did not exist.
+ *
+ * A SCHEDULE CANNOT ANSWER IT. For HiLo the schedule does begin on the launch
+ * day, so it looks like it could — but the word search's begins eight months
+ * early and the three ring games have no schedule at all. It is a fact about
+ * the GAME, not about its storage, so it lives here beside the family list.
+ *
+ * The day a game first served its daily, UTC, as YYYY-MM-DD. Null means not
+ * launched: QuickFire and Grid XI have boards and no page, and the day one of
+ * them launches is the day its date is written here — the same edit that puts
+ * it in GAMES, and the importer reads it rather than being told twice.
+ */
+export const LAUNCHED = {
+  crossword: "2026-08-26",    // day one of the family, the epoch reset
+  wordsearch: "2026-08-27",   // the day after; board #2
+  scrambled: "2026-09-01",    // "takes the number 3 shirt: released"; board #7
+  hilo: "2026-09-03",         // and hl_schedule's own first day agrees
+  vowels: "2026-09-04",       // the fifth shirt; board #10
+  quickfire: null,
+  grid: null,
+};
+
+/* The launch as a board NUMBER, which is what every list is counted in.
+   Null for a game that has not launched, so a caller cannot quietly treat
+   "not launched" as "launched on day one" — which is exactly the reading
+   that put ten boards Vowels never had on its archive page. */
+export function launchNumber(game) {
+  const day = LAUNCHED[game];
+  return day ? dailyNoForDay(day) : null;
+}
 
 /* Anything not on the list is refused rather than coerced. A typo that becomes
    a silently-accepted game id is a row nobody will ever read again. */

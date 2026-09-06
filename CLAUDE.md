@@ -190,6 +190,11 @@ Where facts live — extend these, never copy them:
   game-specific facts go in `results.detail` as JSON).
 - Daily key composition: `dailyKey()` in `functions/_lib/daily.js`, beside
   `ANSWERS_AFTER_DAYS` (the ONE answers window — never restate the number).
+- WHEN EACH GAME LAUNCHED: `LAUNCHED` in `functions/_lib/games.js`, with
+  `launchNumber()` beside it. A schedule cannot answer this — the word
+  search's begins eight months before the game did, and the ring games have
+  no schedule — and three pages were each guessing. Null means not launched,
+  and a caller must not read that as day one.
 - WHICH BOARDS EXIST: `boardKeys()` in `permalink.js` — the sitemap, each
   game's `/archive/` index and the route itself all ask it, so a ring game's
   1..today and a scheduled game's gaps have one answer. It promises nothing
@@ -243,9 +248,15 @@ Where facts live — extend these, never copy them:
   (`..\crosswordxi-source`, `..\wordsearchxi-source`). Never commit them,
   never print answers into anything that ships. The D1 database is the only
   authoritative copy of the crossword bank — treat it accordingly.
-- Answers pages: sealed until `ANSWERS_AFTER_DAYS` past a board's FIRST
-  scheduled day; sealed/unknown/malformed ids get one identical 404
-  (no-store, noindex, zero content).
+- Answers pages: sealed until `ANSWERS_AFTER_DAYS` past a board's first day
+  AS THE DAILY — which is not its first row in a schedule table. The word
+  search's `ws_schedule` holds two years of inventory from 1 January 2026 and
+  the game launched on 27 August, so the older rule published 233 boards that
+  are dailies still to come: names, placements and the secret bonus word, live
+  (found and closed 6 Sep 2026). A board that has never run publishes nothing;
+  whether free play may OPEN it is a different question and still `released()`.
+  Sealed/unknown/malformed ids get one identical 404 (no-store, noindex, zero
+  content).
 - Date/time: the SERVER decides what day it is, in UTC. Never compute a date
   client-side and send it up.
 

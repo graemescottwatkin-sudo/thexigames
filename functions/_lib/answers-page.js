@@ -27,6 +27,7 @@
 import { dailyNumber, answersAvailable, ANSWERS_AFTER_DAYS, dailyDayKey } from "./daily.js";
 import { sitePage, htmlResponse } from "./site-page.js";
 import { gamePath, permalinkPath } from "./permalink.js";
+import { launchNumber } from "./games.js";
 
 const esc = (s) => String(s == null ? "" : s)
   .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -128,22 +129,36 @@ ${nav ? `<p class="sub">${nav}</p>` : ""}
 
 /* ---- which boards are published ----------------------------------------- */
 
-/* FOR A GAME COUNTED IN BOARD NUMBERS. Every number from 1 up to the newest
-   that has aged past the window — asked of answersAvailable rather than
-   computed here, so the seal has one definition. */
-export function publishedNumbers(now = Date.now()) {
+/* FOR A GAME COUNTED IN BOARD NUMBERS. Every number from the game's LAUNCH up
+   to the newest that has aged past the window — asked of answersAvailable
+   rather than computed here, so the seal has one definition.
+ *
+ * FROM THE LAUNCH, NOT FROM ONE, and the difference is four pages per game.
+ * This counted down to board 1 for every game, so Scrambled — launched on
+ * 1 September, board seven — published answers for boards 1 to 4, which are
+ * days it did not exist, and Vowels published the same four. Nobody played
+ * those boards; the ring generates them for any number, which is what made
+ * them look real. The launch is games.js's fact and the game is now named
+ * when this is asked. */
+export function publishedNumbers(game, now = Date.now()) {
   const today = dailyNumber(now);
+  const from = launchNumber(game);
+  if (!from) return [];
   const out = [];
-  for (let no = today; no >= 1; no--) if (answersAvailable(no, today)) out.push(no);
+  for (let no = today; no >= from; no--) if (answersAvailable(no, today)) out.push(no);
   return out;
 }
 
 /* FOR A GAME SCHEDULED BY DAY. Same question, asked in days: a day is
    published when the board number it stands for has aged past the window, so
-   the two kinds of game cannot drift into two different windows. */
-export function dayIsPublished(day, now = Date.now()) {
+   the two kinds of game cannot drift into two different windows. The game is
+   named for the same reason as above — a day before it launched is not a day
+   it ran, whichever way the board is addressed. */
+export function dayIsPublished(game, day, now = Date.now()) {
   const today = dailyNumber(now);
-  for (let no = 1; no <= today; no++) {
+  const from = launchNumber(game);
+  if (!from) return false;
+  for (let no = from; no <= today; no++) {
     if (dailyDayKey(no) === String(day)) return answersAvailable(no, today);
   }
   return false;

@@ -45,6 +45,10 @@
  * nothing, because for them there was never a question.
  */
 import { dailyNumber, dailyDayKey, dailyNoForDay } from "./daily.js";
+/* WHEN EACH GAME LAUNCHED lives in games.js, with the family list. A URL file
+   should not be the place that knows it, and boardKeys is the one thing here
+   that has to ask. */
+import { launchNumber } from "./games.js";
 
 /* THE GAMES. Every one of them is addressed by a BOARD NUMBER counted from the
    family's day one, 26 August 2026 — /football/<game>/daily/12 is 6 September
@@ -220,8 +224,17 @@ export async function boardKeys(env, game, now = Date.now()) {
   if (!g) return [];
   const today = Number(todayKeyFor(game, now));
   if (!Number.isFinite(today) || today < 1) return [];
+  /* NOT FROM ONE. From the day the game LAUNCHED, which is games.js's fact.
+     A ring generates a board for any number, so this listed 1..today for all
+     three ring games — and Vowels launched on 4 September, board ten, so ten
+     of the twelve it offered were days the game did not exist. The route will
+     still serve them, and that is a different question: this is what the site
+     ADVERTISES. A game with no launch day is a game that has not launched,
+     and it advertises nothing. */
+  const from = launchNumber(game);
+  if (!from || from > today) return [];
   if (g.schedule === "ring") {
-    return Array.from({ length: today }, (_, i) => String(i + 1));
+    return Array.from({ length: today - from + 1 }, (_, i) => String(from + i));
   }
   const table = SCHEDULE_TABLE[game];
   if (!table || !env || !env.DB) return [];
@@ -239,7 +252,7 @@ export async function boardKeys(env, game, now = Date.now()) {
   }
   const ran = new Set(days);
   const out = [];
-  for (let i = 1; i <= today; i++) if (ran.has(dailyDayKey(i))) out.push(String(i));
+  for (let i = from; i <= today; i++) if (ran.has(dailyDayKey(i))) out.push(String(i));
   return out;
 }
 

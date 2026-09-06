@@ -8,12 +8,22 @@
  * off the grid by construction. The ONLY secret this game has is the schedule
  * — which board is tomorrow's — and these pages leak nothing about it.
  *
- * THE SEAL. A board's answers publish once its FIRST scheduled day is more
+ * THE SEAL. A board's answers publish once its first day AS THE DAILY is more
  * than ANSWERS_AFTER_DAYS old — the crossword's own constant, imported from
  * the one place it lives. No second seven anywhere: if the window ever
  * changes, both games change together. A board scheduled again later does not
  * re-seal; its answers were public the first time and pretending otherwise
  * would only make the page lie.
+ *
+ * "AS THE DAILY" IS DOING WORK IN THAT SENTENCE, and until 6 September 2026 it
+ * was not. The seal read the first row in ws_schedule, which holds two years
+ * of inventory pre-filled from 1 January 2026 — eight months before the game
+ * launched. So 233 boards looked months old, and every one of them is a daily
+ * still to come: this page was publishing the eleven names, every placement
+ * and the secret bonus word for boards nobody had played. The fix is one fact,
+ * LAUNCHED in games.js, asked through firstRunDay: a day before the game
+ * launched is not a day it ran, and a board whose first run is in the future
+ * is sealed by the same arithmetic that seals yesterday's.
  *
  * THE REFUSAL. A sealed or unknown board gets the same 404: no theme, no
  * names, no hint of whether the id even exists. no-store, noindex — a cached
@@ -25,9 +35,10 @@
  * duplicate content, and a second copy of one fact.
  */
 import { ANSWERS_AFTER_DAYS } from "../../../_lib/daily.js";
-import { hasDB, utcDayKey, boardById, firstScheduledDay } from "../../../_lib/wsdata.js";
+import { hasDB, utcDayKey, boardById, firstRunDay } from "../../../_lib/wsdata.js";
 import { sitePage } from "../../../_lib/site-page.js";
 import { permalinkPath } from "../../../_lib/permalink.js";
+import { LAUNCHED } from "../../../_lib/games.js";
 import { dailyNoForDay } from "../../../_lib/daily.js";
 
 const SITE = "https://www.thexigames.com";
@@ -40,8 +51,19 @@ function daysBetween(fromKey, toKey) {
 }
 
 export function sealedNow(firstDay, todayKey) {
-  /* Never scheduled counts as released — there is no date to protect. */
-  if (firstDay === null) return false;
+  /* A BOARD THAT HAS NEVER RUN HAS NOTHING TO PUBLISH, and this used to say
+     the opposite: never scheduled counted as released, on the argument that
+     an unscheduled board has no date to protect. That argument belongs to the
+     CATALOGUE — whether free play may open the board — and it still governs
+     there, in released(). It does not belong here. This page's claim is "here
+     are the answers to a board that has run", and for a board that has not it
+     is both untrue and a hostage: the schedule is imported two years at a
+     time, and a board with no run today is a daily the moment the next import
+     lands. Sealed, and it costs nothing — a board nobody has played is a board
+     nobody is looking up. */
+  if (firstDay === null) return true;
+  /* A first run still ahead is sealed by this arithmetic too: the difference
+     is negative, which is comfortably inside the window. */
   return daysBetween(firstDay, todayKey) <= ANSWERS_AFTER_DAYS;
 }
 
@@ -116,7 +138,7 @@ export async function onRequestGet({ params, env }) {
        the response never distinguishes "wrong" from "not yet". */
     if (!/^XIWS-\d{4}$/.test(id)) return refusal();
 
-    const first = await firstScheduledDay(env, id);
+    const first = await firstRunDay(env, id);
     if (sealedNow(first, today)) return refusal();
 
     const board = await boardById(env, id);
@@ -148,23 +170,26 @@ ${placementLine(board.bonus.placement)}</div>
   if (parts.length > 1) return refusal();
 
   /* ---- the index -------------------------------------------------------- */
-  /* Publishable = first scheduled day older than the window. One query, and
-     ordered by that day so the list reads newest first, the same as the
-     crossword's. Boards never scheduled do not appear here: they are released
-     by the rule, but a list entry needs a date to stand in. */
+  /* Publishable = first day AS THE DAILY older than the window, which is the
+     same question the single-board seal asks and it must be asked the same
+     way. It was not: this grouped every row in ws_schedule, so the two years
+     of inventory pre-filled from 1 January 2026 counted as days the game had
+     run and the index listed 233 boards that are dailies still to come. The
+     WHERE is the fix — the launch day, bound, so days before the game existed
+     are not in the grouping at all. One query still, ordered newest first.
+     Boards that never run do not appear: they are released by the catalogue's
+     rule, but a list entry needs a date to stand in. */
   let items = [];
   if (hasDB(env)) {
     const q = await env.DB.prepare(
       `SELECT s.puzzle_id AS id, MIN(s.day) AS first, p.theme AS theme
          FROM ws_schedule s JOIN ws_puzzles p ON p.id = s.puzzle_id
+        WHERE s.day >= ?
         GROUP BY s.puzzle_id
        HAVING first < date(?, '-' || ? || ' days')
-        ORDER BY first DESC`).bind(today, ANSWERS_AFTER_DAYS).all();
+        ORDER BY first DESC`).bind(LAUNCHED.wordsearch, today, ANSWERS_AFTER_DAYS).all();
     /* The day is carried through as well as the theme, because a board's
-       PLAYABLE address is its number and the number is that day's. A board
-       whose first day is before the family's day one has no permalink at all
-       - the word search's schedule reaches back to January - so it gets no
-       play link rather than a link to board one. */
+       PLAYABLE address is its number and the number is that day's. */
     items = (q.results || []).map((r) => ({ id: r.id, theme: r.theme, first: r.first }));
   }
 

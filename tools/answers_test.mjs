@@ -19,6 +19,7 @@ import { onRequestGet as hilo } from "../functions/football/hilo/answers/[[path]
 import { onRequestGet as crossword } from "../functions/football/crossword/answers/index.js";
 import { dailyNumber, ANSWERS_AFTER_DAYS, answersAvailable } from "../functions/_lib/daily.js";
 import { publishedNumbers, dayIsPublished } from "../functions/_lib/answers-page.js";
+import { launchNumber } from "../functions/_lib/games.js";
 
 let pass = 0, fail = 0;
 const t = (n, ok, d) => { ok ? pass++ : fail++; console.log(`${ok ? "  ok  " : "FAIL  "}${n}${d ? "  — " + d : ""}`); };
@@ -69,13 +70,23 @@ console.log("\nThe seal is the family's one window");
      behaviour relative to it; duplicating the pin here would give two answers
      to one question. */
   t("and every game agrees on which boards are published",
-    publishedNumbers().every((no) => answersAvailable(no, TODAY)),
-    publishedNumbers().length + " boards past the seal");
+    publishedNumbers("crossword").every((no) => answersAvailable(no, TODAY)),
+    publishedNumbers("crossword").length + " boards past the seal");
+  /* AND THE LIST STARTS WHERE THE GAME DID. The ring generates a board for
+     any number, so before 6 Sep 2026 this published boards 1 to 4 for
+     Scrambled and Vowels — days neither game existed, since one launched on
+     board 7 and the other on board 10. */
+  for (const g of ["crossword", "scrambled", "vowels"]) {
+    const list = publishedNumbers(g);
+    t(`${g}: no published board is from before it launched`,
+      list.every((no) => no >= launchNumber(g)),
+      `launched #${launchNumber(g)}, lowest published #${list.length ? Math.min(...list) : "none"}`);
+  }
   /* A DAY-SCHEDULED GAME ASKS THE SAME QUESTION IN DAYS. HiLo is keyed by day
      and the other two by number; if they had separate rules they would drift
      into two different archives. */
   t("a day is published exactly when its board number is",
-    publishedNumbers().every((no) => dayIsPublished(require_day(no))),
+    publishedNumbers("hilo").every((no) => dayIsPublished("hilo", require_day(no))),
     "HiLo's days and Scrambled's numbers are one window asked twice");
 }
 function require_day(no) {
@@ -114,9 +125,22 @@ console.log("\nA sealed board gives nothing away");
 
 console.log("\nA published board gives its answers, and nothing it should not");
 {
-  const open = publishedNumbers()[publishedNumbers().length - 1];   // the oldest open board
+  const list = publishedNumbers("scrambled");
+  const open = list[list.length - 1];              // the oldest open board
   if (open === undefined) {
-    t("there is a published board to check", false, "no board has aged past the seal yet");
+    /* NOT A SKIP, AND NOT A FAILURE EITHER. Scrambled launched on board 7 and
+       the window is ANSWERS_AFTER_DAYS, so for its first week there is
+       genuinely nothing to publish — which used to be impossible only because
+       the list started at board 1 and published four boards the game never
+       ran. So the empty state is asserted instead, and the arithmetic that
+       will open the first board is asserted directly: the list must begin at
+       the launch once the clock has moved past the window. */
+    const later = publishedNumbers("scrambled", Date.now() + 30 * 86400000);
+    t("the index says the game is new rather than looking broken",
+      (await call(scrambled, [])).text.includes("The game is new"));
+    t("and the first board it will ever publish is the one it launched on",
+      later.length > 0 && Math.min(...later) === launchNumber("scrambled"),
+      `#${later.length ? Math.min(...later) : "none"} vs launch #${launchNumber("scrambled")}`);
   } else {
     const r = await call(scrambled, [String(open)]);
     t("a published board is a page", r.status === 200, String(r.status));

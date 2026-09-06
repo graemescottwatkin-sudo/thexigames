@@ -12,6 +12,7 @@
  *   node wordsearch/answers_test.mjs        (from the repo root)
  */
 import { onRequestGet, sealedNow } from "../../functions/football/wordsearch/answers/[[path]].js";
+import { LAUNCHED } from "../../functions/_lib/games.js";
 import { ANSWERS_AFTER_DAYS } from "../../functions/_lib/daily.js";
 import fs from "node:fs";
 
@@ -49,8 +50,15 @@ function stubEnv(firstDays) {
     bind: (...args) => ({
       first: async () => {
         if (/MIN\(day\)/.test(sql)) {
+          /* THE STUB APPLIES THE LAUNCH BOUND ITSELF, because that is the half
+             of the seal that was missing: the real query is now
+             `WHERE puzzle_id = ? AND day >= ?`, and a stub that ignored the
+             second bind would rubber-stamp exactly the fault this closed —
+             233 boards published because their first row predates the game.
+             args = [id, launch day]. */
           const d = firstDays[args[0]];
-          return d === undefined ? { d: null } : { d };
+          if (d === undefined || d === null) return { d: null };
+          return { d: args[1] && d < args[1] ? null : d };
         }
         if (/FROM ws_puzzles WHERE id/.test(sql)) {
           /* The SEALED board is fetchable too. With only one board stocked,
@@ -68,13 +76,14 @@ function stubEnv(firstDays) {
       },
       all: async () => {
         if (/GROUP BY s.puzzle_id/.test(sql)) {
-          /* The index query: the stub applies the same HAVING rule in JS so a
-             change to the window shows up as a disagreement, not a rubber
-             stamp. args = [today, ANSWERS_AFTER_DAYS]. */
-          const cutoff = new Date(Date.parse(args[0]) - args[1] * 86400000)
+          /* The index query: the stub applies the same WHERE and HAVING rules
+             in JS so a change to either shows up as a disagreement rather than
+             a rubber stamp. args = [launch day, today, ANSWERS_AFTER_DAYS]. */
+          const from = args[0];
+          const cutoff = new Date(Date.parse(args[1]) - args[2] * 86400000)
             .toISOString().slice(0, 10);
           const rows = Object.entries(firstDays)
-            .filter(([, d]) => d !== null && d < cutoff)
+            .filter(([, d]) => d !== null && d >= from && d < cutoff)
             .sort((a, b) => (a[1] < b[1] ? 1 : -1))
             .map(([id, d]) => ({ id, first: d, theme: "Theme for " + id }));
           return { results: rows };
@@ -98,8 +107,15 @@ t(`a board is sealed until it is more than ${ANSWERS_AFTER_DAYS} days old`,
   sealedNow(dayAgo(ANSWERS_AFTER_DAYS), TODAY) === true &&
   sealedNow(dayAgo(ANSWERS_AFTER_DAYS + 1), TODAY) === false,
   "the boundary day stays sealed");
-t("a board never scheduled is released — there is no date to protect",
-  sealedNow(null, TODAY) === false);
+/* CHANGED DELIBERATELY on 6 September 2026, and it was one half of a live
+   leak. This read "a board never scheduled is released — there is no date to
+   protect", which is the CATALOGUE's rule and still is: released() decides
+   whether free play may open a board and answers exactly that way. Publishing
+   its ANSWERS is a different claim, and for a board that has never run it is
+   both untrue and a hostage to the next schedule import. */
+t("a board that has never run as the daily publishes nothing",
+  sealedNow(null, TODAY) === true,
+  "the catalogue's rule is released(); this page is an archive of boards that ran");
 /* THE WINDOW IS THE CROSSWORD'S CONSTANT. A second seven written here would be
    the two games disagreeing about what 'sealed' means the day one changes. */
 t("the window is imported from _lib/daily.js, not restated", (() => {
@@ -159,6 +175,36 @@ t("is served cacheable and indexable",
   /max-age/.test(idx.headers.get("cache-control")) && idxText.indexOf("noindex") === -1);
 t("and links the crossword's answers, because the two archives cross-reference",
   idxText.indexOf("/football/crossword/answers/") > -1);
+
+/* ---- the leak this seal had, closed 6 September 2026 ------------------- */
+/* ws_schedule holds two years of inventory pre-filled from 1 January 2026 and
+   the game launched on 27 August. The seal asked for a board's FIRST row and
+   got a day from months before the game existed, so 233 boards read as long
+   past - and every one of them is a daily still to come. Their answers pages
+   were serving the eleven names, every placement and the secret bonus word.
+   Both halves are checked here: a pre-launch day is not a day it ran, and a
+   board whose first real run is in the future is sealed by the same
+   arithmetic that seals yesterday's. */
+console.log("\nA day before the game launched is not a day it ran");
+{
+  const before = new Date(Date.parse(LAUNCHED.wordsearch + "T00:00:00Z") - 40 * 86400000)
+    .toISOString().slice(0, 10);
+  const ahead = new Date(Date.now() + 120 * 86400000).toISOString().slice(0, 10);
+  const env = stubEnv({
+    "XIWS-0001": before,     // rows only from before the game launched
+    "XIWS-0002": ahead,      // its first real run is months away
+  });
+  const one = await onRequestGet({ params: { path: ["XIWS-0001"] }, env });
+  const two = await onRequestGet({ params: { path: ["XIWS-0002"] }, env });
+  const list = await (await onRequestGet({ params: { path: undefined }, env })).text();
+  t("a board whose only day is before the launch publishes nothing",
+    one.status === 404, before + " - " + one.status);
+  t("nor does one whose first day as the daily is still ahead",
+    two.status === 404, ahead + " - " + two.status);
+  t("and the index names neither of them",
+    list.indexOf("XIWS-0001") === -1 && list.indexOf("XIWS-0002") === -1,
+    "233 future boards were listed here on production");
+}
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

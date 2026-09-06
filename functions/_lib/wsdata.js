@@ -10,7 +10,11 @@
  * sends it up; it asks. Changing a device clock changes nothing.
  */
 import { SAMPLE_PUZZLES, samplePuzzleForDay, sampleFirstDay } from "./ws-sample.js";
-import { utcDay, dailyDayKey } from "./daily.js";
+import { utcDay } from "./daily.js";
+/* WHEN THIS GAME LAUNCHED. One fact, in games.js with the family list —
+   the schedule cannot answer it, because the schedule starts eight months
+   before the game did. */
+import { LAUNCHED } from "./games.js";
 
 export function hasDB(env) { return !!(env && env.DB); }
 
@@ -41,11 +45,47 @@ export async function dailyBoard(env, now) {
 }
 
 /* When a board first appears as a daily. Null means it is never scheduled,
-   which counts as released — an unscheduled board has no date to protect. */
+   which counts as released — an unscheduled board has no date to protect.
+
+   THIS IS THE CATALOGUE'S QUESTION, not the archive's: may this board be
+   opened in free play. It reads every row in the schedule on purpose,
+   including the two years of inventory pre-filled from 1 January 2026, and
+   that is why free play offers the whole catalogue rather than the eleven
+   boards that have run. Do not narrow it — see firstRunDay below, which is
+   the archive's question and a different one. */
 export async function firstScheduledDay(env, id) {
   if (!hasDB(env)) return sampleFirstDay(id);
   const row = await env.DB.prepare(
     `SELECT MIN(day) AS d FROM ws_schedule WHERE puzzle_id = ?`).bind(id).first();
+  return row && row.d ? row.d : null;
+}
+
+/* When a board first RUNS as the daily — the first scheduled day on or after
+   the game LAUNCHED. Null means it never does, which is a catalogue board
+   with no date to protect.
+ *
+ * THE DIFFERENCE BETWEEN THIS AND firstScheduledDay WAS A LEAK, and it was
+ * live. ws_schedule holds 730 days of inventory from 1 January 2026 and the
+ * word search launched on 27 August, so 233 boards had a first row from
+ * months before the game existed — and the answers seal, which asks whether
+ * that first day is more than ANSWERS_AFTER_DAYS old, said yes to every one
+ * of them. All 233 are scheduled to run in the FUTURE: XIWS-0127 is the daily
+ * on 1 January 2027 and its answers page was serving the eleven names, every
+ * placement and the secret bonus word on 6 September 2026. Found while
+ * writing down the launch dates, which is the fact that was missing.
+ *
+ * A day before the game launched is not a day it ran. The launch is games.js's
+ * fact — the schedule cannot answer it, because the schedule starts first. */
+export async function firstRunDay(env, id) {
+  const from = LAUNCHED.wordsearch;
+  if (!from) return null;
+  if (!hasDB(env)) {
+    const d = sampleFirstDay(id);
+    return d && d >= from ? d : null;
+  }
+  const row = await env.DB.prepare(
+    `SELECT MIN(day) AS d FROM ws_schedule WHERE puzzle_id = ? AND day >= ?`)
+    .bind(id, from).first();
   return row && row.d ? row.d : null;
 }
 
@@ -182,12 +222,12 @@ export async function archive(env, now) {
      the archive is bounded by exactly the set that is addressable and the two
      can no longer disagree.
 
-     WHAT THIS DOES NOT FIX, and it is one day rather than 238: the word search
-     went live on 27 August and day one of the family is the 26th, so that
-     board is listed a day before the game served it. Left alone deliberately —
-     removing it needs a per-game launch date, which is a new fact to keep, and
-     the day is addressable, playable and real. */
-  const firstDay = dailyDayKey(1);
+     AND THE LAST DAY OF IT, closed on 6 September: the word search went live
+     on 27 August and day one of the family is the 26th, so this listed one
+     board from the day before the game served anything. That needed a
+     per-game launch date, which now exists — LAUNCHED in games.js — so the
+     bound is the day the game launched rather than the day the family did. */
+  const firstDay = LAUNCHED.wordsearch;
   const rows = await env.DB.prepare(
     `SELECT s.day AS day, p.id AS id, p.theme AS theme, p.category AS category
        FROM ws_schedule s JOIN ws_puzzles p ON p.id = s.puzzle_id

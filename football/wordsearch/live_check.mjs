@@ -23,6 +23,9 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
+/* WHEN THIS GAME LAUNCHED, from the one place it is written. The ceiling on
+   how many boards may be published is counted from it. */
+import { LAUNCHED } from "../../functions/_lib/games.js";
 
 const BASE = "https://www.thexigames.com";
 const expectArg = process.argv.indexOf("--expect");
@@ -56,6 +59,10 @@ const w = (n, d) => { warn++; console.log(`  ??  ${n}${d ? "  — " + d : ""}`);
    Reviewed on 5 Sep when the leak checks were added, rather than raised by
    reflex: it sat at 36 against a run of 57, twenty-one below, which could not
    have refused a whole block going quiet — the one job the floor has. */
+/* Raised from 58 with the published-count assertion added below. Reviewed:
+   the run makes 60 and several sit inside branches that legitimately skip
+   (no sealed board to refuse, no published board to open), so 58 still leaves
+   the skip room and now counts the new one. */
 const MIN_ASSERTIONS = 58;
 let reachedEnd = false, announced = false;
 function incomplete() {
@@ -276,8 +283,28 @@ if (sealedId) {
 const ansIndex = await get("/football/wordsearch/answers/");
 const ansText = ansIndex.status === 200 ? await ansIndex.text() : "";
 t("the answers index is served", ansIndex.status === 200, "HTTP " + ansIndex.status);
-const firstAnswered = (ansText.match(/\/football\/wordsearch\/answers\/(XIWS-\d{4})/) || [])[1];
+const listed = [...new Set([...ansText.matchAll(/\/football\/wordsearch\/answers\/(XIWS-\d{4})/g)]
+  .map((m) => m[1]))];
+const firstAnswered = listed[0];
 t("it lists published boards", !!firstAnswered, firstAnswered);
+/* THE COUNT IS THE CHECK, and it is derived rather than pinned. A board can
+   only be published once it has RUN, so the index can never hold more boards
+   than the game has had days: (today - launch + 1) is the ceiling, and it is
+   generous because a repeat costs a day without adding a board. On 6 September
+   2026 this index listed 233 boards against a ceiling of 11 — the whole
+   two-year schedule, pre-filled from 1 January 2026, read as boards long past
+   when every one of them is a daily still to come. It is the only place the
+   SQL itself is exercised: the offline suite stubs D1, so a bound dropped from
+   the query would pass there and fail here. */
+{
+  const launch = LAUNCHED.wordsearch;
+  const ceiling = Math.floor(
+    (Date.parse(new Date().toISOString().slice(0, 10) + "T00:00:00Z") -
+     Date.parse(launch + "T00:00:00Z")) / 86400000) + 1;
+  t("and never more of them than the game has had days",
+    listed.length <= ceiling,
+    `${listed.length} listed, ${ceiling} days since ${launch}`);
+}
 if (firstAnswered) {
   const one = await get("/football/wordsearch/answers/" + firstAnswered);
   t("a published board's answers are served", one.status === 200);

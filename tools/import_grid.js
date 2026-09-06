@@ -34,6 +34,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { publicText, boardToken } from "../functions/_lib/gd-board.js";
 import { dailyDayKey, dailyNumber } from "../functions/_lib/daily.js";
+import { LAUNCHED } from "../functions/_lib/games.js";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const CHECK_ONLY = process.argv.includes("--check");
@@ -212,7 +213,14 @@ function main() {
   }
   if (refused) { console.error(`\n${refused} board(s) refused. Nothing written.`); process.exit(1); }
 
-  const from = arg("from");
+  /* THE CALENDAR STARTS ON THE DAY THE GAME LAUNCHES, and that day is one
+     fact: LAUNCHED.grid in functions/_lib/games.js, which is null until the
+     launch and is the same line that has to be written anyway. --from still
+     wins, for a re-import that moves the calendar deliberately; what has gone
+     is the third place the launch day would have been typed. Without either,
+     the calendar starts today, which is the placeholder this repo has now and
+     is why the import must be run again at launch. */
+  const from = arg("from") || LAUNCHED.grid || null;
   const schedule = buildSchedule(boards, from);
   const days = Object.keys(schedule).sort();
 

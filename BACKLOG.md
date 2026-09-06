@@ -402,6 +402,33 @@ automatically after every deploy so the window closes itself.
 
 ## Shipped
 
+- **When each game launched, and the leak it was hiding** — 6 Sep. Three
+  pages were reasoning about "before this game existed" with nothing to ask,
+  so `LAUNCHED` now lives in `functions/_lib/games.js` beside the family list:
+  crossword 26 Aug (day one), wordsearch 27 Aug, scrambled 1 Sep, hilo 3 Sep,
+  vowels 4 Sep, and null for the two that have not launched. A schedule cannot
+  answer it — the word search's begins eight months before the game did and
+  the ring games have none.
+  **What it turned up, live on production:** the word search's answers pages
+  were publishing 233 boards that are dailies STILL TO COME — the eleven
+  names, every placement and the secret bonus word. `ws_schedule` holds two
+  years of inventory pre-filled from 1 January 2026, the seal asked for a
+  board's first row in that table, and so every one of them looked months old.
+  XIWS-0127 is the daily on 1 January 2027 and its answers were a public page.
+  The seal now measures from a board's first day AS THE DAILY, and a board
+  that has never run publishes nothing — whether free play may OPEN a board is
+  a different question and is still `released()`, which is unchanged.
+  Also closed with the same fact: Scrambled and Vowels published answers for
+  boards 1-4, which are days neither game existed (the ring generates a board
+  for any number, which is what made them look real); every game's archive
+  index and the sitemap listed boards from 1, so Vowels advertised nine days
+  it did not exist; and the word search's "previous puzzles" list lost the one
+  remaining day it was over — the fix that comment asked for.
+  Proven by sabotage in each of its four uses. The offline suite stubs D1 and
+  therefore cannot catch a bound dropped from the SQL, so the word search's
+  live_check gained the check that can: the index may never list more boards
+  than the game has had days. It read 241 against a ceiling of 11 before this
+  deployed.
 - **12. The board permalink pages are no longer orphans** — 6 Sep. Gap 1 was
   already closed by the generated sitemap, which lists every board across the
   five games and nothing that 404s. Gap 2 was still open and it was the whole

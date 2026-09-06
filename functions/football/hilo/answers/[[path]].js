@@ -64,7 +64,7 @@ export async function onRequestGet({ env, params }) {
 
   const day = parts[0];
   if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return sealed();
-  if (!dayIsPublished(day)) return sealed();
+  if (!dayIsPublished(GAME, day)) return sealed();
 
   const board = boardForDay(bank, day);
   if (!board) return sealed();

@@ -29,7 +29,7 @@ export async function onRequestGet({ env, params }) {
   if (!parts.length) {
     return answersIndex({
       game: GAME, name: NAME,
-      published: publishedNumbers().map((no) => ({
+      published: publishedNumbers(GAME).map((no) => ({
         key: String(no), board: String(no), label: "Board #" + no + " — the eleven",
       })),
     });
@@ -39,7 +39,12 @@ export async function onRequestGet({ env, params }) {
      number, a future one and a sealed one all get the same refusal. */
   if (!/^[1-9][0-9]{0,5}$/.test(parts[0])) return sealed();
   const no = Number(parts[0]);
-  if (!answersAvailable(no, dailyNumber())) return sealed();
+  /* AND NOT A BOARD FROM BEFORE THE GAME LAUNCHED. The ring generates a board
+     for any number, so boards 1 to 6 look exactly like boards this game once
+     ran; it did not, and an answers page for one is a page about a day that
+     never happened. publishedNumbers is the list and this is the same rule
+     asked of one number. */
+  if (!publishedNumbers(GAME).includes(no)) return sealed();
 
   const board = boardForNumber(no, boards);
   if (!board) return sealed();

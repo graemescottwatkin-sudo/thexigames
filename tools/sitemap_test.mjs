@@ -23,7 +23,7 @@ import fs from "node:fs";
    test converts — through the same function the route converts with, since a
    second copy of the arithmetic is the thing this whole file guards. */
 import { dailyNoForDay } from "../functions/_lib/daily.js";
-import { GAMES, BUILT } from "../functions/_lib/games.js";
+import { GAMES, BUILT, launchNumber } from "../functions/_lib/games.js";
 
 let pass = 0, fail = 0;
 const t = (n, ok, d) => { ok ? pass++ : fail++; console.log(`${ok ? "  ok  " : "FAIL  "}${n}${d ? "  — " + d : ""}`); };
@@ -80,13 +80,17 @@ t("and no url is listed twice", new Set(locs).size === locs.length,
 
 console.log("\nComplete: every board that exists is in it");
 for (const game of Object.keys(PERMA_GAMES)) {
-  /* A RING game contributes every board from 1 to today. A SCHEDULED one
-     contributes only the boards whose day it ran — the days in RAN, said as
-     numbers, which is what the address is now. */
+  /* A RING game contributes every board from the day it LAUNCHED to today —
+     not from board 1, which is the family's day one and only the crossword's
+     launch. Vowels launched on board 10, so nine of the twelve numbers a ring
+     answers to are days it did not exist. A SCHEDULED one contributes only
+     the boards whose day it ran, and those days start at its launch anyway. */
+  const from = launchNumber(game);
   const want = PERMA_GAMES[game].schedule === "ring"
-    ? Array.from({ length: Number(todayKeyFor(game)) }, (_, i) => String(i + 1))
+    ? Array.from({ length: Number(todayKeyFor(game)) - from + 1 }, (_, i) => String(from + i))
     : RAN[game === "wordsearch" ? "ws_schedule" : "hl_schedule"]
-        .map((day) => String(dailyNoForDay(day)));
+        .map((day) => String(dailyNoForDay(day)))
+        .filter((no) => Number(no) >= from);
   const missing = want.filter((k) => !locs.includes(`https://www.thexigames.com${permalinkPath(game, k)}`));
   t(`${game}: all ${want.length} of its boards are listed`, missing.length === 0,
     missing.length ? "missing " + missing.slice(0, 4).join(", ") : want.length + " boards");
@@ -137,6 +141,16 @@ console.log("\nAnd what it must never carry");
   t("nor are the boards from before a scheduled game began",
     ![1, 2, 3, 4, 5, 6, 7, 8].some((n) =>
       locs.includes("https://www.thexigames.com" + permalinkPath("hilo", String(n)))));
+  /* AND NOTHING FROM BEFORE A GAME LAUNCHED, for every game rather than for
+     the scheduled ones only. The ring games are the case that was wrong: they
+     answer to any number, so the sitemap offered Vowels boards 1 to 9 —
+     addresses for days the game did not exist. */
+  for (const g of Object.keys(PERMA_GAMES)) {
+    const before = launchNumber(g) - 1;
+    t(`${g}: no board from before it launched (#${launchNumber(g)})`,
+      before < 1 || !locs.includes("https://www.thexigames.com" + permalinkPath(g, String(before))),
+      before < 1 ? "launched on day one" : "#" + before + " is the day before");
+  }
   /* DERIVED, not written down — the same fix chrome_test needed on the same
      day and for the same reason. This list named quickfire and five ideas, and
      Grid XI got a bank, two endpoints and a page without ever joining it, so
