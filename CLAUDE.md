@@ -160,6 +160,14 @@ and diagnose before anything ships. Never push past a red gate.
   (`save_test`, `adopt_test`, `tabs_test` pin their server's Date header to
   it), and ask first whether the page agrees. Where a zone is what is being
   proved, set `process.env.TZ` as fixture — `clock_test` does.
+- **A stubbed database cannot prove a query.** The suites stub D1 and the
+  stubs re-apply each rule in JS, which is right — a stub that rubber-stamped
+  would prove nothing — but it means a bound dropped from real SQL passes
+  offline. Found on 6 Sep 2026: removing the launch bound from the word
+  search's seal left its suite green. What a suite can prove is that the code
+  passes the right binds and reads the results correctly; the QUERY is proved
+  in a live_check, and the check should be DERIVED (the answers index may not
+  list more boards than the game has had days) rather than pinned to an id.
 - **Regexes cannot count and cannot catch rule-bugs.** Anything about SQL
   arity, merge behaviour, or ordering must EXECUTE the real code.
 - Totals only from CI-shaped runs: suites run **from the repo root**, after
