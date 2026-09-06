@@ -261,6 +261,13 @@ jobs:
           # was guessed. Named here from its first day rather than when the
           # game ships: a suite outside the roster is a suite nobody runs.
           node football/grid/rules_test.mjs
+          # Whose clock says what day it is. The page syncs to the Date header of
+          # its own response and counts UTC days from it; the device's calendar
+          # is a fallback for when there is no server to ask. The sync lands
+          # after boot on purpose, so this proves the landing tile catches up
+          # with it — the number was an hour wrong every BST night and only
+          # somebody outside the code could see it.
+          node football/crossword/clock_test.mjs
 
       # node_modules must be gone for this one: it checks the package that
       # would actually be uploaded.

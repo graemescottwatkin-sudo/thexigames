@@ -286,7 +286,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v002z";
+  var BUILD = "v003";
   try {
     window.CROSSWORDXI_BUILD = BUILD;
     console.log("Crossword XI build " + BUILD);
@@ -5587,9 +5587,20 @@
       (Object.keys(rec.letters || {}).length > 0 || (rec.elapsed || 0) > 0);
   }
 
+  /* WHICH DAY THE LANDING TILE WAS DRAWN FOR. The tile is drawn at boot and the
+     server's clock arrives after it — see the sync at the bottom of this file,
+     which deliberately does not hold up the Daily. Until this was recorded
+     nothing compared the two, so on a device whose calendar day runs ahead of
+     UTC the hero said "TODAY · #12" while the server was still serving #11.
+     In the UK that is every night of BST between local and UTC midnight: an
+     hour, every night, of a number that was simply wrong. Reproduced by running
+     engine.js at 23:53 UTC on 5 Sep 2026 with TZ=Europe/London — the device
+     path answers 12 and the trusted path answers 11. */
+  var homeDay = null;
   function renderHome() {
     syncKickSelect();          // fills and syncs the Play as control on this screen
     var today = FCW.dailyNumber();
+    homeDay = today;
     var phase = FCW.dailyPhase(today);
     /* Both the dimming and the badge follow DAILY_OPEN, from here.
 
@@ -7578,6 +7589,14 @@
      the cheat. */
   syncServerDate(function (synced) {
     if (!synced) return;
+    /* THE TILE FIRST, BEFORE ANY QUESTION ABOUT AN OPEN BOARD. Everything
+       below is about a board already in play; the landing screen has none, so
+       it returned early and the hero kept whatever the device clock said. The
+       board that would actually open was always the server's — this is the
+       label catching up with it rather than a change of behaviour. Redrawing
+       is safe to repeat: the club controls are populated on every render and
+       carry one change listener each, which save_test counts. */
+    if (homeDay !== null && today() !== homeDay) renderHome();
     /* Nothing opened yet: board.no is null on the landing screen, and null is
        not today, so without this the sync decided the clock was wrong and
        opened a board nobody had chosen. */
