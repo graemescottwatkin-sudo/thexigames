@@ -15,7 +15,7 @@
  *   - no practice. There is now an archive picker and a finals catalogue; what
  *     is still missing is a practice mode, which this game may never want.
  */
-var BUILD = "v001i";
+var BUILD = "v001j";
 
 (function () {
   "use strict";
@@ -1267,11 +1267,28 @@ var BUILD = "v001i";
     });
   }
 
+  /* ONE VERIFICATION, TWO READERS. The card wants the number and the
+     challenge wants to know it landed; asking twice would post two finishes
+     for one board and time the second from a clock that had already stopped.
+     So the answer is kept and handed to whoever asks. */
+  var verifiedWaiters = [];
+  var verifiedAnswer = null;
+  function whenVerified(fn) {
+    if (verifiedAnswer !== null) { fn(verifiedAnswer); return; }
+    verifiedWaiters.push(fn);
+  }
+  function settleVerified(ok) {
+    verifiedAnswer = !!ok;
+    var list = verifiedWaiters; verifiedWaiters = [];
+    list.forEach(function (fn) { try { fn(verifiedAnswer); } catch (e) {} });
+  }
+
   function verifyScore(local, scoreEl, note) {
     var id = playIdOf();
-    if (!id || !state.board) return;
+    if (!id || !state.board) { settleVerified(false); return; }
     post("finish", { playId: id })
       .then(function (v) {
+        settleVerified(!!(v && v.verified));
         if (!v || !v.verified) return;
         scoreEl.textContent = v.score + " / " + SCORING.MAX_SCORE;
         note.textContent = v.score === local
@@ -1279,7 +1296,7 @@ var BUILD = "v001i";
           : "Verified by the server — " + v.score + " rather than " + local +
             ", timed from when the board was pulled.";
       })
-      .catch(function () { /* the card keeps its own number */ });
+      .catch(function () { settleVerified(false); /* the card keeps its own number */ });
   }
 
   function showResults() {
@@ -1307,6 +1324,23 @@ var BUILD = "v001i";
     vnote.className = "ftLine ftVerified";
     body.appendChild(vnote);
     verifyScore(res.score, score, vnote);
+
+    /* AND THE CHALLENGE, if this board can carry one. Somebody who followed a
+       challenge joins its table; somebody who played on their own is offered
+       the chance to send it. Both need a score the SERVER has verified, so
+       this waits for the same answer verifyScore is waiting for rather than
+       racing it — an entry posted before the play row is scored is refused,
+       and refused silently, which would read as a challenge that does nothing.
+       Only the finals: the server will not make a challenge from a daily, and
+       offering a button that is always refused is worse than no button. */
+    var chal = document.createElement("div");
+    chal.className = "ftChallenge";
+    body.appendChild(chal);
+    if (window.XIChallenge && state.board && state.board.iconic) {
+      whenVerified(function (ok) {
+        if (ok) window.XIChallenge.finished(playIdOf(), chal);
+      });
+    }
 
     var line = document.createElement("p");
     line.className = "ftLine";
@@ -1638,7 +1672,51 @@ var BUILD = "v001i";
     else perma.clear("vowels");
   }
 
-  function boot() { openBoard(askFromUrl()); }
+  /* ---- CHALLENGES, FROM THE SHARED LAYER ---------------------------------
+     The whole flow — the invitation, the name taken before the board opens,
+     the entry at Full Time, the standings — is shared/xi-challenge.js, so this
+     game supplies only what is its own: which game it is, how to open one of
+     its boards from a token, what a board is called, and what its third
+     column means. The crossword had all of this written into its own file,
+     which is why no other game had any of it. */
+  function configureChallenge() {
+    if (!window.XIChallenge) return;
+    window.XIChallenge.configure({
+      /* The name below is rewritten by tools/build_vowels.js when it generates
+         Vowels from this file, so each game tells the server which it is
+         without this one knowing there are two. (The rule is not restated
+         here: the generator would rewrite the restatement too.) */
+      game: "vowels",
+      /* A finals board's token is sc:iconic:<id>, which is the board key the
+         play was banked under — so the server hands back exactly what this
+         needs. A daily token cannot arrive here: the server refuses to make a
+         challenge from a daily. */
+      openByToken: function (token) {
+        var m = /^sc:iconic:(?:c:)?(\d+)$/.exec(String(token || ""));
+        if (!m) { openBoard({ kind: "daily" }, { play: true }); return; }
+        openBoard({ kind: "iconic", id: m[1] }, { play: true });
+      },
+      boardLabel: function () { return "One of the finals"; },
+      /* Scrambled's help is the bench: names bought and hints taken. "Checks"
+         would be the crossword's word for something this game does not have. */
+      column: {
+        label: "Bench",
+        of: function (e) { return (e.reveals || 0) + (e.checks || 0); },
+      },
+    });
+  }
+
+  function boot() {
+    configureChallenge();
+    /* A CHALLENGE OPENS ITS OWN BOARD, so the default one must not be opened
+       underneath it: two boards loading into one page is how the finals card
+       used to arrive on the daily's clock. */
+    var pending = window.XIChallenge && window.XIChallenge.arrive
+      ? window.XIChallenge.arrive() : Promise.resolve(false);
+    pending.then(function (taken) {
+      if (!taken) openBoard(askFromUrl());
+    });
+  }
 
   /* The hero IS the kick off now: one control that says what it opens,
      rather than a card with a button under it. Named, because openBoard also

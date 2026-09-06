@@ -40,7 +40,7 @@ export async function onRequestPost({ request, env }) {
     .bind(id, key).first();
   if (!mine) return json({ played: false });
 
-  const r = await tableFor(env, id);
+  const r = await tableFor(env, id, key);
   if (!r) return bad("Unknown challenge.", 404);
   return json(Object.assign({ played: true }, r));
 }
@@ -59,7 +59,7 @@ export async function onRequestGet({ request, env }) {
 
 /* One query, two callers: the page after Full Time, and somebody who has
    already scored asking how it is going. */
-async function tableFor(env, id) {
+async function tableFor(env, id, mineKey) {
   const c = await env.DB.prepare(
     `SELECT id, theme_id, board_no, creator_name, group_name, play_id
        FROM challenges WHERE id = ? AND hidden = 0`)
@@ -73,7 +73,7 @@ async function tableFor(env, id) {
   /* Score first, then the faster of two equal scores. */
   const rows = await env.DB.prepare(
     `SELECT name, score, elapsed_secs, checks, reveals, play_id, created_at,
-            reveal_letters, reveal_answers, check_answers, check_grids
+            reveal_letters, reveal_answers, check_answers, check_grids, entrant_key
        FROM challenge_entries
       WHERE challenge_id = ? AND hidden = 0
       ORDER BY score DESC, elapsed_secs ASC
@@ -93,6 +93,11 @@ async function tableFor(env, id) {
     started: (started && started.n) || 0,
     entries: (rows.results || []).map((r, i) => ({
       position: i + 1,
+      /* WHICH ROW IS YOURS, as a flag rather than a key. The caller has just
+         told us its own entrant key, so saying "this one is you" gives nothing
+         away — and returning the keys themselves would hand every reader the
+         identity of every entrant in the table. */
+      mine: !!(mineKey && r.entrant_key === mineKey),
       name: r.name,
       score: r.score,
       elapsedSeconds: r.elapsed_secs,

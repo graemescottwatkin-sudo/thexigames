@@ -88,6 +88,13 @@ jobs:
       # archive offers is fetched through the real route in the suite.
       - name: Every board has a page that links it
         run: node tools/archive_test.mjs
+      # The challenge flow every game shares. It lived inside the crossword's
+      # own file, which is why no other game had it; a fault in the shared one
+      # is a fault in five games, so the rule it exists for is checked hardest:
+      # nothing competitive — no score, no standings, no time — before the
+      # board has been played.
+      - name: One challenge flow, for every game
+        run: node tools/challenge_client_test.mjs
 
       # The forward check: what /api/preflight will say about the next
       # fortnight, and the gate in front of it. The nightly workflow runs the

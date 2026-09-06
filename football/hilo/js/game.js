@@ -10,7 +10,7 @@
  * more, 114 the ceiling. This file is the page: the landing the family
  * shares, the ladder of two rows, the clock, the answers list, the share.
  */
-var BUILD = "v002";
+var BUILD = "v002a";
 
 (function () {
   "use strict";
@@ -777,6 +777,13 @@ var BUILD = "v002";
     var id = playIdOf();
     var note = $("ftVerified");
     if (!id || !note) return;
+    /* AND THE CHALLENGE, on the same answer. Asking the server twice would
+       post two finishes for one round and time the second from a clock that
+       had already stopped, so the challenge waits on this one — an entry
+       posted before the play row is scored is refused, silently, which would
+       read as a button that does nothing. Club boards only: the server will
+       not make a challenge from a daily. */
+    var chal = $("ftChallenge");
     fetch("/api/hilo/finish", {
       method: "POST", headers: { "Content-Type": "application/json", "X-XI-Games": "1" },
       credentials: "same-origin",
@@ -784,6 +791,9 @@ var BUILD = "v002";
     }).then(function (r) { return r.ok ? r.json() : null; })
       .then(function (v) {
         if (!v || !v.verified) { note.textContent = ""; return; }
+        if (chal && window.XIChallenge && g && g.mode !== "daily") {
+          window.XIChallenge.finished(playIdOf(), chal);
+        }
         $("ftScore").textContent = v.score;
         note.textContent = v.score === local
           ? "Verified by the server."
@@ -831,8 +841,34 @@ var BUILD = "v002";
   }
 
   /* ---- boot ------------------------------------------------------------ */
+  /* ---- CHALLENGES, FROM THE SHARED LAYER ---------------------------------
+     shared/xi-challenge.js carries the whole flow — the invitation, the name
+     before the board opens, the entry at Full Time, the standings — so this
+     game supplies only what is its own. A CLUB board is what can be
+     challenged: it is never the daily, it is playable whenever, and it is the
+     one somebody would send a friend. Its token is hlb:<id>, which is the
+     board key the play was banked under, so the server hands back exactly
+     what openBoard already takes. */
+  function configureChallenge() {
+    if (!window.XIChallenge) return;
+    window.XIChallenge.configure({
+      game: "hilo",
+      openByToken: function (token) {
+        var m = /^hlb:([A-Za-z0-9_-]{1,40})$/.exec(String(token || ""));
+        if (m) openBoard(m[1], "CHALLENGE");
+      },
+      boardLabel: function () { return "A club board"; },
+      /* NO THIRD COLUMN, DELIBERATELY. The crossword's is checks and reveals
+         and Scrambled's is the bench; HiLo has neither — a call is right or it
+         is not, and that is already the score. A column of blanks under a
+         heading reads as data that failed to load. */
+    });
+  }
+
   function boot() {
     $("buildTag").textContent = BUILD;
+    configureChallenge();
+    if (window.XIChallenge) window.XIChallenge.arrive();
     syncAccount();
     $("homeDaily").onclick = function () {
       if (!todayBoard) { toast("No board today — try the clubs"); return; }

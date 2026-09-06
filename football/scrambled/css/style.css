@@ -592,3 +592,10 @@ body.touch.playing #screenGame {
    of it, and absent on a round nothing could verify. */
 .ftVerified { font-size: 12px; color: var(--ink-faint); margin-top: 2px; }
 .ftVerified:empty { display: none; }
+
+/* Where the shared challenge draws its button and, for a round that came from
+   one, its standings. The panel itself is shared — .xic-panel and .xic-ch-* in
+   shared/xi-chrome.css — and this is only the space it sits in on this game's
+   Full Time card. */
+.ftChallenge { margin-top: 14px; }
+.ftChallenge:empty { display: none; }

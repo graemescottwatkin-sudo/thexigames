@@ -557,3 +557,41 @@ a.xic-slot:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; 
 .xic-cal-key .k.open { border-color: var(--pitch); }
 .xic-cal-key .k.none { border: 0; background: var(--line); }
 .xic-cal-key .k.locked { border-style: dashed; background: none; }
+
+/* ---- THE CHALLENGE PANEL -------------------------------------------------
+   Built by shared/xi-challenge.js, poured into the .xic-panel above. Every
+   game that has a challenge draws the same one — the invitation, the name
+   before the board opens, and the standings after Full Time — so this is
+   where it is styled and there is nowhere else it can be styled differently. */
+.xic-ch-card { text-align: left; }
+.xic-ch-who {
+  font-family: var(--disp); font-weight: 700; font-size: 24px; letter-spacing: .1em;
+  text-transform: uppercase; color: var(--pitch-ink); margin: 0 0 2px;
+}
+.xic-ch-board { margin-bottom: 6px; }
+.xic-ch-count { font-size: 13.5px; color: var(--ink-soft); margin: 0 0 16px; }
+.xic-ch-msg { font-size: 13px; color: var(--danger); margin: 6px 0 0; min-height: 1em; }
+.xic-ch-msg:empty { display: none; }
+.xic-ch-make, .xic-ch-copy { width: 100%; }
+/* The link is shown as well as copied: a clipboard that silently fails on a
+   locked-down browser would otherwise leave nothing to send. */
+.xic-ch-link {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 13px;
+  word-break: break-all; background: var(--paper); border: 1px solid var(--line);
+  border-radius: var(--r-md); padding: 9px 10px; margin: 0 0 8px; color: var(--ink);
+}
+.xic-ch-table { width: 100%; border-collapse: collapse; font-size: 14px; margin: 6px 0 4px; }
+.xic-ch-table th {
+  text-align: left; font-family: var(--disp); font-size: 11px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--ink-faint); padding: 6px 6px; font-weight: 600;
+}
+.xic-ch-table td {
+  padding: 7px 6px; border-bottom: 1px solid var(--line);
+  font-variant-numeric: tabular-nums; color: var(--ink);
+}
+.xic-ch-table tr.me td { font-weight: 700; color: var(--pitch-ink); }
+.xic-ch-standings h3 {
+  font-family: var(--disp); font-weight: 700; font-size: 15px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--pitch-ink);
+  border-bottom: 2px solid var(--pitch-deep); padding-bottom: 4px; margin: 4px 0 8px;
+}

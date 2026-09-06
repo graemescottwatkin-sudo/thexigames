@@ -32,7 +32,7 @@
 
   var R = window.XIGR_RULES;
   var $ = function (id) { return document.getElementById(id); };
-  var BUILD = "v001a";
+  var BUILD = "v001b";
 
   var S = {
     board: null,          // the PUBLIC board: shape, lengths, crossings. No letters.
