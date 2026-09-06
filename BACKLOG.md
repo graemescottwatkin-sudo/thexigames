@@ -424,39 +424,6 @@ As each game's score becomes the server's. HiLo and Scrambled now write
 
 Debt recorded in `football/scrambled/css/style.css`.
 
-### A suite can fail at UTC midnight, and did
-
-Found 5 Sep 2026 at 00:06 UTC, while the theme move was being checked. Two
-suites went red on a tree that had changed nothing about them.
-
-`football/crossword/save_test.mjs` fixes its day number ONCE, at module load,
-from `Date.now()`; the page under test asks the SERVER, which computes it later
-in the run. Across midnight those two disagree by one, the seeded save no
-longer matches the board that loads, and the menu shows nothing. It failed
-three times running at 23:5x-00:0x and passed again at 00:06 with both sides on
-the same day. CI has never caught it because a run has to straddle the
-boundary — which it will, eventually, and then it will look like a real fault
-in the save code.
-
-The fix is for the suite to take ONE reading of the day and hand it to both
-sides, rather than each asking separately. Not done here: it wants a careful
-look at how many suites do the same thing, and it should not ride along with a
-URL migration.
-
-**Wider than recorded, found 6 Sep 2026 at 00:45 BST.** It is not only the
-midnight straddle. The suite reads the day from `Date.now()` against a UTC
-epoch; the PAGE falls back to LOCAL calendar days whenever it has no server
-clock to trust, which is every offline run. So on a UK machine in BST the two
-disagree for the whole hour between local midnight and UTC midnight — 23:00 to
-00:00 UTC, every night, with no straddle needed. Proved rather than reasoned:
-red on the wall clock, `TZ=UTC node football/crossword/save_test.mjs` green on
-the same tree, same minute, 19 passed 0 failed. CI has never seen it because
-the runner's local time IS UTC, which is also why the straddle is the only form
-CI can ever produce. The one-reading fix closes both.
-
-Worth checking at the same time: any suite that computes a day, a board number
-or a schedule position independently of the server it is testing.
-
 ### A shipped tag is unguarded until post_deploy catches up
 
 Found 5 Sep 2026, the hard way. The asset-hash gate refuses changed bytes
@@ -495,6 +462,24 @@ automatically after every deploy so the window closes itself.
 
 ## Shipped
 
+- **A suite could fail at UTC midnight, and did** — 6 Sep. Three suites that
+  drive the crossword in jsdom decided what day it was themselves while the
+  page decided separately, so a run across UTC midnight seeded a fixture for
+  one board and opened another, and — the wider half, found the same night —
+  the page falls back to LOCAL calendar days whenever it has no clock it
+  trusts, which is every offline run, so a machine ahead of UTC disagreed with
+  the fixtures for an hour every evening with no straddle needed. Both were
+  proved rather than reasoned: red on a London wall clock at 00:45 BST, green
+  under `TZ=UTC` on the same tree the same minute. `save_test`, `adopt_test`
+  and `tabs_test` now take ONE reading of the clock and hand it to both sides —
+  the day comes from the server's own `dailyNumber()` and every response the
+  test server sends carries that instant as its `Date` header, which is the
+  channel `syncServerDate` already uses. Each also asks, before anything else,
+  whether the page and the fixtures agree what day it is, so the disagreement
+  is named once instead of surfacing as half a dozen phantom lost saves. Green
+  at UTC+14 and UTC-11; both new checks proved by sabotage. It also removed the
+  epoch scraped out of `daily.js` with a regex in all three — a third and
+  fourth copy of a number that already lives in two places.
 - **13. The theme segment in the URL** — 5 Sep, every game moved to
   /football/<game>/, old paths 301'd with their tails, /football/ 302 to the
   hub. Where a game lives is gamePath/gameDir in permalink.js and nowhere else.

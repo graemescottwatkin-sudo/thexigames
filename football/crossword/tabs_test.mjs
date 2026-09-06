@@ -27,6 +27,7 @@ import { onRequestGet as apiCategories } from "../../functions/api/categories.js
 import { onRequestPost as apiCheck } from "../../functions/api/check-answer.js";
 import { onRequestPost as apiReveal } from "../../functions/api/reveal.js";
 import { onRequestGet as apiStatus } from "../../functions/api/status.js";
+import { dailyNumber } from "../../functions/_lib/daily.js";
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 /* The repository, two levels up: this suite lives at football/<game>/. */
@@ -55,7 +56,7 @@ const server = http.createServer(async (req, res) => {
     });
     const out = await fn({ request, env: {} });
     const body = await out.text();
-    res.writeHead(out.status, { "Content-Type": "application/json" });
+    res.writeHead(out.status, { "Content-Type": "application/json", Date: SERVER_DATE });
     return res.end(body);
   }
   const rel = url.pathname === "/" ? "/index.html" : url.pathname;
@@ -74,20 +75,25 @@ const server = http.createServer(async (req, res) => {
   const SHARED = path.join(ROOT, "shared");
   if ((!file.startsWith(DIR) && !file.startsWith(SHARED)) ||
       !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
-    res.writeHead(404); return res.end("not found");
+    res.writeHead(404, { Date: SERVER_DATE }); return res.end("not found");
   }
-  res.writeHead(200, { "Content-Type": TYPES[path.extname(file)] || "application/octet-stream" });
+  res.writeHead(200, { "Content-Type": TYPES[path.extname(file)] || "application/octet-stream",
+                       Date: SERVER_DATE });
   res.end(fs.readFileSync(file));
 });
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 /* Saves are keyed by board: fcw.v04.daily.<no>. See save_test.mjs. */
-/* Read from the source, like save_test.mjs — a hardcoded epoch here would be a
-   fourth copy of a value that already exists twice. */
-const EPOCH_SRC = fs.readFileSync(path.join(DIR, "../../functions/_lib/daily.js"), "utf8");
-const EM = EPOCH_SRC.match(/const EPOCH = Date\.UTC\((\d+), (\d+), (\d+)\)/);
-const TODAY_NO = Math.max(1, Math.floor(
-  (Date.now() - Date.UTC(+EM[1], +EM[2], +EM[3])) / 86400000) + 1);
+/* ONE READING OF THE CLOCK, HANDED TO BOTH SIDES — the same fix save_test.mjs
+   carries and the reasoning is written out there. The day is read once, from
+   the server's own dailyNumber, and every response this server sends carries
+   that instant as its Date header, which is the channel the page uses to
+   settle what day it is. Two things went with it: the run no longer straddles
+   midnight, and the page no longer falls back to local calendar days that a
+   timezone ahead of UTC would number differently from these fixtures. */
+const NOW = Date.now();
+const SERVER_DATE = new Date(NOW).toUTCString();
+const TODAY_NO = dailyNumber(NOW);
 const SLOT = "fcw.v04.daily." + TODAY_NO;
 
 server.listen(0, "127.0.0.1", async () => {
@@ -131,6 +137,13 @@ server.listen(0, "127.0.0.1", async () => {
   console.log("A reset in another window");
   let dom = await open(null);
   let w = dom.window, $ = (id) => w.document.getElementById(id);
+  /* SLOT is built from TODAY_NO, so a page that has settled on a different day
+     writes somewhere this suite never looks and every check below reads an
+     empty record. Asked once, here, rather than found six times. */
+  t("the page and this suite agree what day it is",
+    w.FCW.dailyNumber() === TODAY_NO,
+    `page #${w.FCW.dailyNumber()}, fixtures #${TODAY_NO}` +
+    (w.FCW.timeState().trusted ? "" : " — the page never got a trusted clock"));
   ($("dailyBtn") || $("homeDaily")).click(); await wait(2500);
   if ($("kickOffBtn")) { $("kickOffBtn").click(); await wait(500); }
   type(w, "BURN"); await wait(1200);

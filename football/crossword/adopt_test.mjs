@@ -29,6 +29,7 @@ import { JSDOM } from "jsdom";
 import { onRequestGet as apiDaily } from "../../functions/api/daily.js";
 import { onRequestGet as apiCategories } from "../../functions/api/categories.js";
 import { onRequestGet as apiStatus } from "../../functions/api/status.js";
+import { dailyNumber } from "../../functions/_lib/daily.js";
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 /* The repository, two levels up: this suite lives at football/<game>/. */
@@ -40,12 +41,15 @@ const TYPES = { ".html": "text/html; charset=utf-8", ".css": "text/css",
   ".js": "text/javascript", ".json": "application/json", ".txt": "text/plain" };
 const REAL = { "/api/daily": apiDaily, "/api/categories": apiCategories, "/api/status": apiStatus };
 
-/* Today's number from the ONE epoch, never restated here. */
-const EPOCH_SRC = fs.readFileSync(path.join(DIR, "../../functions/_lib/daily.js"), "utf8");
-const EM = EPOCH_SRC.match(/const EPOCH = Date\.UTC\((\d+), (\d+), (\d+)\)/);
-if (!EM) throw new Error("Could not read EPOCH from functions/_lib/daily.js");
-const DAILY_EPOCH = Date.UTC(+EM[1], +EM[2], +EM[3]);
-const TODAY_NO = Math.max(1, Math.floor((Date.now() - DAILY_EPOCH) / 86400000) + 1);
+/* ONE READING OF THE CLOCK, HANDED TO BOTH SIDES — the reasoning is written
+   out in save_test.mjs, which had the same fault: this suite decided what day
+   it was and the page decided separately, so a run across UTC midnight, or on
+   a machine in a timezone ahead of UTC with no trusted clock, seeded fixtures
+   for one board and opened another. The instant is read once and every
+   response carries it as the Date header, which is how the page decides. */
+const NOW = Date.now();
+const SERVER_DATE = new Date(NOW).toUTCString();
+const TODAY_NO = dailyNumber(NOW);
 const DAILY_SLOT = "fcw.v04.daily." + TODAY_NO;
 
 /* What the account is holding. Set between page loads. */
@@ -55,7 +59,7 @@ let servedDailyNo = null;
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://127.0.0.1");
   const send = (obj, status = 200) => {
-    res.writeHead(status, { "Content-Type": "application/json" });
+    res.writeHead(status, { "Content-Type": "application/json", Date: SERVER_DATE });
     res.end(JSON.stringify(obj));
   };
   /* The account endpoints, stubbed: this suite is about the client's journey,
@@ -76,7 +80,7 @@ const server = http.createServer(async (req, res) => {
     if (url.pathname === "/api/daily") {
       try { servedDailyNo = JSON.parse(body).dailyNo; } catch (e) {}
     }
-    res.writeHead(out.status, { "Content-Type": "application/json" });
+    res.writeHead(out.status, { "Content-Type": "application/json", Date: SERVER_DATE });
     return res.end(body);
   }
   if (url.pathname.startsWith("/api/")) return send({}, 200);
@@ -96,9 +100,10 @@ const server = http.createServer(async (req, res) => {
   const SHARED = path.join(ROOT, "shared");
   if ((!file.startsWith(DIR) && !file.startsWith(SHARED)) ||
       !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
-    res.writeHead(404); return res.end("not found");
+    res.writeHead(404, { Date: SERVER_DATE }); return res.end("not found");
   }
-  res.writeHead(200, { "Content-Type": TYPES[path.extname(file)] || "application/octet-stream" });
+  res.writeHead(200, { "Content-Type": TYPES[path.extname(file)] || "application/octet-stream",
+                       Date: SERVER_DATE });
   res.end(fs.readFileSync(file));
 });
 
@@ -150,6 +155,14 @@ server.listen(0, "127.0.0.1", async () => {
   t("the board renders", grid.length > 0, grid.length + " cells");
   t("the server's daily number agrees with ours, so no clamp is involved",
     servedDailyNo === TODAY_NO, "served " + servedDailyNo + ", today " + TODAY_NO);
+  /* AND THE PAGE'S AGREES TOO, which is the half that was missing: the line
+     above compares this suite with the endpoint, and both of those count UTC
+     days. The page counts local days until it has a clock it trusts, and it
+     is the page's number that picks the save slot. */
+  t("and so does the page's, so the fixtures name the board it opened",
+    w.FCW.dailyNumber() === TODAY_NO,
+    "page #" + w.FCW.dailyNumber() + ", fixtures #" + TODAY_NO +
+    (w.FCW.timeState().trusted ? "" : " — the page never got a trusted clock"));
   t("and nothing is painted when the account holds no journey",
     Object.keys(painted(w)).length === 0);
 

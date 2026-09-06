@@ -23,10 +23,37 @@ import { onRequestGet as apiCategories } from "../../functions/api/categories.js
 import { onRequestPost as apiCheck } from "../../functions/api/check-answer.js";
 import { onRequestPost as apiReveal } from "../../functions/api/reveal.js";
 import { onRequestGet as apiStatus } from "../../functions/api/status.js";
+import { dailyNumber } from "../../functions/_lib/daily.js";
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 /* The repository, two levels up: this suite lives at football/<game>/. */
 const ROOT = path.join(DIR, "..", "..");
+
+/* ---- ONE READING OF THE CLOCK, HANDED TO BOTH SIDES --------------------
+   The suite decided what day it was and the page decided separately, and
+   the two answered differently twice over. Across UTC midnight the run
+   straddled the boundary: the fixture was seeded for one board and the page
+   loaded the next, so a save "disappeared" and the save code took the blame.
+   And offline — which is every run here — the page falls back to LOCAL
+   calendar days when it has no clock it trusts, so on a machine an hour or
+   fourteen ahead of UTC the two disagreed all evening with no straddle
+   needed. Both were proved, not reasoned: red on the wall clock at 00:45
+   BST on 6 Sep 2026, green under TZ=UTC on the same tree the same minute.
+
+   So the clock is read ONCE, here, and that one instant is what both sides
+   get: TODAY_NO comes from it, and every response this server sends carries
+   it as the Date header — which is the channel the page already uses to
+   decide what day it is (syncServerDate does a HEAD of its own page and
+   reads that header). The page cannot now be told a different day from the
+   one the fixtures were seeded for, and the run is stable across midnight
+   because the instant does not move while it runs.
+
+   The arithmetic is not restated either: dailyNumber() is the server's own,
+   asked about this instant. It used to be reimplemented here from an EPOCH
+   scraped out of daily.js with a regex — a third copy of a number that
+   already lives in two places. */
+const NOW = Date.now();
+const SERVER_DATE = new Date(NOW).toUTCString();
 let pass = 0, fail = 0;
 const t = (n, ok, d) => { ok ? pass++ : fail++; console.log(`${ok ? "  ok  " : "FAIL  "}${n}${d ? "  — " + d : ""}`); };
 
@@ -51,7 +78,7 @@ const server = http.createServer(async (req, res) => {
     });
     const out = await fn({ request, env: {} });
     const body = await out.text();
-    res.writeHead(out.status, { "Content-Type": "application/json" });
+    res.writeHead(out.status, { "Content-Type": "application/json", Date: SERVER_DATE });
     return res.end(body);
   }
   const rel = url.pathname === "/" ? "/index.html" : url.pathname;
@@ -70,9 +97,14 @@ const server = http.createServer(async (req, res) => {
   const SHARED = path.join(ROOT, "shared");
   if ((!file.startsWith(DIR) && !file.startsWith(SHARED)) ||
       !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
-    res.writeHead(404); return res.end("not found");
+    res.writeHead(404, { Date: SERVER_DATE }); return res.end("not found");
   }
-  res.writeHead(200, { "Content-Type": TYPES[path.extname(file)] || "application/octet-stream" });
+  /* THE DATE HEADER IS THE PIN. Node would stamp each response with the clock
+     as it is now; this stamps every one of them with the run's one reading, so
+     the page's syncServerDate lands on the same day the fixtures were built
+     for however long the run takes and whatever the machine's timezone is. */
+  res.writeHead(200, { "Content-Type": TYPES[path.extname(file)] || "application/octet-stream",
+                       Date: SERVER_DATE });
   res.end(fs.readFileSync(file));
 });
 
@@ -83,11 +115,7 @@ const wait = (ms) => new Promise((r) => setTimeout(r, ms));
    overwrote today's and came back blank. These fixtures seed and read the
    keyed slot; the legacy unkeyed one is still READ once as a fallback, which
    the "survives the change" case below covers. */
-const EPOCH_SRC = fs.readFileSync(path.join(DIR, "../../functions/_lib/daily.js"), "utf8");
-const EM = EPOCH_SRC.match(/const EPOCH = Date\.UTC\((\d+), (\d+), (\d+)\)/);
-if (!EM) throw new Error("Could not read EPOCH from functions/_lib/daily.js");
-const DAILY_EPOCH = Date.UTC(+EM[1], +EM[2], +EM[3]);
-const TODAY_NO = Math.max(1, Math.floor((Date.now() - DAILY_EPOCH) / 86400000) + 1);
+const TODAY_NO = dailyNumber(NOW);
 const DAILY_SLOT = "fcw.v04.daily." + TODAY_NO;
 const KEYS = [DAILY_SLOT, "fcw.v04.practice", "fcw.mode", "fcw.results.v1",
   "fcw.usedClues.v1", "fcw.clubPref", "fcw.recent", "fcw.bank", "fcw.filter"];
@@ -99,11 +127,12 @@ const KEYS = [DAILY_SLOT, "fcw.v04.practice", "fcw.mode", "fcw.results.v1",
    and failed after midnight, because renderHome only shows a saved game as in
    progress when it belongs to today — correctly. A fixture that expires is a
    test that reports a fault in the code when the fault is in the fixture. */
-/* Read from the source, not restated here. This was a hardcoded
-   Date.UTC(2026, 7, 16) — a third copy of an epoch that already exists twice
-   and that epoch_test.mjs pins together. Moving the daily to restart at #1
-   broke it, and the failure read as "the menu stopped showing games as in
-   progress" when the code was right and this line was stale.
+/* Asked of the server's own dailyNumber, about the run's one instant — not
+   restated here. This was a hardcoded Date.UTC(2026, 7, 16), then the epoch
+   scraped back out of daily.js with a regex, and both were a third copy of a
+   number that already lives in two places. Moving the daily to restart at #1
+   broke the first, and the failure read as "the menu stopped showing games as
+   in progress" when the code was right and this line was stale.
 
    The comment above warns that a fixture which expires reports a fault in the
    code when the fault is in the fixture. It expired a different way. */
@@ -171,6 +200,23 @@ server.listen(0, "127.0.0.1", async () => {
   console.log("The landing screen");
   let dom = await open({ [DAILY_SLOT]: IN_PROGRESS });
   let w = dom.window, $ = (id) => w.document.getElementById(id);
+
+  /* THE FIRST THING ASKED, because everything after it depends on the answer.
+     Every fixture in this file is seeded for TODAY_NO; if the page has settled
+     on a different day then the save it is looking for is not the save that
+     was seeded, and half a dozen checks report that saves are being lost when
+     nothing is being lost at all — which is precisely what the midnight and
+     timezone flakes looked like from the outside. Asked here, the disagreement
+     is named once rather than discovered six times.
+
+     It also proves the pin works: the page reaches this number through the
+     Date header this server sent, so a page on the machine's own clock in a
+     timezone ahead of UTC fails HERE. Sabotaged by rejecting the HEAD in the
+     fetch stub, which is what an untrusted clock is: red, and it says so. */
+  t("the page and this suite agree what day it is",
+    w.FCW.dailyNumber() === TODAY_NO,
+    `page #${w.FCW.dailyNumber()}, fixtures #${TODAY_NO}` +
+    (w.FCW.timeState().trusted ? "" : " — the page never got a trusted clock"));
 
   t("a seeded game in progress is there to begin with", played(daily(w)),
     `${Object.keys(daily(w).letters).length} letters, ${daily(w).elapsed}s`);

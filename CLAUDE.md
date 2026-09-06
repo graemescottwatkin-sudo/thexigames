@@ -152,6 +152,14 @@ and diagnose before anything ships. Never push past a red gate.
   it by reflex — a floor set to the exact count flaps on a legitimate skip, and
   a floor left alone for five releases stops being able to refuse anything.
   Both floors drifted once already, in the release that introduced them.
+- **A suite must not decide for itself what day it is.** The page decides from
+  the server's Date header and falls back to LOCAL calendar days when it has
+  none; a suite that computes the day from `Date.now()` disagrees with it
+  across UTC midnight and all evening on any machine ahead of UTC, and the
+  disagreement reads as lost saves. Take ONE reading, hand it to both sides
+  (`save_test`, `adopt_test`, `tabs_test` pin their server's Date header to
+  it), and ask first whether the page agrees. Where a zone is what is being
+  proved, set `process.env.TZ` as fixture — `clock_test` does.
 - **Regexes cannot count and cannot catch rule-bugs.** Anything about SQL
   arity, merge behaviour, or ordering must EXECUTE the real code.
 - Totals only from CI-shaped runs: suites run **from the repo root**, after
