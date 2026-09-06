@@ -349,11 +349,27 @@ console.log("\nThe interface keeps the same promise as the endpoints");
     /* .overlay-card was invented by the markup once already and the card
        rendered with no panel at all. A missing class fails silently. */
     const html = fs.readFileSync(path.join(DIR, "index.html"), "utf8");
-    const css = fs.readFileSync(path.join(DIR, "css/style.css"), "utf8");
+    /* EVERY STYLESHEET THE PAGE ACTUALLY LINKS, not this game's alone. The
+       sheet and the month grid moved to shared/xi-chrome.css on 6 Sep 2026 —
+       one component, three copies before that — so a class on this screen can
+       legitimately be defined in the shared layer. Derived from the page's own
+       <link> tags rather than listed here, so a shared file added tomorrow is
+       counted without anyone remembering to add it. */
+    const css = [...html.matchAll(/<link[^>]+href="([^"]+\.css)(?:\?[^"]*)?"/g)]
+      .map((m) => m[1])
+      .filter((href) => !/^https?:/.test(href))
+      .map((href) => href.startsWith("/")
+        ? path.join(DIR, "../..", href.slice(1))
+        : path.join(DIR, href))
+      .filter((f) => fs.existsSync(f))
+      .map((f) => fs.readFileSync(f, "utf8"))
+      .join("\n");
     const block = html.slice(html.indexOf('id="challengeOverlay"'), html.indexOf('id="rotatePrompt"'));
     const names = new Set();
     for (const m of block.matchAll(/class="([^"]+)"/g)) m[1].split(/\s+/).forEach((n) => names.add(n));
-    return [...names].every((n) => css.includes(n));
+    const missing = [...names].filter((n) => !css.includes(n));
+    if (missing.length) console.log("        missing: " + missing.join(", "));
+    return missing.length === 0;
   })());
 
   t("the standings sit above the league table", (() => {

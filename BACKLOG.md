@@ -360,10 +360,6 @@ As each game's score becomes the server's. HiLo and Scrambled now write
 
 ### 9. A universal admin panel
 
-### 10. The shared sheet/calendar CSS lift
-
-Debt recorded in `football/scrambled/css/style.css`.
-
 ### A shipped tag is unguarded until post_deploy catches up
 
 Found 5 Sep 2026, the hard way. The asset-hash gate refuses changed bytes
@@ -402,6 +398,39 @@ automatically after every deploy so the window closes itself.
 
 ## Shipped
 
+- **10. The shared sheet/calendar CSS lift** — 6 Sep. The overlay, the card
+  and the seven-column month grid were written out in the crossword's
+  stylesheet and again in Scrambled's, with a third copy in Vowels because
+  Vowels is generated from Scrambled. One design, three copies: 28 of 33 rules
+  byte-identical once whitespace was normalised, and four of the five
+  differences were ".85" against "0.85". They live once now, as `.xic-sheet*`
+  and `.xic-cal*` in `shared/xi-chrome.css`.
+  **The prefix is not decoration, and the name is not `sheet`.** HiLo uses
+  `.sheet` for its list of calls at full time and every game loads the shared
+  file, so an unprefixed `.sheet` would have turned HiLo's results list into a
+  fixed full-screen overlay — and `.xic-sheet` was already taken by the account
+  sheet the chrome builds. Lifting it in under that name redefined the chrome's
+  and broke the mechanism that opens it; `frontend_test` caught it, because it
+  looks for the account sheet by that class and suddenly found three of the
+  crossword's. It is `.xic-panel*` now.
+  **Left open, deliberately:** the family has two overlay components that look
+  alike — the chrome's account sheet (z-index 210, neutral scrim, centred, hides
+  by the `hidden` attribute) and this one (55, pitch scrim, left, hides by the
+  absence of `.show`). Whether they should be one is a real question; answering
+  it changes how a component on every page looks, which is not what a move
+  commit should do.
+  **A fourth copy turned up in the crossword's own file**: 33 lines of it sat
+  inside `@media (prefers-reduced-motion:reduce)`, pasted in front of the one
+  rule that query was written for. Identical values, so nothing looked wrong —
+  and it would have started looking wrong for reduced-motion players only, the
+  moment this lift removed the copy above it.
+  Two values moved: the scrim is now a token (`--scrim`, because the shared
+  layer may not keep a palette of its own) and `.xic-sheet-empty` takes the
+  crossword's 6px top padding over Scrambled's 10px, which was drift rather
+  than a decision. Everything else is byte-for-byte what it was.
+  As the note it replaced asked: this commit is the move and nothing else.
+  SHARED_TAG v28 -> v29 and every one of the seven games' tags with it, because
+  a page whose bytes change must say so.
 - **The schedule-assumption sweep** — 6 Sep, straight after the answers leak.
   The question asked of every date-keyed read: what does this table mean, and
   does the reader believe it? Four answers were wrong, all the same shape and

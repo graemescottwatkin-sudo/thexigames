@@ -15,7 +15,7 @@
  *   - no practice. There is now an archive picker and a finals catalogue; what
  *     is still missing is a practice mode, which this game may never want.
  */
-var BUILD = "v001h";
+var BUILD = "v001i";
 
 (function () {
   "use strict";
@@ -228,17 +228,17 @@ var BUILD = "v001h";
     var days = new Date(Date.UTC(first.y, first.m + 1, 0)).getUTCDate();
 
     var out = [], i;
-    for (i = 0; i < lead; i++) out.push('<div class="cal-cell empty"></div>');
+    for (i = 0; i < lead; i++) out.push('<div class="xic-cal-cell empty"></div>');
     for (i = 1; i <= days; i++) {
       var no = noForDate(Date.UTC(first.y, first.m, i));
-      var cls = "cal-cell", body = "";
+      var cls = "xic-cal-cell", body = "";
       if (no < 1 || no > today) {
         cls += " none";
       } else if (played[no]) {
         cls += " done";
         /* On its own line under the date: rendered inline, "24" with a score
            of 97 read as "2497". */
-        body = '<b class="cal-score">' +
+        body = '<b class="xic-cal-score">' +
           (played[no].score != null ? played[no].score : "✓") + "</b>";
       } else if (no === today) {
         /* Today is the hero on the landing screen, not something missed — the
@@ -276,7 +276,7 @@ var BUILD = "v001h";
   /* Delegated: the grid is rebuilt on every render, so a handler per cell
      would have to be rebound each time. */
   on("calGrid", "click", function (ev) {
-    var cell = ev.target.closest ? ev.target.closest(".cal-cell") : null;
+    var cell = ev.target.closest ? ev.target.closest(".xic-cal-cell") : null;
     if (!cell || cell.classList.contains("none") || cell.classList.contains("empty")) return;
     var no = Number(cell.getAttribute("data-no"));
     if (!no) return;
@@ -322,7 +322,7 @@ var BUILD = "v001h";
     var box = $("finalsInput");
     if (box) box.focus({ preventScroll: true });
     if (finals) { renderFinals(); return; }
-    $("finalsList").innerHTML = '<div class="sheet-empty">Reading the list…</div>';
+    $("finalsList").innerHTML = '<div class="xic-panel-empty">Reading the list…</div>';
     fetch("/api/scrambled/iconic", {
       headers: { "X-XI-Games": "1" }, credentials: "same-origin"
     })
@@ -333,7 +333,7 @@ var BUILD = "v001h";
       })
       .catch(function () {
         $("finalsList").innerHTML =
-          '<div class="sheet-empty">Could not reach the list. Try again in a moment.</div>';
+          '<div class="xic-panel-empty">Could not reach the list. Try again in a moment.</div>';
       });
   }
   function closeFinals() { $("finalsSheet").classList.remove("show"); }
@@ -353,7 +353,7 @@ var BUILD = "v001h";
     var rows = (finals || []).filter(function (r) { return finalsMatch(r, needle); });
 
     if (!rows.length) {
-      list.innerHTML = '<div class="sheet-empty">Nothing matches &ldquo;' +
+      list.innerHTML = '<div class="xic-panel-empty">Nothing matches &ldquo;' +
         esc(finalsFilter) + "&rdquo;.</div>";
       $("finalsSub").textContent = (finals || []).length + " finals";
       return;

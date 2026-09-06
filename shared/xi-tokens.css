@@ -99,6 +99,14 @@
      sits ON green (white in both modes); --pitch-hover is where a green
      control goes under the pointer, darker in light and lighter in dark. */
   --pitch-ink:#1E6B45; --on-pitch:#FFFFFF; --pitch-hover:#123B27;
+  /* The scrim behind a sheet. Written as a literal in two games' stylesheets
+     and lifted with the sheet itself on 6 Sep 2026; a token because the shared
+     layer is not allowed a palette of its own, and because "the dimming behind
+     a dialog" is a decision the family should make once. Deep pitch at 60%:
+     dark enough to sit the card forward, light enough to see the board under
+     it. One value for both schemes — a scrim that changed with the theme would
+     make the card float in light mode and sink in dark. */
+  --scrim:rgba(18,34,25,.6);
   /* Secondary text ON green — a kicker or a note on the hero. Mint, not
      white at reduced opacity, so it stays a colour rather than a fade. */
   --on-pitch-soft:#9FE1CB;

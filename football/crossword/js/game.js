@@ -286,7 +286,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v003b";
+  var BUILD = "v003c";
   try {
     window.CROSSWORDXI_BUILD = BUILD;
     console.log("Crossword XI build " + BUILD);
@@ -2857,7 +2857,7 @@
 
   /* THE SHEET IS THE CHROME'S. accountToggle stays as the footer's control
      and every route in the game presses it — the toolbar name, the Full Time
-     offer, the settings row — but what it opens is the family's account sheet
+     offer, the settings row — but what it opens is the family's account xic-panel
      in shared/xi-chrome.js: one Google button, one display name, one device
      code, on every game. This file no longer draws any of that. What it still
      owns is its results: the chrome announces a sign-in, a sign-out or a
@@ -6032,7 +6032,7 @@
   function renderThemes() {
     var box = $("themeAvailable"), next = $("themeUpcoming");
     if (!box) return;
-    box.innerHTML = '<div class="sheet-empty">Loading\u2026</div>';
+    box.innerHTML = '<div class="xic-panel-empty">Loading\u2026</div>';
     loadThemes().then(function (d) {
       /* Filled first, and whatever else is on screen. It sat inside the branch
          that runs only when boards exist, so the moment asking for a theme
@@ -6041,8 +6041,8 @@
       fillThemeRequestList(d);
       renderMyRequests(d);
       if (!d.configured || !d.themes.length) {
-        box.innerHTML = '<div class="sheet-empty">No themed boards yet.</div>';
-        next.innerHTML = '<div class="sheet-empty">Nothing scheduled yet.</div>';
+        box.innerHTML = '<div class="xic-panel-empty">No themed boards yet.</div>';
+        next.innerHTML = '<div class="xic-panel-empty">Nothing scheduled yet.</div>';
         return;
       }
 
@@ -6066,17 +6066,17 @@
         .concat(topics.map(function (t) { return topicBlock(t, done, asked); }))
         .join("");
 
-      box.innerHTML = html || '<div class="sheet-empty">No themed boards yet.</div>';
+      box.innerHTML = html || '<div class="xic-panel-empty">No themed boards yet.</div>';
 
       next.innerHTML = d.upcoming.length
         ? d.upcoming.map(function (u) {
             return '<div class="theme-next"><span>' + escapeHtml(u.name) + " #" + u.no +
               '</span><span class="tn-date">' + friendlyDate(u.releaseOn) + "</span></div>";
           }).join("")
-        : '<div class="sheet-empty">Nothing scheduled yet.</div>';
+        : '<div class="xic-panel-empty">Nothing scheduled yet.</div>';
 
     }).catch(function () {
-      box.innerHTML = '<div class="sheet-empty">Could not load the themed boards.</div>';
+      box.innerHTML = '<div class="xic-panel-empty">Could not load the themed boards.</div>';
     });
   }
 
@@ -6994,7 +6994,7 @@
   })();
 
   /* Every route into the account presses accountToggle, and accountToggle
-     opens the chrome's sheet. Four ways in used to open a sheet of this
+     opens the chrome's xic-panel. Four ways in used to open a xic-panel of this
      game's own, one of which remembered to load the sign-in button; now
      there is one sheet and it belongs to the family. */
   on("fxTipYes", "click", function (ev) {
@@ -7268,7 +7268,7 @@
     var days = new Date(first.getFullYear(), first.getMonth() + 1, 0).getDate();
 
     var out = [], i;
-    for (i = 0; i < lead; i++) out.push('<div class="cal-cell empty"></div>');
+    for (i = 0; i < lead; i++) out.push('<div class="xic-cal-cell empty"></div>');
     for (i = 1; i <= days; i++) {
       var date = new Date(first.getFullYear(), first.getMonth(), i);
       var no = FCW.dailyNumber(date);
@@ -7276,7 +7276,7 @@
          before the epoch reports as the first board. Compare the date back to
          be sure this cell really is that board. */
       var real = FCW.dailyDate(no).toDateString() === date.toDateString();
-      var cls = "cal-cell";
+      var cls = "xic-cal-cell";
       var body = "";
       if (!real || no > today) {
         cls += " none";
@@ -7284,7 +7284,7 @@
         cls += " done";
         /* On its own line under the date. Rendered inline they ran together
            and "24" with a score of 97 read as "2497". */
-        body = '<b class="cal-score">' +
+        body = '<b class="xic-cal-score">' +
           (played[no].score != null ? played[no].score : "\u2713") + "</b>";
       } else if (no === today) {
         /* Today is the hero on the landing screen, not an archive entry. Marked
@@ -7304,7 +7304,7 @@
          from inside the game. */
       if (real && no <= today && answersPublished(no)) {
         cls += " ans";
-        body += '<i class="cal-ans" title="Answers published">A</i>';
+        body += '<i class="xic-cal-ans" title="Answers published">A</i>';
       }
       out.push('<button class="' + cls + '" data-no="' + (real ? no : "") + '">' +
         "<span>" + i + "</span>" + body + "</button>");
@@ -7328,7 +7328,7 @@
   /* Delegated: the grid is rebuilt on every render, so a handler per cell would
      have to be rebound each time. */
   on("calGrid", "click", function (ev) {
-    var cell = ev.target.closest ? ev.target.closest(".cal-cell") : null;
+    var cell = ev.target.closest ? ev.target.closest(".xic-cal-cell") : null;
     if (!cell || cell.classList.contains("none") || cell.classList.contains("empty")) return;
     var no = Number(cell.getAttribute("data-no"));
     if (!no) return;

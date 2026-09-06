@@ -429,3 +429,131 @@ a.xic-slot:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; 
 .xic-rc.xic-none {
   background: transparent; border: 1.5px dashed var(--line); box-shadow: none;
 }
+
+/* ==========================================================================
+   THE SHEET, AND THE MONTH GRID INSIDE IT
+   ==========================================================================
+
+   WHY THESE ARE HERE NOW. The crossword and Scrambled each carried this
+   component in their own stylesheet — the same overlay, the same card, the
+   same seven-column calendar — and Vowels carried a third copy because it is
+   generated from Scrambled's. Byte for byte the two sources were the same
+   rules: 28 of 33 identical once whitespace was normalised, and four of the
+   five differences were ".85" against "0.85". That is not two designs, it is
+   one design written down twice, which is the drift this project pays for
+   everywhere else. Recorded as debt in scrambled/css/style.css on the day it
+   was written; this is the lift it asked for.
+
+   AND THE CROSSWORD HELD A THIRD COPY OF ITS OWN. Thirty-three lines of it
+   sat inside `@media (prefers-reduced-motion:reduce)`, where a paste had
+   dropped them in front of the one rule that belonged there
+   (`.toast{transition:none}`). Identical values, so nothing was visibly wrong
+   for anyone — and it would have become visibly wrong the moment this lift
+   removed the copy above it and left that one behind, for players with
+   reduced motion only.
+
+   THE PREFIX IS NOT DECORATION. HiLo uses `.sheet` for something else
+   entirely — the list of calls at full time — and every game loads this file.
+   An unprefixed `.sheet` here would have made HiLo's results list a fixed
+   full-screen overlay. `xic-` is what marks a class the shared layer owns,
+   and the gates already refuse a game that defines one.
+
+   AND IT IS A PANEL, NOT A SHEET, BECAUSE .xic-sheet IS ALREADY TAKEN — fifty
+   lines above, by the account sheet the chrome builds. The two look alike and
+   are not the same component: the account sheet sits at z-index 210 above
+   everything, dims with a neutral black, centres its text and hides by the
+   hidden attribute; this one is the game's own layer at 55, dims with the
+   pitch, reads left and hides by the absence of .show. Lifting this in under
+   the same name redefined the chrome's and broke the mechanism that opens it.
+   frontend_test caught it, because it looks for the account sheet by that
+   class and suddenly found three of the crossword's. Whether the family should
+   have one overlay rather than two is a real question and a separate one:
+   answering it here would change how a component on every page looks, in a
+   commit meant to be a move and nothing else.
+
+   ONE DELIBERATE CHANGE OF VALUE: `.xic-panel-empty` takes the crossword's
+   top padding of 6px. Scrambled's said 10px; it is drift rather than a
+   decision, and one of the two had to win. */
+
+.xic-panel {
+  position: fixed; inset: 0; background: var(--scrim); z-index: 55;
+  display: none; align-items: center; justify-content: center; padding: 18px;
+}
+.xic-panel.show { display: flex; }
+.xic-panel-card {
+  background: var(--card); border-radius: var(--r-lg); max-width: 520px; width: 100%;
+  max-height: 92vh; overflow: auto; padding: 22px 22px 20px; border-top: 6px solid var(--pitch);
+}
+.xic-panel-card h2 {
+  font-family: var(--disp); font-weight: 700; font-size: 26px; letter-spacing: .12em;
+  text-transform: uppercase; color: var(--pitch-ink); margin-bottom: 2px;
+}
+.xic-panel-card h3 {
+  font-family: var(--disp); font-weight: 700; font-size: 15px; letter-spacing: .14em;
+  text-transform: uppercase; color: var(--pitch-ink);
+  border-bottom: 2px solid var(--pitch-deep); padding-bottom: 4px; margin: 0 0 8px;
+}
+.xic-panel-sub { font-size: 12.5px; color: var(--ink-faint); margin-bottom: 16px; }
+.xic-panel-empty { color: var(--ink-soft); font-size: 13.5px; padding: 6px 0 14px; }
+.xic-panel-note { font-size: 11.5px; color: var(--ink-faint); margin-top: 14px; line-height: 1.45; }
+.xic-panel-close { width: 100%; margin-top: 14px; }
+
+/* THE MONTH GRID. A board's only identity is its date, so a date is how you
+   choose one. Three states rather than two: played, still to play, and not
+   yet released — plus locked, for a day behind the free window. */
+.xic-cal-head { display: flex; align-items: center; gap: 10px; margin: 14px 0 10px; }
+.xic-cal-head button {
+  width: 44px; height: 44px; border: 1px solid var(--line); border-radius: var(--r-md);
+  background: var(--card); font-size: 19px; line-height: 1; color: var(--ink-soft);
+}
+.xic-cal-head button[disabled] { opacity: .35; }
+.xic-cal-month {
+  flex: 1; text-align: center; font-family: var(--disp); font-size: 19px; font-weight: 700;
+}
+.xic-cal-dow {
+  display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px;
+  font-size: 11px; color: var(--ink-faint); text-align: center; margin-bottom: 6px;
+}
+.xic-cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.xic-cal-cell {
+  position: relative;
+  aspect-ratio: 1; border-radius: var(--r-md); border: 1px solid var(--line); background: var(--card);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  font-size: 13px; color: var(--ink); min-height: 40px; padding: 0;
+}
+.xic-cal-cell.empty { border: 0; background: none; }
+/* Not released. A dot rather than a number: there is nothing there to choose,
+   and an empty square with a date on it reads as something you failed to do. */
+.xic-cal-cell.none { border: 0; background: none; color: var(--ink-faint); }
+.xic-cal-cell.none::after { content: ""; width: 5px; height: 5px; border-radius: 50%; background: var(--line); }
+.xic-cal-cell.none span { display: none; }
+.xic-cal-cell.open { border-color: var(--pitch); color: var(--pitch); font-weight: 700; }
+.xic-cal-cell.done { background: var(--pitch); border-color: var(--pitch); color: var(--on-pitch); font-weight: 700; }
+.xic-cal-cell.today { box-shadow: 0 0 0 2px var(--sel); }
+/* A DAY BEHIND THE FREE WINDOW. Shown rather than hidden: what is behind the
+   lock is the reason to register, and a day that vanished would say nothing. */
+.xic-cal-cell.locked { border-style: dashed; border-color: var(--line); color: var(--ink-faint); }
+.xic-cal-cell.locked::after { content: "\1F512"; font-size: 8px; line-height: 1; margin-top: 2px; opacity: .75; }
+.xic-cal-cell b { font-size: 9px; font-weight: 700; letter-spacing: .04em; opacity: .85; }
+/* The date and the score are separate lines. Inline, "24" and a score of 97
+   rendered as "2497". */
+.xic-cal-cell span { display: block; line-height: 1.1; }
+.xic-cal-cell .xic-cal-score { display: block; line-height: 1.1; margin-top: 1px; }
+/* The open-book marker: a board whose answers page is published. Bottom
+   corner, small and muted — information, not decoration. */
+.xic-cal-cell .xic-cal-ans {
+  position: absolute; right: 4px; bottom: 3px; font-style: normal;
+  font: 700 9px/1 "Barlow Condensed", "Arial Narrow", Arial, sans-serif;
+  letter-spacing: .05em; color: var(--ink-soft); opacity: .75;
+}
+.xic-cal-cell.done .xic-cal-ans { color: var(--on-pitch); opacity: .8; }
+.xic-cal-key {
+  display: flex; gap: 14px; justify-content: center; margin: 14px 0 4px;
+  font-size: 12px; color: var(--ink-soft); flex-wrap: wrap;
+}
+.xic-cal-key span { display: flex; align-items: center; gap: 6px; }
+.xic-cal-key .k { width: 13px; height: 13px; border-radius: var(--r-xs); border: 1px solid var(--line); display: inline-block; }
+.xic-cal-key .k.done { background: var(--pitch); border-color: var(--pitch); }
+.xic-cal-key .k.open { border-color: var(--pitch); }
+.xic-cal-key .k.none { border: 0; background: var(--line); }
+.xic-cal-key .k.locked { border-style: dashed; background: none; }

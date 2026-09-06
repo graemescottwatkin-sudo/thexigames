@@ -456,136 +456,25 @@ html, body {
 
 /* ---- SHEETS: PREVIOUS BOARDS, AND THE FINALS -------------------------------
 
-   A NOTE ON WHERE THIS LIVES. The crossword carries the same sheet and the
-   same month grid in its own stylesheet, so these rules now exist twice in the
-   family, which is the drift this project pays for everywhere else. The right
-   home is the shared layer beside the chrome. It is not moved here because
-   lifting it means bumping SHARED_TAG for all five games in the same breath as
-   a new feature, and a wide deploy and a new feature should not be one commit.
-   Recorded rather than left to be discovered. */
+   LIFTED, 6 September 2026. The sheet and the month grid were written out here
+   and again in the crossword's stylesheet — one design, two copies, and a
+   third in Vowels because Vowels is generated from this file. They now live
+   once, as .xic-sheet* and .xic-cal* in shared/xi-chrome.css, and this game's
+   markup names them there. What stays below is what is actually this game's:
+   the finals list, and the rows inside a sheet rather than the sheet.
 
-.sheet {
-  position: fixed;
-  inset: 0;
-  background: rgba(18, 34, 25, 0.6);
-  z-index: 55;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  padding: 18px;
-}
-.sheet.show { display: flex; }
-.sheet-card {
-  background: var(--card);
-  border-radius: var(--r-lg);
-  max-width: 520px;
-  width: 100%;
-  max-height: 92vh;
-  overflow: auto;
-  padding: 22px 22px 20px;
-  border-top: 6px solid var(--pitch);
-}
-.sheet-card h3 {
-  font-family: var(--disp);
-  font-weight: 700;
-  font-size: 15px;
-  letter-spacing: 0.14em;
-  text-transform: uppercase;
-  color: var(--pitch-ink);
-  border-bottom: 2px solid var(--pitch-deep);
-  padding-bottom: 4px;
-  margin: 0 0 8px;
-}
-.sheet-sub { font-size: 12.5px; color: var(--ink-faint); margin-bottom: 16px; }
-.sheet-empty { color: var(--ink-soft); font-size: 13.5px; padding: 10px 0 14px; }
-.sheet-note { font-size: 11.5px; color: var(--ink-faint); margin-top: 14px; line-height: 1.45; }
-.sheet-close { width: 100%; margin-top: 14px; }
+   The note that used to be here said the lift was worth doing but should not
+   ride along with a feature, because it bumps SHARED_TAG and every game's tag
+   with it. That is exactly how it was done: this commit carries the move and
+   nothing else. */
+
 
 /* ---- the month grid ---- */
 
-.cal-head { display: flex; align-items: center; gap: 10px; margin: 14px 0 10px; }
-.cal-head button {
-  width: 44px;
-  height: 44px;
-  border: 1px solid var(--line);
-  border-radius: var(--r-md);
-  background: var(--card);
-  font-size: 19px;
-  line-height: 1;
-  color: var(--ink-soft);
-}
-.cal-head button[disabled] { opacity: 0.35; }
-.cal-month {
-  flex: 1;
-  text-align: center;
-  font-family: var(--disp);
-  font-size: 19px;
-  font-weight: 700;
-}
-.cal-dow {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 6px;
-  font-size: 11px;
-  color: var(--ink-faint);
-  text-align: center;
-  margin-bottom: 6px;
-}
-.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
-.cal-cell {
-  position: relative;
-  aspect-ratio: 1;
-  border-radius: var(--r-md);
-  border: 1px solid var(--line);
-  background: var(--card);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  color: var(--ink);
-  min-height: 40px;
-  padding: 0;
-}
-.cal-cell.empty { border: 0; background: none; }
 /* Not released. A dot rather than a number: there is nothing there to choose,
    and an empty square with a date on it reads as something you failed to do. */
-.cal-cell.none { border: 0; background: none; color: var(--ink-faint); }
-.cal-cell.none::after {
-  content: "";
-  width: 5px;
-  height: 5px;
-  border-radius: 50%;
-  background: var(--line);
-}
-.cal-cell.none span { display: none; }
-.cal-cell.open { border-color: var(--pitch); color: var(--pitch); font-weight: 700; }
-.cal-cell.done { background: var(--pitch); border-color: var(--pitch); color: #fff; font-weight: 700; }
-.cal-cell.today { box-shadow: 0 0 0 2px var(--sel); }
 /* The date and the score are separate lines. Inline, a 24th with a score of
    97 rendered as "2497". */
-.cal-cell span { display: block; line-height: 1.1; }
-.cal-cell b { font-size: 9px; font-weight: 700; letter-spacing: 0.04em; opacity: 0.85; }
-.cal-key {
-  display: flex;
-  gap: 14px;
-  justify-content: center;
-  margin: 14px 0 4px;
-  font-size: 12px;
-  color: var(--ink-soft);
-  flex-wrap: wrap;
-}
-.cal-key span { display: flex; align-items: center; gap: 6px; }
-.cal-key .k {
-  width: 13px;
-  height: 13px;
-  border-radius: var(--r-xs);
-  border: 1px solid var(--line);
-  display: inline-block;
-}
-.cal-key .k.done { background: var(--pitch); border-color: var(--pitch); }
-.cal-key .k.open { border-color: var(--pitch); }
-.cal-key .k.none { border: 0; background: var(--line); }
 
 /* ---- the finals list ----
 
@@ -686,19 +575,6 @@ body.touch.playing #screenGame {
    reason to register, and a day that simply vanished from the grid would say
    nothing at all. Quieter than an open day and plainly not a button that
    plays — the padlock is the whole message. */
-.cal-cell.locked {
-  border-style: dashed;
-  border-color: var(--line);
-  color: var(--ink-faint);
-}
-.cal-cell.locked::after {
-  content: "🔒";
-  font-size: 8px;
-  line-height: 1;
-  margin-top: 2px;
-  opacity: .75;
-}
-.cal-key .k.locked { border-style: dashed; background: none; }
 
 /* FULL TIME: THE BOARD STAYS, THE CONTROLS GO. The finished XI is the payoff
    and it used to vanish the moment the last name went in — the results screen

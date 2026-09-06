@@ -845,39 +845,17 @@ body.no-pitch .cell.block{background:var(--grid-block);border-color:var(--grid-b
 .form-mark.W{background:var(--pitch)}
 .form-mark.D{background:var(--draw)}
 .form-mark.L{background:var(--loss)}
-.sheet{
-  position:fixed;inset:0;background:rgba(18,34,25,.6);z-index:55;
-  display:none;align-items:center;justify-content:center;padding:18px;
-}
-.sheet.show{display:flex}
-.sheet-card{
-  background:var(--card);border-radius:var(--r-lg);max-width:520px;width:100%;
-  max-height:92vh;overflow:auto;padding:22px 22px 20px;border-top:6px solid var(--pitch);
-}
-.sheet-card h2{
-  font-family:var(--disp);font-weight:700;font-size:26px;letter-spacing:.12em;
-  text-transform:uppercase;color:var(--pitch-ink);margin-bottom:2px;
-}
-.sheet-sub{font-size:12.5px;color:var(--ink-faint);margin-bottom:16px}
 .stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:18px}
 .stat{border:1px solid var(--line);border-radius:var(--r-md);padding:9px 8px;text-align:center;background:var(--paper)}
 .stat b{display:block;font-family:var(--disp);font-weight:700;font-size:23px;color:var(--pitch-ink);
   font-variant-numeric:tabular-nums;line-height:1.1}
 .stat span{display:block;font-family:var(--disp);font-weight:600;font-size:10px;letter-spacing:.1em;
   text-transform:uppercase;color:var(--ink-soft);margin-top:3px}
-.sheet-card h3{
-  font-family:var(--disp);font-weight:700;font-size:15px;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--pitch-ink);
-  border-bottom:2px solid var(--pitch-deep);padding-bottom:4px;margin:0 0 8px;
-}
 table.history{width:100%;border-collapse:collapse;font-size:13px}
 table.history td{padding:6px 6px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
 table.history td.club{font-weight:600;color:var(--ink)}
 table.history td.pos{text-align:right;font-weight:700;color:var(--pitch-ink)}
 table.history td.dim{color:var(--ink-faint)}
-.sheet-empty{color:var(--ink-soft);font-size:13.5px;padding:6px 0 14px}
-.sheet-note{font-size:11.5px;color:var(--ink-faint);margin-top:14px;line-height:1.45}
-.sheet-close{width:100%;margin-top:14px}
 .toast{
   position:fixed;left:50%;transform:translateX(-50%) translateY(-8px);top:12px;z-index:60;
   background:var(--pitch-deep);color:var(--on-pitch);border-radius:var(--r-md);padding:9px 16px;text-align:center;
@@ -890,40 +868,10 @@ table.history td.dim{color:var(--ink-faint)}
   text-transform:none;font-size:12px;opacity:.85;margin-top:2px}
 .toast.loss{background:var(--danger)}
 .toast.draw{background:var(--xi-ink)}
-@media (prefers-reduced-motion:reduce){.sheet{
-  position:fixed;inset:0;background:rgba(18,34,25,.6);z-index:55;
-  display:none;align-items:center;justify-content:center;padding:18px;
-}
-.sheet.show{display:flex}
-.sheet-card{
-  background:var(--card);border-radius:var(--r-lg);max-width:520px;width:100%;
-  max-height:92vh;overflow:auto;padding:22px 22px 20px;border-top:6px solid var(--pitch);
-}
-.sheet-card h2{
-  font-family:var(--disp);font-weight:700;font-size:26px;letter-spacing:.12em;
-  text-transform:uppercase;color:var(--pitch-ink);margin-bottom:2px;
-}
-.sheet-sub{font-size:12.5px;color:var(--ink-faint);margin-bottom:16px}
-.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:18px}
-.stat{border:1px solid var(--line);border-radius:var(--r-md);padding:9px 8px;text-align:center;background:var(--paper)}
-.stat b{display:block;font-family:var(--disp);font-weight:700;font-size:23px;color:var(--pitch-ink);
-  font-variant-numeric:tabular-nums;line-height:1.1}
-.stat span{display:block;font-family:var(--disp);font-weight:600;font-size:10px;letter-spacing:.1em;
-  text-transform:uppercase;color:var(--ink-soft);margin-top:3px}
-.sheet-card h3{
-  font-family:var(--disp);font-weight:700;font-size:15px;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--pitch-ink);
-  border-bottom:2px solid var(--pitch-deep);padding-bottom:4px;margin:0 0 8px;
-}
-table.history{width:100%;border-collapse:collapse;font-size:13px}
-table.history td{padding:6px 6px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
-table.history td.club{font-weight:600;color:var(--ink)}
-table.history td.pos{text-align:right;font-weight:700;color:var(--pitch-ink)}
-table.history td.dim{color:var(--ink-faint)}
-.sheet-empty{color:var(--ink-soft);font-size:13.5px;padding:6px 0 14px}
-.sheet-note{font-size:11.5px;color:var(--ink-faint);margin-top:14px;line-height:1.45}
-.sheet-close{width:100%;margin-top:14px}
-.toast{transition:none}}
+/* The one rule this query was written for. Thirty-three lines of the sheet
+   and calendar sat between the brace and it, pasted in by accident: a third
+   copy of rules that now live once, in shared/xi-chrome.css. */
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
 /* Overlaid on the foot of the pitch rather than sitting in the flow. It used
    to be a block between the board and the clue lists, so showing it — on every
    Check, every Check All, and twice per New Puzzle while "Getting the puzzle"
@@ -2615,58 +2563,13 @@ body.home-showing .tbar{visibility:hidden}
 /* ============ PREVIOUS PUZZLES CALENDAR ============
    A board's only identity is its date, so a date is how you choose one. Three
    states rather than two: played, still to play, and not yet released. */
-.cal-head{display:flex;align-items:center;gap:10px;margin:14px 0 10px}
-.cal-head button{
-  width:44px;height:44px;border:1px solid var(--line);border-radius:var(--r-md);
-  background:var(--card);font-size:19px;line-height:1;color:var(--ink-soft);
-}
-.cal-head button[disabled]{opacity:.35}
-.cal-month{
-  flex:1;text-align:center;font-family:var(--disp);font-size:19px;font-weight:700;
-}
-.cal-dow{
-  display:grid;grid-template-columns:repeat(7,1fr);gap:6px;
-  font-size:11px;color:var(--ink-faint);text-align:center;margin-bottom:6px;
-}
-.cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}
-.cal-cell{
-  position:relative;
-  aspect-ratio:1;border-radius:var(--r-md);border:1px solid var(--line);background:var(--card);
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  font-size:13px;color:var(--ink);min-height:40px;padding:0;
-}
-.cal-cell.empty{border:0;background:none}
 /* Not released. A dot rather than a number: there is nothing there to choose,
    and an empty square with a date on it reads as something you failed to do. */
-.cal-cell.none{border:0;background:none;color:var(--ink-faint)}
-.cal-cell.none::after{content:"";width:5px;height:5px;border-radius:50%;background:var(--line)}
-.cal-cell.none span{display:none}
-.cal-cell.open{border-color:var(--pitch);color:var(--pitch);font-weight:700}
-.cal-cell.done{background:var(--pitch);border-color:var(--pitch);color:#fff;font-weight:700}
-.cal-cell.today{box-shadow:0 0 0 2px var(--sel)}
-.cal-cell b{font-size:9px;font-weight:700;letter-spacing:.04em;opacity:.85}
-.cal-key{
-  display:flex;gap:14px;justify-content:center;margin:14px 0 4px;
-  font-size:12px;color:var(--ink-soft);flex-wrap:wrap;
-}
-.cal-key span{display:flex;align-items:center;gap:6px}
-.cal-key .k{width:13px;height:13px;border-radius:var(--r-xs);border:1px solid var(--line);display:inline-block}
-.cal-key .k.done{background:var(--pitch);border-color:var(--pitch)}
-.cal-key .k.open{border-color:var(--pitch)}
-.cal-key .k.none{border:0;background:var(--line)}
 /* The date and the score are separate lines. Inline, "24" and a score of 97
    rendered as "2497". */
-.cal-cell span{display:block;line-height:1.1}
-.cal-cell .cal-score{display:block;line-height:1.1;margin-top:1px}
 /* The open-book marker: a board whose answers page is published. Bottom
    corner, small and muted — information, not decoration. The strap's version
    is a link in the board's own line. */
-.cal-cell .cal-ans{
-  position:absolute; right:4px; bottom:3px; font-style:normal;
-  font:700 9px/1 "Barlow Condensed","Arial Narrow",Arial,sans-serif;
-  letter-spacing:.05em; color:var(--ink-soft); opacity:.75;
-}
-.cal-cell.done .cal-ans{ color:#fff; opacity:.8; }
 .strap-ans{ color:inherit; text-decoration:underline; text-underline-offset:2px; }
 
 
@@ -2694,6 +2597,3 @@ body.home-showing .tbar{visibility:hidden}
 /* A DAY BEHIND THE FREE WINDOW. Shown rather than hidden: what is behind the
    lock is the reason to register, and a day that vanished from the grid would
    say nothing at all. */
-.cal-cell.locked{border-style:dashed;border-color:var(--line);color:var(--ink-faint)}
-.cal-cell.locked::after{content:"🔒";font-size:8px;line-height:1;margin-top:2px;opacity:.75}
-.cal-key .k.locked{border-style:dashed;background:none}

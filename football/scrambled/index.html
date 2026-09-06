@@ -26,16 +26,16 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/shared/xi-tokens.css?v=v28">
-<link rel="stylesheet" href="/shared/xi-landing.css?v=v28">
-<link rel="stylesheet" href="/shared/xi-chrome.css?v=v28">
-<link rel="stylesheet" href="/shared/xi-keys.css?v=v28">
-<link rel="stylesheet" href="/shared/xi-share.css?v=v28">
-<link rel="stylesheet" href="/shared/xi-table.css?v=v28">
+<link rel="stylesheet" href="/shared/xi-tokens.css?v=v29">
+<link rel="stylesheet" href="/shared/xi-landing.css?v=v29">
+<link rel="stylesheet" href="/shared/xi-chrome.css?v=v29">
+<link rel="stylesheet" href="/shared/xi-keys.css?v=v29">
+<link rel="stylesheet" href="/shared/xi-share.css?v=v29">
+<link rel="stylesheet" href="/shared/xi-table.css?v=v29">
 <!-- The theme, stamped before first paint: light unless the player chose
      dark, decided in one shared place for every page of the family. -->
-<script src="/shared/xi-theme.js?v=v28"></script>
-<link rel="stylesheet" href="css/style.css?v=v002m">
+<script src="/shared/xi-theme.js?v=v29"></script>
+<link rel="stylesheet" href="css/style.css?v=v002n">
 </head>
 <body>
 
@@ -242,65 +242,65 @@
 <!-- PREVIOUS BOARDS, as a month grid. The same shape the crossword uses, for
      the same reason: a card that opened yesterday's board was one board with
      a plural label, and nothing said which days had been played. -->
-<div class="sheet" id="archiveSheet">
-  <div class="sheet-card">
+<div class="xic-panel" id="archiveSheet">
+  <div class="xic-panel-card">
     <h3>Previous boards</h3>
-    <div class="sheet-sub" id="archiveSub">Every board so far</div>
+    <div class="xic-panel-sub" id="archiveSub">Every board so far</div>
 
-    <div class="cal-head">
+    <div class="xic-cal-head">
       <button id="calPrev" type="button" aria-label="Previous month">&lsaquo;</button>
-      <div class="cal-month" id="calMonth">&mdash;</div>
+      <div class="xic-cal-month" id="calMonth">&mdash;</div>
       <button id="calNext" type="button" aria-label="Next month">&rsaquo;</button>
     </div>
 
-    <div class="cal-dow" aria-hidden="true">
+    <div class="xic-cal-dow" aria-hidden="true">
       <span>M</span><span>T</span><span>W</span><span>T</span>
       <span>F</span><span>S</span><span>S</span>
     </div>
-    <div class="cal-grid" id="calGrid"></div>
+    <div class="xic-cal-grid" id="calGrid"></div>
 
-    <div class="cal-key">
+    <div class="xic-cal-key">
       <span><i class="k done"></i>Played</span>
       <span><i class="k open"></i>To play</span>
       <span><i class="k none"></i>Not yet</span>
       <span><i class="k locked"></i>Sign in</span>
     </div>
 
-    <button class="btn ghost sheet-close" id="archiveClose">Close</button>
+    <button class="btn ghost xic-panel-close" id="archiveClose">Close</button>
   </div>
 </div>
 
 <!-- THE FINALS. Every one in the bank, both XIs of each, grouped by
      competition. Searched rather than paged: it is one list of five fields
      and a box is less to learn than a pager. -->
-<div class="sheet" id="finalsSheet">
-  <div class="sheet-card">
+<div class="xic-panel" id="finalsSheet">
+  <div class="xic-panel-card">
     <h3>Iconic matches</h3>
-    <div class="sheet-sub" id="finalsSub">Finals, both XIs of each</div>
+    <div class="xic-panel-sub" id="finalsSub">Finals, both XIs of each</div>
 
     <input class="fin-search" id="finalsInput" type="search" autocomplete="off"
            placeholder="Search a club, a competition or a year"
            aria-label="Search the finals">
     <div class="fin-list" id="finalsList"></div>
 
-    <p class="sheet-note">These are not dailies and do not count towards a run.</p>
-    <button class="btn ghost sheet-close" id="finalsClose">Close</button>
+    <p class="xic-panel-note">These are not dailies and do not count towards a run.</p>
+    <button class="btn ghost xic-panel-close" id="finalsClose">Close</button>
   </div>
 </div>
 
 <!-- THE SHARED FOOTER, AT TOP LEVEL. It carries the family disclaimer. -->
 <footer class="xic-foot"></footer>
 
-<script src="/shared/xi-seasons.js?v=v28"></script>
-<script src="/shared/xi-clubs.js?v=v28"></script>
-<script src="/shared/xi-table.js?v=v28"></script>
-<script src="/shared/xi-chrome.js?v=v28"></script>
-<script src="/shared/xi-season.js?v=v28"></script>
-<script src="/shared/xi-plays.js?v=v28"></script>
-<script src="/shared/xi-keys.js?v=v28"></script>
-<script src="/shared/xi-share.js?v=v28"></script>
-<script src="js/config.js?v=v002m"></script>
-<script src="js/scoring.js?v=v002m"></script>
-<script src="js/game.js?v=v002m"></script>
+<script src="/shared/xi-seasons.js?v=v29"></script>
+<script src="/shared/xi-clubs.js?v=v29"></script>
+<script src="/shared/xi-table.js?v=v29"></script>
+<script src="/shared/xi-chrome.js?v=v29"></script>
+<script src="/shared/xi-season.js?v=v29"></script>
+<script src="/shared/xi-plays.js?v=v29"></script>
+<script src="/shared/xi-keys.js?v=v29"></script>
+<script src="/shared/xi-share.js?v=v29"></script>
+<script src="js/config.js?v=v002n"></script>
+<script src="js/scoring.js?v=v002n"></script>
+<script src="js/game.js?v=v002n"></script>
 </body>
 </html>

@@ -10,7 +10,7 @@
  * browser is the fault the word search rebuild retired; this game never had it
  * and must not acquire it.
  */
-var BUILD = "v001";
+var BUILD = "v001a";
 
 (function bootstrap() {
   'use strict';

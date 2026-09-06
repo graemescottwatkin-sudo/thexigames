@@ -112,15 +112,15 @@
      width:var(--tap) was invalid, not because it was styled small. Order
      matters — style.css comes after and still wins wherever the crossword
      genuinely differs. -->
-<link rel="stylesheet" href="/shared/xi-tokens.css?v=v28">
-<link rel="stylesheet" href="/shared/xi-landing.css?v=v28">
-<link rel="stylesheet" href="/shared/xi-chrome.css?v=v28">
-<link rel="stylesheet" href="/shared/xi-keys.css?v=v28">
-<link rel="stylesheet" href="/shared/xi-share.css?v=v28">
+<link rel="stylesheet" href="/shared/xi-tokens.css?v=v29">
+<link rel="stylesheet" href="/shared/xi-landing.css?v=v29">
+<link rel="stylesheet" href="/shared/xi-chrome.css?v=v29">
+<link rel="stylesheet" href="/shared/xi-keys.css?v=v29">
+<link rel="stylesheet" href="/shared/xi-share.css?v=v29">
 <!-- The theme, stamped before first paint: light unless the player chose
      dark, decided in one shared place for every page of the family. -->
-<script src="/shared/xi-theme.js?v=v28"></script>
-<link rel="stylesheet" href="css/style.css?v=v003b">
+<script src="/shared/xi-theme.js?v=v29"></script>
+<link rel="stylesheet" href="css/style.css?v=v003c">
 </head>
 <body>
 <!-- The page's only H1, first thing in the body.
@@ -149,10 +149,10 @@
 <!-- Reporting a clue. Recording only which clue was flagged is half the job:
      a fortnight later "clue 0412" says nothing, and the reason is the part that
      tells you whether to reword it or bin it. -->
-<div class="sheet" id="flagSheet">
-  <div class="sheet-card">
+<div class="xic-panel" id="flagSheet">
+  <div class="xic-panel-card">
     <h3>Flag this clue</h3>
-    <div class="sheet-sub" id="flagClueText">&mdash;</div>
+    <div class="xic-panel-sub" id="flagClueText">&mdash;</div>
 
     <div class="flag-reasons" id="flagReasons">
       <button class="btn outline" data-reason="Answer looks wrong">Answer looks wrong</button>
@@ -171,14 +171,14 @@
       <button class="btn secondary" id="flagSend">Flag it</button>
       <button class="btn outline" id="flagCancel">Cancel</button>
     </div>
-    <div class="sheet-note" id="flagMsg"></div>
+    <div class="xic-panel-note" id="flagMsg"></div>
   </div>
 </div>
 
-<div class="sheet" id="adminSheet">
-  <div class="sheet-card">
+<div class="xic-panel" id="adminSheet">
+  <div class="xic-panel-card">
     <h3>Owner tools</h3>
-    <div class="sheet-sub" id="adminSub">&mdash;</div>
+    <div class="xic-panel-sub" id="adminSub">&mdash;</div>
     <table class="status-table"><tbody id="adminBody"></tbody></table>
 
     <div class="admin-group">
@@ -237,7 +237,7 @@
                maxlength="40" title="The specific community or post">
         <button class="btn outline" id="linkMake">Build</button>
       </div>
-      <div class="sheet-note" id="linkOut"></div>
+      <div class="xic-panel-note" id="linkOut"></div>
       <button class="btn outline" id="adminFeatured">Board of the day</button>
       <button class="btn outline" id="adminThemeReqs">Theme requests</button>
       <button class="btn outline" id="adminReports">Show flagged clues</button>
@@ -259,19 +259,19 @@
         it can be played again. Clear everything wipes the whole history and
         every saved game &mdash; a record of nothing played that still refuses
         to let you play would contradict itself.</p>
-      <div class="sheet-note" id="adminMsg"></div>
+      <div class="xic-panel-note" id="adminMsg"></div>
     </div>
 
-    <button class="btn outline sheet-close" id="adminClose">Close</button>
+    <button class="btn outline xic-panel-close" id="adminClose">Close</button>
   </div>
 </div>
 
-<div class="sheet" id="statusSheet">
-  <div class="sheet-card">
+<div class="xic-panel" id="statusSheet">
+  <div class="xic-panel-card">
     <h3>What&rsquo;s live</h3>
-    <div class="sheet-sub" id="statusSub">Checking&hellip;</div>
+    <div class="xic-panel-sub" id="statusSub">Checking&hellip;</div>
     <table class="status-table"><tbody id="statusBody"></tbody></table>
-    <button class="btn outline sheet-close" id="statusClose">Close</button>
+    <button class="btn outline xic-panel-close" id="statusClose">Close</button>
   </div>
 </div>
 
@@ -316,7 +316,7 @@
            placeholder="Dave" aria-label="Your name for the table">
     <button class="btn primary" id="chPlay">Play</button>
     <div class="ch-note">The clock starts when the board opens. It does not pause.</div>
-    <div class="sheet-note" id="chMsg"></div>
+    <div class="xic-panel-note" id="chMsg"></div>
     <!-- A way out. Without it the screen is a one-way door: no back, and the
          challenge stays in the address, so a refresh returns you to it. -->
     <!-- Shown only to somebody who has already scored here. They cannot act on
@@ -618,24 +618,24 @@
 <!-- The account sheet is the chrome's: shared/xi-chrome.js builds one for
      every page, so there is no markup for it here. -->
 
-<div class="sheet" id="statsSheet">
-  <div class="sheet-card">
+<div class="xic-panel" id="statsSheet">
+  <div class="xic-panel-card">
     <h3>My Season</h3>
-    <div class="sheet-sub" id="statsSub"></div>
+    <div class="xic-panel-sub" id="statsSub"></div>
     <!-- The friendlies stay visible once the season starts. A run built in
          August vanishing on Matchday 1 would read as a bug. -->
     <div class="stats-pre" id="statsPreNote" style="display:none"></div>
     <div class="stat-grid" id="statGrid"></div>
     <h3>Recent results</h3>
     <table class="history"><tbody id="historyBody"></tbody></table>
-    <div class="sheet-empty" id="historyEmpty" style="display:none">
+    <div class="xic-panel-empty" id="historyEmpty" style="display:none">
       No Daily results yet. Finish today&rsquo;s puzzle to start your season.
     </div>
-    <div class="sheet-note">
+    <div class="xic-panel-note">
       Saved on this device only &mdash; clearing browser data, private browsing
       or switching device will lose this history. Practice puzzles are not counted.
     </div>
-    <button class="btn primary sheet-close" id="statsClose">Close</button>
+    <button class="btn primary xic-panel-close" id="statsClose">Close</button>
   </div>
 </div>
 
@@ -663,38 +663,38 @@
      and still catchable, missed too long ago. That last distinction is the
      difference between a draw and a loss, and a grid shows it better than a
      list could. -->
-<div class="sheet" id="archiveSheet">
-  <div class="sheet-card">
+<div class="xic-panel" id="archiveSheet">
+  <div class="xic-panel-card">
     <h3>Previous puzzles</h3>
-    <div class="sheet-sub" id="archiveSub">Every daily so far</div>
+    <div class="xic-panel-sub" id="archiveSub">Every daily so far</div>
 
-    <div class="cal-head">
+    <div class="xic-cal-head">
       <button id="calPrev" type="button" aria-label="Previous month">&lsaquo;</button>
-      <div class="cal-month" id="calMonth">August 2026</div>
+      <div class="xic-cal-month" id="calMonth">August 2026</div>
       <button id="calNext" type="button" aria-label="Next month">&rsaquo;</button>
     </div>
 
-    <div class="cal-dow" aria-hidden="true">
+    <div class="xic-cal-dow" aria-hidden="true">
       <span>M</span><span>T</span><span>W</span><span>T</span>
       <span>F</span><span>S</span><span>S</span>
     </div>
-    <div class="cal-grid" id="calGrid"></div>
+    <div class="xic-cal-grid" id="calGrid"></div>
 
-    <div class="cal-key">
+    <div class="xic-cal-key">
       <span><i class="k done"></i>Played</span>
       <span><i class="k open"></i>To play</span>
       <span><i class="k none"></i>Not yet</span>
       <span><i class="k locked"></i>Sign in</span>
     </div>
 
-    <button class="btn ghost sheet-close" id="archiveClose">Close</button>
+    <button class="btn ghost xic-panel-close" id="archiveClose">Close</button>
   </div>
 </div>
 
-<div class="sheet" id="themeSheet">
-  <div class="sheet-card">
+<div class="xic-panel" id="themeSheet">
+  <div class="xic-panel-card">
     <h3>Clubs and themes</h3>
-    <div class="sheet-sub" id="themeSub">A new board every Friday</div>
+    <div class="xic-panel-sub" id="themeSub">A new board every Friday</div>
 
     <h3>Available now</h3>
     <div class="theme-filter">
@@ -713,7 +713,7 @@
       <select id="themeRequestKey" title="Choose a theme to request"></select>
       <button class="btn outline" id="themeRequestBtn">Request</button>
     </div>
-    <div class="sheet-note" id="themeRequestMsg"></div>
+    <div class="xic-panel-note" id="themeRequestMsg"></div>
     <!-- What you have asked for, and a way to take it back. Asking was one tap
          and undoing it was impossible, which the struck-off list made worse:
          a mis-tap became permanent and visibly so. -->
@@ -722,7 +722,7 @@
          emailing about it later is a change of purpose unless the purpose was
          stated when it was collected — and one line here is cheaper than
          deciding later that the requests already gathered cannot be used. -->
-    <div class="sheet-note">
+    <div class="xic-panel-note">
       Request as many as you like — one request each. An account is needed so we
       know who wants what, and we may use it to let you know when a board you
       requested is released.
@@ -1007,7 +1007,7 @@
              aria-label="Who you are sending it to">
       <button class="btn secondary" id="challengeBtn">Challenge</button>
     </div>
-    <div class="sheet-note" id="challengeOut"></div>
+    <div class="xic-panel-note" id="challengeOut"></div>
     <!-- THE SHARE ROW IS THE FAMILY'S. Its buttons, the platforms and the
          copy fallback were this game's alone while the other three had share
          text and nowhere to send it; they are shared/xi-share.js now and every
@@ -1034,7 +1034,7 @@
 
 <footer>
   <button id="statsBtn">My Season</button> &middot; <span id="streakLine"></span><br>
-  Crossword <span class="xi">XI</span> by The <span class="xi">XI</span> Games &middot; unofficial word puzzle &middot; <span id="buildTag">v003b</span> &middot;
+  Crossword <span class="xi">XI</span> by The <span class="xi">XI</span> Games &middot; unofficial word puzzle &middot; <span id="buildTag">v003c</span> &middot;
   <a href="privacy.html">privacy</a> &middot;
   <button id="skipToggle">skip filled: off</button> &middot;
   <button id="bankToggle">letter bank: on</button> &middot;
@@ -1053,16 +1053,16 @@
      aligned_test only grepped for the class, which is true of an element
      sealed inside a hidden container. -->
 <footer class="xic-foot"></footer>
-<script src="/shared/xi-clubs.js?v=v28"></script>
-<script src="/shared/xi-chrome.js?v=v28"></script>
-<script src="/shared/xi-season.js?v=v28"></script>
-<script src="/shared/xi-plays.js?v=v28"></script>
-<script src="/shared/xi-share.js?v=v28"></script>
-<script src="/shared/xi-keys.js?v=v28"></script>
-<script src="/shared/xi-seasons.js?v=v28"></script>
-<script src="/shared/xi-clubs.js?v=v28"></script>
-<script src="/shared/xi-table.js?v=v28"></script>
-<script src="js/engine.js?v=v003b"></script>
-<script src="js/game.js?v=v003b"></script>
+<script src="/shared/xi-clubs.js?v=v29"></script>
+<script src="/shared/xi-chrome.js?v=v29"></script>
+<script src="/shared/xi-season.js?v=v29"></script>
+<script src="/shared/xi-plays.js?v=v29"></script>
+<script src="/shared/xi-share.js?v=v29"></script>
+<script src="/shared/xi-keys.js?v=v29"></script>
+<script src="/shared/xi-seasons.js?v=v29"></script>
+<script src="/shared/xi-clubs.js?v=v29"></script>
+<script src="/shared/xi-table.js?v=v29"></script>
+<script src="js/engine.js?v=v003c"></script>
+<script src="js/game.js?v=v003c"></script>
 </body>
 </html>
