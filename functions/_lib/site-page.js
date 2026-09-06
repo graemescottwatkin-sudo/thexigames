@@ -28,16 +28,19 @@ const MAST = {
   crossword: {
     name: "Crossword", home: "/football/crossword/",
     nav: [["Today", "/football/crossword/"], ["Clubs", "/football/crossword/clubs/"],
+          ["Archive", "/football/crossword/archive/"],
           ["Answers", "/football/crossword/answers/"], ["How to play", "/football/crossword/how-to-play"]],
   },
   wordsearch: {
     name: "Wordsearch", home: "/football/wordsearch/",
     nav: [["Today", "/football/wordsearch/"], ["Themes", "/football/wordsearch/themes/"],
+          ["Archive", "/football/wordsearch/archive/"],
           ["Answers", "/football/wordsearch/answers/"], ["How to play", "/football/crossword/how-to-play"]],
   },
   hilo: {
     name: "HiLo", home: "/football/hilo/",
     nav: [["Today", "/football/hilo/"], ["Clubs", "/football/hilo/clubs/"],
+          ["Archive", "/football/hilo/archive/"],
           ["Answers", "/football/hilo/answers/"], ["How to play", "/football/hilo/#how"]],
   },
   /* Scrambled and Vowels had no server-rendered page at all until their
@@ -45,12 +48,14 @@ const MAST = {
      with no masthead is a page a player cannot get back from. */
   scrambled: {
     name: "Scrambled", home: "/football/scrambled/",
-    nav: [["Today", "/football/scrambled/"], ["Answers", "/football/scrambled/answers/"],
+    nav: [["Today", "/football/scrambled/"], ["Archive", "/football/scrambled/archive/"],
+          ["Answers", "/football/scrambled/answers/"],
           ["How to play", "/football/crossword/how-to-play"]],
   },
   vowels: {
     name: "Vowels", home: "/football/vowels/",
-    nav: [["Today", "/football/vowels/"], ["Answers", "/football/vowels/answers/"],
+    nav: [["Today", "/football/vowels/"], ["Archive", "/football/vowels/archive/"],
+          ["Answers", "/football/vowels/answers/"],
           ["How to play", "/football/crossword/how-to-play"]],
   },
 };

@@ -52,7 +52,12 @@ let pass = 0, fail = 0, warn = 0;
    Reviewed on 5 Sep, when the floor was moved to the end of the file and could
    see the whole run for the first time: it sat at 37 against a run of 48, and
    before the move it was measuring a partial run anyway. */
-const MIN_ASSERTIONS = 47;
+/* Raised from 47 on 6 Sep 2026, with five assertions added for the archive
+   page. Reviewed rather than bumped by reflex: the run makes 53 and three of
+   them are inside the "is today's board sealed" branch, which legitimately
+   skips when /api/daily cannot be read — so 49 leaves the skip room and one
+   spare, and no more. */
+const MIN_ASSERTIONS = 49;
 let reachedEnd = false, announced = false;
 function incomplete() {
   if (announced) return;
@@ -417,14 +422,52 @@ console.log(`
   t("and offered to a crawler with a line of its own",
     !/noindex/.test(html) && /name="description" content="[^"]*\d{4}"?/.test(html));
 
-  /* THE ONLY CRAWLABLE LINK A PERMALINK HAS. These pages are indexable by
-     the owner's decision, and nothing else on the site points at one — an
-     answers page is where a reader who wants to play that board is, and it
-     is a page that is already indexed. */
+  /* WHAT LINKS A PERMALINK, checked on production because that is the only
+     place it counts. It used to be one thing: a published answers page linked
+     the board it was about, and nothing else on the site pointed at a board at
+     all — five links for hundreds of addresses, and only ever the ones whose
+     answers had aged past the seal. */
   const ans = await fetch(HUB + "/football/crossword/answers/1");
   const ansHtml = ans.status === 200 ? await ans.text() : "";
   t("a published answers page links the board it is about",
     ansHtml.includes('href="/football/crossword/daily/1"'), String(ans.status));
+
+  /* AND THE ARCHIVE, which is the page that links ALL of them. Asked of the
+     live site rather than the tree: the suite proves the page is built right,
+     this proves it is being served and that its links are real. */
+  const arc = await fetch(HUB + "/football/crossword/archive/");
+  const arcHtml = arc.status === 200 ? await arc.text() : "";
+  const arcLinks = [...arcHtml.matchAll(/href="(\/football\/crossword\/daily\/\d+)"/g)]
+    .map((m) => m[1]);
+  t("the archive index is served", arc.status === 200, `HTTP ${arc.status}`);
+  /* EVERY BOARD, and the count comes from the Link header read above rather
+     than from a second call: the crossword's ring has a board for every number
+     from one to today, so today's number IS how many boards there are. */
+  t("and links every board the game has had",
+    arcLinks.length === Number(key || 0) && arcLinks.length > 0,
+    `${arcLinks.length} links, today is #${key}`);
+  /* THE STATUS IS PART OF THE CLAIM. Written without it, this read an empty
+     body from a 404 and passed — "no noindex in nothing" is true of every
+     page that does not exist, which is the vacuous check this project has
+     found six times and looks exactly like this one did. */
+  t("and is offered to a crawler rather than hidden from one",
+    arc.status === 200 && !/noindex/.test(arcHtml) &&
+    !/noindex/.test(arc.headers.get("x-robots-tag") || ""),
+    "an archive nobody may index is an archive nobody will find");
+  /* THE LINK IS REAL, not merely present: the first one is followed. */
+  const firstBoard = arcLinks.length ? await fetch(HUB + arcLinks[0], { redirect: "manual" }) : null;
+  t("and the board at the top of it opens",
+    !!firstBoard && firstBoard.status === 200,
+    firstBoard ? `${arcLinks[0]} -> ${firstBoard.status}` : "no links to follow");
+
+  /* THE INDEX LINKS BOARDS TOO. The backlog's own verification for this:
+     `curl .../answers/ | grep -c 'daily/'` was zero on production. */
+  const ansIdx = await fetch(HUB + "/football/crossword/answers/");
+  const ansIdxHtml = ansIdx.status === 200 ? await ansIdx.text() : "";
+  t("the answers index links boards and the archive",
+    /href="\/football\/crossword\/daily\/\d+"/.test(ansIdxHtml) &&
+    ansIdxHtml.includes('href="/football/crossword/archive/"'),
+    "an index that only links answers is a dead end for anyone who wants to play");
 
   const future = await fetch(HUB + "/football/crossword/daily/99999", { redirect: "manual" });
   t("a board that does not exist yet is not a page", future.status === 404, String(future.status));

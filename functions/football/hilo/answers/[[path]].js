@@ -53,7 +53,11 @@ export async function onRequestGet({ env, params }) {
       if (!day || !answersAvailable(no, today)) continue;
       const board = boardForDay(bank, day);
       if (!board) continue;
-      published.push({ key: day, label: dayLabel(day) + " — " + board.category });
+      /* The permalink key is the board NUMBER, even here where the answers
+         are addressed by day: one address shape for every game, decided on
+         6 Sep 2026. The number is already in hand — it is the loop. */
+      published.push({ key: day, board: String(no),
+                       label: dayLabel(day) + " — " + board.category });
     }
     return answersIndex({ game: GAME, name: NAME, published });
   }

@@ -12,6 +12,7 @@
  */
 import { dailyNumber, answersAvailable, ANSWERS_AFTER_DAYS } from "../../../_lib/daily.js";
 import { sitePage, htmlResponse } from "../../../_lib/site-page.js";
+import { permalinkPath } from "../../../_lib/permalink.js";
 
 export async function onRequestGet() {
   const today = dailyNumber();
@@ -19,7 +20,12 @@ export async function onRequestGet() {
   const links = [];
   for (let no = newest; no >= 1; no--) {
     if (answersAvailable(no, today)) {
-      links.push(`<li><a href="/football/crossword/answers/${no}">Board #${no} — clues and answers</a></li>`);
+      /* AND THE BOARD ITSELF, not only what was in it. The permalinks had
+         one route in from this whole site — a detail page linking the board it
+         was about — so a reader who wanted to PLAY a past board had to open
+         its answers first. */
+      links.push(`<li><a href="/football/crossword/answers/${no}">Board #${no} — clues and answers</a>` +
+        ` <a class="meta" href="${permalinkPath("crossword", String(no))}">Play this board</a></li>`);
     }
   }
   const body = links.length
@@ -27,11 +33,13 @@ export async function onRequestGet() {
 <p class="sub">Clues and answers for every board more than ${ANSWERS_AFTER_DAYS} days old.
 Newer boards stay sealed so the archive is worth playing.</p>
 <ol>${links.join("")}</ol>
-<a class="cta" href="/football/crossword/">Play today's board</a>`
+<a class="cta" href="/football/crossword/">Play today's board</a>
+<a class="cta ghost" href="/football/crossword/archive/">Every board</a>`
     : `<h1>Crossword XI — answers</h1>
 <p class="sub">Answers appear here once a board is more than ${ANSWERS_AFTER_DAYS} days old.
 The game is new — the first will arrive shortly.</p>
-<a class="cta" href="/football/crossword/">Play today's board</a>`;
+<a class="cta" href="/football/crossword/">Play today's board</a>
+<a class="cta ghost" href="/football/crossword/archive/">Every board</a>`;
 
   /* An hour: long enough to be cheap, short enough that a board crossing
      the seven-day line appears the same morning. */

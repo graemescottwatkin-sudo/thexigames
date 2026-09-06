@@ -353,66 +353,6 @@ Unnecessary, since every game completes unaided, and a fleet submitting wrong
 guesses at volume against the rate limits is indistinguishable from an attack
 on the service — the one traffic pattern worth being able to block cleanly.
 
-### 12. The board permalink pages are orphaned
-
-The pages themselves are right and nothing about them needs fixing: each board
-has a unique dated title, a unique description and a self-referencing
-canonical; unreleased and future boards 404 rather than serving a thin page;
-and `/football/wordsearch/daily` canonicalises to its dated URL instead of competing
-with it. They simply cannot earn anything, because nothing points at them.
-
-Both gaps verified against production, 4 Sep:
-
-**Gap 1 — no board is in the sitemap.** `sitemap.xml` carries the same 12 URLs
-it had before the board pages shipped, and not one of them is a board. It has
-to be GENERATED rather than hand-kept, because a new board appears every day:
-a build step that writes it from the released boards, or a Function that serves
-it. Either way it must exclude unreleased and future boards, which is the rule
-the pages already keep — so it reads that rule from `permalink.js` rather than
-restating it.
-
-**Gap 2 — almost nothing on the site links to a board page.** CORRECTED 4 Sep:
-the first write-up of this said "zero links anywhere", and so did my own check,
-because neither of us looked at an answers DETAIL page. `/football/crossword/answers/1`
-and `/football/crossword/answers/2` each link the board they are about — the crossword's
-live_check has an assertion for it. Everything else is bare: zero on the hub,
-on `/football/crossword/`, on `/football/crossword/answers/`, on `/football/crossword/clubs/`, on a club
-page, on `/football/hilo/clubs/` and on `/football/wordsearch/answers/`.
-
-So a crawl path exists and reaches exactly TWO boards, because an answers page
-is sealed until `ANSWERS_AFTER_DAYS` past a board's first day and only two are
-published. It is the shape of the fix, at 2 boards out of hundreds.
-
-TWO CORRECTIONS to how this was first written up, both from checking it:
-
-- **It is four games, not one.** All four have working board pages off a single
-  module — `/football/crossword/daily/12`, `/football/scrambled/daily/12`,
-  `/football/wordsearch/daily/2026-09-03`, `/football/hilo/daily/2026-09-03`, all 200, all built
-  by `functions/_lib/permalink.js`. Two games count matchdays and two schedule
-  by date. The sitemap generator has to handle both key shapes, and the fix is
-  worth four games rather than one.
-- **The answers pages cannot be the whole route, and already are the route.**
-  A detail page already links its board; the index does not, and the word
-  search's answers index lists nothing at all. But an answers page is sealed
-  until `ANSWERS_AFTER_DAYS` past a board's first day, so this path can never
-  reach more than the published few however it is wired. The sitemap is doing
-  the real work; a crawlable per-game ARCHIVE index would be the on-site path
-  to all of them, and no such page exists today.
-
-**Graeme's call, not mine: where the board links sit.** Whether the answers
-index gets a "play this board" link beside each entry, whether a crawlable
-archive page is added per game, or both.
-
-Verify after:
-
-```
-curl -s https://www.thexigames.com/sitemap.xml | grep -c "/daily/"
-curl -s https://www.thexigames.com/football/crossword/answers/ | grep -c 'football/crossword/daily/'
-```
-
-Both should be greater than zero, and the first should equal the number of
-released boards across the four games.
-
 ### 6. Challenge tables, switched on per game
 
 As each game's score becomes the server's. HiLo and Scrambled now write
@@ -462,6 +402,23 @@ automatically after every deploy so the window closes itself.
 
 ## Shipped
 
+- **12. The board permalink pages are no longer orphans** — 6 Sep. Gap 1 was
+  already closed by the generated sitemap, which lists every board across the
+  five games and nothing that 404s. Gap 2 was still open and it was the whole
+  of the item: the only thing on the site linking to a board was an answers
+  DETAIL page, which reaches the handful whose answers have aged past the seal
+  and no more. Each game now has `/football/<game>/archive/` — every board it
+  has ever had, newest first, grouped by month, each at its permanent address —
+  built from `boardKeys()` in permalink.js, which is the same rule the sitemap
+  uses and the route enforces, so the page cannot advertise a board the route
+  would refuse. It is in every game's masthead (so every served page of that
+  game links it), in the sitemap, and on both ends of the answers archive: the
+  index now carries "Play this board" beside each entry and "Every board"
+  beside the CTA. `tools/archive_test.mjs`, 55 checks, five sabotages; the
+  crossword's live_check gained five assertions that were red against
+  production before the deploy and green after. Owner's call still open and
+  cheap to add later: whether the games' own static pages should carry the
+  link too — that is five tag bumps, so it was not taken on unasked.
 - **A suite could fail at UTC midnight, and did** — 6 Sep. Three suites that
   drive the crossword in jsdom decided what day it was themselves while the
   page decided separately, so a run across UTC midnight seeded a fixture for

@@ -81,6 +81,13 @@ jobs:
         run: node tools/permalink_test.mjs
       - name: The sitemap lists every board and nothing that 404s
         run: node tools/sitemap_test.mjs
+      # And the page a READER reaches them from. The sitemap covers a crawler;
+      # until 6 Sep 2026 the only thing on the site linking a board was an
+      # answers detail page, which reaches the handful past the seal. The two
+      # properties are the sitemap's: complete, and true — every address the
+      # archive offers is fetched through the real route in the suite.
+      - name: Every board has a page that links it
+        run: node tools/archive_test.mjs
 
       # The forward check: what /api/preflight will say about the next
       # fortnight, and the gate in front of it. The nightly workflow runs the

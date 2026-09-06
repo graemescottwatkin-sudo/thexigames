@@ -158,6 +158,13 @@ export function keyForOldDate(raw, now = Date.now()) {
  * lives. Without a database there is nothing to ask, and the honest answer is
  * yes — the same rule the rest of the family keeps, and the sample banks the
  * offline suites run against would otherwise all 404. */
+/* Where a scheduled game keeps the days it ran. Named here rather than inside
+   the two functions that read it, because two copies of a table name is two
+   things to change the day a game's storage moves. Never interpolated from
+   anything a request can reach: the key is a game name already matched
+   against PERMA_GAMES. */
+const SCHEDULE_TABLE = { wordsearch: "ws_schedule", hilo: "hl_schedule" };
+
 export async function ranOn(env, game, key) {
   const g = PERMA_GAMES[game];
   if (!g) return false;
@@ -165,8 +172,7 @@ export async function ranOn(env, game, key) {
   if (!env || !env.DB) return true;
   const day = dailyDayKey(key);
   if (!day) return false;
-  const TABLE = { wordsearch: "ws_schedule", hilo: "hl_schedule" };
-  const table = TABLE[game];
+  const table = SCHEDULE_TABLE[game];
   if (!table) return true;
   try {
     /* The table name is not interpolated from anything a request can reach:
@@ -181,6 +187,60 @@ export async function ranOn(env, game, key) {
        has nothing to do with the board asked for. */
     return true;
   }
+}
+
+/* ---- EVERY BOARD A GAME HAS, AS A LIST ----
+ *
+ * ranOn answers "this one board, yes or no". Two pages need the whole set:
+ * the sitemap, which offers every board to a crawler, and each game's archive
+ * index, which offers the same set to a reader. They were one function apart
+ * from becoming two answers — the sitemap held its own copy of this and its
+ * own schedule query, and the archive page would have made a third.
+ *
+ * A RING game contributes every number from 1 to today, because the ring
+ * generates a board for any of them. A SCHEDULED game contributes only the
+ * numbers whose day it actually ran: HiLo's schedule begins on 3 September
+ * 2026, which is board 9, so boards 1 to 8 are days it had not launched and
+ * the route refuses them. Listing those would put eight 404s in front of a
+ * crawler, and a list that names what does not exist is worse than no list.
+ *
+ * The schedule is read ONCE per game rather than asking ranOn per board: one
+ * query instead of one for every day of the game's life, and the number of
+ * those grows by one every morning.
+ *
+ * WITH NO DATABASE, A SCHEDULED GAME CONTRIBUTES NOTHING, and that is the
+ * opposite of what ranOn does with no database — deliberately, because they
+ * are opposite questions. ranOn is asked whether to REFUSE a player who has
+ * followed a link, and the safe direction there is to serve. This is asked
+ * what to ADVERTISE, and the safe direction is to promise nothing it cannot
+ * keep. Ascending, oldest first; a caller that wants newest reverses it.
+ */
+export async function boardKeys(env, game, now = Date.now()) {
+  const g = PERMA_GAMES[game];
+  if (!g) return [];
+  const today = Number(todayKeyFor(game, now));
+  if (!Number.isFinite(today) || today < 1) return [];
+  if (g.schedule === "ring") {
+    return Array.from({ length: today }, (_, i) => String(i + 1));
+  }
+  const table = SCHEDULE_TABLE[game];
+  if (!table || !env || !env.DB) return [];
+  let days = [];
+  try {
+    const { results } = await env.DB
+      .prepare(`SELECT day FROM ${table} WHERE day <= ? ORDER BY day DESC`)
+      .bind(dailyDayKey(today)).all();
+    days = (results || []).map((r) => String(r.day)).filter(Boolean);
+  } catch (e) {
+    /* No schedule table, or unreadable. An empty list means this game
+       contributes no boards, which is a smaller wrong than a list of
+       addresses that answer 404. */
+    return [];
+  }
+  const ran = new Set(days);
+  const out = [];
+  for (let i = 1; i <= today; i++) if (ran.has(dailyDayKey(i))) out.push(String(i));
+  return out;
 }
 
 /* ---- WHERE A GAME LIVES ----

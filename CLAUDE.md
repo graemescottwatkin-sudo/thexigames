@@ -190,6 +190,11 @@ Where facts live — extend these, never copy them:
   game-specific facts go in `results.detail` as JSON).
 - Daily key composition: `dailyKey()` in `functions/_lib/daily.js`, beside
   `ANSWERS_AFTER_DAYS` (the ONE answers window — never restate the number).
+- WHICH BOARDS EXIST: `boardKeys()` in `permalink.js` — the sitemap, each
+  game's `/archive/` index and the route itself all ask it, so a ring game's
+  1..today and a scheduled game's gaps have one answer. It promises nothing
+  without a database (a list that 404s is worse than an empty page) where
+  `ranOn` serves anyway (refusing a player who followed a link is worse).
 - CSRF: `csrfOk`/`CSRF_HEADER` in `functions/_lib/auth.js` (`X-XI-Games`;
   legacy `X-Crossword-XI` accepted).
 - Palette: `shared/xi-tokens.css`. Chrome (bar/drawer/footer + squad list):

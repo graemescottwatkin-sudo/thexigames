@@ -30,7 +30,7 @@ export async function onRequestGet({ env, params }) {
     return answersIndex({
       game: GAME, name: NAME,
       published: publishedNumbers().map((no) => ({
-        key: String(no), label: "Board #" + no + " — the eleven",
+        key: String(no), board: String(no), label: "Board #" + no + " — the eleven",
       })),
     });
   }

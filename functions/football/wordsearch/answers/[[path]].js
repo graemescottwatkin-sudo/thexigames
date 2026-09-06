@@ -27,6 +27,8 @@
 import { ANSWERS_AFTER_DAYS } from "../../../_lib/daily.js";
 import { hasDB, utcDayKey, boardById, firstScheduledDay } from "../../../_lib/wsdata.js";
 import { sitePage } from "../../../_lib/site-page.js";
+import { permalinkPath } from "../../../_lib/permalink.js";
+import { dailyNoForDay } from "../../../_lib/daily.js";
 
 const SITE = "https://www.thexigames.com";
 
@@ -158,21 +160,32 @@ ${placementLine(board.bonus.placement)}</div>
         GROUP BY s.puzzle_id
        HAVING first < date(?, '-' || ? || ' days')
         ORDER BY first DESC`).bind(today, ANSWERS_AFTER_DAYS).all();
-    items = (q.results || []).map((r) => ({ id: r.id, theme: r.theme }));
+    /* The day is carried through as well as the theme, because a board's
+       PLAYABLE address is its number and the number is that day's. A board
+       whose first day is before the family's day one has no permalink at all
+       - the word search's schedule reaches back to January - so it gets no
+       play link rather than a link to board one. */
+    items = (q.results || []).map((r) => ({ id: r.id, theme: r.theme, first: r.first }));
   }
 
   const body = items.length
     ? `<h1>Wordsearch XI \u2014 answers</h1>
 <p class="sub">Every board more than ${ANSWERS_AFTER_DAYS} days old: the eleven, the secret
 bonus, and where each one hid. Newer boards stay sealed so the archive is worth playing.</p>
-<ol>${items.map((b) =>
-      `<li><a href="/football/wordsearch/answers/${b.id}">${esc(b.theme)} \u2014 answers</a></li>`).join("")}</ol>
+<ol>${items.map((b) => {
+      const no = dailyNoForDay(b.first);
+      return `<li><a href="/football/wordsearch/answers/${b.id}">${esc(b.theme)} \u2014 answers</a>` +
+        (no ? ` <a class="meta" href="${permalinkPath("wordsearch", String(no))}">Play this board</a>` : "") +
+        "</li>";
+    }).join("")}</ol>
 <a class="cta" href="/football/wordsearch/">Play today's board</a>
+<a class="cta ghost" href="/football/wordsearch/archive/">Every board</a>
 <nav><a href="/football/crossword/answers/">Crossword XI answers</a></nav>`
     : `<h1>Wordsearch XI \u2014 answers</h1>
 <p class="sub">Answers appear here once a board is more than ${ANSWERS_AFTER_DAYS} days old.
 The game is new \u2014 the first will arrive shortly.</p>
 <a class="cta" href="/football/wordsearch/">Play today's board</a>
+<a class="cta ghost" href="/football/wordsearch/archive/">Every board</a>
 <nav><a href="/football/crossword/answers/">Crossword XI answers</a></nav>`;
 
   return html(shell(

@@ -26,7 +26,7 @@
  */
 import { dailyNumber, answersAvailable, ANSWERS_AFTER_DAYS, dailyDayKey } from "./daily.js";
 import { sitePage, htmlResponse } from "./site-page.js";
-import { gamePath } from "./permalink.js";
+import { gamePath, permalinkPath } from "./permalink.js";
 
 const esc = (s) => String(s == null ? "" : s)
   .replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
@@ -50,22 +50,36 @@ export function sealed() {
 /* ---- the index ---------------------------------------------------------- */
 
 /* `game` is the id; `name` is what it is called; `published` is the list of
-   { key, label } the archive may show, newest first, which the caller builds
-   because only it knows what a board is called. */
+   { key, label, board } the archive may show, newest first, which the caller
+   builds because only it knows what a board is called. `board` is that board's
+   PERMALINK key — the same board, at the address that plays it — and it is the
+   caller's to supply because two games are addressed by a day here and by a
+   number there. An entry without one simply gets no play link. */
 export function answersIndex({ game, name, published, blurb }) {
   const base = SITE + gamePath(game) + "answers/";
+  /* AND EACH ENTRY LINKS THE BOARD ITSELF. The permalinks shipped and nothing
+     pointed at them: an answers DETAIL page linked the board it was about and
+     that was the whole of it, five links for four hundred addresses. The
+     detail pages are also the pages a reader reaches LAST, so the link was
+     behind the answer — which is the wrong way round for anybody who wanted
+     to play the board rather than read what it was. */
   const links = published.map((b) =>
-    `<li><a href="${esc(gamePath(game))}answers/${esc(b.key)}">${esc(b.label)}</a></li>`).join("");
+    `<li><a href="${esc(gamePath(game))}answers/${esc(b.key)}">${esc(b.label)}</a>` +
+    (b.board
+      ? ` <a class="meta" href="${esc(permalinkPath(game, b.board))}">Play this board</a>`
+      : "") + "</li>").join("");
   const body = published.length
     ? `<h1>${esc(name)} — answers</h1>
 <p class="sub">Answers for every board more than ${ANSWERS_AFTER_DAYS} days old.
 Newer boards stay sealed so the archive is worth playing.</p>
 <ol>${links}</ol>
-<a class="cta" href="${esc(gamePath(game))}">Play today's board</a>`
+<a class="cta" href="${esc(gamePath(game))}">Play today's board</a>
+<a class="cta ghost" href="${esc(gamePath(game))}archive/">Every board</a>`
     : `<h1>${esc(name)} — answers</h1>
 <p class="sub">Answers appear here once a board is more than ${ANSWERS_AFTER_DAYS} days old.
 The game is new — the first will arrive shortly.</p>
-<a class="cta" href="${esc(gamePath(game))}">Play today's board</a>`;
+<a class="cta" href="${esc(gamePath(game))}">Play today's board</a>
+<a class="cta ghost" href="${esc(gamePath(game))}archive/">Every board</a>`;
 
   /* An hour: long enough to be cheap, short enough that a board crossing the
      line appears the same morning. */
@@ -99,7 +113,8 @@ ${sub ? `<p class="sub">${esc(sub)}</p>` : ""}
 <ol class="answers">${list}</ol>
 ${nav ? `<p class="sub">${nav}</p>` : ""}
 <a class="cta" href="${esc(gamePath(game))}">Play today's board</a>
-<p class="sub"><a href="${esc(gamePath(game))}answers/">All published answers</a></p>`;
+<p class="sub"><a href="${esc(gamePath(game))}answers/">All published answers</a>
+&middot; <a href="${esc(gamePath(game))}archive/">Every board</a></p>`;
 
   return htmlResponse(sitePage({
     title: `${heading} — ${name} answers`,
