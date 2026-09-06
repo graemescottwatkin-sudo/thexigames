@@ -15,7 +15,7 @@
      the family more time than any layout question: the footer line, the
      console, and the named window variable. If this is not the build just
      deployed, the deploy has not landed — do not start debugging the game. */
-  var BUILD = "v002m";
+  var BUILD = "v002n";
   window.WORDSEARCHXI_BUILD = BUILD;
   try { console.log("Wordsearch XI build " + BUILD); } catch (e) {}
 
@@ -1533,6 +1533,17 @@
     /* Today, from the hero. */
     $("homeDaily").onclick = function () {
       if (!window.__daily) { toast("No Daily today — try the themes"); setPrematchMode("free"); return; }
+      /* AND WHAT THE ACCOUNT SAYS, not only this device. The check above reads
+         localStorage, which a device that has never synced does not have, so a
+         player signed in on two devices was offered today's board twice and
+         banked a score the account then refused. See XIChrome.playedTodayHas,
+         which is warmed at chrome init and answers null-as-unknown: a
+         signed-out player falls through to their own record, as before. */
+      if (window.XIChrome && window.XIChrome.playedTodayHas &&
+          window.XIChrome.playedTodayHas("wordsearch")) {
+        toast("Today's grid is played", "You finished it on another device.");
+        return;
+      }
       setPrematchMode("daily");
       startDaily(window.__daily);
     };

@@ -26,7 +26,23 @@
   root.HL_SCORING = api;
 })(typeof window !== "undefined" ? window : globalThis, function () {
   "use strict";
-  var CLOCK_MS = 12000, GRACE_MS = 2000, CALL_MAX = 10, CALLS = 11;
+  /* THE CALL CLOCK, widened on the owner's ruling of 6 September 2026: five
+     seconds before it starts to run, then twenty seconds to zero. It was two
+     and ten, which cost a point a second — long enough to press a button you
+     had already decided on and not long enough to think, so the clock was
+     deciding calls that knowledge should have.
+   *
+     Ten points over twenty seconds is HALF A POINT A SECOND, which is the rate
+     the owner asked for and is derived here rather than written down: CALL_MAX
+     over (CLOCK_MS - GRACE_MS). Change either and the rate follows, which is
+     why neither is a rate.
+   *
+     The score stays in whole points — worthAt rounds up, so the number on the
+     clock when you press is the number you get — so at half a point a second
+     the figure steps every two seconds rather than every one. That is the
+     family's integer scoring, not a rounding accident: 114 is a whole number
+     in every game. */
+  var CLOCK_MS = 25000, GRACE_MS = 5000, CALL_MAX = 10, CALLS = 11;
   var SUBS = 3, CEILING = 114, RUN = 5, RUN_BONUS = 2, LONG_RUN = 10, LONG_RUN_BONUS = 4;
 
   /* What a right call made after `elapsedMs` on its clock is worth. Whole

@@ -154,8 +154,27 @@ t("the catalogue groups club boards by club, identity only",
   clubCatalog(bank).length >= 1 && clubCatalog(bank).every((c) => c.boards.every((b) => !b.chain && !b.value)));
 
 console.log("\n=== The owner's scoring ===");
-t("a right call is worth ten inside the grace, then falls a point a second to nothing",
-  S.worthAt(0) === 10 && S.worthAt(2000) === 10 && S.worthAt(7000) === 5 && S.worthAt(11999) === 1 && S.worthAt(12000) === 0);
+/* THE CLOCK WIDENED on 6 September 2026: five seconds of grace, then twenty to
+   zero, which is half a point a second. It was two and ten — a point a second —
+   and the owner's judgement was that this left the clock deciding calls that
+   knowledge should have decided.
+
+   ASSERTED AS THE SHAPE, NOT AS FIVE MAGIC INSTANTS. The numbers are read from
+   the module and the curve is checked at the boundaries they define, so the
+   next widening changes two constants and this still says something true. What
+   is pinned is the RULE: full value through the grace, nothing at the end, and
+   a straight line between them. */
+t("a right call is worth full value through the grace, then falls to nothing",
+  S.worthAt(0) === S.CALL_MAX &&
+  S.worthAt(S.GRACE_MS) === S.CALL_MAX &&
+  S.worthAt(S.CLOCK_MS) === 0 &&
+  S.worthAt(S.CLOCK_MS - 1) === 1 &&
+  /* Halfway down the running part is half the points, which is what makes it
+     a straight line rather than a cliff. */
+  S.worthAt(S.GRACE_MS + (S.CLOCK_MS - S.GRACE_MS) / 2) === S.CALL_MAX / 2);
+t("and it falls at half a point a second, which is the owner's rate",
+  S.CALL_MAX / ((S.CLOCK_MS - S.GRACE_MS) / 1000) === 0.5,
+  `${S.CALL_MAX} points over ${(S.CLOCK_MS - S.GRACE_MS) / 1000}s`);
 const T = true, F = false;
 t("eleven right at full value is 110 plus four for the run: 114, the ceiling",
   S.score([T,T,T,T,T,T,T,T,T,T,T], [10,10,10,10,10,10,10,10,10,10,10]) === 114);
@@ -163,8 +182,9 @@ t("two runs of five earn two each", S.runBonus([T,T,T,T,T,F,T,T,T,T,T]) === 4 &&
 t("nothing exceeds 114", S.score([T,T,T,T,T,T,T,T,T,T,T], [10,10,10,10,10,10,10,10,10,10,10]) <= S.CEILING);
 t("win with three wrong, draw with four, loss if unfinished",
   S.result([T,T,T,T,T,T,T,T,F,F,F]) === "W" && S.result([T,T,T,T,T,T,T,F,F,F,F]) === "D" && S.result([T,T,T]) === "L");
-t("three substitutions and a twelve-second clock with two of grace",
-  S.SUBS === 3 && S.CLOCK_MS === 12000 && S.GRACE_MS === 2000 && S.CALLS === 11);
+t("three substitutions, and a twenty-five second clock with five of grace",
+  S.SUBS === 3 && S.CLOCK_MS === 25000 && S.GRACE_MS === 5000 && S.CALLS === 11,
+  `${S.GRACE_MS / 1000}s grace, ${S.CLOCK_MS / 1000}s in all`);
 
 /* ---- WHICH CATEGORIES ARE A CLUB'S ------------------------------------
 

@@ -15,7 +15,7 @@
  *   - no practice. There is now an archive picker and a finals catalogue; what
  *     is still missing is a practice mode, which this game may never want.
  */
-var BUILD = "v001g";
+var BUILD = "v001h";
 
 (function () {
   "use strict";
@@ -1655,7 +1655,24 @@ var BUILD = "v001g";
     startServerRound();
     $("answer").focus({ preventScroll: true });
   }
-  $("homeDaily").addEventListener("click", kickOff);
+  $("homeDaily").addEventListener("click", function () {
+      /* AND WHAT THE ACCOUNT SAYS, not only this device. The check above reads
+         localStorage, which a device that has never synced does not have, so a
+         player signed in on two devices was offered today's board twice and
+         banked a score the account then refused. See XIChrome.playedTodayHas,
+         which is warmed at chrome init and answers null-as-unknown: a
+         signed-out player falls through to their own record, as before. */
+    /* The game's own name, written as a literal because tools/build_vowels.js
+       rewrites "vowels" to "vowels" when it generates the copy — so this
+       line is correct in both without either knowing about the other. */
+    if (state.board && state.board.no === state.todayNo &&
+        window.XIChrome && window.XIChrome.playedTodayHas &&
+        window.XIChrome.playedTodayHas("vowels")) {
+      say("Today's board is played — you finished it on another device.", "warn");
+      return;
+    }
+    kickOff();
+  });
 
   /* The two sheets. Bound once, here, rather than rebound by renderLanding
      each time a board opens — a handler added on every render is a handler

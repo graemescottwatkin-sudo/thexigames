@@ -286,7 +286,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v003";
+  var BUILD = "v003a";
   try {
     window.CROSSWORDXI_BUILD = BUILD;
     console.log("Crossword XI build " + BUILD);
@@ -7183,6 +7183,19 @@
     loadResults().forEach(function (r) {
       if (r && r.mode === "daily" && r.dailyNo === no) found = r;
     });
+    /* AND WHAT THE ACCOUNT SAYS, not only this device. loadResults() reads
+       localStorage, which a device that has never synced does not have — so a
+       player signed in on a phone and a laptop was offered today's board twice
+       and banked a score the account then refused. The pull that would correct
+       it runs on boot and does not finish before this button is clickable.
+       No score to report from here: the season knows WHICH games were finished
+       today, not what they scored, and the sentence below already reads
+       correctly without one. */
+    if (!found && no === FCW.dailyNumber() &&
+        window.XIChrome && window.XIChrome.playedTodayHas &&
+        window.XIChrome.playedTodayHas("crossword")) {
+      found = { mode: "daily", dailyNo: no, score: null, fromAccount: true };
+    }
     return found;
   }
 

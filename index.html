@@ -68,9 +68,9 @@
      own — the team sheet and the kit colours. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared/xi-tokens.css?v=v26">
-<link rel="stylesheet" href="shared/xi-chrome.css?v=v26">
-<script src="shared/xi-theme.js?v=v26"></script>
+<link rel="stylesheet" href="shared/xi-tokens.css?v=v27">
+<link rel="stylesheet" href="shared/xi-chrome.css?v=v27">
+<script src="shared/xi-theme.js?v=v27"></script>
 <style>
 :root{
 
@@ -162,7 +162,22 @@ body{
   border:1.5px solid rgba(255,255,255,.3);color:rgba(255,255,255,.55)}
 .season .mark.W{background:var(--gold);border-color:var(--gold);color:var(--gold-ink)}
 .season .mark.D{border-color:#fff;color:#fff}
-.season .mark.now{border-style:dashed;opacity:.8}
+/* TODAY, AND NOT COUNTED YET. This was a dashed border at 0.8 opacity, which
+   is not enough weight for what it has to say: the owner read a strip of "WW"
+   beside a line saying "1 played, 1 won, 3 pts" and asked, reasonably, why it
+   was not 2. Both were right — the second W is today, and today cannot be
+   counted because a defeat with hours left in it can still become a draw — but
+   a difference nobody can see is a contradiction.
+
+   So it is set apart rather than merely faded: no fill whatever the result,
+   the letter in the strip's own muted colour, and the label under it. A mark
+   that is still being played should not look like a mark that is finished. */
+.season .mark.now{background:none;border-style:dashed;
+  border-color:rgba(255,255,255,.45);color:rgba(255,255,255,.7)}
+.season .mark.now::after{content:"";}
+.season .form{align-items:flex-start}
+.season .today-note{display:block;font-size:11px;letter-spacing:.1em;
+  color:rgba(255,255,255,.5);margin:7px 0 0}
 
 /* ---------- games ---------- */
 .section{padding:38px 0 8px}
@@ -464,8 +479,8 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
      and the one page list, so the front door's footer and every game's are
      the same footer. -->
 <footer class="xic-foot"></footer>
-<script src="shared/xi-season.js?v=v26"></script>
-<script src="shared/xi-chrome.js?v=v26"></script>
+<script src="shared/xi-season.js?v=v27"></script>
+<script src="shared/xi-chrome.js?v=v27"></script>
 
 <script>
 /* Progressive enhancement only: everything above renders complete without
@@ -679,11 +694,33 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
       }
 
       form.textContent = "";
+      var oldNote = box.querySelector && box.querySelector(".today-note");
+      if (oldNote && oldNote.remove) oldNote.remove();
       s.marks.slice(-FORM_SHOWN).forEach(function (m) { form.appendChild(mark(m, false)); });
       /* Today, as it stands, and marked as unsettled. It is not counted into
          P W D L above — a defeat with hours left in it can still become a
          draw, and a season that banked it would take the point back. */
-      if (s.inFlight) form.appendChild(mark(s.inFlight.provisional, true));
+      if (s.inFlight) {
+        form.appendChild(mark(s.inFlight.provisional, true));
+        /* SAID IN WORDS, because the shape alone was not enough. The strip is
+           read left to right as a run of results and the last one is not a
+           result yet; one line under it removes the arithmetic the owner had
+           to do to work out why two marks meant one game. */
+        /* BESIDE THE MARKS, NOT AMONG THEM. Appended to the form strip at
+           first, which put a sentence inside the element that IS the run of
+           results — season_device_test reads that strip as a string and got
+           "WDLDWDW?Today is still open…". A caption is not a result. */
+        var note = document.createElement("p");
+        note.className = "today-note";
+        note.textContent = "Today is still open — it counts at midnight.";
+        /* Appended to the season BOX, which is the element this function was
+           given, rather than to form.parentNode — the strip is not guaranteed
+           to have one, and reaching upwards from a node you were handed is how
+           a renderer throws in a harness that gave it exactly what it asked
+           for and nothing more. It did: draw() stopped rendering at all and
+           three checks that had nothing to do with this went red with it. */
+        if (box && box.appendChild) box.appendChild(note);
+      }
       box.hidden = false;
     }
 

@@ -769,6 +769,11 @@
       if (!f.querySelector(".xic-foot-in")) buildFooter(f);
     });
     loadSession();
+    /* WARMED HERE, so the synchronous check below has an answer by the time a
+       human can click anything. Fired and not awaited: the chrome must not
+       hold up a page for a question that only matters when a board is
+       started. */
+    try { playedToday(); } catch (e) { /* a season that cannot be asked decides nothing */ }
   }
 
   if (document.readyState === "loading") {
@@ -980,21 +985,43 @@
    * ARRAY means the account answered and today is untouched.
    */
   var playedPromise = null;
+  var playedSnapshot = null;
   function playedToday(force) {
     if (playedPromise && !force) return playedPromise;
     playedPromise = fetch("/api/season", { headers: { accept: "application/json" } })
       .then(function (r) { return r.json(); })
       .then(function (d) {
         if (!d || !d.account) return null;      // no account: the device is all there is
-        return { today: d.today, games: d.todayGames || [] };
+        playedSnapshot = { today: d.today, games: d.todayGames || [] };
+        return playedSnapshot;
       })
       .catch(function () { return null; });     // a season that cannot be read decides nothing
     return playedPromise;
   }
 
+  /* THE SAME ANSWER, SYNCHRONOUSLY, for the checks that cannot wait. Every
+     game's "have I played today" test is a synchronous read of localStorage
+     inside a click handler, and rewriting five of those into promises to ask
+     one question would be a large change for a small fact. So the fetch is
+     started at init and this reads what came back.
+   *
+   * NULL MEANS "NOT KNOWN", and never "not played". Not signed in, the answer
+     not yet arrived, or the request failed — in all three the caller falls
+     back to its own record, which is exactly right for a signed-out player and
+     is the behaviour every game already had. The window where it is null and
+     an account exists is the moment between load and the season answering;
+     HiLo's kick-off closes that one properly by awaiting the promise, and it
+     is the pattern to copy if any other game turns out to need it. */
+  function playedTodaySync() { return playedSnapshot; }
+
+  function playedTodayHas(game) {
+    return !!(playedSnapshot && playedSnapshot.games.indexOf(game) !== -1);
+  }
+
   window.XIChrome = { init: init, squad: SQUAD, pages: PAGES, close: close,
     formChips: formChips, formBand: band, FORM_LENGTH: FORM_LENGTH,
-    playedToday: playedToday,
+    playedToday: playedToday, playedTodaySync: playedTodaySync,
+    playedTodayHas: playedTodayHas,
     /* A BOARD THE PLAYER HAS TO REGISTER FOR, asked for once and answered the
        same way in every game. The archive is open for today and the week
        behind it; older boards need an account — see functions/_lib/archive.js,
