@@ -47,8 +47,15 @@ export function validGame(v) {
    held it twice. indexOf did not care, which is why it survived; anything
    that iterates does, and the tracking gate reported the same game twice the
    first time it ran. A game promoted into GAMES should stop being named here
-   by hand, and the Set means forgetting costs nothing. */
-export const BUILT = [...new Set([...GAMES, "quickfire"])];
+   by hand, and the Set means forgetting costs nothing.
+
+   Grid XI joined on 6 September 2026, at the same stage QuickFire is at: a
+   board is playable and judged, and there is no page yet. It is here and NOT
+   in GAMES for exactly the reason above — no result row may be written for it
+   until it launches — and it needs to be here for the one thing that matters
+   before a launch: a play_id, so a round has an owner the server can hang
+   turns and misses off. See data/migrations/033-grid.sql. */
+export const BUILT = [...new Set([...GAMES, "quickfire", "grid"])];
 
 export function validReportGame(v) {
   const g = String(v || DEFAULT_GAME).toLowerCase();
