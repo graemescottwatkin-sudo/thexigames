@@ -382,13 +382,6 @@ html, body {
   .slot { width: 21%; }
 }
 
-/* The owner's board picker. Hidden for everyone else, so it needs no styling
-   beyond being unobtrusive when it is there. */
-.owner-bar { display: flex; align-items: center; gap: .5rem; margin: 0 0 .75rem;
-  font-size: .85rem; opacity: .8; }
-.owner-bar select { max-width: 22rem; }
-.owner-note { opacity: .7; }
-
 /* ---- The lifted letters ------------------------------------------------
    What the player has typed that THIS tile could supply, above the bag it
    came out of. It has to read as a different KIND of thing from the scramble,
@@ -460,7 +453,6 @@ html, body {
   max-width: 22ch;
   overflow-wrap: break-word;
 }
-
 
 /* ---- SHEETS: PREVIOUS BOARDS, AND THE FINALS -------------------------------
 

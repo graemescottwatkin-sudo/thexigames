@@ -15,7 +15,7 @@
  *   - no practice. There is now an archive picker and a finals catalogue; what
  *     is still missing is a practice mode, which this game may never want.
  */
-var BUILD = "v002k";
+var BUILD = "v002l";
 
 (function () {
   "use strict";
@@ -293,7 +293,14 @@ var BUILD = "v002k";
       return;
     }
     closeArchive();
-    openBoard({ kind: "daily", no: no });
+    /* STRAIGHT INTO THE BOARD. Picking a date out of the calendar IS the
+       choice — it opened the start card instead and asked to be clicked a
+       second time, which put the landing hero's content on a board nobody had
+       arrived at that way. The crossword has always opened what you picked,
+       and "Board of the week" already did it here; the calendar and the finals
+       were the two that did not. `play` is openBoard's own option: it kicks
+       off rather than showing the start screen. */
+    openBoard({ kind: "daily", no: no }, { play: true });
   });
 
   /* ---- the finals ------------------------------------------------------
@@ -390,7 +397,9 @@ var BUILD = "v002k";
     var row = ev.target.closest ? ev.target.closest(".fin-row") : null;
     if (!row) return;
     closeFinals();
-    openBoard({ kind: "iconic", id: row.getAttribute("data-id") });
+    /* The same as the calendar above: the row that was clicked names the
+       board, so there is nothing left to confirm. */
+    openBoard({ kind: "iconic", id: row.getAttribute("data-id") }, { play: true });
   });
 
   /* ---- the durable record ---------------------------------------------
@@ -1385,46 +1394,6 @@ var BUILD = "v002k";
 
   /* ---- start ------------------------------------------------------------ */
 
-  /* ---- the owner's board picker ----------------------------------------
-     Revealed only when the server says this account is an admin, and every
-     board it loads comes back through the admin route which re-checks that on
-     each request. Convenience, not security — the same reasoning the crossword
-     writes above its own owner tools.
-
-     Addressed by board ID, not by the ?no= the public route takes. ?no= is a
-     position in the daily ring, and the ring is only the boards eligible for a
-     daily — so it moves the moment one is marked daily:false, and a proofing
-     link that points somewhere else next week is worse than none. */
-  function ownerTools() {
-    fetch("/api/admin/whoami", { headers: { "X-XI-Games": "1" }, credentials: "same-origin" })
-      .then(function (r) { return r.json(); })
-      .then(function (d) {
-        if (!d || !d.admin) return;
-        return fetch("/api/admin/scrambled?list=1", {
-          headers: { "X-XI-Games": "1" }, credentials: "same-origin"
-        }).then(function (r) { return r.json(); }).then(function (list) {
-          if (!list || !list.boards) return;
-          var sel = $("ownerBoard");
-          var asked = new URLSearchParams(location.search).get("id");
-          list.boards.forEach(function (b) {
-            var o = document.createElement("option");
-            o.value = b.id;
-            /* The ring flag is shown, because "why is this never my daily" is
-               the first question a picker full of boards invites. */
-            o.textContent = "#" + b.id + "  " + b.title + (b.daily ? "" : "   (not in the daily)");
-            if (String(b.id) === String(asked)) o.selected = true;
-            sel.appendChild(o);
-          });
-          $("ownerNote").textContent = list.boards.length + " boards, from " + list.source;
-          sel.addEventListener("change", function () {
-            location.search = "?id=" + encodeURIComponent(sel.value);
-          });
-          $("ownerBar").hidden = false;
-        });
-      })
-      .catch(function () { /* not an admin, or offline: the bar stays hidden */ });
-  }
-
   /* The permalink is read from the path by the shared chrome, which states
      its shape once for the family — see shared/xi-chrome.js, and
      functions/_lib/permalink.js for the server's half. */
@@ -1618,7 +1587,15 @@ var BUILD = "v002k";
   function startKicker(board) {
     if (board.iconic) return "ICONIC MATCH";
     if (board.preview) return "PREVIEW · BOARD " + board.id;
-    return board.no === board.today ? "TODAY" : "BOARD #" + board.no;
+    /* TODAY WEARS ITS NUMBER TOO. It read a bare "TODAY", so the board's own
+       number appeared only once you had picked a PREVIOUS one — the crossword
+       was the only game that named today's. Since 6 September 2026 every game
+       counts the same board number from the same day one, and it is the number
+       in the board's address, so it is worth saying on the card somebody is
+       about to press. */
+    return board.no === board.today
+      ? "TODAY · #" + board.no
+      : "BOARD #" + board.no;
   }
 
   /* THE ADDRESS SAYS WHICH BOARD IS OPEN, so it can be copied and come back
@@ -1792,7 +1769,6 @@ var BUILD = "v002k";
      the board fetch second, which journey_test caught by asserting what the
      FIRST call was. */
 
-  ownerTools();
 
   /* A SEAM FOR THE SUITES, and nothing else. supplyFrom is the pure part of
      the rule that decides when a typed name has used up a slot's letters, and

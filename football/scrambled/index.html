@@ -35,7 +35,7 @@
 <!-- The theme, stamped before first paint: light unless the player chose
      dark, decided in one shared place for every page of the family. -->
 <script src="/shared/xi-theme.js?v=v25"></script>
-<link rel="stylesheet" href="css/style.css?v=v002k">
+<link rel="stylesheet" href="css/style.css?v=v002l">
 </head>
 <body>
 
@@ -60,12 +60,6 @@
   <!-- The H1 says what the page IS and lives on the pre-match card, the same
        place the other games keep theirs. The board changes daily; the game
        does not, so the board's own title is an h2. -->
-<!-- OWNER ONLY, and hidden until the server says so. The public route serves
-     the past and today and refuses the future, which is right for players and
-     useless for proofing 262 boards four days in. This is the same shape as
-     the crossword's owner tools: the control is revealed by /api/admin/whoami
-     and every board it loads is re-checked server-side, because a hidden
-     control is not a lock. -->
   <!-- One H1, first in the body, saying what the game is. The landing shows
        the name in the masthead, which is furniture; this is the heading a
        screen reader and a search engine read. -->
@@ -117,11 +111,6 @@
         </aside>
       </div>
 
-<div class="owner-bar" id="ownerBar" hidden>
-  <label for="ownerBoard">Board</label>
-  <select id="ownerBoard"></select>
-  <span class="owner-note" id="ownerNote"></span>
-</div>
 
       <div class="site-sec">OTHER BOARDS</div>
       <div class="site-row">
@@ -310,8 +299,8 @@
 <script src="/shared/xi-plays.js?v=v25"></script>
 <script src="/shared/xi-keys.js?v=v25"></script>
 <script src="/shared/xi-share.js?v=v25"></script>
-<script src="js/config.js?v=v002k"></script>
-<script src="js/scoring.js?v=v002k"></script>
-<script src="js/game.js?v=v002k"></script>
+<script src="js/config.js?v=v002l"></script>
+<script src="js/scoring.js?v=v002l"></script>
+<script src="js/game.js?v=v002l"></script>
 </body>
 </html>

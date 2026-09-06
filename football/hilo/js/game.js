@@ -10,7 +10,7 @@
  * more, 114 the ceiling. This file is the page: the landing the family
  * shares, the ladder of two rows, the clock, the answers list, the share.
  */
-var BUILD = "v001w";
+var BUILD = "v001x";
 
 (function () {
   "use strict";
@@ -26,6 +26,12 @@ var BUILD = "v001w";
 
   /* ---- state ---------------------------------------------------------- */
   var serverDay = null, todayBoard = null, catalog = null, archiveDays = null;
+  /* TODAY'S BOARD NUMBER, from the server. Every game counts the same number
+     from the same day one since 6 September 2026, and it is the number in the
+     board's address — so the hero says it, as the crossword's always has. Kept
+     beside serverDay rather than worked out from it: the server decides what
+     day it is and therefore what number today wears. */
+  var todayNo = null;
   var g = null;      /* the round in play */
 
   /* ---- the live league table -------------------------------------------
@@ -217,6 +223,9 @@ var BUILD = "v001w";
       $("startSub").textContent = "The calendar has a gap. The clubs are open.";
       $("startState").textContent = "";
       return;
+    }
+    if ($("startKicker")) {
+      $("startKicker").textContent = todayNo ? "TODAY · #" + todayNo : "TODAY";
     }
     $("startTitle").textContent = todayBoard.category;
     /* The hero says what the number means, then the rule that settles the
@@ -829,7 +838,8 @@ var BUILD = "v001w";
       if (!todayBoard) { toast("No board today — try the clubs"); return; }
       var had = todayResult();
       if (had) { toast("Today's board is played — " + had.score + " pts"); return; }
-      startRound(todayBoard, "daily", { day: serverDay, kicker: "TODAY" });
+      startRound(todayBoard, "daily",
+        { day: serverDay, kicker: todayNo ? "TODAY · #" + todayNo : "TODAY" });
     };
     $("homeFeatured").onclick = function () {
       if (!featured) { toast("No board this week"); return; }
@@ -875,7 +885,7 @@ var BUILD = "v001w";
     $("navToday").onclick = function () { if ($("screenStart").hidden) goToMenu(); };
 
     api("daily").then(function (r) {
-      serverDay = r.day; todayBoard = r.board;
+      serverDay = r.day; todayNo = r.todayNo; todayBoard = r.board;
       renderLanding();
       /* ?b= is the door from a club page: the board on its card, the first
          clock waiting for Kick off. Only a released board answers. */

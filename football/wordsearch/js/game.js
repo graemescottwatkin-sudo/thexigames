@@ -15,7 +15,7 @@
      the family more time than any layout question: the footer line, the
      console, and the named window variable. If this is not the build just
      deployed, the deploy has not landed — do not start debugging the game. */
-  var BUILD = "v002k";
+  var BUILD = "v002l";
   window.WORDSEARCHXI_BUILD = BUILD;
   try { console.log("Wordsearch XI build " + BUILD); } catch (e) {}
 
@@ -1617,6 +1617,14 @@
        the browser. Neither response contains a schedule. */
     api("daily").then(function (r) {
       serverDay = r.day; serverNo = r.no; window.__daily = r.puzzle;
+      /* TODAY WEARS ITS NUMBER. Every game counts the same board number from
+         the same day one since 6 September 2026, and it is the number in the
+         board's address — so the card somebody is about to press says it, as
+         the crossword's always has. From the server's answer, never worked
+         out here: what day it is, and therefore what number today wears, is
+         the server's to decide. */
+      var kick = document.getElementById("homeDailyKicker");
+      if (kick && serverNo) kick.textContent = "TODAY · #" + serverNo;
       if (typeof r.freeArchiveDays === "number") freeArchiveDays = r.freeArchiveDays;
       /* THE TABLE WAITS FOR THE SERVER'S DAY. Mounted here rather than at
          start-up because the day is what picks the season, and picking one

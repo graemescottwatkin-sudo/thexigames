@@ -40,7 +40,7 @@
 <!-- The theme, stamped before first paint: light unless the player chose
      dark, decided in one shared place for every page of the family. -->
 <script src="/shared/xi-theme.js?v=v25"></script>
-<link rel="stylesheet" href="css/style.css?v=v002k">
+<link rel="stylesheet" href="css/style.css?v=v002l">
 </head>
 <body>
 
@@ -89,7 +89,10 @@
         <!-- Today. The one thing on the page with weight, because it is the
              one thing most people came for. -->
         <button class="home-choice hero" id="homeDaily">
-          <span class="hc-kicker">TODAY</span>
+          <!-- The board number goes in here once the server has answered. It
+               was static text, so this was the one game whose daily card never
+               said which board it was. -->
+          <span class="hc-kicker" id="homeDailyKicker">TODAY</span>
           <span class="hc-title">Today&rsquo;s word search</span>
           <span class="hc-note">One grid, the same for everyone. The clock counts.</span>
           <span class="hc-state" id="homeDailyState"></span>
@@ -314,7 +317,7 @@
 <script src="/shared/xi-share.js?v=v25"></script>
 <!-- What a score is, in one file, so the Worker and the page cannot disagree
      about it. Loaded before the game, which reads it. -->
-<script src="js/scoring.js?v=v002k"></script>
-<script src="js/game.js?v=v002k"></script>
+<script src="js/scoring.js?v=v002l"></script>
+<script src="js/game.js?v=v002l"></script>
 </body>
 </html>
