@@ -271,6 +271,11 @@ jobs:
           # bank on a runner and a check that passes when it finds no problems
           # also passes when it finds nothing at all.
           node tools/import_grid.js --check
+          # The published archive, for the three games that had none. An
+          # answers page is the one page meant to give a board away, so the
+          # checks are weighted on the seal: a sealed board, a future board and
+          # a nonsensical key must be indistinguishable.
+          node tools/answers_test.mjs
           # And the page, played from boot to full time through the real
           # handlers. api_test proves the endpoints; this proves the FILE
           # between them does not paint a letter it was never given and does

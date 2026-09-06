@@ -39,6 +39,13 @@ const STATIC = [
   ["/football/hilo/", "daily", "0.9"],
   ["/football/crossword/answers/", "daily", "0.7"],
   ["/football/wordsearch/answers/", "daily", "0.7"],
+  /* Three games had no answers archive until 6 Sep 2026 — the crossword got
+     one, the word search copied it, and the three built afterwards were never
+     given theirs. The index is what a crawler finds the individual boards
+     from, so it is listed and they are not. */
+  ["/football/scrambled/answers/", "daily", "0.7"],
+  ["/football/vowels/answers/", "daily", "0.7"],
+  ["/football/hilo/answers/", "daily", "0.7"],
   ["/football/crossword/clubs/", "weekly", "0.6"],
   ["/football/wordsearch/themes/", "weekly", "0.6"],
   ["/football/hilo/clubs/", "weekly", "0.6"],
