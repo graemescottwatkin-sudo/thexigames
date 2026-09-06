@@ -286,7 +286,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v003a";
+  var BUILD = "v003b";
   try {
     window.CROSSWORDXI_BUILD = BUILD;
     console.log("Crossword XI build " + BUILD);
@@ -7492,6 +7492,32 @@
     var atHome = false;
     try { atHome = !!localStorage.getItem("fcw.athome"); } catch (e) {}
 
+    /* ARRIVING IS NOT REFRESHING, and until now this could not tell them
+       apart. The rule below — "a game already under way resumes" — was written
+       for a REFRESH, where changing what you are playing under somebody would
+       be wrong. It also fired when a player opened the daily, went back to the
+       hub, and clicked Crossword XI again: they were put straight back into
+       today's board rather than on the game's own front page, having asked for
+       the game and not for the board. Reported by the owner, who had done
+       exactly that.
+
+       The browser knows which happened. A reload is "reload"; a click from the
+       hub is "navigate"; Back and Forward are "back_forward" and should resume,
+       because going back to something IS asking for it. Referrer cannot answer
+       this: it survives a reload, so a refresh after arriving from the hub
+       looks like a fresh arrival.
+
+       WHAT A FRESH ARRIVAL LOSES IS NOTHING. The landing screen already says
+       "In progress" against a board that is part-played and opens it in one
+       click — so this is the difference between being put somewhere and being
+       shown where you are. If the API is missing, resume: that is the
+       behaviour every browser had before this and it is the safer half. */
+    var arrived = false;
+    try {
+      var nav = performance.getEntriesByType && performance.getEntriesByType("navigation")[0];
+      arrived = !!nav && nav.type === "navigate";
+    } catch (e) { arrived = false; }
+
     /* Run at boot as well as on banking. Capping only when a board is finished
        would leave a player who stops playing holding whatever they had
        accumulated for good, and every browser carrying slots from before the
@@ -7511,7 +7537,7 @@
        Scans the daily slots instead, newest first, and stops at the first
        unfinished one. */
     var saved = null;
-    if (!atHome) {
+    if (!atHome && !arrived) {
       if (last === "practice") saved = savedFor("practice");
       /* A themed board has to be found by scanning, for the same reason a daily
          does: slots are keyed per board, and at boot `board` is the empty

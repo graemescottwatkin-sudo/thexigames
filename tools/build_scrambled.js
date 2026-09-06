@@ -406,6 +406,46 @@ export function gate(src, shape) {
      the cypher is derived at build. */
   problems.push(...consonantProblems(xi));
 
+  /* NOBODY IS BOTH A CENTRE-BACK AND A CENTRE-FORWARD.
+   *
+   * The builder is free to place a player at any position their article
+   * mentions, which is right and is how a formation gets filled: a full-back
+   * who is also a winger can take either flank, and a midfielder who is also a
+   * forward can play up top. The owner's ruling, 6 September 2026 — "its fine
+   * being in different positions, like LB, LW or CM, AM".
+   *
+   * What is NOT fine is the jump across the middle of the pitch. Dion Dublin
+   * was placed at centre-back on six boards because his article says
+   * "Centre-forward, Centre-back": true, and true of a handful of games out of
+   * six hundred and fifteen. Ian Marshall was a striker on four boards for the
+   * mirror reason. A player reads that and knows the board is wrong.
+   *
+   * So the wide moves and the middle-to-front moves stay, and this refuses the
+   * central swap in either direction — checked against the ARTICLE, because
+   * the article is the only evidence the bank holds about what else a player
+   * was, and it is exactly what the builder read to justify the placement. */
+  const CENTRAL_DEF = /(centre.?back|center.?back|\bdefender\b|sweeper)/i;
+  const CENTRAL_ATT = /(centre.?forward|center.?forward|\bstriker\b|\bforward\b)/i;
+  const WIDE = /(wing|full.?back|left.?back|right.?back)/i;
+  xi.forEach((p, i) => {
+    /* A RULING SETTLES IT, and that is the escape this clause needs rather
+       than an exception list. posSource carries "article says ..." while the
+       position is the builder's own reading of the article; once the owner has
+       ruled, the row says so instead and there is nothing left to refuse. That
+       is how Dublin, Marshall and Warhurst leave this check — by being decided,
+       not by being excused. */
+    const said = String(p.posSource || "").match(/article says "([^"]+)"/);
+    if (!said) return;
+    const parts = said[1].split(/[,;\/]/).map((x) => x.trim()).filter(Boolean);
+    const centralDef = parts.some((x) => CENTRAL_DEF.test(x) && !WIDE.test(x));
+    const centralAtt = parts.some((x) => CENTRAL_ATT.test(x) && !WIDE.test(x));
+    if (!centralDef || !centralAtt) return;
+    problems.push(
+      `player ${i + 1} (${p.display}) is listed as both a central defender and a ` +
+      `central forward — "${said[1]}" — and is placed at ${p.pos}. One of those is ` +
+      `a handful of games and the bank cannot tell which, so it needs a ruling ` +
+      `rather than a slot to fill`);
+  });
   if (shape.error) problems.push(shape.error);
   if (xi.length !== 11) {
     problems.push(`${xi.length} players — an XI has eleven, and that is the whole product`);

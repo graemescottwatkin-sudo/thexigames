@@ -10,7 +10,7 @@
  * sends it up; it asks. Changing a device clock changes nothing.
  */
 import { SAMPLE_PUZZLES, samplePuzzleForDay, sampleFirstDay } from "./ws-sample.js";
-import { utcDay } from "./daily.js";
+import { utcDay, dailyDayKey } from "./daily.js";
 
 export function hasDB(env) { return !!(env && env.DB); }
 
@@ -167,10 +167,31 @@ export async function archive(env, now) {
     const p = samplePuzzleForDay(day);
     return [{ day, id: p.id, theme: p.theme, category: p.category }];
   }
+  /* NOT EVERY SCHEDULED DAY IS A PREVIOUS PUZZLE. ws_schedule was pre-filled
+     from 1 January 2026 — 730 consecutive days of inventory — and this listed
+     all of them that were before today. So the page offered 238 "previous
+     puzzles" from before the game existed, and claimed the word search had a
+     daily on 3 February 2026. Reported by the owner from outside; invisible
+     from in here, because the query was correct about the table and wrong
+     about what the table means.
+
+     THE LINE IS DERIVED, NOT WRITTEN DOWN: a day before the family's day one
+     has no board NUMBER, so it has no address either — dailyNoForDay returns
+     null and /football/wordsearch/daily/<n> cannot name it. A row that is
+     listed as a past board and cannot be linked to is the same fault twice, so
+     the archive is bounded by exactly the set that is addressable and the two
+     can no longer disagree.
+
+     WHAT THIS DOES NOT FIX, and it is one day rather than 238: the word search
+     went live on 27 August and day one of the family is the 26th, so that
+     board is listed a day before the game served it. Left alone deliberately —
+     removing it needs a per-game launch date, which is a new fact to keep, and
+     the day is addressable, playable and real. */
+  const firstDay = dailyDayKey(1);
   const rows = await env.DB.prepare(
     `SELECT s.day AS day, p.id AS id, p.theme AS theme, p.category AS category
        FROM ws_schedule s JOIN ws_puzzles p ON p.id = s.puzzle_id
-      WHERE s.day < ?
-      ORDER BY s.day DESC`).bind(today).all();
+      WHERE s.day < ? AND s.day >= ?
+      ORDER BY s.day DESC`).bind(today, firstDay).all();
   return rows.results || [];
 }

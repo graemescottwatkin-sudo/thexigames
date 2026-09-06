@@ -121,7 +121,11 @@ server.listen(0, "127.0.0.1", async () => {
   const origin = `http://127.0.0.1:${server.address().port}`;
   console.log(`Serving ${DIR} at ${origin}\n`);
 
-  async function open(seed) {
+  /* HOW THE PAGE GOT HERE. A real browser answers through the Navigation
+     Timing API; jsdom answers with an empty list, so without a stub every run
+     looks like neither an arrival nor a reload and the branch that tells them
+     apart is never taken. `navType` is what a browser would have said. */
+  async function open(seed, navType) {
     const dom = await JSDOM.fromURL(origin + "/", {
       runScripts: "dangerously", pretendToBeVisual: true, resources: "usable",
       beforeParse(w) {
@@ -129,6 +133,10 @@ server.listen(0, "127.0.0.1", async () => {
         w.scrollTo = () => {}; w.scrollBy = () => {};
         w.fetch = (u, o) => fetch(String(u).startsWith("http") ? u : origin + u, o);
         w.confirm = () => true;
+        if (navType) {
+          w.performance.getEntriesByType = (kind) =>
+            (kind === "navigation" ? [{ type: navType }] : []);
+        }
         for (const k in seed || {}) if (seed[k] != null) w.localStorage.setItem(k, seed[k]);
         /* Count every change listener the page binds to a club control.
            Counting handlers the test added itself proves nothing — the
@@ -328,6 +336,46 @@ server.listen(0, "127.0.0.1", async () => {
       done.some((r) => r.dailyNo === 44),
       "reopening a daily should show what you did");
     w.close();
+  }
+
+  /* ---- ARRIVING IS NOT REFRESHING --------------------------------------
+   *
+   * The owner: open the crossword, play today's board, go back to the hub,
+   * click Crossword XI again — and land straight back in the daily rather than
+   * on the game's own front page. Having asked for the GAME, they were given
+   * the BOARD.
+   *
+   * The resume rule it came from is right and is kept: refreshing must not
+   * change what you are playing. What was missing is that the browser knows
+   * which happened — a reload is "reload", a click from the hub is "navigate"
+   * — and nothing was asking. Referrer cannot answer it, because a referrer
+   * survives a reload, so a refresh after arriving from the hub looks exactly
+   * like an arrival.
+   *
+   * Both halves are driven here, because a rule with two branches that has
+   * only ever been seen take one is a rule half-known. */
+  console.log("\nArriving from the hub, against refreshing in place");
+  {
+    const nav = await open({ [DAILY_SLOT]: IN_PROGRESS, "fcw.mode": "daily" }, "navigate");
+    const nd = nav.window.document;
+    t("a fresh arrival lands on the game's own front page",
+      nd.getElementById("homeOverlay").classList.contains("show"),
+      "asking for the game is not asking for the board");
+    t("and the board it did not open is still there, said so on the card",
+      /in progress/i.test(nd.getElementById("homeDailyState").textContent),
+      nd.getElementById("homeDailyState").textContent);
+    nav.window.close();
+
+    /* fcw.mode TOO. boot reads it to know WHICH kind of board to look for, so
+       a seed with a saved daily and no mode resumes nothing — which is what
+       the first draft of this check tested, and it passed against a page that
+       was showing the menu for a different reason entirely. */
+    const rel = await open({ [DAILY_SLOT]: IN_PROGRESS, "fcw.mode": "daily" }, "reload");
+    const rd = rel.window.document;
+    t("a refresh resumes what was being played, as it always has",
+      !rd.getElementById("homeOverlay").classList.contains("show"),
+      "changing the board under a refresh would be the worse fault");
+    rel.window.close();
   }
 
   server.close();
