@@ -355,6 +355,23 @@ on the service — the one traffic pattern worth being able to block cleanly.
 
 ### 6. Challenge tables, switched on per game
 
+**Four of the five carry one, 6 Sep, and the fifth cannot yet.** The flow is
+`shared/xi-challenge.js` — one implementation, wired into Scrambled, Vowels
+and HiLo, with the crossword still on its own until the shared one has been
+proved in three games. **The word search is blocked, for a real reason rather
+than a missing button:** its free-play boards are judged BY THE PAGE. The
+whole board, placements and all, is handed over on purpose — `judgedHere()`
+says so — and only the daily is judged by the server. So a free board has no
+score the server computed, and a challenge table is made of exactly that. The
+work is to extend the server round to free play, which is the direction the
+game already went for its daily; it changes how a free board is served, so it
+is its own piece rather than a line in this one.
+
+**Still open: converging the crossword.** It has its own copy of the flow
+inside `crossword/js/game.js`, which is where all of this came from. Moving it
+onto the shared module is the last step and deliberately not the first: it is
+the one game where challenges work today.
+
 **The server half is done, 6 Sep.** A challenge no longer belongs to the
 crossword: the board it is about is derived from the play it was created from
 — `plays` already records `(game, board_key)` for every game — the entry check
