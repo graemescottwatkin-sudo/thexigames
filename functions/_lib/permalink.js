@@ -73,6 +73,11 @@ export const PERMA_GAMES = {
   /* The same ring as Scrambled read half a turn round, so the same board
      number and a different board behind it. */
   vowels: { name: "Vowels XI", schedule: "ring" },
+  /* Grid XI launched 7 September 2026. It is a SCHEDULED game: gd_schedule
+     names one board per day and there is no ring behind it, so a number the
+     calendar does not hold is not a board — the same question the word search
+     and HiLo are asked. */
+  grid: { name: "Grid XI", schedule: "day" },
 };
 
 /* WHAT A BOARD IS CALLED OUT LOUD: the day it ran, in every game.
@@ -167,7 +172,7 @@ export function keyForOldDate(raw, now = Date.now()) {
    things to change the day a game's storage moves. Never interpolated from
    anything a request can reach: the key is a game name already matched
    against PERMA_GAMES. */
-const SCHEDULE_TABLE = { wordsearch: "ws_schedule", hilo: "hl_schedule" };
+const SCHEDULE_TABLE = { wordsearch: "ws_schedule", hilo: "hl_schedule", grid: "gd_schedule" };
 
 export async function ranOn(env, game, key) {
   const g = PERMA_GAMES[game];
@@ -272,7 +277,7 @@ export async function boardKeys(env, game, now = Date.now()) {
  * coming, and its games will not be football's. */
 export const THEME_OF = {
   crossword: "football", wordsearch: "football", scrambled: "football",
-  hilo: "football", vowels: "football", quickfire: "football",
+  hilo: "football", vowels: "football", quickfire: "football", grid: "football",
 };
 export const themeOf = (game) => THEME_OF[game] || "football";
 export const gamePath = (game) => `/${themeOf(game)}/${game}/`;

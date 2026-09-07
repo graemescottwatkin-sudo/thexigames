@@ -53,8 +53,12 @@
        says so — "only a launched game holds a number ... and moves down when a
        game ships past it". */
     { n: 5,  name: "Vowels XI",      href: "/football/vowels/" },
-    { n: 6,  status: "In testing",   href: "/football/quickfire/" },
-    { n: 7,  status: "In build" },
+    /* Grid XI launched on 7 Sep 2026 and took the next free number, which is
+       what launching does. QuickFire moves from 6 to 7 for the same reason it
+       moved from 5 to 6 when Vowels went out: a game in testing does not hold
+       a shirt, and it moves down when a game ships past it. */
+    { n: 6,  name: "Grid XI",        href: "/football/grid/" },
+    { n: 7,  status: "In testing",   href: "/football/quickfire/" },
     { n: 8,  status: "In build" },
     { n: 9,  status: "On the drawing board" },
     { n: 10, status: "On the drawing board" },

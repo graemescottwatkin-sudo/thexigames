@@ -37,6 +37,7 @@ const STATIC = [
   ["/football/scrambled/", "daily", "0.9"],
   ["/football/vowels/", "daily", "0.9"],
   ["/football/hilo/", "daily", "0.9"],
+  ["/football/grid/", "daily", "0.9"],
   ["/football/crossword/answers/", "daily", "0.7"],
   ["/football/wordsearch/answers/", "daily", "0.7"],
   /* Three games had no answers archive until 6 Sep 2026 — the crossword got
@@ -46,6 +47,7 @@ const STATIC = [
   ["/football/scrambled/answers/", "daily", "0.7"],
   ["/football/vowels/answers/", "daily", "0.7"],
   ["/football/hilo/answers/", "daily", "0.7"],
+  ["/football/grid/answers/", "daily", "0.7"],
   ["/football/crossword/clubs/", "weekly", "0.6"],
   ["/football/wordsearch/themes/", "weekly", "0.6"],
   ["/football/hilo/clubs/", "weekly", "0.6"],

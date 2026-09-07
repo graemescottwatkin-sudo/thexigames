@@ -32,7 +32,7 @@
 
   var R = window.XIGR_RULES;
   var $ = function (id) { return document.getElementById(id); };
-  var BUILD = "v001b";
+  var BUILD = "v002";
 
   var S = {
     board: null,          // the PUBLIC board: shape, lengths, crossings. No letters.
@@ -366,6 +366,110 @@
 
   /* ---- full time --------------------------------------------------------- */
 
+
+  /* ---- the durable record ----------------------------------------------
+   *
+   * WHAT A LAUNCHED GAME OWES THE FAMILY, and what this game did not have
+   * until it launched on 7 September 2026: a list of the boards it has
+   * finished, under its own prefix, that the hub can read and an account can
+   * carry between devices. Without it the front door cannot say this game was
+   * played today, and a player signed in on two devices has two records.
+   *
+   * A ROW IS UNIQUE BY BOARD NUMBER, not by date: the boards are numbered and
+   * somebody can finish yesterday's today. Every other game keys the same way.
+   *
+   * THE MERGE RULE IS THE FAMILY'S, stated once here and kept the same in all
+   * six: the first result banked wins, the account's row wins outright on
+   * pull, and unpushed local rows survive. */
+  var PREFIX = "xigd.";
+  var RESULTS_KEY = PREFIX + "results";
+  var account = null;
+
+  function readResults() {
+    try {
+      var r = JSON.parse(localStorage.getItem(RESULTS_KEY) || "[]");
+      return Array.isArray(r) ? r : [];
+    } catch (e) { return []; }
+  }
+
+  function recordResult(rec) {
+    try {
+      /* Replaying a board you have already finished does not overwrite the
+         run you set on it. */
+      var all = readResults();
+      if (all.some(function (r) { return r && r.no === rec.no; })) return;
+      all.push(rec);
+      localStorage.setItem(RESULTS_KEY, JSON.stringify(all.slice(-800)));
+    } catch (e) {}
+    pushResults();
+  }
+
+  /* The session cookie is scoped to the family, so a player signed in on
+     another game is already signed in here. */
+  function apiAuth(path, body) {
+    var opts = {
+      method: body ? "POST" : "GET",
+      headers: { "X-XI-Games": "1" },     // the CSRF check on the server
+      credentials: "same-origin",
+    };
+    if (body) {
+      opts.headers["Content-Type"] = "application/json";
+      opts.body = JSON.stringify(body);
+    }
+    return fetch(path, opts).then(function (r) {
+      if (!r.ok) throw new Error(String(r.status));
+      return r.json();
+    });
+  }
+
+  /* Logged and swallowed. A sync that cannot reach the server is not a
+     signed-out player, and telling them so mid-board would be a lie they
+     cannot act on. */
+  function accountNote(what, e) {
+    try { console.info("grid account " + what + ": " + (e && e.message)); } catch (x) {}
+  }
+
+  function pushResults() {
+    if (!account) return Promise.resolve(null);
+    return apiAuth("/api/account/migrate", { game: "grid", results: readResults() })
+      .catch(function (e) { accountNote("push", e); return null; });
+  }
+
+  function pullResults() {
+    if (!account) return Promise.resolve(null);
+    return apiAuth("/api/account/results?game=grid").then(function (r) {
+      var remote = (r && r.results) || [];
+      if (!remote.length) return null;
+      var byNo = {};
+      readResults().forEach(function (x) { if (x && x.no != null) byNo[x.no] = x; });
+      remote.forEach(function (x) { if (x && x.no != null) byNo[x.no] = x; });
+      var merged = Object.keys(byNo).map(function (k) { return byNo[k]; })
+        .sort(function (a, b) { return a.no - b.no; });
+      try { localStorage.setItem(RESULTS_KEY, JSON.stringify(merged.slice(-800))); } catch (e) {}
+      return merged;
+    }).catch(function (e) { accountNote("pull", e); return null; });
+  }
+
+  /* THE CHROME OWNS THE IDENTITY. Its account sheet announces a sign-in, a
+     sign-out or a rename on document as xi:account; this game answers by
+     syncing its own results, which is the one part that is still its own. */
+  document.addEventListener("xi:account", function (ev) {
+    var d = ev.detail || {};
+    if (d.type === "signout") { account = null; return; }
+    syncAccount();
+  });
+  function syncAccount() {
+    return apiAuth("/api/auth/session").then(function (r) {
+      account = (r && r.user) || null;
+      if (!account) return null;
+      return pushResults().then(pullResults);
+    }).catch(function (e) {
+      /* A transient failure is NOT a sign-out. */
+      accountNote("session", e);
+      return null;
+    });
+  }
+
   function fullTime() {
     var el = $("gdFullTime");
     if (!el || !S.score) return;
@@ -383,6 +487,20 @@
       "<table>" + rows + "</table>";
     if (window.XIPlays && window.XIPlays.active) {
       if (window.XIPlays.active()) window.XIPlays.end(S.score.solved === R.ENTRIES);
+    }
+    /* THE RECORD, ONCE THE BOARD IS OVER. A board with no number cannot be
+       part of a run, so it is not recorded — the same rule Scrambled keeps
+       for its finals. */
+    if (S.no != null) {
+      recordResult({
+        no: S.no,
+        title: S.board && S.board.title,
+        score: S.score.total,
+        solved: S.score.solved,
+        misses: S.misses,
+        hints: S.hints ? Object.keys(S.hints).length : 0,
+        at: Date.now(),
+      });
     }
     el.scrollIntoView({ block: "nearest" });
   }
@@ -445,6 +563,7 @@
       S.no = r.no;
       S.turns = R.TURNS_START;
       resetBuffer();
+      syncAccount();
       if (window.XIPlays && window.XIPlays.start) {
         /* boardKey and dailyNo are the field names xi-plays.js reads; `key`
            was invented here and would have been dropped in silence. */

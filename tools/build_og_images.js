@@ -127,6 +127,19 @@ function vowelsMotif() {
   return s;
 }
 
+/* GRID: one crossing. The across entry is solved and its letters are given;
+   the down entry through it has only the crossing letter, which is exactly
+   what solving one hands the next. */
+function gridMotif() {
+  let s = "";
+  const across = ["K", "A", "N", "E"];
+  for (let i = 0; i < 4; i++) s += cell(i, 1, MINT, across[i], DEEP);
+  s += cell(1, 0, DEEP, "", SOFT);
+  s += cell(1, 2, DEEP, "", SOFT);
+  s += cell(1, 3, DEEP, "", SOFT);
+  return s;
+}
+
 /* HILO: two values and the call between them. Higher or lower is the entire
    mechanic and an arrow pair says it without a word of copy. */
 function hiloMotif() {
@@ -198,6 +211,15 @@ const GAMES = {
     lead: "Eleven names, no vowels.",
     sub: "A new football eleven every day.",
     motif: vowelsMotif,
+  },
+  /* GRID: a crossing, which is the whole of this game. Two entries meeting at
+     one square, one solved and one not — the letter that crosses is what a
+     solved entry gives the next, and it is the only thing worth drawing. */
+  grid: {
+    name: "GRID",
+    lead: "Eleven names, one grid.",
+    sub: "No clues but the title. A new grid every day.",
+    motif: gridMotif,
   },
   hilo: {
     name: "HILO",

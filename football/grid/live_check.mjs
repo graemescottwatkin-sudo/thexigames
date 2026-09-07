@@ -132,17 +132,29 @@ console.log("\nA guess is marked by the server, not the page");
   }
 }
 
-/* ---- and it is still unlaunched ----------------------------------------- */
-console.log("\nAnd Grid XI is still not launched");
+/* ---- and it is launched -------------------------------------------------- */
+/* THIS BLOCK USED TO ASSERT THE OPPOSITE — no sitemap entry, no mention on the
+   hub, no permalink route — so that the game could not go live by drift. It
+   went live on 7 September 2026, and the same three things are now the proof
+   that it did: a launch nobody can reach from the front door, or that search
+   cannot see, is a launch in name only. */
+console.log("\nAnd Grid XI is launched");
 {
   const map = await (await fetch(HUB + "/sitemap.xml")).text();
-  t("the sitemap names no grid page", !/\/football\/grid\//.test(map),
-    "236 boards in a sitemap is a game announced by a crawler");
+  const boards = map.split("/football/grid/daily/").length - 1;
+  t("the sitemap carries its boards", boards > 0, boards + " grid boards listed");
+  t("and its front page and its archive",
+    map.indexOf("/football/grid/</loc>") > -1 && map.indexOf("/football/grid/archive/") > -1);
   const hub = await (await fetch(HUB + "/")).text();
-  t("the hub does not name it", !/Grid XI/i.test(hub.replace(/<!--[\s\S]*?-->/g, "")));
-  const perma = await fetch(SITE + "/daily/1", { redirect: "manual" });
-  t("and it has no permalink route yet", perma.status === 404,
-    `${perma.status} — the route is a launch step, because it puts boards in the sitemap`);
+  t("the hub names it, now that it is out", hub.indexOf("Grid XI") > -1);
+  const no = daily && daily.no ? daily.no : 1;
+  const perma = await fetch(SITE + "/daily/" + no, { redirect: "manual" });
+  t("and today's board has a permanent address", perma.status === 200,
+    "/daily/" + no + " -> " + perma.status);
+  const answers = await fetch(SITE + "/answers/");
+  t("its answers archive answers", answers.status === 200, String(answers.status));
+  const archive = await fetch(SITE + "/archive/");
+  t("and so does its board archive", archive.status === 200, String(archive.status));
 }
 
 /* ---- the floor and the marker ------------------------------------------- */

@@ -68,9 +68,9 @@
      own — the team sheet and the kit colours. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared/xi-tokens.css?v=v30">
-<link rel="stylesheet" href="shared/xi-chrome.css?v=v30">
-<script src="shared/xi-theme.js?v=v30"></script>
+<link rel="stylesheet" href="shared/xi-tokens.css?v=v31">
+<link rel="stylesheet" href="shared/xi-chrome.css?v=v31">
+<script src="shared/xi-theme.js?v=v31"></script>
 <style>
 :root{
 
@@ -285,7 +285,9 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
       <a class="shirt live" id="shirt5" href="/football/vowels/" title="Vowels XI" aria-label="Vowels XI">
         <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor"
              stroke-width="1.9"><path d="M4 8h4M10 8h4M16 8h4" stroke-linecap="round"/><path d="M4 13h4M16 13h4" stroke-linecap="round"/><path d="M10 12.4v1.2" stroke-linecap="round" opacity=".45"/><path d="M4 18h16" stroke-linecap="round" opacity=".35"/></svg></a>
-      <span class="shirt soon" title="Not out yet">6</span>
+      <a class="shirt live" id="shirt6" href="/football/grid/" title="Grid XI" aria-label="Grid XI">
+        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor"
+             stroke-width="1.9"><rect x="3.2" y="3.2" width="17.6" height="17.6" rx="2.2"/><path d="M3.2 9.1h17.6M3.2 15h17.6M9.1 3.2v17.6M15 3.2v17.6" opacity=".5"/></svg></a>
       <span class="shirt soon" title="Not out yet">7</span>
       <span class="shirt soon" title="Not out yet">8</span>
       <span class="shirt soon" title="Not out yet">9</span>
@@ -411,6 +413,21 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
         </div>
       </article>
 
+      <article class="card">
+        <div class="cap on-dark" style="background:var(--kit-06)">
+          <span class="num">6</span>
+          <svg viewBox="0 0 48 48" aria-hidden="true" fill="none">
+            <rect x="6" y="6" width="36" height="36" rx="3" stroke="#fff" stroke-width="2.5"/>
+            <path d="M6 18h36M6 30h36M18 6v36M30 6v36" stroke="#fff" stroke-width="2" opacity=".55"/>
+          </svg>
+          <h3>Grid XI</h3>
+        </div>
+        <div class="body">
+          <p>Eleven footballers locked into one grid, with no clues but the title. Solve one and its letters cross into the next.</p>
+          <a class="btn primary" href="/football/grid/">Play today</a>
+        </div>
+      </article>
+
     </div>
   </section>
 
@@ -434,16 +451,17 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
          Each number keeps the kit colour it will launch in, so the colour is
          familiar before the name ever appears. The status line is the only
          thing that moves. -->
+    <!-- GRID XI TOOK THE SIX ON 7 SEP 2026, so everything here moved down one
+         and the tail lost a slot rather than the squad growing a twelfth —
+         which is the rule the drawer keeps and this grid has to keep with it.
+         QuickFire is in testing and does not hold a shirt; it sits on the
+         first number no launched game wears, which is now seven. -->
     <div class="soon-grid">
       <a class="soon-card open" href="/football/quickfire/" rel="nofollow"
          title="In testing — not finished, and not yet a daily game">
-        <span class="sq" style="background:var(--kit-06)">6</span>
-        <span class="nm">Number six<span>In testing</span></span>
-      </a>
-      <div class="soon-card">
         <span class="sq" style="background:var(--kit-07)">7</span>
-        <span class="nm">Number seven<span>In build</span></span>
-      </div>
+        <span class="nm">Number seven<span>In testing</span></span>
+      </a>
       <div class="soon-card">
         <span class="sq" style="background:var(--kit-08)">8</span>
         <span class="nm">Number eight<span>In build</span></span>
@@ -502,8 +520,8 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
      and the one page list, so the front door's footer and every game's are
      the same footer. -->
 <footer class="xic-foot"></footer>
-<script src="shared/xi-season.js?v=v30"></script>
-<script src="shared/xi-chrome.js?v=v30"></script>
+<script src="shared/xi-season.js?v=v31"></script>
+<script src="shared/xi-chrome.js?v=v31"></script>
 
 <script>
 /* Progressive enhancement only: everything above renders complete without
@@ -603,6 +621,13 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
       { n: 5, id: "vowels", name: "Vowels XI", key: "xivw.results",
         api: "/api/scrambled/daily?cy=1",
         today: function (d) { return d.today; },
+        done: function (r, t) { return r.no === t; } },
+      /* Grid XI launched 7 Sep 2026. Its calendar names one board per day and
+         its payload carries that board's number, so it is judged by number
+         like the two cypher games rather than by day. */
+      { n: 6, id: "grid", name: "Grid XI", key: "xigd.results",
+        api: "/api/grid/daily",
+        today: function (d) { return d.no; },
         done: function (r, t) { return r.no === t; } }
     ];
 
@@ -770,7 +795,7 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
       if (ladderLibs) return ladderLibs;
       ladderLibs = new Promise(function (done) {
         var left = 2, ok = true;
-        ["shared/xi-seasons.js?v=v30", "shared/xi-table.js?v=v30"].forEach(function (src) {
+        ["shared/xi-seasons.js?v=v31", "shared/xi-table.js?v=v31"].forEach(function (src) {
           var el = document.createElement("script");
           el.src = src;
           el.onload = function () { if (!--left) done(ok); };

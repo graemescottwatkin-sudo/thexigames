@@ -38,9 +38,14 @@ const t = (n, ok, d) => { ok ? pass++ : fail++; console.log(`${ok ? "  ok  " : "
 const RAN = {
   ws_schedule: ["2026-09-03", "2026-09-01", "2026-08-30"],
   hl_schedule: ["2026-09-03"],
+  /* Grid XI launched on 7 September 2026 and is scheduled like the other two:
+     a number the calendar does not hold is not a board. Two days, so the
+     fixture can tell "lists what exists" from "lists one to today". */
+  gd_schedule: ["2026-09-08", "2026-09-07"],
 };
 const tableOf = (sql) => (/ws_schedule/.test(sql) ? "ws_schedule"
-  : /hl_schedule/.test(sql) ? "hl_schedule" : null);
+  : /hl_schedule/.test(sql) ? "hl_schedule"
+  : /gd_schedule/.test(sql) ? "gd_schedule" : null);
 const env = {
   DB: {
     prepare: (sql) => ({

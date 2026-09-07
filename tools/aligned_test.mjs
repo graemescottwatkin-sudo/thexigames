@@ -92,6 +92,7 @@ const GAMES = [
   { id: "scrambled",  dir: "football/scrambled",  name: "Scrambled XI",  prefix: "xisc" },
   { id: "hilo",       dir: "football/hilo",       name: "HiLo XI",       prefix: "xihl" },
   { id: "vowels",     dir: "football/vowels",     name: "Vowels XI",     prefix: "xivw" },
+  { id: "grid",       dir: "football/grid",       name: "Grid XI",       prefix: "xigd" },
 ];
 
 const workflow = read(".github/workflows/checks.yml");
@@ -252,11 +253,32 @@ for (const g of GAMES) {
       }
       return out;
     };
-    const literalOf = (name) => {
-      const head = "var " + name + " = " + QUOTE;
-      const at = js.indexOf(head);
+    /* A CONSTANT MAY BE BUILT FROM ANOTHER ONE, and three games build theirs
+       that way: `var RESULTS_KEY = PREFIX + "results"`. This read only
+       `var NAME = "literal"`, so such a key resolved to NOTHING — and a game
+       whose ONLY write is that shape then failed for "writing no keys at
+       all", which is what Grid XI did on the day it launched. Scrambled and
+       the crossword passed the same check only because they ALSO write keys
+       this could see; the one they build was never being read either. */
+    const literalOf = (name, seen) => {
+      seen = seen || new Set();
+      if (seen.has(name)) return null;
+      seen.add(name);
+      const decl = "var " + name + " = ";
+      const at = js.indexOf(decl);
       if (at < 0) return null;
-      return js.slice(at + head.length, js.indexOf(QUOTE, at + head.length));
+      const expr = js.slice(at + decl.length, js.indexOf(";", at));
+      let out = "";
+      for (const part of expr.split("+")) {
+        const tok = part.trim();
+        if (tok.indexOf(QUOTE) === 0) out += tok.slice(1, tok.indexOf(QUOTE, 1));
+        else {
+          const v = literalOf(tok, seen);
+          if (v === null) return null;      // a piece nothing can resolve
+          out += v;
+        }
+      }
+      return out;
     };
     /* A builder is judged by EVERY key it can return, not by the first one.
        slotKey() returns one key for practice and another for a board; a check
@@ -355,8 +377,8 @@ t("no game carries a private copy of a shared file",
 
    Move both constants together, in the post-deploy commit, exactly as a game's
    LAST_SHIPPED and LAST_SHIPPED_ASSETS move together. */
-const SHARED_TAG = "v30";
-const SHARED_HASH = "d1c82a6e007fecc4";
+const SHARED_TAG = "v31";
+const SHARED_HASH = "67823a48853946d7";
 /* EVERY PAGE THAT LINKS THE SHARED LAYER, not the games alone. The hub, the
    two static pages and the unlaunched game all carry the chrome now, and the
    server-rendered shell writes the tag from a constant of its own — so a tag

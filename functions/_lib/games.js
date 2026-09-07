@@ -17,7 +17,7 @@
    already keep about naming unbuilt games. */
 import { dailyKey, dailyDayKey, dailyNoForDay } from "./daily.js";
 
-export const GAMES = ["crossword", "wordsearch", "scrambled", "hilo", "vowels"];
+export const GAMES = ["crossword", "wordsearch", "scrambled", "hilo", "vowels", "grid"];
 
 export const DEFAULT_GAME = "crossword";
 
@@ -54,7 +54,7 @@ export const LAUNCHED = {
   hilo: "2026-09-03",         // and hl_schedule's own first day agrees
   vowels: "2026-09-04",       // the fifth shirt; board #10
   quickfire: null,
-  grid: null,
+  grid: "2026-09-07",       // the sixth shirt; board #13
 };
 
 /* ---- WHICH GAMES SHARE AN ENGINE -----------------------------------------

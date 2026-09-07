@@ -187,27 +187,35 @@ t("the shared layer is on the shared tag, not this game's", (() => {
   return shared.length > 0 && shared.every((x) => x === shared[0] && x !== tag);
 })());
 
-console.log("\nAnd it is NOT launched, which is a thing to state rather than assume");
+console.log("\nAnd it IS launched, which is a thing to state rather than assume");
+/* THESE WERE THE REFUSALS. Until 7 September 2026 this block asserted the
+   opposite of every line below — not in GAMES, no shirt, named nowhere but
+   its own page — so that the game could not go live by drift. Launching was
+   the deliberate edit they existed to demand, and they are the assertions
+   that it was made COMPLETELY: a launch half done is a game whose results
+   nobody may write, or whose shirt nobody can see. */
 const games = read("functions/_lib/games.js");
 t("grid is in BUILT, so a round can have a play id",
   /"quickfire", "grid"|"grid", "quickfire"/.test(games));
-/* THE ONE THAT MATTERS. GAMES is "whose rows the account system may write",
-   and a results row for a game nobody can reach is a row nobody will read.
-   Launching is a deliberate edit to that line, and this refuses it happening
-   by accident — which is the same shape as the shirt below. */
-t("and NOT in GAMES, so no results row can be written for it",
-  !/export const GAMES = \[[^\]]*"grid"/.test(games),
-  "launching Grid XI is an edit to that line, on purpose");
-t("it wears no shirt: an unlaunched game does not hold a number", (() => {
-  const squad = read("shared/xi-chrome.js");
-  const block = squad.slice(squad.indexOf("var SQUAD"), squad.indexOf("var PAGES"));
-  return !/Grid XI/.test(block);
-})(), "only a launched game holds a number");
-t("and is named in no served markup but its own", (() => {
-  /* chrome_test proves this across the family; here it is the one page that
-     IS allowed to say it, checked so that the pair cannot both be forgotten. */
-  return /Grid XI/.test(html);
-})(), "its own page says its name; chrome_test refuses every other page saying it");
+t("and in GAMES, so its results are the account's to carry",
+  games.slice(games.indexOf('export const GAMES ='), games.indexOf('];')).indexOf('"grid"') > -1,
+  "a game people can play whose rows nobody may write is half a launch");
+t("and has a launch day, which is what every list counts from",
+  /grid: "[0-9]{4}-[0-9]{2}-[0-9]{2}"/.test(games),
+  "boardKeys, the archive index and the sitemap all start there");
+const squad = (() => {
+  const s = read("shared/xi-chrome.js");
+  return s.slice(s.indexOf("var SQUAD"), s.indexOf("var PAGES"));
+})();
+t("it wears the sixth shirt", /n: 6,[^}]*name: "Grid XI"/.test(squad),
+  "a launched game takes the next free number");
+t("and QuickFire moved down to make room", /n: 7,[^}]*status: "In testing"/.test(squad),
+  "a game in testing does not hold a shirt, and moves when one ships past it");
+t("its own page still says its name", /Grid XI/.test(html));
+t("and the hub says it too, now that it is out", (() => {
+  const hub = read("index.html");
+  return /Grid XI/.test(hub) && /id="shirt6"/.test(hub);
+})(), "the front door is where a launch is visible");
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

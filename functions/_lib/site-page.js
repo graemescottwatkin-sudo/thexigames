@@ -20,7 +20,7 @@
 /* THE SHARED LAYER'S TAG, as every page carries it in its ?v=. One more
    place the tag is written; tools/aligned_test.mjs asserts it agrees with the
    pages, so it cannot fall behind them quietly. */
-export const SHARED_TAG = "v30";
+export const SHARED_TAG = "v31";
 
 /* What each game's masthead says and where its tabs go. The current tab is
    marked by path; a page with no game (a hub-level page) gets no masthead. */
@@ -50,6 +50,12 @@ const MAST = {
     name: "Scrambled", home: "/football/scrambled/",
     nav: [["Today", "/football/scrambled/"], ["Archive", "/football/scrambled/archive/"],
           ["Answers", "/football/scrambled/answers/"],
+          ["How to play", "/football/crossword/how-to-play"]],
+  },
+  grid: {
+    name: "Grid", home: "/football/grid/",
+    nav: [["Today", "/football/grid/"], ["Archive", "/football/grid/archive/"],
+          ["Answers", "/football/grid/answers/"],
           ["How to play", "/football/crossword/how-to-play"]],
   },
   vowels: {
@@ -169,6 +175,7 @@ const OG_IMAGE = {
   scrambled: "/football/scrambled/og-image.png",
   hilo: "/football/hilo/og-image.png",
   vowels: "/football/vowels/og-image.png",
+  grid: "/football/grid/og-image.png",
 };
 const SITE_ORIGIN = "https://www.thexigames.com";
 
