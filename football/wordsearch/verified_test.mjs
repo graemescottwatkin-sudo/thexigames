@@ -37,6 +37,14 @@ function t(name, ok, note) {
 
 const { puzzle: BOARD, day: DAY } = await dailyBoard({});
 const ANS = BOARD.answers;
+/* A BOARD THAT IS NOT TODAY'S, DERIVED. This was the literal "XIWS-0001" in
+   three checks, on the reasoning that it is yesterday's — and the sample
+   schedule is a three-board rotation, so on 7 September 2026 the rotation came
+   round and XIWS-0001 WAS today's. All three went red on a tree that had not
+   changed, saying the server could not tell one board from another when what
+   had actually happened is that the clock moved. Tomorrow's board is never
+   today's, whatever day it is run. */
+const NOT_TODAY = (await dailyBoard({}, Date.now() + 86400000)).puzzle.id;
 const cellsOf = (item) => {
   const p = item.placement;
   return { from: [p.start_row, p.start_col], to: [p.end_row, p.end_col] };
@@ -96,8 +104,8 @@ console.log("\nWhat the other doors will not give");
      and the archive gate saw it as zero days old. */
   t("today's board is today's daily, and the server can say so",
     await isTodaysDaily({}, BOARD.id) === true, BOARD.id);
-  t("and yesterday's board is not",
-    await isTodaysDaily({}, "XIWS-0001") === false);
+  t("and another board is not",
+    await isTodaysDaily({}, NOT_TODAY) === false, NOT_TODAY);
   const list = await catalog({});
   t("free play does not list the board in flight",
     !list.some((p) => p.id === BOARD.id),
@@ -388,8 +396,11 @@ console.log("The doors, with a database behind them");
           if (/FROM ws_puzzles/.test(sql)) {
             /* Two boards: today's, and one from last week. The SQL under test
                is what decides which of them a catalogue may list. */
+            /* The older board is DERIVED too: pinned as "XIWS-0001" it became
+               today's board when the three-board sample rotation came round,
+               and the stub then offered the same id twice. */
             const rows = [{ id: todayId, theme: "Today", category: "c", status: "live" },
-                          { id: "XIWS-0001", theme: "Older", category: "c", status: "live" }];
+                          { id: NOT_TODAY, theme: "Older", category: "c", status: "live" }];
             return { results: /NOT IN \(SELECT puzzle_id FROM ws_schedule/.test(sql)
               ? rows.filter((r) => r.id !== todayId) : rows };
           }
@@ -403,10 +414,10 @@ console.log("The doors, with a database behind them");
   t("with a database, the server still knows today's board",
     await isTodaysDaily(env, BOARD.id) === true, BOARD.id);
   t("and still knows another board is not it",
-    await isTodaysDaily(env, "XIWS-0001") === false);
+    await isTodaysDaily(env, NOT_TODAY) === false, NOT_TODAY);
   const listed = await catalog(env);
   t("and free play's own query leaves the board in flight out",
-    !listed.some((p) => p.id === BOARD.id) && listed.some((p) => p.id === "XIWS-0001"),
+    !listed.some((p) => p.id === BOARD.id) && listed.some((p) => p.id === NOT_TODAY),
     listed.map((p) => p.id).join(", "));
 
   /* AND THE ROUTE ITSELF, which is what actually leaked: released() passes a

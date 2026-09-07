@@ -160,6 +160,12 @@ and diagnose before anything ships. Never push past a red gate.
   (`save_test`, `adopt_test`, `tabs_test` pin their server's Date header to
   it), and ask first whether the page agrees. Where a zone is what is being
   proved, set `process.env.TZ` as fixture — `clock_test` does.
+- **Every hash of shipped bytes normalises CRLF to LF.** What ships is what is
+  in git, and a Windows checkout writes CRLF — so a hash of the working tree
+  answers a different question on each machine. The five game asset hashes did
+  this already; `aligned_test`'s shared hash did not, and a plain `git checkout`
+  of an untouched shared file turned it red locally while CI stayed green
+  (7 Sep 2026). Six places now, and any seventh must do the same.
 - **A stubbed database cannot prove a query.** The suites stub D1 and the
   stubs re-apply each rule in JS, which is right — a stub that rubber-stamped
   would prove nothing — but it means a bound dropped from real SQL passes

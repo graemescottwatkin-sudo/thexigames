@@ -379,7 +379,15 @@ t("the shared chrome cannot change without its ?v= moving", (() => {
     .filter((f) => f.endsWith(".css") || f.endsWith(".js"))
     .sort().map((f) => "shared/" + f);
   for (const f of sharedFiles) {
-    h.update(f); h.update("\0"); h.update(read(f));
+    h.update(f); h.update("\0");
+    /* NORMALISED TO LF, LIKE EVERY OTHER HASH IN THIS REPOSITORY. The five
+       that describe a game's shipped assets already do it; this was the
+       sixth and did not, so it described the working tree rather than what
+       ships. A plain `git checkout` of an untouched shared file on Windows
+       rewrites it CRLF and moved this hash — red for a change nobody had
+       made, on a tree git itself reports as clean, and green in CI where the
+       checkout is LF. Found on 7 September 2026 doing exactly that. */
+    h.update(read(f).replace(/\r\n/g, "\n"));
   }
   const now = h.digest("hex").slice(0, 16);
   /* EVERY shared asset every page links, not just the script. xi-tokens.css
