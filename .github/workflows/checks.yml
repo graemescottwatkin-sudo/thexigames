@@ -95,6 +95,15 @@ jobs:
       # board has been played.
       - name: One challenge flow, for every game
         run: node tools/challenge_client_test.mjs
+      # The crossword's GENERATOR, which nothing has run since the games moved
+      # under football/ — it was written to live inside the private archive and
+      # required ./engine.js and ./data.json beside it. It now runs against a
+      # bank built from what this repository ships (the sample puzzles and the
+      # club list), so CI can have it; every check about clue CONTENT skips and
+      # says so, because the real bank is secret and a check that passes for
+      # want of data is worse than one that does not run.
+      - name: The board generator, and the model under it
+        run: node football/crossword/headless_test.mjs
 
       # The forward check: what /api/preflight will say about the next
       # fortnight, and the gate in front of it. The nightly workflow runs the

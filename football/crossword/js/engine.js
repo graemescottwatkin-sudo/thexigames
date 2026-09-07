@@ -555,6 +555,18 @@ var FCW = (function () {
     if (opts.rotation === true && !opts.bannedTerms) {
       opts.bannedTerms = buildRotation(rows, opts.seed, opts.rotationConfig);
     }
+    /* A FILTER THAT MATCHES NOTHING IS A REFUSAL, NOT A CRASH. buildLayout
+       seeds itself with byPgk[pgks[0]][0], so an empty pool threw
+       "Cannot read properties of undefined" from four frames down — a message
+       that names neither the filter nor the pool. Free-run offers the filters
+       and the practice route passes them through, so this is reachable by
+       asking for a combination the bank has nothing for. Said plainly instead,
+       and thrown rather than returned: every caller of generate() expects a
+       puzzle, and a null would be a second thing for each of them to handle. */
+    if (Object.keys(byPgk).length === 0) {
+      throw new Error("No clues match that selection: the pool is empty" +
+        (opts.filter ? " for " + JSON.stringify(opts.filter) : "") + ".");
+    }
     var best = null, bestScore = -Infinity, attempted = 0;
     var t0 = (typeof performance !== "undefined" ? performance.now() : Date.now());
     for (var r = 0; r < opts.attempts; r++) {

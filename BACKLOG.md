@@ -435,6 +435,28 @@ automatically after every deploy so the window closes itself.
 
 ## Shipped
 
+- **headless_test revived** — 7 Sep, on the owner's decision. The crossword's
+  generator had been covered by nothing since the games moved under
+  `football/`: the suite was written to run INSIDE the private archive and
+  required `./engine.js` and `./data.json` beside itself. It now runs against a
+  bank built from what this repository already ships — `sample-puzzles.js`'s 77
+  real answers and every Premier League club — so CI gets 273 assertions on
+  generation, numbering, validation, scoring, seasons and the clock. The 56
+  that need the real bank's CONTENT skip and are counted; `--source=<archive>`
+  asks them.
+  **What it found the moment it ran:** ~20 assertions still described the
+  scoring model that was replaced when help moved to the clock; the form
+  markers were backwards (a Check is the D, a Reveal the L) and Reveal Answer
+  was three marks instead of four; the streak and stats fixtures were dated
+  from before the epoch reset, so every record was filtered out as late; and a
+  filter that matched nothing crashed the generator with a TypeError four
+  frames down, which now refuses cleanly and names the filter (crossword
+  v003e).
+  **And the check it was built around was vacuous.** "100 puzzles pass full
+  validation" only asks whether `validatePuzzle` agrees — stubbing it to
+  return `[]` left the whole suite green. There is now one that reads the grid
+  back: every entry must spell its own answer out of the squares it claims.
+  One wrong letter in one square is caught by that check and no other.
 - **Vowels XI had never had a score verified** — 6 Sep, found while checking
   every game could carry a challenge. `/api/scrambled/finish` serves both games
   (Vowels is Scrambled's board read half a turn round) and ended its write with
