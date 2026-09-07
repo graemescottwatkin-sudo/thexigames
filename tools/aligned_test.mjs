@@ -361,6 +361,38 @@ const SHARED_HASH = "d1c82a6e007fecc4";
    two static pages and the unlaunched game all carry the chrome now, and the
    server-rendered shell writes the tag from a constant of its own — so a tag
    bump that missed one of them would serve two builds of one chrome. */
+/* ---- THE SHARE CARD EVERY PAGE PROMISES -------------------------------
+ *
+ * A card that 404s is worse than the wrong card: WhatsApp and Reddit both fall
+ * back to NOTHING on a broken image, so the link goes out with no picture at
+ * all. site-page.js has a whole paragraph about avoiding exactly that by
+ * falling through to the crossword's — and one level up, where nothing was
+ * looking, the word search's and Scrambled's own pages named their own cards
+ * while the files sat uncommitted. Every share of those two games was
+ * pictureless from the day they launched until 7 September 2026.
+ *
+ * So: every og:image any page names must be a file in this repository, and
+ * every entry in site-page.js's map must be one too. Derived from the pages
+ * themselves rather than a list here, because a list is the thing that was
+ * missing in the first place. */
+t("every share card a page names is a file that exists", (() => {
+  const missing = [];
+  for (const g of GAMES) {
+    const html = read(`${g.dir}/index.html`);
+    for (const m of html.matchAll(/(?:og:image|twitter:image)"\s+content="([^"]+)"/g)) {
+      const rel = m[1].replace("https://www.thexigames.com/", "");
+      if (!fs.existsSync(rel)) missing.push(`${g.dir} -> ${m[1]}`);
+    }
+  }
+  const map = read("functions/_lib/site-page.js");
+  const block = map.slice(map.indexOf("const OG_IMAGE"), map.indexOf("};", map.indexOf("const OG_IMAGE")));
+  for (const m of block.matchAll(/"(\/[^"]+\.png)"/g)) {
+    if (!fs.existsSync(m[1].slice(1))) missing.push(`OG_IMAGE -> ${m[1]}`);
+  }
+  if (missing.length) console.log("        " + missing.join("\n        "));
+  return missing.length === 0;
+})(), "a card that 404s shows no picture at all, which is worse than the wrong one");
+
 const SHARED_PAGES = [
   ...GAMES.map((g) => `${g.dir}/index.html`),
   "index.html", "football/crossword/privacy.html", "football/crossword/how-to-play.html", "football/quickfire/index.html",
