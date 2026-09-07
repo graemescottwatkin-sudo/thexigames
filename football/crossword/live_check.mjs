@@ -165,7 +165,14 @@ console.log(`\n${SITE}\n`);
      "/football/quickfire/" in the number-four card's link as the hub naming the game
      while missing "quickfire xi" written out in lower case. What a reader
      sees is still searched; where a link points is not. */
+  /* COMMENTS ARE EXEMPT BY THE FAMILY'S OWN RULE — "an unreleased game is
+     named NOWHERE in served markup (HTML comments exempt)" — and chrome_test
+     has always stripped them. This did not, so the first comment written to
+     explain WHY QuickFire sits where it does turned this red, on a hub that
+     names it nowhere a reader or a crawler can see. Stripped first, then the
+     hrefs: what a reader sees is searched, where a link points is not. */
   const hubClean = html
+    .replace(/<!--[\s\S]*?-->/g, "")
     .replace(/\b(?:href|src)\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "");
   const leaked = ["QuickFire","Missing XI","Transfer XI",
                   "Player Chain","Link XI","Odd One Out"]
