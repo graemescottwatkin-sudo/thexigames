@@ -20,6 +20,7 @@
  */
 import { onRequestGet as daily } from "../../functions/api/grid/daily.js";
 import { onRequestPost as guess } from "../../functions/api/grid/guess.js";
+import { playable } from "../../functions/_lib/gd-board.js";
 import { GD_SAMPLE_BOARDS } from "../../functions/_lib/gd-sample.js";
 import { loadBank, boardForDay, todayKey, boardToken, RULES } from "../../functions/_lib/gd-board.js";
 import { roundState } from "../../functions/_lib/gd-round.js";
@@ -290,6 +291,103 @@ console.log("\nWhat it refuses");
   const shortGuess = await call(guess, "/api/grid/guess",
     { token: boardToken(board.id), playId: "p4", n: board.entries[0].n, guess: "AB" }, db);
   t("a guess of the wrong length is refused, not padded", shortGuess.status === 400);
+}
+
+console.log("\nThe future is shut on every door, not just the daily's");
+{
+  /* WHAT THIS IS FOR, and it was live for a few hours on the day Grid XI
+     launched. /api/grid/daily refuses a board whose day has not come. The
+     guess route, beside it, judged ANY board in the bank: a token is "gd:"
+     plus an id, the ids run gx-0001 upward, and every guess came back with
+     per-letter marks AND the confirmed letters with their cells. Tomorrow's
+     board — and every board of the next eight months — could be solved one
+     guess at a time before anybody played it. Nothing here asked the
+     question, which is why it shipped.
+
+     Asked of the RULE rather than through the route, so the bank can hold a
+     board dated tomorrow without the sample having to carry one. */
+  const day = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
+  const today = { id: "b-today", kind: "daily" };
+  const tomorrow = { id: "b-tomorrow", kind: "daily" };
+  const older = { id: "b-old", kind: "daily" };
+  const loose = { id: "b-loose", kind: "daily" };      // in the bank, on no day
+  const free = { id: "b-free", kind: "free" };
+  const bank = {
+    boards: [today, tomorrow, older, loose, free],
+    schedule: { [day(0)]: "b-today", [day(1)]: "b-tomorrow", [day(-3)]: "b-old" },
+  };
+  t("today's board may be played", playable(bank, today, Date.now()));
+  t("and one from last week", playable(bank, older, Date.now()));
+  t("but NOT tomorrow's", !playable(bank, tomorrow, Date.now()),
+    "marks and confirmed letters are the whole board, one guess at a time");
+  t("nor one the calendar never names", !playable(bank, loose, Date.now()),
+    "a board with no day is not a daily nobody scheduled, it is not a daily");
+  /* A CATALOGUE BOARD HAS NO DAY AND THAT IS THE POINT: it is the one somebody
+     goes looking for rather than the one set for everybody today. */
+  t("a catalogue board may always be played", playable(bank, free, Date.now()));
+  t("and nothing may be played that is not a board", !playable(bank, null, Date.now()));
+}
+
+console.log("\nAnd the ROUTE asks, not just the rule");
+{
+  /* THE RULE BEING RIGHT IS NOT THE ROUTE ASKING IT. The checks above prove
+     playable(); this one proves /api/grid/guess calls it, because the fault
+     that shipped was a route that never asked. Removing the call left every
+     check above green.
+
+     A BANK WITH A BOARD DATED TOMORROW, which the sample cannot hold — its
+     calendar is today and yesterday — so this is the one place in this suite
+     that stubs the D1 bank rather than falling through to the sample. */
+  const mkBoard = (id, entries) => ({
+    id, set_id: "s", kind: "daily", title: "A board", rows: 3, cols: 11,
+    payload: JSON.stringify({ entries, crossings: [] }),
+  });
+  const ENTRY = [{ n: 1, dir: "across", r: 0, c: 0, len: 4, answer: "KANE",
+                   cells: ["0,0", "0,1", "0,2", "0,3"] }];
+  const day = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
+  const bankDB = {
+    prepare(sql) {
+      return {
+        bind: (...a) => ({
+          async run() { return { success: true }; },
+          async first() { return null; },
+          async all() {
+            if (/FROM gd_board/.test(sql)) {
+              return { results: [mkBoard("b-today", ENTRY), mkBoard("b-tomorrow", ENTRY)] };
+            }
+            if (/FROM gd_schedule/.test(sql)) {
+              return { results: [{ day: day(0), board_id: "b-today" },
+                                 { day: day(1), board_id: "b-tomorrow" }] };
+            }
+            return { results: [] };
+          },
+        }),
+        async all() {
+          if (/FROM gd_board/.test(sql)) {
+            return { results: [mkBoard("b-today", ENTRY), mkBoard("b-tomorrow", ENTRY)] };
+          }
+          if (/FROM gd_schedule/.test(sql)) {
+            return { results: [{ day: day(0), board_id: "b-today" },
+                               { day: day(1), board_id: "b-tomorrow" }] };
+          }
+          return { results: [] };
+        },
+      };
+    },
+  };
+
+  const ask = (id) => call(guess, "/api/grid/guess",
+    { token: "gd:" + id, playId: null, n: 1, guess: "AAAA" }, bankDB);
+
+  const now = await ask("b-today");
+  const soon = await ask("b-tomorrow");
+  t("today's board is marked by the route", now.status === 200 && !!now.body.marks,
+    String(now.status));
+  t("and tomorrow's is refused by it", soon.status === 404,
+    soon.status + " — a route that does not ask is a route with the future open");
+  t("with nothing about the board in the refusal",
+    !soon.body.marks && !soon.body.confirms,
+    "marks and confirmed letters are what leaked");
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

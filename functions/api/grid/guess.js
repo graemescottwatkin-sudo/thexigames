@@ -20,7 +20,7 @@
 import { json, bad } from "../../_lib/puzzle.js";
 import { csrfOk } from "../../_lib/auth.js";
 import {
-  loadBank, boardById, boardToken, entryOf, judge, dayOf, answersOf,
+  loadBank, boardById, boardToken, entryOf, judge, dayOf, answersOf, playable,
 } from "../../_lib/gd-board.js";
 import {
   startRound, recordGuess, roundState, confirmedCells,
@@ -36,16 +36,33 @@ function boardForToken(bank, token) {
 
 export async function onRequestPost({ request, env }) {
   if (!csrfOk(request)) return bad("Refused.", 403);
+  /* One reading of the clock for the whole request: the guard below and the
+     round's own timestamps must not disagree about what day it is. */
+  const now0 = Date.now();
   let body;
   try { body = await request.json(); } catch (e) { return bad("Expected a JSON body."); }
 
   const bank = await loadBank(env);
   const board = boardForToken(bank, body.token);
   if (!board) return bad("No such board.", 404);
+
+  /* THE FUTURE IS SHUT HERE TOO, and it was not until 7 September 2026 — the
+     day this game launched, hours after it did.
+     /api/grid/daily refuses a board whose day has not come; this door, beside
+     it, judged ANY board in the bank. A token is "gd:" + an id and the ids run
+     gx-0001 upward, so tomorrow's board — and every board of the next eight
+     months — could be asked for by name, and each guess came back with
+     per-letter marks AND the confirmed letters with their cells. That is the
+     whole board, one guess at a time, before anybody has played it.
+     A CATALOGUE BOARD HAS NO DAY and is always playable: that is what makes it
+     the catalogue. A daily is refused with the same words a missing board
+     gets, so a probe cannot tell "not yet" from "no such thing" — the rule the
+     answers pages and the permalink route already keep. */
+  if (!playable(bank, board, now0)) return bad("No such board.", 404);
   const entry = entryOf(board, body.n);
   if (!entry) return bad("No such entry.");
 
-  const now = Date.now();
+  const now = now0;
   /* Kick off is idempotent and happens on the first guess rather than on a
      separate call: a round that has to be opened explicitly is a round a page
      can forget to open, and then the first guess is unscored with nothing to

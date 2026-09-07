@@ -97,6 +97,52 @@ export function boardForDay(bank, day) {
   return id ? boardById(bank, id) : null;
 }
 
+/* MAY THIS BOARD BE PLAYED AT ALL, and it is one question with one answer.
+ *
+ * A CATALOGUE BOARD ALWAYS MAY: it has no day, which is what makes it the
+ * catalogue. A DAILY MAY ONCE ITS DAY HAS COME, and not before.
+ *
+ * This existed only inside /api/grid/daily, which refuses a board whose day is
+ * ahead — and /api/grid/guess, beside it, judged any board in the bank. A
+ * token is "gd:" + an id, the ids run gx-0001 upward, and every guess came
+ * back with per-letter marks and the confirmed letters with their cells, so
+ * the whole of tomorrow's board could be had one guess at a time. Found on
+ * 7 September 2026, hours after the game launched, while wiring the
+ * catalogue. One rule, in one place, so the next door cannot be left open.
+ */
+export function playable(bank, board, now) {
+  if (!board) return false;
+  if (board.kind === "free") return true;
+  const day = dayOf(bank, board.id);
+  return !!day && day <= todayKey(now);
+}
+
+/* ---- the catalogue ------------------------------------------------------
+ *
+ * A FREE BOARD IS NEVER IN THE CALENDAR. It is the one somebody goes looking
+ * for rather than the one set for everybody today — the owner's plan for these
+ * is the older and more obscure elevens — and it is the only kind that can
+ * carry a challenge, because a challenge on a daily would be a challenge on
+ * the board everybody is already playing.
+ *
+ * IDENTITY ONLY. A catalogue list is a menu: ids and titles, never a payload.
+ * Sending the boards themselves would be sending every grid in the bank to
+ * anyone who opened the page, which is the leak the word search closed. */
+export function catalogue(bank) {
+  return (bank.boards || [])
+    .filter((b) => b.kind === "free")
+    .map((b) => ({ id: b.id, title: b.title, set_id: b.set_id || null }))
+    .sort((a, b) => (a.title < b.title ? -1 : a.title > b.title ? 1 : 0));
+}
+
+/* One catalogue board, by id. A DAILY is refused here however it is asked
+   for: the daily route is where a daily comes from, and serving one through
+   this door would hand out a board whose day has not come. */
+export function freeBoard(bank, id) {
+  const b = boardById(bank, id);
+  return b && b.kind === "free" ? b : null;
+}
+
 export function dayOf(bank, id) {
   const found = Object.keys(bank.schedule || {}).find(
     (d) => String(bank.schedule[d]) === String(id));
