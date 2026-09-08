@@ -461,6 +461,34 @@ async function run() {
       `${e.DB._answers.length} rows`);
   }
 
+  /* ---- 8b. the verdict's `green` is this guess, not a running count ------ */
+  {
+    /* THE BUG THIS CATCHES, found on the first production round: the round's
+       state is spread after the verdict, so a field named in both wins from the
+       state. `green` was the ladder's boolean AND the count of good answers so
+       far, and the count won — a miss after three good answers came back
+       `green: 3`, which a page reading `!!r.green` draws as a good answer.
+       Offline this never showed, because a fixture path that misses everything
+       never has a count above zero. So the case has to be built on purpose:
+       good answers FIRST, then a miss. */
+    const e = { DB: makeDb() };
+    const play = "p-green";
+    for (let i = 1; i <= 3; i++) {
+      const q = board.questions[i - 1];
+      await open({ request: req("https://x/api/ballpark/open", { token, playId: play, idx: i }), env: e });
+      await answer({ request: req("https://x/api/ballpark/answer",
+        { token, playId: play, idx: i, guess: q.answer }), env: e });
+    }
+    const q4 = board.questions[3];
+    await open({ request: req("https://x/api/ballpark/open", { token, playId: play, idx: 4 }), env: e });
+    const miss = await bodyOf(await answer({ request: req("https://x/api/ballpark/answer",
+      { token, playId: play, idx: 4, guess: Number(q4.answer) + Number(q4.tolerance) * 50 }), env: e }));
+    t("a miss after three good answers is not reported as good",
+      miss.green === false, `green = ${JSON.stringify(miss.green)}`);
+    t("the running count travels under its own name",
+      miss.greens === 3, `greens = ${JSON.stringify(miss.greens)}`);
+  }
+
   /* ---- 9. overspending the substitutions is a draw ---------------------- */
   {
     const e = { DB: makeDb() };

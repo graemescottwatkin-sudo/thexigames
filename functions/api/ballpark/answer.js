@@ -114,7 +114,15 @@ export async function onRequestPost({ request, env }) {
     elapsedMs,
     ...(after ? {
       answered: after.answered, over: after.over, subsUsed: after.subsUsed,
-      green: after.green, bangOns: after.bangOns, score: after.score,
+      /* `greens` AND `green` ARE DIFFERENT FACTS AND MUST NOT SHARE A NAME.
+         `green` is this guess's verdict, a boolean from the ladder; `greens` is
+         how many of the board's answers have read as good so far, a count. They
+         were both called `green`, and because the round's state is spread after
+         the verdict, the count won: a way-out answer given after three good ones
+         came back `green: 3`, and a page doing `!!r.green` would have drawn it
+         as a good answer. Found on the first production round, not offline —
+         the fixture path never gets far enough to have a count above zero. */
+      greens: after.green, bangOns: after.bangOns, score: after.score,
       result: after.result,
       /* AT FULL TIME, AND ONLY AT FULL TIME, THE WHOLE BOARD'S ANSWERS. There
          is nothing left to give away — every question has been locked — and a
