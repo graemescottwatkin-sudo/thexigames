@@ -141,27 +141,67 @@ function loadSource() {
  * The owner's plan for these is the older and more obscure elevens: a board
  * that is a fair daily for everybody is not the same board as one somebody
  * goes looking for. */
-const KINDS = ["daily", "free"];
-const kindOf = (b) => (KINDS.indexOf(String(b.kind || "")) > -1 ? String(b.kind) : "daily");
+const KINDS = ["daily", "free", "transient"];
+/* A KIND THIS DOES NOT UNDERSTAND IS A STOP, NOT A DEFAULT. It used to fall
+   back to "daily" for anything it could not read, including a board with no
+   kind at all — and that is exactly how 236 boards went into the calendar as
+   236 dailies when 144 of them are the catalogue's and 20 describe one
+   weekend. A default is how that goes unnoticed for eight months.
+   TRANSIENT is the third state: the matchweek boards are on a rolling window
+   of two by the owner's ruling, so they are neither the calendar's nor the
+   catalogue's. They are imported and left dormant — no day, no listing —
+   until the window exists to promote them. */
+const kindOf = (b) => {
+  const kind = String(b.kind || "");
+  if (KINDS.indexOf(kind) === -1) {
+    throw new Error(`board ${b.id}: kind ${kind ? '"' + kind + '"' : "missing"} — ` +
+      `re-emit with emit_boards.mjs, which writes it from the manifest's pool`);
+  }
+  return kind;
+};
 
 /* ---- the calendar ------------------------------------------------------- */
 
 /* One board a day, in order, from a start day. Written as DAYS rather than as
    board numbers because a schedule table is keyed by day — the address a player
    sees is a board number, and permalink.js reconciles the two in one place. */
-function buildSchedule(boards, fromDay) {
+/* THE DAYS ALREADY WRITTEN, KEPT. Everything before the start day is carried
+   forward exactly as it was: the past is not rebuildable, and a board that has
+   since become a catalogue board still ran on the day it ran. Without this a
+   `--from` of tomorrow left yesterday with no board at all — the emitted SQL
+   clears the table and writes only what it built — which the history guard
+   correctly refused as a rewrite by omission. */
+export function carryForward(prev, fromDay) {
+  const keep = {};
+  for (const day of Object.keys(prev || {})) {
+    if (!fromDay || day < fromDay) keep[day] = prev[day];
+  }
+  return keep;
+}
+
+export function buildSchedule(boards, fromDay, keep = {}) {
   const startNo = fromDay
     ? dailyNumber(Date.parse(fromDay + "T00:00:00Z"))
     : dailyNumber();
-  const schedule = {};
+  const schedule = { ...keep };
   /* ONLY THE DAILIES, and the run is contiguous: a catalogue board taken out
      of the middle must not leave a hole in the calendar, because a day with no
      board is a day this game has nothing to serve. Filtered before the index
-     is used, so the days close up behind it. */
-  boards.filter((b) => kindOf(b) === "daily").forEach((b, i) => {
-    const day = dailyDayKey(startNo + i);
+     is used, so the days close up behind it.
+
+     AND NOTHING THE PAST ALREADY SERVED. A reshape that dropped 150 boards out
+     of the calendar would otherwise start again at board one and hand people
+     the same boards a second time — invisible on day one of the change and
+     obvious a week later. The cost of waiting to reshape is exactly this list
+     getting longer, which is why it is skipped rather than counted. */
+  const served = new Set(Object.values(keep).map(String));
+  let i = 0;
+  for (const b of boards) {
+    if (kindOf(b) !== "daily") continue;
+    if (served.has(String(b.id))) continue;
+    const day = dailyDayKey(startNo + i++);
     if (day) schedule[day] = b.id;
-  });
+  }
   return schedule;
 }
 
@@ -277,7 +317,11 @@ function main() {
      the calendar starts today, which is the placeholder this repo has now and
      is why the import must be run again at launch. */
   const from = arg("from") || LAUNCHED.grid || null;
-  const schedule = buildSchedule(boards, from);
+  /* What was written last time, so the days before the start day survive it. */
+  const previous = fs.existsSync(OUT)
+    ? scheduleFromSql(fs.readFileSync(OUT, "utf8")) : {};
+  const kept = carryForward(previous, from);
+  const schedule = buildSchedule(boards, from, kept);
   const days = Object.keys(schedule).sort();
 
   /* AND IT MUST NOT MOVE A DAY THAT HAS BEEN PLAYED. See scheduleFromSql
@@ -286,8 +330,7 @@ function main() {
      comparison is against the last SQL this importer emitted, which is the
      only record of the calendar that exists outside the database. */
   if (fs.existsSync(OUT)) {
-    const clashes = historyClash(
-      scheduleFromSql(fs.readFileSync(OUT, "utf8")), schedule, todayKey());
+    const clashes = historyClash(previous, schedule, todayKey());
     if (clashes.length && !process.argv.includes("--rewrite-history")) {
       console.error(`REFUSED: this would rewrite ${clashes.length} day(s) that have already been played.`);
       for (const c of clashes.slice(0, 8)) {

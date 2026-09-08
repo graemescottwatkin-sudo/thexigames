@@ -19,7 +19,7 @@
  *
  *   node tools/import_grid_test.mjs        (from the repo root)
  */
-import { scheduleFromSql, historyClash } from "./import_grid.js";
+import { scheduleFromSql, historyClash, carryForward, buildSchedule } from "./import_grid.js";
 
 let pass = 0, fail = 0;
 const t = (n, ok, d) => { ok ? pass++ : fail++; console.log(`${ok ? "  ok  " : "FAIL  "}${n}${d ? "  — " + d : ""}`); };
@@ -84,6 +84,56 @@ console.log("\nA day that has been played cannot be moved");
     "the guard must not stand in the way of the import it was written for");
   t("and a calendar that has not started yet has nothing to protect",
     historyClash(prev, shifted, "2026-09-01").length === 0);
+}
+
+console.log("\nA re-import keeps the past and does not serve a board twice");
+{
+  /* THE OPERATION ALL OF THIS IS FOR. Marking boards for the catalogue takes
+     them out of the daily run and the calendar is rebuilt; the two things that
+     must not happen are a played day changing and a board being handed to
+     somebody twice.
+
+     Days are the importer's own, counted from the launch epoch, so this asks
+     for the SHAPE — what was kept, and which boards fill what follows. */
+  const boards = [
+    { id: "gx-0001", kind: "daily" },
+    { id: "gx-0002", kind: "free" },      // was a daily, now the catalogue's
+    { id: "gx-0003", kind: "daily" },
+    { id: "gx-0004", kind: "daily" },
+    { id: "gx-0005", kind: "transient" }, // a matchweek board: never a day
+  ];
+  const prev = { "2026-09-07": "gx-0001", "2026-09-08": "gx-0002" };
+  const FROM = "2026-09-09";
+
+  const kept = carryForward(prev, FROM);
+  t("every day before the start day is carried forward, exactly as it was",
+    Object.keys(kept).length === 2 && kept["2026-09-07"] === "gx-0001" &&
+    kept["2026-09-08"] === "gx-0002",
+    "gx-0002 still ran on the 8th, even though it is a catalogue board now");
+  t("and nothing from the start day on is carried",
+    carryForward({ ...prev, "2026-09-09": "gx-0003" }, FROM)["2026-09-09"] === undefined,
+    "from there it is rebuilt, which is the point of the re-import");
+
+  const sched = buildSchedule(boards, FROM, kept);
+  const days = Object.keys(sched).sort();
+  t("the past survives the rebuild",
+    sched["2026-09-07"] === "gx-0001" && sched["2026-09-08"] === "gx-0002",
+    days.slice(0, 2).join(", "));
+  const future = days.filter((d) => d >= FROM).map((d) => sched[d]);
+  t("and no board the past already served is served again",
+    !future.includes("gx-0001") && !future.includes("gx-0002"),
+    future.join(", ") + " — gx-0001 and gx-0002 have been played");
+  t("a catalogue board takes no day at all", !future.includes("gx-0002"));
+  t("nor does a transient one", !future.includes("gx-0005"),
+    "the matchweek boards are a rolling window, not a calendar day");
+  t("the remaining dailies fill the days in order",
+    future.join(",") === "gx-0003,gx-0004", future.join(", "));
+
+  /* AND THE WHOLE THING PASSES ITS OWN GUARD, which is the property that
+     matters: this is the shape of re-import that does not rewrite history. */
+  t("so the history guard finds nothing to refuse",
+    historyClash(prev, sched, FROM).length === 0,
+    "the operation the guard was written to allow");
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
