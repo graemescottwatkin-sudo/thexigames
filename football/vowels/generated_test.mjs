@@ -61,8 +61,17 @@ console.log("\n=== It says which game it is, everywhere a reader looks ===");
   t("no part of the page a reader sees names the other game",
     !/scrambl|anagram/i.test(visible),
     (visible.match(/.{0,30}(scrambl|anagram)[a-z]*.{0,20}/i) || ["clean"])[0]);
-  t("the masthead is this game's name",
-    /<div class="site-mast">Vowels <span class="site-xi">XI<\/span>/.test(html));
+  /* THE NAME, NOT THE TAG. This pinned `<div class="site-mast">` and went red
+     the day the masthead became a `<p>` — a change made because every game
+     already carries one sr-only h1 and a second heading here gave the page two.
+     The element type was never what this check was about: what matters is that
+     the largest word on a Vowels page says Vowels. Asserted on the text now, so
+     the next honest change to the markup does not read as a regression. */
+  t("the masthead is this game's name", (() => {
+    const mast = (html.match(/class="site-mast"[^>]*>([\s\S]*?)<\/[a-z]+>/) || [])[1] || "";
+    const words = mast.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim();
+    return words.split(" ")[0] === "Vowels" && !/scrambl/i.test(words);
+  })());
   t("and the script names this game on the card and in the share",
     js.includes('"Vowels XI #"') || js.includes('"Vowels XI"'),
     "the results card said Scrambled XI #10 on launch day");
