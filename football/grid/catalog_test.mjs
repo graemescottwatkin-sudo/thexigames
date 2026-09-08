@@ -62,7 +62,7 @@ const ANSWERS = ROWS.flatMap((r) => JSON.parse(r.payload).entries.map((e) => e.a
 const FREE = ROWS.filter((r) => r.kind === "free").map((r) => r.id);
 const DAILY = ROWS.filter((r) => r.kind === "daily").map((r) => r.id);
 
-function makeDb(rows) {
+function makeDb(rows, schedule) {
   return {
     prepare(sql) {
       return {
@@ -70,7 +70,8 @@ function makeDb(rows) {
         async all() {
           if (/FROM gd_board/.test(sql)) return { results: rows };
           if (/FROM gd_schedule/.test(sql)) {
-            return { results: [{ day: todayKey(), board_id: DAILY[0] }] };
+            const sched = schedule || { [todayKey()]: DAILY[0] };
+            return { results: Object.keys(sched).map((d) => ({ day: d, board_id: sched[d] })) };
           }
           throw new Error("no such table");
         },
@@ -144,6 +145,37 @@ console.log("\nOne board, opened");
   t("the title is the whole clue, and it is sent",
     b.title === "Burnley — 1960 champions", b.title);
 }
+
+console.log("\nA board the calendar names is not the catalogue's");
+{
+  /* SHIPPED AND CAUGHT WITHIN THE HOUR, 8 September 2026. The owner routed the
+     bank per set, and boards that had ALREADY RUN as dailies were among those
+     routed to the catalogue. A played day is carried forward untouched — it has
+     to be, or somebody's result stops matching the board they played — so that
+     day's board was live as the daily AND openable here. One board, two doors,
+     and only the daily counts turns, records a round and allows one attempt: a
+     player could have walked the answers in free play and then taken the daily
+     clean.
+
+     The fixture is the collision itself — a FREE board holding today's calendar
+     slot — and the door has to refuse it. */
+  const rows = ROWS.map((r) => (r.id === FREE[0] ? { ...r, kind: "free" } : r));
+  const env2 = { DB: makeDb(rows, { [todayKey()]: FREE[0] }) };
+
+  const list = await call("/api/grid/catalog", env2);
+  t("a board holding a calendar day is off the menu",
+    !(list.body.boards || []).some((b) => b.id === FREE[0]),
+    "it is the daily today, and the catalogue is for boards that are not");
+  const direct = await call("/api/grid/catalog?id=" + FREE[0], env2);
+  t("and cannot be opened by id either",
+    direct.status === 404 && !direct.body.board,
+    "off the menu but openable by id is the same leak with one more step");
+  const still = await call("/api/grid/catalog?id=" + FREE[1], env2);
+  t("while a free board with no day still opens",
+    still.status === 200 && !!still.body.board,
+    "this must refuse the collision, not the catalogue");
+}
+
 
 console.log("\nWhat is refused, and refused identically");
 {

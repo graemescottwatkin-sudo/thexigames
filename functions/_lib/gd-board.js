@@ -130,7 +130,19 @@ export function playable(bank, board, now) {
  * anyone who opened the page, which is the leak the word search closed. */
 export function catalogue(bank) {
   return (bank.boards || [])
-    .filter((b) => b.kind === "free")
+    /* A BOARD THE CALENDAR NAMES IS NOT THE CATALOGUE'S, whatever its kind.
+       The kind says what a board is FOR; the schedule says what it IS. When the
+       owner routed the bank on 8 September some boards that had already RUN as
+       dailies were routed to the catalogue — so the day it shipped, today's
+       daily was openable through this door as well: one board, two doors, and
+       only one of them counts turns, records a round and allows one attempt.
+       A player could have walked the answers in free play and then taken the
+       daily clean.
+       Excluded here rather than at the import, because the calendar changes
+       every time it is rebuilt and this has to stay true after it does. Past
+       days count too: yesterday's daily belongs to the archive, which has its
+       own rules about who may open it. */
+    .filter((b) => b.kind === "free" && !dayOf(bank, b.id))
     .map((b) => ({ id: b.id, title: b.title, set_id: b.set_id || null }))
     .sort((a, b) => (a.title < b.title ? -1 : a.title > b.title ? 1 : 0));
 }
@@ -140,7 +152,10 @@ export function catalogue(bank) {
    this door would hand out a board whose day has not come. */
 export function freeBoard(bank, id) {
   const b = boardById(bank, id);
-  return b && b.kind === "free" ? b : null;
+  if (!b || b.kind !== "free") return null;
+  /* And the same rule on the way in, not only on the listing — a board absent
+     from the menu but still openable by id is the leak with an extra step. */
+  return dayOf(bank, b.id) ? null : b;
 }
 
 export function dayOf(bank, id) {
