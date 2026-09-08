@@ -144,11 +144,19 @@ console.log("\nThe turn budget — shared, and it can grow");
      entry by which of three attempts it fell on; the owner had already
      iterated past that in the prototype, to one pool of turns for the board.
      These are the cases that tell the two apart. */
-  t("a wrong answer spends a turn", R.turnsAfter(15, false) === 14);
+  /* Asserted against the budget rather than against a number typed here: the
+     property is that a wrong answer costs one and a right one returns one, and
+     that is true whatever the budget is. */
+  t("a wrong answer spends a turn",
+    R.turnsAfter(R.TURNS_START, false) === R.TURNS_START - 1);
   t("and a right one gives it back",
-    R.turnsAfter(14, true) === 15,
-    "eleven correct answers must not cost eleven of fifteen");
-  t("fifteen to start", R.TURNS_START === 15);
+    R.turnsAfter(R.TURNS_START - 1, true) === R.TURNS_START,
+    "eleven correct answers must not cost eleven of the budget");
+  /* THE ONE NUMBER WORTH PINNING, because it is a decision rather than a
+     consequence: twenty-five since 8 September 2026, raised from fifteen after
+     the owner ran out with two names solved. If this line fails, somebody
+     changed the game's difficulty — which is allowed, and should be noticed. */
+  t("twenty-five to start", R.TURNS_START === 25);
   t("the board ends when the turns are gone",
     R.isOver({ solved: 4, turns: 0 }) === true);
   t("and when all eleven are solved, whatever is left",
@@ -210,9 +218,14 @@ console.log("\nThe score, out of 114");
     S(3, 0, 0).eff === Math.round(26 * (3 / 11)), String(S(3, 0, 0).eff));
   t("and misses eat it", S(11, 12, 0).eff < S(11, 0, 0).eff,
     `${S(11, 12, 0).eff} against ${S(11, 0, 0).eff}`);
-  t("a board solved with every turn spent keeps the 88 and little of the 26",
-    S(11, 25, 0).base === 88 && S(11, 25, 0).eff === 0,
-    JSON.stringify(S(11, 25, 0)));
+  /* THE WORST CASE IS THE MISS SCALE, not a number typed here. This said 25,
+     which WAS the scale while the budget was fifteen — and when the budget went
+     to twenty-five on 8 September the scale became 35, so the line was asking
+     about a board with ten misses to spare and calling it "every turn spent".
+     The literal defended the old rule instead of testing the current one. */
+  t("a board solved with every turn spent keeps the 88 and none of the 26",
+    S(11, R.MISS_SCALE, 0).base === 88 && S(11, R.MISS_SCALE, 0).eff === 0,
+    JSON.stringify(S(11, R.MISS_SCALE, 0)));
   /* HINTS COME OFF THE TOTAL. Four each, and they never spend a turn — a hint
      that could end a board punishes asking rather than charging for it. */
   t("a revealed letter costs four", R.PTS_LETTER === 4);

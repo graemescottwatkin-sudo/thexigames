@@ -52,14 +52,26 @@
 
   /* ---- the turn budget ------------------------------------------------- */
 
-  /* SHARED, NOT PER ENTRY. Fifteen for the board, a turn spent on a wrong
-     answer and a turn RETURNED for a right one — so a player who knows the
-     board never runs out, and a player who is guessing is the one the count
-     presses on. The prototype measured this: turns from 12 to 18 moved
-     "finished with two names forgotten" from 36% to 41%, which is to say the
-     count is not the difficulty dial and there is no cliff to tune. Fifteen is
-     simply a number that does not feel mean. */
-  var TURNS_START = 15;
+  /* SHARED, NOT PER ENTRY. A turn spent on a wrong answer and a turn RETURNED
+     for a right one — so a player who knows the board never runs out, and a
+     player who is guessing is the one the count presses on.
+
+     TWENTY-FIVE SINCE 8 SEPTEMBER 2026, up from fifteen. The owner: "i run out
+     of turns by the time i solve 1 or 2 names." The mechanic was checked first
+     and is right; fifteen wrong guesses is simply what an unfamiliar eleven
+     costs, and 98 of the 159 daily boards are not English-facing.
+
+     SO THIS TREATS THE SYMPTOM AND IT WAS RAISED KNOWING THAT. The prototype
+     measured turns 12 to 18 moving "finished with two names forgotten" from
+     36% to 41% — weak evidence that the count is not the difficulty dial, and
+     weaker still here because it was measured on the prototype's boards rather
+     than on this bank. The cure is the daily pool; this is what makes the game
+     playable while that is decided.
+
+     IT MOVES THE SCORE TOO. Efficiency is measured against MISS_SCALE below,
+     which derives from this, so the same number of misses costs proportionally
+     less than it did — scores before and after this date are not comparable. */
+  var TURNS_START = 25;
 
   /* What a revealed letter costs. It never spends a turn: a hint must not be
      able to end a board, or a player is punished for asking rather than
@@ -149,7 +161,7 @@
   /* ---- what a submission costs ----------------------------------------- */
 
   /* A TURN BACK FOR A RIGHT ANSWER. Not merely "no cost": the budget has to be
-     able to GROW, or eleven correct answers still spend eleven of fifteen and
+     able to GROW, or eleven correct answers still spend eleven of the budget and
      the last few entries are played under a pressure the player earned their
      way out of. */
   function turnsAfter(turns, correct) {

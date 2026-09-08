@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="theme-color" content="#F4F5F2">
 <title>Grid XI — the daily football grid | The XI Games</title>
-<meta name="description" content="Eleven footballers locked into one grid, with no clues but the title. Type a full name into an entry and every letter comes back marked; solve one and its letters cross into the next. Fifteen turns, 114 points. A new grid every day from The XI Games.">
+<meta name="description" content="Eleven footballers locked into one grid, with no clues but the title. Type a full name into an entry and every letter comes back marked; solve one and its letters cross into the next. Twenty-five turns, 114 points. A new grid every day from The XI Games.">
 <link rel="canonical" href="https://www.thexigames.com/football/grid/">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://www.thexigames.com/football/grid/">
@@ -30,7 +30,7 @@
 <link rel="stylesheet" href="/shared/xi-landing.css?v=v33">
 <link rel="stylesheet" href="/shared/xi-chrome.css?v=v33">
 <script src="/shared/xi-theme.js?v=v33"></script>
-<link rel="stylesheet" href="css/style.css?v=v002">
+<link rel="stylesheet" href="css/style.css?v=v002a">
 </head>
 <body>
 
@@ -104,10 +104,16 @@
     <p><b>Type a full name into an entry.</b> Every letter comes back marked:
        right letter in the right square, right letter in the wrong square, or
        not in the name at all.</p>
-    <p><b>Fifteen turns, shared across the board.</b> A wrong answer spends
+    <p><b>Twenty-five turns, shared across the board.</b> A wrong answer spends
        one; a right answer hands one back. Solving an entry gives its letters
        to everything that crosses it, so the board opens up as you go.</p>
-    <p><b>A hint costs four turns</b> and fills one letter.</p>
+    <!-- A HINT COSTS POINTS, NOT TURNS. This said "four turns" from the day the
+         rules were written here, and the rule beside PTS_LETTER says the
+         opposite in terms: a hint "never spends a turn: a hint must not be able
+         to end a board, or a player is punished for asking rather than charged
+         for it". The page was describing a game that would end on a hint. -->
+    <p><b>A hint costs four points</b> and fills one letter. It never spends a
+       turn, so asking cannot end the board.</p>
     <p><b>114 is the ceiling</b>: eight for every entry solved, and up to
        twenty-six more for finishing with turns to spare.</p>
   </section>
@@ -118,8 +124,8 @@
 <footer class="xic-foot"></footer>
 
 <script src="/shared/xi-chrome.js?v=v33"></script>
-<script src="js/rules.js?v=v002"></script>
+<script src="js/rules.js?v=v002a"></script>
 <script src="/shared/xi-plays.js?v=v33"></script>
-<script src="js/game.js?v=v002"></script>
+<script src="js/game.js?v=v002a"></script>
 </body>
 </html>
