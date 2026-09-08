@@ -22,7 +22,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>The XI Games — daily football puzzles</title>
-<meta name="description" content="Eleven daily football puzzles, one for every shirt. Crossword XI, Wordsearch XI, Scrambled XI and HiLo XI are out now — a new board every day.">
+<meta name="description" content="Eleven daily football puzzles, one for every shirt. Crossword XI, Wordsearch XI, Scrambled XI, HiLo XI, Vowels XI and Grid XI are out now — a new board every day.">
 <link rel="canonical" href="https://www.thexigames.com/">
 <script type="application/ld+json">
 {
@@ -93,7 +93,7 @@
      place and keeps the colour it was wearing. */
   --kit-04:#1F4E79;   /* navy — HiLo XI */
   --kit-05:#8E2F45;     /* claret        */
-  --kit-06:#2C3E63;      /* navy          */
+  --kit-06:#2C3E63;      /* indigo        */
   --kit-07:#D96C2C;        /* tangerine     */
   --kit-08:#5B4B8A;         /* purple        */
   --kit-09:#4C8C7A;         /* teal          */
@@ -105,53 +105,123 @@ body{
   font-family:var(--body);font-size:16px;line-height:1.5;
   -webkit-font-smoothing:antialiased;
 }
-.wrap{max-width:1040px;margin:0 auto;padding:0 20px}
+.wrap{max-width:1100px;margin:0 auto;padding:0 20px}
 
-/* ---------- the team sheet ---------- */
-.sheet{background:var(--pitch-deep);color:#fff;padding:30px 0 34px}
-.sheet h1{font-family:var(--disp);font-weight:700;font-size:clamp(30px,7vw,44px);
-  letter-spacing:.04em;text-transform:uppercase;margin:0 0 2px}
-.sheet .date{font-family:var(--disp);font-size:14px;letter-spacing:.18em;
-  text-transform:uppercase;color:#9DBBA9;margin:0 0 20px}
+/* ---------- the banner ----------
 
-/* Eleven shirts. The signature: squad numbers, not a progress bar. A filled
-   shirt is a game played today; an outlined one is live and unplayed; a dashed
-   one is not built yet. Three states, no legend needed — the roster explains
-   itself because everyone knows what a team sheet is. */
-.xi-strip{display:grid;grid-template-columns:repeat(11,1fr);gap:6px;
-  max-width:620px}
-.shirt{aspect-ratio:1/1.12;border-radius:4px;display:flex;align-items:center;
-  justify-content:center;font-family:var(--disp);font-weight:700;
-  font-size:clamp(13px,2.6vw,19px);line-height:1;
-  border:2px solid rgba(255,255,255,.34);color:rgba(255,255,255,.5);
-  background:transparent;text-decoration:none;transition:transform .12s ease}
-.shirt.live{border-color:#fff;color:#fff}
-/* A LIVE SHIRT WEARS ITS GAME, NOT ITS NUMBER. The strip was eleven numerals,
-   which told you how many games there are and nothing about what any of them
-   is. The four that exist now say so at a glance; the seven that do not are
-   still numbers, because a number is exactly what an unsigned shirt has. The
-   name stays in the title and the aria-label, so what was readable before is
-   still readable to a screen reader and on hover. */
-.shirt svg{width:58%;height:58%;display:block}
-.shirt.live:hover,.shirt.live:focus-visible{transform:translateY(-3px)}
-.shirt.done{background:var(--gold);border-color:var(--gold);color:var(--gold-ink)}
-.shirt.soon{border-style:dashed;border-color:rgba(255,255,255,.2);
-  color:rgba(255,255,255,.28)}
-.sheet .played{font-family:var(--disp);font-size:15px;letter-spacing:.16em;
-  text-transform:uppercase;color:#9DBBA9;margin:16px 0 0}
-.about{max-width:620px;margin:36px 0 0;padding:0}
-.about h2{font-family:"Barlow Condensed","Arial Narrow",Arial,sans-serif;
-  font-weight:700;font-size:21px;letter-spacing:.04em;text-transform:uppercase;
-  margin:0 0 10px}
-.about p{font-size:14.5px;line-height:1.65;margin:0 0 12px;color:var(--ink-soft)}
-.about a{color:var(--pitch);text-decoration:underline;text-underline-offset:2px}
-.sheet .played b{color:var(--gold);font-weight:700}
+   A HEADLINE, THEN THE GAMES. The front door used to open on the team sheet —
+   a title, a date, eleven shirts, a roll-call, a form guide and a league
+   table — and the first playable thing was under all of it. Somebody arriving
+   for the first time was told what their season was before they had one.
+   So: one line of what this is, and the puzzles right under it. The team
+   sheet keeps everything it did; it is a strip now rather than a screen. */
+.hero{background:var(--pitch-deep);color:#fff;border-radius:14px;
+  margin:18px 0 0;padding:26px 28px;overflow:hidden}
+.hero-in{display:flex;align-items:center;gap:24px;max-width:none;padding:0}
+.hero-say{flex:1 1 auto;min-width:0}
+.hero h1{font-family:var(--disp);font-weight:700;
+  font-size:clamp(30px,5.6vw,54px);letter-spacing:.01em;text-transform:uppercase;
+  margin:0 0 8px;line-height:1}
+.hero .sub{margin:0;font-size:clamp(15px,1.6vw,18px);color:#C7DACD;max-width:46ch}
+/* The pitch and a couple of tiles, drawn rather than lettered: the reference
+   art carries invented words on its tiles and this page names nothing it has
+   not released. Off on a phone, where the words are the whole width. */
+.hero-art{flex:0 0 auto;width:190px;height:118px}
+.hero-art svg{display:block;width:100%;height:100%}
 
-/* The season, under the strip. A form guide, because that is what a run of
-   days IS — and because W D L needs no legend to anybody who has ever looked
-   at a league table. Today is dashed: it is not settled, and a defeat that
-   still has hours left in it must not look like one that is over. */
-.season{max-width:620px;margin:18px 0 0}
+/* ---------- today's XI ----------
+
+   The three states of the roster, on one shelf: a game played today, a game
+   live and unplayed, a shirt nobody wears yet. Everything the strip counts is
+   still counted from the strip — the dashed shirts say how many are to sign,
+   the live ones are what the chrome test measures against the squad — so both
+   rows stay inside .xi-strip whatever the shelf looks like. */
+.today{background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:14px 16px 16px;margin:16px 0 0}
+.today-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:0 0 12px}
+.today-head h2{font-family:var(--disp);font-weight:700;font-size:16px;
+  letter-spacing:.18em;text-transform:uppercase;color:var(--ink);margin:0}
+.today-head .date{font-family:var(--disp);font-size:13px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink-faint);margin:0}
+.xi-strip{display:flex;flex-direction:column;gap:10px}
+.strip-row{display:flex;flex-wrap:wrap;gap:8px}
+.shirt{font-family:var(--body);line-height:1;text-decoration:none}
+a.shirt{display:flex;align-items:center;gap:9px;min-height:44px;
+  padding:6px 14px 6px 6px;border:1px solid var(--line);border-radius:999px;
+  background:var(--card);color:var(--ink);
+  transition:border-color .12s ease,transform .12s ease,background .12s ease}
+.shirt .dot{flex:0 0 auto;width:30px;height:30px;border-radius:50%;
+  display:flex;align-items:center;justify-content:center;color:#fff;
+  font-family:var(--disp);font-weight:700;font-size:15px;line-height:1}
+/* The amber and sky kits are light: their numeral takes ink, like the cards. */
+.shirt .dot.on-light{color:var(--ink)}
+.shirt .lbl{font-size:14px;font-weight:600;white-space:nowrap}
+.shirt.live:hover,.shirt.live:focus-visible{border-color:var(--ink-faint);
+  transform:translateY(-1px)}
+/* PLAYED TODAY. The tick is the state; the colour alone would be a second
+   thing to learn, and a tick is not a colour anybody has to be able to see. */
+.shirt.done{background:rgba(30,107,69,.08);border-color:var(--pitch)}
+.shirt.done .lbl::after{content:" \2713";color:var(--pitch);font-weight:700}
+.shirt.soon{display:flex;align-items:center;justify-content:center;
+  min-width:40px;height:34px;padding:0 12px;border-radius:999px;
+  border:1px dashed var(--line);color:var(--ink-faint);
+  font-family:var(--disp);font-weight:700;font-size:15px}
+.today .played{font-family:var(--disp);font-size:14px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink-faint);margin:14px 0 0}
+.today .played b{color:var(--pitch);font-weight:700}
+
+/* ---------- the puzzles ---------- */
+.section{padding:30px 0 4px}
+.section h2.big{font-family:var(--disp);font-weight:700;
+  font-size:clamp(26px,4vw,38px);letter-spacing:.02em;text-transform:uppercase;
+  color:var(--ink);margin:0;line-height:1}
+.section .lede{margin:4px 0 18px;color:var(--ink-soft);font-size:15px}
+.grid{display:grid;gap:18px;grid-template-columns:repeat(3,1fr)}
+
+/* SIX CARDS, ONE SET. They were sized by their contents, so a longer blurb or
+   a taller drawing made a taller card — most visibly Grid XI, which had lost
+   its .game class outright and rendered as an unstyled block. The illustration
+   is a fixed panel inside the card and the button sits on the floor, so the
+   only thing that varies is the words. */
+.game{background:var(--card);border:1px solid var(--line);border-radius:14px;
+  padding:10px;display:flex;flex-direction:column}
+.game .cap{height:154px;position:relative;border-radius:10px;overflow:hidden;
+  display:flex;align-items:center;justify-content:center;padding:12px}
+/* A LITTLE OF THE PUZZLE, NOT AN ICON OF ONE. A grid glyph says "grid" for
+   four of the six games and nothing about what you do in any of them. Drawn
+   here in HTML and SVG, from ordinary football words — never a board that is
+   still to come. */
+.game .cap .prev{display:block;width:100%;height:100%}
+.game .cap .prev text{font-family:var(--disp);font-weight:700}
+.game .num{position:absolute;top:10px;right:10px;width:26px;height:26px;
+  border-radius:50%;background:var(--card);color:var(--ink);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--disp);font-weight:700;font-size:14px;line-height:1}
+.game .body{padding:14px 8px 6px;display:flex;flex-direction:column;gap:6px;flex:1}
+.game h3{font-size:19px;font-weight:700;letter-spacing:-.01em;margin:0;
+  color:var(--ink);line-height:1.2}
+.game p{margin:0;font-size:14.5px;color:var(--ink-soft);line-height:1.45}
+.game .acts{margin-top:auto;padding-top:12px;display:flex;flex-direction:column;
+  align-items:center;gap:8px}
+.btn{display:block;width:100%;text-align:center;padding:12px 14px;border-radius:9px;
+  border:1px solid var(--pitch);background:var(--pitch);color:#fff;
+  text-decoration:none;font-family:var(--body);font-weight:600;font-size:15px;
+  min-height:44px;transition:background .12s ease,border-color .12s ease}
+.btn:hover,.btn:focus-visible{background:var(--pitch-deep);border-color:var(--pitch-deep)}
+/* The archive, kept. The reference art has one button to a card; the boards a
+   player has missed are still the second most-used thing on this page, so they
+   stay — as a link under the button rather than a second button beside it. */
+.past{display:inline-block;padding:6px 4px;font-size:13px;color:var(--ink-faint);
+  text-decoration:none;border-bottom:1px solid transparent}
+.past:hover,.past:focus-visible{color:var(--ink);border-bottom-color:var(--ink-faint)}
+
+/* ---------- the season ----------
+
+   Under the games, not over them: it belongs to somebody who has already
+   played, and it is hidden until there is one to show — so the dark ground is
+   on the panel itself and an empty season takes no room at all. */
+.season{background:var(--pitch-deep);color:#fff;border-radius:14px;
+  padding:20px 22px 22px;margin:26px 0 0}
 .season p{font-family:var(--disp);font-size:14px;letter-spacing:.14em;
   text-transform:uppercase;color:#9DBBA9;margin:0}
 .season p b{color:#fff;font-weight:700}
@@ -192,67 +262,75 @@ body{
 .season .today-note{display:block;font-size:11px;letter-spacing:.1em;
   color:rgba(255,255,255,.5);margin:7px 0 0}
 
-/* ---------- games ---------- */
-.section{padding:38px 0 8px}
-.section h2{font-family:var(--disp);font-weight:700;font-size:15px;
-  letter-spacing:.2em;text-transform:uppercase;color:var(--ink-soft);
-  margin:0 0 16px;padding-bottom:10px;border-bottom:1px solid var(--line)}
-.grid{display:grid;gap:18px;grid-template-columns:repeat(auto-fill,minmax(260px,1fr))}
+/* ---------- the rest of the XI ----------
 
-.game{background:var(--card);border:1px solid var(--line);border-radius:10px;
-  overflow:hidden;display:flex;flex-direction:column}
-.game .cap{padding:26px 18px 18px;text-align:center;position:relative}
-.game .cap svg{display:block;margin:0 auto 12px;width:56px;height:56px}
-.game .num{position:absolute;top:10px;right:12px;font-family:var(--disp);
-  font-weight:700;font-size:15px;letter-spacing:.06em;opacity:.5}
-.game h3{font-family:var(--disp);font-weight:700;font-size:27px;letter-spacing:.03em;
-  text-transform:uppercase;margin:0;line-height:1.05}
-/* Dark caps take chalk text, light caps take ink. Set per game rather than
-   computed, because two of them sit near the boundary and guessing gets it
-   wrong on exactly those two. */
-.cap.on-dark,.cap.on-dark h3,.cap.on-dark .num{color:#fff}
-.cap.on-light,.cap.on-light h3,.cap.on-light .num{color:var(--ink)}
-.game .body{padding:14px 18px 18px;border-top:1px solid var(--line);
-  display:flex;flex-direction:column;gap:9px;flex:1}
-.game p{margin:0 0 3px;font-size:14.5px;color:var(--ink-soft);line-height:1.45}
-.btn{display:block;text-align:center;padding:11px 14px;border-radius:999px;
-  border:1px solid var(--ink);color:var(--ink);text-decoration:none;
-  font-family:var(--disp);font-weight:700;font-size:16px;letter-spacing:.1em;
-  text-transform:uppercase;background:var(--card);min-height:44px;
-  transition:background .12s ease,color .12s ease}
-.btn:hover,.btn:focus-visible{background:var(--ink);color:var(--card)}
-.btn.primary{background:var(--pitch);border-color:var(--pitch);color:#fff}
-.btn.primary:hover,.btn.primary:focus-visible{background:var(--pitch-deep);
-  border-color:var(--pitch-deep)}
-.tag{position:absolute;top:10px;left:12px;font-family:var(--disp);font-weight:700;
-  font-size:12px;letter-spacing:.14em;text-transform:uppercase;
-  background:var(--gold);color:var(--gold-ink);padding:3px 8px;border-radius:3px}
-
-/* Not built yet. Quiet, but present — eight blanks is the point of the XI. */
-.soon-grid{display:grid;gap:12px;
-  grid-template-columns:repeat(auto-fill,minmax(180px,1fr))}
-.soon-card{background:transparent;border:1px dashed var(--line);border-radius:10px;
-  padding:16px 14px;display:flex;align-items:center;gap:12px}
-.soon-card .sq{width:34px;height:34px;border-radius:5px;flex:0 0 auto;
+   A line, not a grid of five dashed cards. The shirts nobody wears yet are
+   already on the shelf at the top as numbers; repeating them as cards gave a
+   page about six playable games a section about five that are not. What has to
+   stay is the way in to the game in TESTING, which the owner asked for: a
+   number, a status, no name, and nofollow. */
+.rest{padding:34px 0 4px;text-align:center}
+.rest-line{font-family:var(--disp);font-size:14px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--ink-faint);margin:0 0 14px;
+  display:flex;align-items:center;justify-content:center;gap:16px}
+.rest-line::before,.rest-line::after{content:"";height:1px;background:var(--line);
+  flex:1 1 auto;max-width:200px}
+.soon-grid{display:flex;justify-content:center}
+.soon-card{background:transparent;border:1px dashed var(--line);border-radius:999px;
+  padding:7px 16px 7px 7px;display:inline-flex;align-items:center;gap:10px;
+  min-height:44px}
+.soon-card .sq{width:30px;height:30px;border-radius:50%;flex:0 0 auto;
   display:flex;align-items:center;justify-content:center;
-  font-family:var(--disp);font-weight:700;font-size:15px;color:#fff;opacity:.45}
-.soon-card .nm{font-family:var(--disp);font-weight:700;font-size:19px;
-  letter-spacing:.03em;text-transform:uppercase;color:var(--ink-faint);
-  line-height:1.1}
-.soon-card .nm span{display:block;font-family:var(--body);font-weight:400;
-  font-size:12px;letter-spacing:.1em;color:var(--ink-faint);text-transform:uppercase}
+  font-family:var(--disp);font-weight:700;font-size:15px;color:#fff;opacity:.55}
+.soon-card .nm{font-size:14px;font-weight:600;color:var(--ink-faint);
+  line-height:1.15;text-align:left}
+.soon-card .nm span{display:block;font-size:11.5px;font-weight:400;
+  letter-spacing:.1em;text-transform:uppercase;color:var(--ink-faint)}
 /* A card you can open. Dashed still — it is not out — but it answers to the
    pointer, and its shirt is not faded to a promise. */
 a.soon-card{text-decoration:none;transition:border-color .15s ease,transform .15s ease}
-a.soon-card:hover,a.soon-card:focus-visible{border-color:var(--ink-faint);transform:translateY(-2px)}
-a.soon-card .sq{opacity:.85}
+a.soon-card:hover,a.soon-card:focus-visible{border-color:var(--ink-faint);transform:translateY(-1px)}
+a.soon-card .sq{opacity:.9}
 a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
 
+.about{max-width:640px;margin:36px auto 0;padding:0}
+.about h2{font-family:var(--disp);
+  font-weight:700;font-size:21px;letter-spacing:.04em;text-transform:uppercase;
+  margin:0 0 10px}
+.about p{font-size:14.5px;line-height:1.65;margin:0 0 12px;color:var(--ink-soft)}
+.about a{color:var(--pitch);text-decoration:underline;text-underline-offset:2px}
 
 :focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
-@media (max-width:520px){
-  .xi-strip{grid-template-columns:repeat(6,1fr);max-width:340px}
+@media (max-width:980px){
+  .grid{grid-template-columns:repeat(2,1fr)}
+}
+/* ONE SHELF WHERE ONE SHELF FITS. Above this width the eleven sit on a single
+   line, live games and unsigned numbers together, which is what a team sheet
+   looks like. Below it they stack into two rows rather than scrolling: a row
+   that scrolls sideways hides the games at the end of it, and the games are
+   the point of the page. */
+@media (min-width:901px){
+  .xi-strip{flex-direction:row;flex-wrap:wrap;align-items:center}
+}
+@media (max-width:700px){
+  .hero{padding:22px 20px}
+  .hero-art{display:none}
+  /* THE LABELS STAY READABLE. Eleven cells across a phone gave each game 28
+     pixels, which is a glyph and not a name. Three across, the circle over the
+     name, and the "XI" dropped from the label because every one of them ends
+     in it — the full name is still the accessible name and the tooltip. */
+  .strip-row{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .strip-row.soon-row{display:flex;flex-wrap:wrap}
+  a.shirt{flex-direction:column;gap:6px;padding:9px 4px;border-radius:12px;
+    min-width:0;text-align:center}
+  .shirt .lbl{font-size:12px;white-space:normal}
+  .shirt .xi{display:none}
+  .shirt.done .lbl::after{content:" \2713"}
+}
+@media (max-width:620px){
+  .grid{grid-template-columns:1fr}
+  .game .cap{height:170px}
 }
 </style>
 </head>
@@ -264,220 +342,352 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
      at an account page that does not exist. -->
 <header class="xic-bar"></header>
 
-<section class="sheet">
-  <div class="wrap">
-    <h1>Today's XI</h1>
-    <p class="date" id="sheetDate">Today</p>
-
-    <div class="xi-strip">
-      <a class="shirt live" id="shirt1" href="/football/crossword/" title="Crossword XI" aria-label="Crossword XI">
-        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor"
-             stroke-width="1.9"><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/><rect x="9" y="9" width="6" height="6" fill="currentColor" stroke="none"/></svg></a>
-      <a class="shirt live" id="shirt2" href="/football/wordsearch/" title="Wordsearch XI" aria-label="Wordsearch XI">
-        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor"
-             stroke-width="1.9"><path d="M3 8h18M3 16h18M8 3v18M16 3v18" opacity=".5"/><rect x="2.6" y="9.4" width="18.8" height="5.2" rx="2.6" transform="rotate(-42 12 12)"/></svg></a>
-      <a class="shirt live" id="shirt3" href="/football/scrambled/" title="Scrambled XI" aria-label="Scrambled XI">
-        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor"
-             stroke-width="1.9"><rect x="2.6" y="7" width="7.4" height="7.4" rx="1.4" transform="rotate(-13 6.3 10.7)"/><rect x="13.4" y="4.6" width="7.4" height="7.4" rx="1.4" transform="rotate(11 17.1 8.3)"/><rect x="8.4" y="14" width="7.4" height="7.4" rx="1.4" fill="currentColor" fill-opacity=".35" transform="rotate(-6 12.1 17.7)"/></svg></a>
-      <a class="shirt live" id="shirt4" href="/football/hilo/" title="HiLo XI" aria-label="HiLo XI">
-        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor"
-             stroke-width="1.9"><path d="M6.5 9.5 12 4l5.5 5.5" stroke-linecap="round" stroke-linejoin="round"/><path d="M6.5 15.5 12 21l5.5-5.5" stroke-linecap="round" stroke-linejoin="round" opacity=".5"/></svg></a>
-      <a class="shirt live" id="shirt5" href="/football/vowels/" title="Vowels XI" aria-label="Vowels XI">
-        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor"
-             stroke-width="1.9"><path d="M4 8h4M10 8h4M16 8h4" stroke-linecap="round"/><path d="M4 13h4M16 13h4" stroke-linecap="round"/><path d="M10 12.4v1.2" stroke-linecap="round" opacity=".45"/><path d="M4 18h16" stroke-linecap="round" opacity=".35"/></svg></a>
-      <a class="shirt live" id="shirt6" href="/football/grid/" title="Grid XI" aria-label="Grid XI">
-        <svg viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor"
-             stroke-width="1.9"><rect x="3.2" y="3.2" width="17.6" height="17.6" rx="2.2"/><path d="M3.2 9.1h17.6M3.2 15h17.6M9.1 3.2v17.6M15 3.2v17.6" opacity=".5"/></svg></a>
-      <span class="shirt soon" title="Not out yet">7</span>
-      <span class="shirt soon" title="Not out yet">8</span>
-      <span class="shirt soon" title="Not out yet">9</span>
-      <span class="shirt soon" title="Not out yet">10</span>
-      <span class="shirt soon" title="Not out yet">11</span>
-    </div>
-
-    <p class="played" id="playedLine"><span id="toSign">Seven</span> still to sign</p>
-
-    <!-- ONE SEASON, AND IT IS THE FAMILY'S. Not a game's: each game keeps its
-         own live table for the board being played, and this counts DAYS across
-         all of them — two puzzles finished is a win, one is a draw, turning up
-         and finishing none is a defeat. Written by nothing in the markup: it is
-         hidden until the season is known, because a season strip showing zeros
-         to somebody who has never played is worse than no strip. -->
-    <div class="season" id="season" hidden>
-      <p class="season-line" id="seasonLine"></p>
-      <div class="form" id="seasonForm" aria-hidden="true"></div>
-      <!-- THE LADDER. A league table is a thing you have after 38 games, and
-           this shows one from day one — by putting every historical side on
-           what IT would have had after the same number of days, snapped to a
-           total that many matches could actually produce. See
-           shared/xi-table.js seasonTable, which is where the rule lives.
-           Three rows: the player and the club either side of them. -->
-      <table class="season-tbl" id="seasonTable" hidden>
-        <tbody id="seasonTableBody"></tbody>
-      </table>
-      <p class="season-year" id="seasonYear"></p>
-    </div>
-  </div>
-</section>
-
 <div class="wrap">
 
+  <!-- THE BANNER. One line of what this is, and then the puzzles. The count is
+       not written down: it is read off the team sheet below, because "six
+       games" was "four games" eight weeks ago and a number typed into a
+       sentence is a number nobody updates. -->
+  <section class="hero">
+    <div class="hero-in">
+      <div class="hero-say">
+        <h1>Your daily football fix</h1>
+        <p class="sub"><span id="liveCount">Six</span> games. Eleven answers.
+           A fresh challenge every day.</p>
+      </div>
+      <div class="hero-art" aria-hidden="true">
+        <svg viewBox="0 0 190 118" fill="none">
+          <rect x="46" y="8" width="96" height="102" rx="4" stroke="#fff"
+                stroke-width="2" opacity=".55"/>
+          <path d="M46 59h96" stroke="#fff" stroke-width="2" opacity=".55"/>
+          <circle cx="94" cy="59" r="17" stroke="#fff" stroke-width="2" opacity=".55"/>
+          <path d="M74 8v14h40V8M74 110V96h40v14" stroke="#fff" stroke-width="2" opacity=".55"/>
+          <g>
+            <rect x="6" y="30" width="46" height="46" rx="6" fill="#fff"
+                  transform="rotate(-9 29 53)"/>
+            <text x="29" y="61" transform="rotate(-9 29 53)" text-anchor="middle"
+                  font-family="Barlow Condensed,Arial Narrow,Arial" font-weight="700"
+                  font-size="26" fill="#123B27">XI</text>
+          </g>
+          <g>
+            <rect x="140" y="52" width="38" height="38" rx="5" fill="#F2C94C"
+                  transform="rotate(11 159 71)"/>
+            <text x="159" y="78" transform="rotate(11 159 71)" text-anchor="middle"
+                  font-family="Barlow Condensed,Arial Narrow,Arial" font-weight="700"
+                  font-size="22" fill="#3A2D00">11</text>
+          </g>
+        </svg>
+      </div>
+    </div>
+  </section>
+
+  <!-- THE TEAM SHEET. Three states on one shelf: played today, live and
+       unplayed, and a shirt nobody wears yet. Both rows stay inside .xi-strip —
+       the page counts the dashed shirts to say how many are still to sign, and
+       the chrome test counts the live ones against the launched squad. -->
+  <section class="today">
+    <div class="today-head">
+      <h2>Today's XI</h2>
+      <p class="date" id="sheetDate">Today</p>
+    </div>
+    <div class="xi-strip">
+      <div class="strip-row">
+        <a class="shirt live" id="shirt1" href="/football/crossword/" title="Crossword XI" aria-label="Crossword XI">
+          <span class="dot" style="background:var(--kit-01)" aria-hidden="true">1</span>
+          <span class="lbl">Crossword<span class="xi"> XI</span></span></a>
+        <a class="shirt live" id="shirt2" href="/football/wordsearch/" title="Wordsearch XI" aria-label="Wordsearch XI">
+          <span class="dot on-light" style="background:var(--kit-02)" aria-hidden="true">2</span>
+          <span class="lbl">Wordsearch<span class="xi"> XI</span></span></a>
+        <a class="shirt live" id="shirt3" href="/football/scrambled/" title="Scrambled XI" aria-label="Scrambled XI">
+          <span class="dot on-light" style="background:var(--kit-03)" aria-hidden="true">3</span>
+          <span class="lbl">Scrambled<span class="xi"> XI</span></span></a>
+        <a class="shirt live" id="shirt4" href="/football/hilo/" title="HiLo XI" aria-label="HiLo XI">
+          <span class="dot" style="background:var(--kit-04)" aria-hidden="true">4</span>
+          <span class="lbl">HiLo<span class="xi"> XI</span></span></a>
+        <a class="shirt live" id="shirt5" href="/football/vowels/" title="Vowels XI" aria-label="Vowels XI">
+          <span class="dot" style="background:var(--kit-05)" aria-hidden="true">5</span>
+          <span class="lbl">Vowels<span class="xi"> XI</span></span></a>
+        <a class="shirt live" id="shirt6" href="/football/grid/" title="Grid XI" aria-label="Grid XI">
+          <span class="dot" style="background:var(--kit-06)" aria-hidden="true">6</span>
+          <span class="lbl">Grid<span class="xi"> XI</span></span></a>
+      </div>
+      <div class="strip-row soon-row">
+        <span class="shirt soon" title="Not out yet">7</span>
+        <span class="shirt soon" title="Not out yet">8</span>
+        <span class="shirt soon" title="Not out yet">9</span>
+        <span class="shirt soon" title="Not out yet">10</span>
+        <span class="shirt soon" title="Not out yet">11</span>
+      </div>
+    </div>
+    <p class="played" id="playedLine"><span id="toSign">Five</span> still to sign</p>
+  </section>
+
   <section class="section">
-    <h2>Out now</h2>
+    <h2 class="big">Pick your puzzle</h2>
+    <p class="lede">A new board in every game, every day.</p>
     <div class="grid">
 
       <article class="game">
-        <div class="cap on-dark" style="background:var(--kit-01)">
+        <div class="cap" style="background:var(--kit-01)">
           <span class="num">1</span>
-          <svg viewBox="0 0 48 48" aria-hidden="true" fill="none">
-            <rect x="2" y="2" width="44" height="44" rx="3" stroke="#fff" stroke-width="2.5"/>
-            <path d="M2 16h44M2 32h44M16 2v44M32 2v44" stroke="#fff" stroke-width="2.5"/>
-            <rect x="17" y="17" width="14" height="14" fill="#fff"/>
-            <rect x="33" y="1" width="14" height="14" fill="#fff"/>
+          <!-- Two entries crossing on a shared letter, one of them still
+               empty: a crossword, not an icon of one. Ordinary words — never a
+               board that is still to come. -->
+          <svg class="prev" viewBox="0 0 220 120" aria-hidden="true">
+            <g>
+              <rect x="62" y="12" width="30" height="30" rx="3" fill="#fff" fill-opacity=".22"/>
+              <rect x="95" y="12" width="30" height="30" rx="3" fill="#fff"/>
+              <rect x="128" y="12" width="30" height="30" rx="3" fill="#fff" fill-opacity=".22"/>
+              <rect x="62" y="45" width="30" height="30" rx="3" fill="#fff"/>
+              <rect x="95" y="45" width="30" height="30" rx="3" fill="#fff"/>
+              <rect x="128" y="45" width="30" height="30" rx="3" fill="#fff"/>
+              <rect x="62" y="78" width="30" height="30" rx="3" fill="#fff" fill-opacity=".22"/>
+              <rect x="95" y="78" width="30" height="30" rx="3" fill="#fff"/>
+              <rect x="128" y="78" width="30" height="30" rx="3" fill="#fff" fill-opacity=".22"/>
+            </g>
+            <g fill="#123B27" font-size="21" text-anchor="middle">
+              <text x="110" y="35">T</text>
+              <text x="77" y="68">K</text>
+              <text x="110" y="68">I</text>
+              <text x="143" y="68">T</text>
+              <text x="110" y="101">P</text>
+            </g>
           </svg>
+        </div>
+        <div class="body">
           <h3>Crossword XI</h3>
-        </div>
-        <div class="body">
-          <p>A daily football crossword. Eleven clues drawn from the history of the game.</p>
-          <a class="btn primary" href="/football/crossword/">Play today</a>
-          <a class="btn" href="/football/crossword/#archive">Past puzzles</a>
+          <p>Eleven clues. One football crossword.</p>
+          <div class="acts">
+            <a class="btn" href="/football/crossword/" aria-label="Play Crossword XI today">Play today</a>
+            <a class="past" href="/football/crossword/archive/" aria-label="Crossword XI past puzzles">Past puzzles</a>
+          </div>
         </div>
       </article>
 
       <article class="game">
-        <div class="cap on-light" style="background:var(--kit-02)">
+        <div class="cap" style="background:var(--kit-02)">
           <span class="num">2</span>
-          <svg viewBox="0 0 48 48" aria-hidden="true" fill="none">
-            <rect x="2" y="2" width="44" height="44" rx="3" stroke="currentColor" stroke-width="2.5"/>
-            <path d="M2 13h44M2 24h44M2 35h44M13 2v44M24 2v44M35 2v44" stroke="currentColor" stroke-width="1.6" opacity=".45"/>
-            <rect x="5" y="27.2" width="30" height="7.6" rx="3.8" transform="rotate(-45 24 24)" stroke="currentColor" stroke-width="2.5"/>
+          <!-- A grid of letters with a word found on the diagonal, marked the
+               way the game marks it. -->
+          <svg class="prev" viewBox="0 0 220 120" aria-hidden="true">
+            <rect x="2" y="39" width="132" height="26" rx="13" fill="#F2C94C"
+                  fill-opacity=".85" transform="rotate(34.5 68 52)"/>
+            <g fill="#123B27" font-size="16" text-anchor="middle">
+              <text x="20" y="24">G</text><text x="52" y="24">N</text><text x="84" y="24">T</text><text x="116" y="24">S</text><text x="148" y="24">R</text><text x="180" y="24">P</text><text x="212" y="24">M</text>
+              <text x="20" y="46">T</text><text x="52" y="46">O</text><text x="84" y="46">A</text><text x="116" y="46">I</text><text x="148" y="46">N</text><text x="180" y="46">E</text><text x="212" y="46">R</text>
+              <text x="20" y="68">S</text><text x="52" y="68">T</text><text x="84" y="68">A</text><text x="116" y="68">D</text><text x="148" y="68">I</text><text x="180" y="68">U</text><text x="212" y="68">M</text>
+              <text x="20" y="90">R</text><text x="52" y="90">E</text><text x="84" y="90">V</text><text x="116" y="90">L</text><text x="148" y="90">O</text><text x="180" y="90">S</text><text x="212" y="90">T</text>
+              <text x="20" y="112">L</text><text x="52" y="112">E</text><text x="84" y="112">G</text><text x="116" y="112">E</text><text x="148" y="112">N</text><text x="180" y="112">D</text><text x="212" y="112">S</text>
+            </g>
           </svg>
+        </div>
+        <div class="body">
           <h3>Wordsearch XI</h3>
-        </div>
-        <div class="body">
-          <p>A daily football word search. Eleven to find in the grid, plus a hidden bonus word.</p>
-          <a class="btn primary" href="/football/wordsearch/">Play today</a>
+          <p>Find the XI. Discover the bonus.</p>
+          <div class="acts">
+            <a class="btn" href="/football/wordsearch/" aria-label="Play Wordsearch XI today">Play today</a>
+            <a class="past" href="/football/wordsearch/archive/" aria-label="Wordsearch XI past puzzles">Past puzzles</a>
+          </div>
         </div>
       </article>
 
       <article class="game">
-        <div class="cap on-light" style="background:var(--kit-03)">
+        <div class="cap" style="background:var(--kit-03)">
           <span class="num">3</span>
-          <svg viewBox="0 0 48 48" aria-hidden="true" fill="none">
-            <rect x="2" y="2" width="44" height="44" rx="3" stroke="currentColor" stroke-width="2.5"/>
-            <rect x="8" y="10" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="2"/>
-            <rect x="21" y="7" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="2" transform="rotate(12 25.5 11.5)"/>
-            <rect x="33" y="13" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="2" transform="rotate(-9 37.5 17.5)"/>
-            <rect x="12" y="28" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="2" transform="rotate(-14 16.5 32.5)"/>
-            <rect x="26" y="27" width="9" height="9" rx="1.5" fill="currentColor" opacity=".35" stroke="none"/>
-            <rect x="26" y="27" width="9" height="9" rx="1.5" stroke="currentColor" stroke-width="2"/>
+          <!-- Letter tiles out of order, waiting to be put back. -->
+          <svg class="prev" viewBox="0 0 220 120" aria-hidden="true">
+            <g>
+              <g transform="rotate(-8 45 34)"><rect x="28" y="17" width="34" height="34" rx="5" fill="#fff"/>
+                <text x="45" y="41" text-anchor="middle" font-size="20" fill="#1B1B18">A</text></g>
+              <g transform="rotate(7 110 28)"><rect x="93" y="11" width="34" height="34" rx="5" fill="#fff"/>
+                <text x="110" y="35" text-anchor="middle" font-size="20" fill="#1B1B18">N</text></g>
+              <g transform="rotate(-5 175 38)"><rect x="158" y="21" width="34" height="34" rx="5" fill="#fff"/>
+                <text x="175" y="45" text-anchor="middle" font-size="20" fill="#1B1B18">L</text></g>
+              <g transform="rotate(6 70 88)"><rect x="53" y="71" width="34" height="34" rx="5" fill="#fff"/>
+                <text x="70" y="95" text-anchor="middle" font-size="20" fill="#1B1B18">T</text></g>
+              <g transform="rotate(-9 128 84)"><rect x="111" y="67" width="34" height="34" rx="5" fill="#fff"/>
+                <text x="128" y="91" text-anchor="middle" font-size="20" fill="#1B1B18">K</text></g>
+              <g transform="rotate(5 186 92)"><rect x="169" y="75" width="34" height="34" rx="5" fill="#fff"/>
+                <text x="186" y="99" text-anchor="middle" font-size="20" fill="#1B1B18">R</text></g>
+            </g>
           </svg>
+        </div>
+        <div class="body">
           <h3>Scrambled XI</h3>
-        </div>
-        <div class="body">
-          <p>A daily football anagram. Eleven scrambled names in their real positions, on a ninety-minute clock.</p>
-          <a class="btn primary" href="/football/scrambled/">Play today</a>
+          <p>Untangle eleven player names.</p>
+          <div class="acts">
+            <a class="btn" href="/football/scrambled/" aria-label="Play Scrambled XI today">Play today</a>
+            <a class="past" href="/football/scrambled/archive/" aria-label="Scrambled XI past puzzles">Past puzzles</a>
+          </div>
         </div>
       </article>
 
       <article class="game">
-        <div class="cap on-dark" style="background:var(--kit-04)">
+        <div class="cap" style="background:var(--kit-04)">
           <span class="num">4</span>
-          <svg viewBox="0 0 48 48" aria-hidden="true" fill="none">
-            <rect x="2" y="2" width="44" height="44" rx="3" stroke="#fff" stroke-width="2.5"/>
-            <path d="M14 30l10-12 10 12" stroke="#fff" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
-            <path d="M14 36h20" stroke="#fff" stroke-width="2.5" stroke-linecap="round" opacity=".55"/>
+          <!-- One number known, the next one hidden, and the only two answers
+               there are. -->
+          <svg class="prev" viewBox="0 0 220 120" aria-hidden="true">
+            <rect x="26" y="32" width="64" height="56" rx="8" fill="none" stroke="#fff" stroke-width="2.5"/>
+            <rect x="130" y="32" width="64" height="56" rx="8" fill="none" stroke="#fff"
+                  stroke-width="2.5" stroke-dasharray="6 5" opacity=".8"/>
+            <g fill="#fff" text-anchor="middle" font-size="26">
+              <text x="58" y="69">27</text>
+              <text x="162" y="69" opacity=".8">?</text>
+            </g>
+            <g stroke="#F2C94C" stroke-width="3.4" fill="none" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M102 52l8-9 8 9"/>
+              <path d="M102 68l8 9 8-9"/>
+            </g>
           </svg>
-          <h3>HiLo XI</h3>
         </div>
         <div class="body">
-          <p>One stat, eleven calls. Higher or lower, earlier or later, three substitutions.</p>
-          <a class="btn primary" href="/football/hilo/">Play today</a>
+          <h3>HiLo XI</h3>
+          <p>Eleven higher-or-lower calls.</p>
+          <div class="acts">
+            <a class="btn" href="/football/hilo/" aria-label="Play HiLo XI today">Play today</a>
+            <a class="past" href="/football/hilo/archive/" aria-label="HiLo XI past puzzles">Past puzzles</a>
+          </div>
         </div>
       </article>
 
       <article class="game">
-        <div class="cap on-dark" style="background:var(--kit-05)">
+        <div class="cap" style="background:var(--kit-05)">
           <span class="num">5</span>
-          <svg viewBox="0 0 48 48" aria-hidden="true" fill="none">
-            <rect x="2" y="2" width="44" height="44" rx="3" stroke="#fff" stroke-width="2.5"/>
-            <path d="M10 20h6M20 20h8M32 20h6" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
-            <path d="M10 28h6M32 28h6" stroke="#fff" stroke-width="3" stroke-linecap="round"/>
-            <path d="M20 27.4v1.2M28 27.4v1.2" stroke="#fff" stroke-width="3" stroke-linecap="round" opacity=".5"/>
+          <!-- A name with its vowels taken out, and the gaps waiting. -->
+          <svg class="prev" viewBox="0 0 220 120" aria-hidden="true">
+            <g>
+              <rect x="8" y="41" width="30" height="38" rx="4" fill="#fff"/>
+              <rect x="43" y="41" width="30" height="38" rx="4" fill="#fff" fill-opacity=".22"/>
+              <rect x="78" y="41" width="30" height="38" rx="4" fill="#fff" fill-opacity=".22"/>
+              <rect x="113" y="41" width="30" height="38" rx="4" fill="#fff"/>
+              <rect x="148" y="41" width="30" height="38" rx="4" fill="#fff" fill-opacity=".22"/>
+              <rect x="183" y="41" width="30" height="38" rx="4" fill="#fff"/>
+            </g>
+            <g fill="#8E2F45" font-size="21" text-anchor="middle">
+              <text x="23" y="68">R</text>
+              <text x="128" y="68">N</text>
+              <text x="198" y="68">Y</text>
+            </g>
+            <g stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".85">
+              <path d="M50 70h16M85 70h16M155 70h16"/>
+            </g>
           </svg>
-          <h3>Vowels XI</h3>
         </div>
         <div class="body">
-          <p>The same eleven names, in the right order with the vowels taken out. Fill them back in before the whistle.</p>
-          <a class="btn primary" href="/football/vowels/">Play today</a>
+          <h3>Vowels XI</h3>
+          <p>Put the missing vowels back.</p>
+          <div class="acts">
+            <a class="btn" href="/football/vowels/" aria-label="Play Vowels XI today">Play today</a>
+            <a class="past" href="/football/vowels/archive/" aria-label="Vowels XI past puzzles">Past puzzles</a>
+          </div>
         </div>
       </article>
 
-      <article class="card">
-        <div class="cap on-dark" style="background:var(--kit-06)">
+      <article class="game">
+        <div class="cap" style="background:var(--kit-06)">
           <span class="num">6</span>
-          <svg viewBox="0 0 48 48" aria-hidden="true" fill="none">
-            <rect x="6" y="6" width="36" height="36" rx="3" stroke="#fff" stroke-width="2.5"/>
-            <path d="M6 18h36M6 30h36M18 6v36M30 6v36" stroke="#fff" stroke-width="2" opacity=".55"/>
+          <!-- One grid, filling up: solved squares, a letter that two entries
+               share, and the rest still to come. -->
+          <svg class="prev" viewBox="0 0 220 120" aria-hidden="true">
+            <g>
+              <rect x="56" y="6" width="20" height="20" rx="2" fill="#fff" fill-opacity=".22"/>
+              <rect x="78" y="6" width="20" height="20" rx="2" fill="#fff"/>
+              <rect x="100" y="6" width="20" height="20" rx="2" fill="#fff" fill-opacity=".22"/>
+              <rect x="122" y="6" width="20" height="20" rx="2" fill="#1E6B45"/>
+              <rect x="144" y="6" width="20" height="20" rx="2" fill="#fff" fill-opacity=".22"/>
+              <rect x="56" y="28" width="20" height="20" rx="2" fill="#fff"/>
+              <rect x="78" y="28" width="20" height="20" rx="2" fill="#1E6B45"/>
+              <rect x="100" y="28" width="20" height="20" rx="2" fill="#fff"/>
+              <rect x="122" y="28" width="20" height="20" rx="2" fill="#fff"/>
+              <rect x="144" y="28" width="20" height="20" rx="2" fill="#fff" fill-opacity=".22"/>
+              <rect x="56" y="50" width="20" height="20" rx="2" fill="#fff" fill-opacity=".22"/>
+              <rect x="78" y="50" width="20" height="20" rx="2" fill="#fff"/>
+              <rect x="100" y="50" width="20" height="20" rx="2" fill="#F2C94C"/>
+              <rect x="122" y="50" width="20" height="20" rx="2" fill="#fff"/>
+              <rect x="144" y="50" width="20" height="20" rx="2" fill="#1E6B45"/>
+              <rect x="56" y="72" width="20" height="20" rx="2" fill="#fff"/>
+              <rect x="78" y="72" width="20" height="20" rx="2" fill="#fff" fill-opacity=".22"/>
+              <rect x="100" y="72" width="20" height="20" rx="2" fill="#fff"/>
+              <rect x="122" y="72" width="20" height="20" rx="2" fill="#fff" fill-opacity=".22"/>
+              <rect x="144" y="72" width="20" height="20" rx="2" fill="#fff"/>
+              <rect x="56" y="94" width="20" height="20" rx="2" fill="#1E6B45"/>
+              <rect x="78" y="94" width="20" height="20" rx="2" fill="#fff"/>
+              <rect x="100" y="94" width="20" height="20" rx="2" fill="#fff" fill-opacity=".22"/>
+              <rect x="122" y="94" width="20" height="20" rx="2" fill="#fff"/>
+              <rect x="144" y="94" width="20" height="20" rx="2" fill="#fff" fill-opacity=".22"/>
+            </g>
           </svg>
-          <h3>Grid XI</h3>
         </div>
         <div class="body">
-          <p>Eleven footballers locked into one grid, with no clues but the title. Solve one and its letters cross into the next.</p>
-          <a class="btn primary" href="/football/grid/">Play today</a>
+          <h3>Grid XI</h3>
+          <p>Eleven names. Shared letters.</p>
+          <div class="acts">
+            <a class="btn" href="/football/grid/" aria-label="Play Grid XI today">Play today</a>
+            <a class="past" href="/football/grid/archive/" aria-label="Grid XI past puzzles">Past puzzles</a>
+          </div>
         </div>
       </article>
 
     </div>
   </section>
 
-  <section class="section">
-    <h2>The rest of the XI</h2>
-    <!-- A CARD WITH A DASHED BORDER THAT YOU CAN OPEN is a game in testing:
-         built, playable, not launched. The owner asked for those to be
-         reachable from the front door, here rather than under Out now. It is
-         still a number and a status — see below for why the name stays off
-         this page — and it is marked nofollow so the route in does not become
-         an announcement to a crawler.
+  <!-- ONE SEASON, AND IT IS THE FAMILY'S. Not a game's: each game keeps its
+       own live table for the board being played, and this counts DAYS across
+       all of them — two puzzles finished is a win, one is a draw, turning up
+       and finishing none is a defeat. Written by nothing in the markup: it is
+       hidden until the season is known, because a season strip showing zeros
+       to somebody who has never played is worse than no strip.
 
-         Numbers only, no names.
+       UNDER THE GAMES SINCE 8 SEP 2026. It used to sit at the top, between the
+       team sheet and the first playable thing on the page — so a returning
+       player, the only kind who has a season at all, met a form guide and a
+       league table before a Play button. -->
+  <div class="season" id="season" hidden>
+    <p class="season-line" id="seasonLine"></p>
+    <div class="form" id="seasonForm" aria-hidden="true"></div>
+    <!-- THE LADDER. A league table is a thing you have after 38 games, and
+         this shows one from day one — by putting every historical side on
+         what IT would have had after the same number of days, snapped to a
+         total that many matches could actually produce. See
+         shared/xi-table.js seasonTable, which is where the rule lives.
+         Three rows: the player and the club either side. -->
+    <table class="season-tbl" id="seasonTable" hidden>
+      <tbody id="seasonTableBody"></tbody>
+    </table>
+    <p class="season-year" id="seasonYear"></p>
+  </div>
 
-         Two reasons. The roster reads as a squad being assembled rather than a
-         list of promises, which is the whole point of the shirt strip above.
-         And an indexed page naming eight unreleased games hands the roadmap to
-         playfootball.games and footballgenius.app, both of which ship
-         regularly and already hold the names two of these were built under.
+  <section class="section rest">
+    <!-- A LINE, NOT A GRID OF FIVE DASHED CARDS. The shirts nobody wears yet
+         are already on the shelf at the top, as numbers; repeating them as
+         cards gave a page about six playable games a whole section about five
+         that are not.
 
-         Each number keeps the kit colour it will launch in, so the colour is
-         familiar before the name ever appears. The status line is the only
-         thing that moves. -->
-    <!-- GRID XI TOOK THE SIX ON 7 SEP 2026, so everything here moved down one
-         and the tail lost a slot rather than the squad growing a twelfth —
-         which is the rule the drawer keeps and this grid has to keep with it.
-         QuickFire is in testing and does not hold a shirt; it sits on the
-         first number no launched game wears, which is now seven. -->
+         What stays is the way IN to the game in testing, which the owner asked
+         for: built and playable, not launched. It is a number and a status —
+         never a name — and it is marked nofollow so the route in does not
+         become an announcement to a crawler.
+
+         Numbers only, no names. Two reasons. The roster reads as a squad being
+         assembled rather than a list of promises, which is the whole point of
+         the shirts above. And an indexed page naming five unreleased games
+         hands the roadmap to playfootball.games and footballgenius.app, both
+         of which ship regularly and already hold the names two of these were
+         built under.
+
+         GRID XI TOOK THE SIX ON 7 SEP 2026, so the tail moved down one and the
+         squad lost an unsigned slot rather than growing a twelfth. QuickFire is
+         in testing and holds no shirt: it sits on the first number no launched
+         game wears, which is now seven. -->
+    <p class="rest-line">The squad keeps growing &mdash;
+       <span id="toSignProse">five</span> more to come</p>
     <div class="soon-grid">
       <a class="soon-card open" href="/football/quickfire/" rel="nofollow"
          title="In testing — not finished, and not yet a daily game">
         <span class="sq" style="background:var(--kit-07)">7</span>
         <span class="nm">Number seven<span>In testing</span></span>
       </a>
-      <div class="soon-card">
-        <span class="sq" style="background:var(--kit-08)">8</span>
-        <span class="nm">Number eight<span>In build</span></span>
-      </div>
-      <div class="soon-card">
-        <span class="sq" style="background:var(--kit-09)">9</span>
-        <span class="nm">Number nine<span>On the drawing board</span></span>
-      </div>
-      <div class="soon-card">
-        <span class="sq" style="background:#8A968D">10</span>
-        <span class="nm">Number ten<span>On the drawing board</span></span>
-      </div>
-      <div class="soon-card">
-        <span class="sq" style="background:#8A968D">11</span>
-        <span class="nm">Number eleven<span>Not yet signed</span></span>
-      </div>
     </div>
   </section>
 
@@ -510,8 +720,8 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
        reveal, and the same board goes to everyone, every day. Yesterday&rsquo;s
        counts if you finish it before midnight; the rest of the archive is
        always there for a friendly.</p>
-    <p>The other <span id="toSignProse">ten</span> shirts are being filled. Each new game joins the same
-       season, the same account, and the same team sheet above.</p>
+    <p>The shirts still to be filled are being worked on. Each new game joins
+       the same season, the same account, and the same team sheet above.</p>
   </section>
 
 </div>
@@ -525,17 +735,51 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
 
 <script>
 /* Progressive enhancement only: everything above renders complete without
-   this. The date is the device's; the shirt state is read the same way the
-   game itself decides "played today" — its own record in this origin's
-   storage, keyed by the daily number the SERVER says is today. The epoch is
-   deliberately not duplicated here: the hub asking /api/daily for the number
-   is one network call, while a second copy of the epoch in a second file is
-   how the client and server disagreed about dates in the first place. */
+   this. The shirt state is read the same way the game itself decides "played
+   today" — its own record in this origin's storage, keyed by the daily number
+   the SERVER says is today. The epoch is deliberately not duplicated here:
+   the hub asking /api/daily for the number is one network call, while a
+   second copy of the epoch in a second file is how the client and server
+   disagreed about dates in the first place. */
 (function () {
+  /* THE DATE IS THE SERVER'S, and it was the device's until 8 September 2026.
+     An independent review opened the hub and the crossword in the same session
+     and read "Tuesday 8 September" on one and "Mon 7 Sept" on the other — a
+     UK evening after local midnight and before UTC midnight, which is an hour
+     of every summer night. The hub was naming a day whose boards did not
+     exist yet.
+     The device's date is drawn first so the line is never empty, and the
+     server's replaces it when /api/daily answers — the same call the shirt
+     state below already makes, so this costs nothing extra. Its `day` is the
+     UTC day the boards are keyed by. */
+  var MONTHS = ["January", "February", "March", "April", "May", "June", "July",
+                "August", "September", "October", "November", "December"];
+  var DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+  function showDate(text) {
+    try { document.getElementById("sheetDate").textContent = text; } catch (e) {}
+  }
+  function fromServerDay(day) {
+    /* Built from the string's own parts. A Date made from an ISO day is UTC
+       midnight, and any formatter that applies a timezone moves it to the day
+       before — the same trap the archive pages document. */
+    var p = String(day || "").split("-");
+    if (p.length !== 3) return null;
+    var at = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2]));
+    if (isNaN(at.getTime())) return null;
+    return DAYS[at.getUTCDay()] + " " + Number(p[2]) + " " + MONTHS[+p[1] - 1];
+  }
   try {
     var d = new Date();
-    document.getElementById("sheetDate").textContent =
-      d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" });
+    showDate(d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" }));
+  } catch (e) {}
+  try {
+    fetch("/api/daily", { headers: { accept: "application/json" } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        var named = j && j.day ? fromServerDay(j.day) : null;
+        if (named) showDate(named);
+      })
+      .catch(function () {});
   } catch (e) {}
   /* HOW MANY SHIRTS ARE STILL EMPTY, counted from the strip rather than
      written down. It was the word "nine" in three places — the roll-call, the
@@ -548,12 +792,21 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
     var left = document.querySelectorAll(".xi-strip .shirt.soon").length;
     return WORDS[left] || String(left);
   }
+  function upper(w) { return w.charAt(0).toUpperCase() + w.slice(1); }
   (function () {
     var n = stillToSign();
     var a = document.getElementById("toSign");
     var b = document.getElementById("toSignProse");
-    if (a) a.textContent = n.charAt(0).toUpperCase() + n.slice(1);
+    if (a) a.textContent = upper(n);
     if (b) b.textContent = n;
+    /* AND HOW MANY THERE ARE TO PLAY, counted the same way and for the same
+       reason: the banner says "six games" and it said "four games" eight weeks
+       ago. A number typed into a sentence is a number nobody updates. */
+    var c = document.getElementById("liveCount");
+    if (c) {
+      var live = document.querySelectorAll(".xi-strip a.shirt.live").length;
+      c.textContent = upper(WORDS[live] || String(live));
+    }
   })();
 
   /* FIVE live shirts, each judged by its own game's record against its own
