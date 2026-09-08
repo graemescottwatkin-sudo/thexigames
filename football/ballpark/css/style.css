@@ -1,0 +1,246 @@
+/* Ballpark XI — this game's own rules only.
+ *
+ * The palette, the bar, the drawer, the footer and the whole landing are
+ * shared/xi-tokens.css, xi-chrome.css and xi-landing.css. Nothing here restates
+ * a token or writes a .xic- rule; the gates check both. What is left is the one
+ * thing no other game in the family has: a slider that has to say how close you
+ * were without saying where the answer is until you have locked.
+ */
+
+/* ---- the scoreboard ----------------------------------------------------- */
+
+.board{
+  display:grid; grid-template-columns:repeat(4,1fr); gap:1px;
+  background:var(--line); border:1px solid var(--line); border-radius:12px;
+  overflow:hidden; margin:0 0 14px;
+}
+.bd-cell{
+  background:var(--card); padding:10px 12px; display:flex; flex-direction:column;
+  gap:2px; min-width:0;
+}
+.bd-l{
+  font:600 11px/1.2 "Public Sans",system-ui,sans-serif; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--ink-faint);
+}
+.bd-cell>b{
+  font:700 26px/1 "Barlow Condensed",system-ui,sans-serif; color:var(--ink);
+  font-variant-numeric:tabular-nums;
+}
+.secs small{font-size:13px; font-weight:600; opacity:.6}
+/* The last three seconds. Colour is the second signal — the number itself is
+   already counting down in front of the player. */
+.secs.warn{color:var(--danger)}
+.bd-sub{font:500 12px/1.3 "Public Sans",system-ui,sans-serif; color:var(--ink-faint)}
+.dots{display:flex; gap:4px; margin:3px 0 1px}
+.dots i{
+  width:9px; height:9px; border-radius:50%; background:var(--accent);
+  opacity:.85; display:block;
+}
+.dots i.spent{background:transparent; box-shadow:inset 0 0 0 1.5px var(--line)}
+
+@media (max-width:560px){
+  .board{grid-template-columns:repeat(2,1fr)}
+  .bd-cell>b{font-size:22px}
+}
+
+/* ---- the eleven pips ---------------------------------------------------- */
+
+.ladder{display:flex; gap:5px; margin:0 0 14px}
+.ladder i{
+  flex:1 1 0; height:5px; border-radius:3px; background:var(--line);
+  display:block; transition:background .18s ease;
+}
+.ladder i.ok{background:var(--ok)}
+.ladder i.bad{background:var(--danger)}
+.ladder i.cur{background:var(--accent)}
+
+/* ---- the question ------------------------------------------------------- */
+
+.stage{
+  background:var(--card); border:1px solid var(--line); border-radius:14px;
+  padding:18px 18px 16px;
+}
+.eyebrow{
+  font:600 11px/1.2 "Public Sans",system-ui,sans-serif; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--ink-faint); margin:0 0 6px;
+}
+.q{
+  font:600 22px/1.28 "Public Sans",system-ui,sans-serif; color:var(--ink);
+  margin:0 0 4px;
+}
+/* THE DETAIL LINE IS PART OF THE QUESTION, not a footnote. It is what removes
+   the ambiguity a fan would otherwise argue with — which competitions, whose
+   career, to the nearest thousand — so it is set quieter but not smaller than
+   reading size. */
+.q small{
+  display:block; margin-top:6px; font:400 14px/1.45 "Public Sans",system-ui,sans-serif;
+  color:var(--ink-soft);
+}
+
+.big{
+  display:flex; align-items:baseline; gap:8px; justify-content:center;
+  margin:16px 0 10px; min-height:44px;
+}
+.big span{
+  font:700 40px/1 "Barlow Condensed",system-ui,sans-serif; color:var(--ink);
+  font-variant-numeric:tabular-nums;
+}
+.big em{
+  font:600 15px/1 "Public Sans",system-ui,sans-serif; font-style:normal;
+  color:var(--ink-soft);
+}
+/* Nothing is selected until the player touches the track. A slider that opens
+   showing a number is a slider that has already guessed for them. */
+.big.empty span{font:500 15px/1.3 "Public Sans",system-ui,sans-serif; color:var(--ink-faint)}
+
+/* ---- the track ---------------------------------------------------------- */
+
+.track{position:relative; height:44px; margin:6px 0 2px}
+.track::before{
+  content:""; position:absolute; left:0; right:0; top:50%; height:6px;
+  transform:translateY(-50%); background:var(--line); border-radius:4px;
+}
+.track>span{position:absolute; top:50%; transform:translateY(-50%); pointer-events:none}
+
+/* The ballpark's WIDTH, drawn around the player's own knob — how precise they
+   must be. It says nothing about where the answer is. */
+.ghost{
+  height:14px; border-radius:8px; background:var(--accent); opacity:0;
+  transition:opacity .15s ease;
+}
+.ghost.on{opacity:.22}
+
+/* Both of these appear only after the lock. */
+.band{height:14px; border-radius:8px; background:var(--ok); opacity:0}
+.band.on{opacity:.3}
+.mark{
+  width:3px; height:26px; border-radius:2px; background:var(--ink);
+  opacity:0; margin-left:-1.5px;
+}
+.mark.on{opacity:1}
+
+.track input[type=range]{
+  position:absolute; inset:0; width:100%; height:44px; margin:0;
+  background:transparent; -webkit-appearance:none; appearance:none;
+  touch-action:none;
+}
+.track input[type=range]::-webkit-slider-thumb{
+  -webkit-appearance:none; appearance:none; width:26px; height:26px;
+  border-radius:50%; background:var(--accent); border:3px solid var(--card);
+  box-shadow:0 1px 4px rgba(0,0,0,.28); cursor:pointer;
+}
+.track input[type=range]::-moz-range-thumb{
+  width:26px; height:26px; border-radius:50%; background:var(--accent);
+  border:3px solid var(--card); box-shadow:0 1px 4px rgba(0,0,0,.28);
+  cursor:pointer;
+}
+/* Hidden until the player commits, so the track does not show a guess they
+   have not made. The knob is driven by hand — see game.js, which explains why
+   a range thumb on iOS cannot be relied on to move. */
+.track.untouched input[type=range]::-webkit-slider-thumb{opacity:0}
+.track.untouched input[type=range]::-moz-range-thumb{opacity:0}
+.track input[type=range]:focus-visible{outline:none}
+.track input[type=range]:focus-visible::-webkit-slider-thumb{
+  box-shadow:0 0 0 3px var(--card),0 0 0 6px var(--accent);
+}
+
+.ends{
+  display:flex; justify-content:space-between;
+  font:600 13px/1 "Public Sans",system-ui,sans-serif; color:var(--ink-faint);
+  font-variant-numeric:tabular-nums; margin-bottom:12px;
+}
+
+.verdict{
+  min-height:22px; margin:0 0 12px;
+  font:600 15px/1.4 "Public Sans",system-ui,sans-serif; color:var(--ink-soft);
+}
+.verdict.ok{color:var(--ok)}
+.verdict.bad{color:var(--danger)}
+
+/* ---- the buttons -------------------------------------------------------- */
+
+.acts{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+.ghostBtn{
+  appearance:none; background:transparent; border:1px solid var(--line);
+  color:var(--ink); border-radius:10px; padding:9px 13px; cursor:pointer;
+  font:600 14px/1.2 "Public Sans",system-ui,sans-serif;
+  display:inline-flex; align-items:baseline; gap:7px; text-decoration:none;
+}
+.ghostBtn small{font:500 12px/1.2 "Public Sans",system-ui,sans-serif; color:var(--ink-faint)}
+.ghostBtn:disabled{opacity:.45; cursor:default}
+
+/* ---- what it is worth --------------------------------------------------- */
+
+.grades{margin-top:16px; border-top:1px solid var(--line); padding-top:12px}
+.gr-head{
+  font:600 11px/1.2 "Public Sans",system-ui,sans-serif; letter-spacing:.08em;
+  text-transform:uppercase; color:var(--ink-faint); margin:0 0 8px;
+}
+.grades ul{list-style:none; margin:0; padding:0; display:grid; gap:4px}
+.grades li{
+  display:flex; justify-content:space-between; gap:12px;
+  font:500 14px/1.4 "Public Sans",system-ui,sans-serif; color:var(--ink-soft);
+}
+.grades li b{
+  font:700 15px/1.4 "Barlow Condensed",system-ui,sans-serif; color:var(--ink);
+  font-variant-numeric:tabular-nums;
+}
+.grades li span b{font-family:"Public Sans",system-ui,sans-serif; font-size:13px; color:var(--ink-soft)}
+/* The rung this guess landed on, once it has. */
+.grades li.hit{color:var(--ink)}
+.grades li.hit b{color:var(--accent-ink)}
+
+/* ---- the sheet ---------------------------------------------------------- */
+
+.sheet{list-style:none; margin:14px 0 0; padding:0; display:grid; gap:1px;
+  background:var(--line); border:1px solid var(--line); border-radius:12px; overflow:hidden}
+.sheet li{
+  background:var(--card); padding:8px 12px; display:grid;
+  grid-template-columns:22px 1fr auto; gap:10px; align-items:baseline;
+  font:500 13px/1.4 "Public Sans",system-ui,sans-serif; color:var(--ink-soft);
+  min-height:34px;
+}
+.sheet li>b{
+  font:700 13px/1.4 "Barlow Condensed",system-ui,sans-serif; color:var(--ink-faint);
+  font-variant-numeric:tabular-nums;
+}
+.sheet li.ok>b{color:var(--ok)}
+.sheet li.bad>b{color:var(--danger)}
+.sheet li em{font-style:normal; color:var(--ink-faint); font-variant-numeric:tabular-nums}
+
+/* ---- full time ---------------------------------------------------------- */
+
+.ft{
+  position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex;
+  align-items:center; justify-content:center; padding:20px; z-index:60;
+}
+.ftCard{
+  background:var(--card); border:1px solid var(--line); border-radius:16px;
+  padding:20px; max-width:420px; width:100%;
+}
+.ftCard h3{
+  font:700 44px/1 "Barlow Condensed",system-ui,sans-serif; color:var(--ink);
+  margin:0 0 6px; font-variant-numeric:tabular-nums;
+}
+.ftCard h3 .of{font-size:20px; color:var(--ink-faint)}
+.res{
+  display:inline-block; font:700 13px/1 "Public Sans",system-ui,sans-serif;
+  letter-spacing:.06em; text-transform:uppercase; padding:5px 9px;
+  border-radius:6px; margin:0 0 12px; color:var(--accent-on); background:var(--ink-faint);
+}
+.res.W{background:var(--form-w); color:var(--form-w-ink)}
+.res.D{background:var(--form-d); color:var(--form-d-ink)}
+.res.L{background:var(--form-l); color:var(--form-l-ink)}
+.ftShare{
+  background:var(--tint); border:1px solid var(--line); border-radius:10px;
+  padding:12px; margin:0 0 14px; white-space:pre-wrap; word-break:break-word;
+  font:500 13px/1.5 "Public Sans",system-ui,sans-serif; color:var(--ink-soft);
+}
+
+/* HIDDEN MEANS HIDDEN. A rule that sets `display` on an element beats the user
+   agent's `[hidden]{display:none}`, because both are plain declarations and the
+   author's wins — so `.ft{display:flex}` put the full-time card on screen over
+   the first question of the round, before a ball had been kicked. The same trap
+   waits for every button here that toggles with `hidden` and carries a class
+   that sets display, so it is fixed once, for the page, rather than per rule. */
+[hidden]{display:none !important}

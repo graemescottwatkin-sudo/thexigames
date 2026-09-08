@@ -303,6 +303,20 @@ jobs:
           # refused in exactly the words an unknown id gets, and no letter of an
           # answer anywhere in what goes out.
           node football/grid/catalog_test.mjs
+          # Ballpark XI, named here from its first day rather than when the game
+          # ships: a suite outside the roster is a suite nobody runs, and the
+          # crossword's gate refuses one anyway. Its four endpoints, executed
+          # against a D1 stand-in that really stores rows — because the claim is
+          # that the CLOCK, the substitutions and the score come out right after
+          # a sequence of moves, which no regex can check. What the rest of it
+          # exists for: every question in this game is a number and the number
+          # is the answer, so no answer may reach a browser before its question
+          # is locked.
+          node football/ballpark/api_test.mjs
+          # The importer's gate, on the two-board sample — the bank lives off
+          # the runner, and a check that passes when it finds no problems also
+          # passes when it finds nothing at all.
+          node tools/import_ballpark.js --check
           # The importer's gate, on the committed sample — because there is no
           # bank on a runner and a check that passes when it finds no problems
           # also passes when it finds nothing at all.

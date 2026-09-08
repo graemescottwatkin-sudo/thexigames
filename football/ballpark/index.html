@@ -1,0 +1,281 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#F4F5F2">
+<title>Ballpark XI — the daily football numbers game | The XI Games</title>
+<meta name="description" content="Eleven numbers from the history of the game. Slide to your best guess and lock it in. Inside the ballpark is full marks, the clock takes the rest, and a wild miss costs a substitution. A new board every day from The XI Games.">
+<link rel="canonical" href="https://www.thexigames.com/football/ballpark/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://www.thexigames.com/football/ballpark/">
+<meta property="og:title" content="Ballpark XI — the daily football numbers game">
+<meta property="og:description" content="Eleven numbers, one slider. How close can you get before the clock runs down?">
+<meta property="og:site_name" content="The XI Games">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Ballpark XI — the daily football numbers game">
+<meta name="twitter:description" content="Eleven numbers, one slider. How close can you get before the clock runs down?">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/shared/xi-tokens.css?v=v33">
+<link rel="stylesheet" href="/shared/xi-landing.css?v=v33">
+<link rel="stylesheet" href="/shared/xi-chrome.css?v=v33">
+<link rel="stylesheet" href="/shared/xi-share.css?v=v33">
+<!-- The theme, stamped before first paint: light unless the player chose
+     dark, decided in one shared place for every page of the family. -->
+<script src="/shared/xi-theme.js?v=v33"></script>
+<link rel="stylesheet" href="css/style.css?v=v001">
+<!-- NO data-game ON <html>, DELIBERATELY. The accent palette lives in
+     shared/xi-tokens.css, which every page of the site loads, and this game has
+     not launched — naming it there would name it to everybody. QuickFire XI is
+     in testing on the same terms and takes the family's default accent. The
+     row goes in on the day it launches, with the shared tag bumped, and not
+     before. -->
+</head>
+<body>
+
+<!-- The shared bar. The burger and the wordmark are inserted by
+     shared/xi-chrome.js; only this game's own control is written here. -->
+<header class="xic-bar">
+  <div class="xic-right">
+    <a class="xic-ghost" href="#how" data-optional>How to play</a>
+  </div>
+</header>
+
+<main class="app">
+
+  <!-- One H1, first in the body, saying what the game is. The landing shows
+       the name in the masthead, which is furniture; this is the heading a
+       screen reader and a search engine read. -->
+  <h1 class="sr-only">Ballpark XI &mdash; the daily football numbers game</h1>
+
+  <!-- WHOSE PAGE THIS IS. The mark, the name and one line saying what the game
+       is — the accent is the fourth signal, after all three of those, so a
+       player who cannot separate one hue from another loses nothing. -->
+  <div class="site-ident">
+    <span class="ident-mark" aria-hidden="true">
+      <!-- A slider: a track, and a thumb sitting off centre on it. -->
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9"
+           stroke-linecap="round" stroke-linejoin="round">
+        <path d="M3 12h18"/>
+        <circle cx="15" cy="12" r="3.2" fill="currentColor" stroke="none"/>
+        <path d="M15 5.5v2M15 16.5v2" opacity=".5"/>
+      </svg>
+    </span>
+    <div class="ident-say">
+      <p class="site-crumb">Football <span aria-hidden="true">/</span> <b>Ballpark</b></p>
+      <p class="site-mast">Ballpark <span class="site-xi">XI</span></p>
+      <p class="ident-sub">Eleven numbers, one slider.</p>
+    </div>
+  </div>
+
+  <header class="site-head">
+    <div class="site-bar">
+      <nav class="site-nav">
+        <button class="on" id="navToday">Today</button>
+        <a class="site-navlink" href="#how">How to play</a>
+      </nav>
+    </div>
+  </header>
+
+  <section class="screen prematch" id="screenStart">
+    <!-- THE LANDING, THE FAMILY'S. Layout, type and spacing are
+         shared/xi-landing.css — the same file the other games open on — so this
+         is the same page with this game's content in it. -->
+    <div class="site-wrap">
+
+      <div class="site-grid">
+        <div class="site-main">
+          <button class="home-choice hero" id="homeDaily">
+            <span class="hc-kicker" id="startKicker">TODAY</span>
+            <span class="hc-title" id="startTitle">Today&rsquo;s eleven</span>
+            <span class="hc-note" id="startSub">Eleven numbers from the history of the game. Slide to your best guess and lock it in.</span>
+            <span class="hc-fine" id="startFine"></span>
+            <span class="hc-state" id="startState"></span>
+            <span class="hc-cta">Kick off</span>
+          </button>
+        </div>
+
+        <aside class="site-side">
+        <!-- THE TWO RUNS, AND THEY ARE DIFFERENT FACTS: this game on
+             consecutive days, and any game on consecutive days. Filled by
+             shared/xi-menu.js from the completions the season already records,
+             so nothing new is stored and a run cannot drift out of step. -->
+        <div class="home-streaks" id="homeStreaks" hidden>
+          <div class="streak" id="streakGame">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 2.5s5.5 4.4 5.5 9.4a5.5 5.5 0 1 1-11 0c0-1.9.8-3.6 1.8-5 .2 1.5 1 2.6 2 2.6 1.6 0 1.2-3.6 1.7-7Z"
+                    stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+            </svg>
+            <span class="st-say">
+              <span class="st-l">Ballpark streak</span>
+              <span class="st-n" id="streakGameN">&mdash;</span>
+            </span>
+          </div>
+          <div class="streak" id="streakDaily">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <rect x="3" y="4.5" width="18" height="16" rx="2.5" stroke="currentColor" stroke-width="1.6"/>
+              <path d="M3 9.5h18M8 2.5v4M16 2.5v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+            <span class="st-say">
+              <span class="st-l">Daily streak</span>
+              <span class="st-n" id="streakDailyN">&mdash;</span>
+            </span>
+          </div>
+        </div>
+
+          <div class="side-card">
+            <div class="sc-kicker">YOUR FORM</div>
+            <div class="sc-title" id="homeRunTitle">No run yet</div>
+            <div class="home-run" id="homeRun"></div>
+          </div>
+
+          <div class="side-card">
+            <div class="sc-kicker">PLAY AS</div>
+            <div class="home-club">
+              <select id="homeClubSelect" title="Choose your club (optional)"></select>
+            </div>
+          </div>
+        </aside>
+      </div>
+
+      <!-- NO CLUBS ROW AND NO BOARD OF THE WEEK. Those are real features of the
+           games that have them and this game has neither, so there is no card
+           standing in for one. -->
+      <div class="site-sec">More to play</div>
+      <div class="site-row">
+        <button class="home-choice col" id="homePrevious" aria-expanded="false" aria-controls="archivePanel">
+          <span class="hc-kicker">PREVIOUS BOARDS</span>
+          <span class="hc-title" id="homePreviousCount">Every day so far</span>
+          <span class="hc-note">One more every day. Replay any of them &mdash;
+            only today&rsquo;s keeps a run going.</span>
+          <svg class="hc-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none"
+               stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 5v4h4"/><path d="M3.5 9A9 9 0 1 1 4 15"/><path d="M12 8v4l3 2"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="archive hidden" id="archivePanel">
+        <div class="arch-head">
+          <span class="site-sec">PREVIOUS BOARDS</span>
+          <span class="arch-sub" id="archiveSub"></span>
+        </div>
+        <ol class="arch-list" id="archiveList"></ol>
+      </div>
+
+      <p class="legal">Unofficial football game. Not affiliated with or endorsed by any club, league, competition or governing body.<br>
+         <strong>The XI Games &middot; <span id="buildTag"></span></strong></p>
+    </div>
+
+    <section class="how" id="how">
+      <h2>How to play</h2>
+      <p><b>Eleven numbers, one slider.</b> A capacity, a goals total, the year a rule came in, an attendance. Each question carries a line underneath that removes the ambiguity &mdash; which competitions, whose career, to the nearest what &mdash; so the only thing left to work out is the number.</p>
+      <p><b>Inside the ballpark is full marks.</b> How close you are is measured in <em>ballparks</em>: multiples of that question&rsquo;s own tolerance, so one ruler grades a crowd size and a transfer fee without either needing its own rule. Bang on is a quarter of a ballpark. The ladder for the question in play is on screen before you lock, never after.</p>
+      <p><b>The clock takes the rest.</b> Twenty seconds a question. The first ten are free &mdash; time to read it and reach the number &mdash; then the ten points fall a point a second. The ladder&rsquo;s share is taken from whatever the clock has left.</p>
+      <p><b>Three substitutions.</b> A wide miss spends one, and so does running out of time. Narrowing the range spends one too; once they are gone, narrowing costs four seconds of that question&rsquo;s clock instead. Three spent still wins; a fourth is a draw at best.</p>
+      <p><b>Some questions are graded harder.</b> Ages bunch so tightly that being roughly right is no achievement, so those are marked strict: right or a year out to score at all, and anything past that spends a substitution. The board tells you which ladder applies before you lock.</p>
+      <p><b>114 is the ceiling.</b> Eleven questions at ten is 110, and up to four bang-on bonuses carry it to 114.</p>
+    </section>
+  </section>
+
+  <section class="screen" id="screenGame" hidden>
+    <div class="game">
+
+      <!-- THE SCOREBOARD, GROUPED. The clock, what this question is worth now,
+           the running total and the substitutions read as one panel rather than
+           four things scattered round the board. -->
+      <div class="board" aria-label="Scoreboard">
+        <div class="bd-cell">
+          <span class="bd-l">Clock</span>
+          <b class="secs" id="secs">20<small>s</small></b>
+        </div>
+        <div class="bd-cell">
+          <span class="bd-l">Worth now</span>
+          <b id="worth">10</b>
+        </div>
+        <div class="bd-cell">
+          <span class="bd-l">Score</span>
+          <b id="running">0</b>
+        </div>
+        <div class="bd-cell subs" id="subs">
+          <span class="bd-l">Substitutions</span>
+          <span class="dots" aria-hidden="true"><i></i><i></i><i></i></span>
+          <span class="bd-sub" id="subsSay">3 substitutions</span>
+        </div>
+      </div>
+
+      <!-- Eleven pips, one per question: where you are and how it has gone. -->
+      <div class="ladder" id="ladder" aria-label="Progress"></div>
+
+      <section class="stage">
+        <p class="eyebrow" id="modeLabel">Today</p>
+        <h2 class="q" id="q"></h2>
+
+        <div class="big empty" id="big">
+          <span id="val">Tap the track to place your guess</span>
+          <em id="unit"></em>
+        </div>
+
+        <div class="track untouched" id="track">
+          <!-- The ballpark's width, carried by your own knob: how precise you
+               have to be, not where the answer is. -->
+          <span class="ghost" id="ghost"></span>
+          <!-- Both of these appear only once the question is locked. -->
+          <span class="band" id="band"></span>
+          <span class="mark" id="mark"></span>
+          <input type="range" id="slider" min="0" max="100" step="1" value="50"
+                 aria-label="Your guess">
+        </div>
+        <div class="ends"><span id="lo">0</span><span id="hi">100</span></div>
+
+        <p class="verdict" id="verdict" role="status" aria-live="polite"></p>
+
+        <div class="acts">
+          <button class="kick" id="lock" type="button" disabled>Lock it in</button>
+          <button class="ghostBtn" id="narrow" type="button">
+            Narrow the range <small id="narrowCost">1 sub, free</small>
+          </button>
+          <button class="kick" id="next" type="button" disabled hidden>Next</button>
+        </div>
+
+        <!-- THE LADDER THAT APPLIES TO THIS QUESTION, drawn from the question
+             rather than written into the page: a strict question shows its
+             harsher terms BEFORE the lock, not as a surprise after it. -->
+        <div class="grades">
+          <p class="gr-head" id="gradesHead">What it is worth</p>
+          <ul id="gradesList"></ul>
+        </div>
+      </section>
+
+      <!-- The eleven, as they settle. -->
+      <ol class="sheet" id="sheet"></ol>
+    </div>
+
+    <!-- FULL TIME -->
+    <div class="ft" id="ft" hidden>
+      <div class="ftCard">
+        <p class="eyebrow">Full time</p>
+        <h3 id="ftTitle"><span id="ftScore">0</span> <span class="of">/ 114</span></h3>
+        <p class="res" id="ftRes"></p>
+        <pre class="ftShare" id="ftShare"></pre>
+        <div class="acts">
+          <button class="kick" id="copy" type="button">Copy result</button>
+          <a class="ghostBtn" href="/football/ballpark/">Back to the menu</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+</main>
+
+<script src="/shared/xi-chrome.js?v=v33"></script>
+<script src="/shared/xi-menu.js?v=v33"></script>
+<!-- The rules, the same file the server grades with. It holds the ladders, the
+     clock and what a substitution costs — and no answers, which is the whole
+     arrangement: see the note at the top of it. -->
+<script src="js/rules.js?v=v001"></script>
+<script src="js/game.js?v=v001"></script>
+</body>
+</html>
