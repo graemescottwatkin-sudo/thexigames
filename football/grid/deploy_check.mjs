@@ -43,7 +43,7 @@ const has = (p) => fs.existsSync(path.join(ROOT, p));
    v000z is the day before a first release: not v000, which aligned_test
    refuses as a sentinel, and below v001 so the first ship moves past it. */
 const LAST_SHIPPED = "v002";
-const LAST_SHIPPED_ASSETS = null;   // nothing has shipped yet; the first ship sets it
+const LAST_SHIPPED_ASSETS = "6ee2cd04ce3b0216";
 
 let pass = 0, fail = 0;
 function t(name, ok, note) {

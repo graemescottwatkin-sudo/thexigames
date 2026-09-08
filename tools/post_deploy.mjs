@@ -133,11 +133,32 @@ if (!WRITE) {
   process.exit(0);
 }
 
+let unwritten = 0;
 for (const p of plan) {
-  let gate = read(p.gateFile);
+  const before = read(p.gateFile);
+  let gate = before;
   gate = gate.replace(/const LAST_SHIPPED = "[^"]+";/, `const LAST_SHIPPED = "${p.newTag}";`);
-  gate = gate.replace(/const LAST_SHIPPED_ASSETS = "[^"]+";/, `const LAST_SHIPPED_ASSETS = "${p.newHash}";`);
+  /* NULL IS A SHAPE THIS HAS TO WRITE OVER. A game that has never shipped
+     carries `= null;` — the sentinel its gate reads as "nothing to compare
+     against yet" — and this pattern used to demand quotes, so Grid XI's first
+     hash was reported as written and was not. The trailing comment goes with
+     it: "nothing has shipped yet" beside a recorded hash is a lie. */
+  gate = gate.replace(/const LAST_SHIPPED_ASSETS = (?:"[^"]*"|null);[^\n]*/,
+    `const LAST_SHIPPED_ASSETS = "${p.newHash}";`);
+  const wanted = p.curTag !== p.newTag || p.curHash !== p.newHash;
+  if (wanted && gate === before) {
+    /* SAY SO RATHER THAN SAY "written". The whole point of this script is that
+       the bump cannot be skipped; a no-op reported as a write is the skip it
+       was built to stop, wearing a green tick. */
+    console.log(`FAIL  ${p.gateFile}: the constants are not in a shape this can rewrite`);
+    unwritten++;
+    continue;
+  }
   fs.writeFileSync(path.join(ROOT, p.gateFile), gate);
   console.log(`  written  ${p.gateFile}`);
+}
+if (unwritten) {
+  console.log(`\n${unwritten} file(s) could not be rewritten. Fix them by hand and re-run.`);
+  process.exitCode = 1;
 }
 console.log("\nCommit as: LAST_SHIPPED " + plan.map((p) => p.newTag).join(" / ") + " + asset hashes");
