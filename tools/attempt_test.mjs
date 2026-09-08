@@ -234,6 +234,67 @@ console.log("\nHelp that cannot be charged is not served");
     "there is nothing to verify offline, so there is nothing to protect");
 }
 
+console.log("\nA grid check is one press, one request and one charge");
+{
+  /* WHAT THIS REPLACES. The press used to be ELEVEN requests, one per entry,
+     with the play id on the first alone so that nine points were charged once
+     rather than eleven times. It worked, and it meant ten of the eleven could
+     not be charged at all — so the endpoint had to serve a check that named no
+     attempt, which is the paid feature given away to anyone who leaves the
+     field out. Now the press is one request that names its attempt.
+
+     The guesses are the real answers with one letter of the first entry bent,
+     so the reply has to come back per entry and be right about which one. */
+  const env = makeEnv([row({})]);
+  const guessesFor = (bendFirst) => puzzle.entries.map((e, i) => {
+    const chars = e.cells.map((c) => puzzle.cells[c.x + "," + c.y].ch);
+    if (i === 0 && bendFirst) chars[0] = chars[0] === "A" ? "B" : "A";
+    return chars;
+  });
+
+  const pressed = await post(check, env,
+    { token: TOKEN, guesses: guessesFor(true), detail: 1, playId: "p-crossword-1" });
+  const body = await pressed.json();
+  t("the whole grid is one request", pressed.status === 200 && !!body.results,
+    body.results ? body.results.length + " entries answered" : JSON.stringify(body).slice(0, 60));
+  t("and every entry comes back with its own wrong letters",
+    Array.isArray(body.results) && body.results.length === puzzle.entries.length &&
+    body.results[0].wrong.length === 1 && body.results[0].correct === false &&
+    body.results.slice(1).every((r) => r.correct === true && r.wrong.length === 0),
+    "one bent letter in the first entry, and nothing else touched");
+  t("and the press is charged once, not eleven times",
+    env.DB._plays.get("p-crossword-1").srv_check_alls === 1 &&
+    env.DB._plays.get("p-crossword-1").srv_checks === 0,
+    "nine points is the price of the press, whatever traffic it takes");
+
+  /* THE REFUSAL THE OLD PROTOCOL COULD NOT CARRY. */
+  const stranger = await post(check, env,
+    { token: TOKEN, guesses: guessesFor(false), detail: 1, playId: "p-nope-1234" });
+  const nothing = await stranger.json();
+  t("a press naming an attempt that does not exist is refused",
+    stranger.status === 409 && !nothing.results,
+    "an uncharged press is a verified score that does not know about it");
+  const noId = await post(check, env, { token: TOKEN, guesses: guessesFor(false), detail: 1 });
+  t("and so is one that names no attempt at all", noId.status === 409, String(noId.status));
+  t("neither of them was charged to anybody",
+    env.DB._plays.get("p-crossword-1").srv_check_alls === 1,
+    "the count is still the one press that was paid for");
+
+  /* AND THE OLD SHAPE STILL WORKS, because a player who opened the board
+     before this shipped is holding the previous js/game.js. Eleven requests,
+     the id on the first: served, and charged once. */
+  const old = makeEnv([row({})]);
+  const first = await post(check, old, { token: TOKEN, entry: 0, guess: truth.slice(0, 3),
+    detail: 1, checkGrid: 1, playId: "p-crossword-1" });
+  const rest = await post(check, old, { token: TOKEN, entry: 1, guess: truth.slice(0, 3),
+    detail: 1, checkGrid: 1 });
+  t("a browser holding the old build is still served",
+    first.status === 200 && rest.status === 200,
+    "refusing the ten that carry no id takes the nine points and gives back failures");
+  t("and its press is still charged exactly once",
+    old.DB._plays.get("p-crossword-1").srv_check_alls === 1);
+}
+
 console.log("\nThe free nudge is not a letter oracle");
 {
   const env = makeEnv([row({})]);

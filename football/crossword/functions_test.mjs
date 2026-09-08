@@ -202,12 +202,18 @@ console.log("\nA press is charged once, whatever traffic it takes");
   const js = fs.readFileSync(path.join(DIR, "js/game.js"), "utf8");
   t("a grid check is tallied as one grid check, not many single ones",
     /tally\(env, playId, checkGrid \? "srv_check_alls" : "srv_checks", identity\)/.test(src));
-  t("and only one of its requests carries the play id", (() => {
-    /* The tally is keyed on the play id, so the other ten cannot count even if
-       the flag were ever lost. Two guards, because this one was expensive. */
-    const fn = js.slice(js.indexOf('on("checkGridBtn"') > -1
-      ? js.indexOf('on("checkGridBtn"') : js.indexOf("checkAllsUsed++"), js.length);
-    return /playId: i === 0 \? playId : null/.test(fn.slice(0, 2000));
+  t("and the press is one request that names its attempt", (() => {
+    /* THE GUARD MOVED WITH THE PROTOCOL, and it is the same property. This
+       asked for `playId: i === 0 ? playId : null`: eleven requests with the id
+       on the first, so that the other ten could not be charged again. That
+       shape is exactly what made a press impossible to REFUSE — ten of the
+       eleven had no attempt to charge, so the endpoint had to serve a check
+       naming none, and a paid feature anyone can have by leaving a field out
+       is not a paid feature. The whole grid goes up in one request now, with
+       the id on it, and the server charges it once. */
+    const fn = js.slice(js.indexOf("checkAllsUsed++"), js.length).slice(0, 2000);
+    return /guesses: guesses/.test(fn) && /playId: playId/.test(fn) &&
+      !/playId: i === 0/.test(js);
   })());
   t("the single check is still charged as a single check",
     /checkGrid \? "srv_check_alls" : "srv_checks"/.test(src));

@@ -286,7 +286,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v003f";
+  var BUILD = "v003g";
   try {
     window.CROSSWORDXI_BUILD = BUILD;
     console.log("Crossword XI build " + BUILD);
@@ -3942,25 +3942,29 @@
     helpActions.push("checkAll");
     chargeHelp("checkAll");
     consecutiveChecks = 0;
-    /* One request per entry, because the player is owed the positions of every
-       wrong letter and each entry is a separate question.
-       Only the first carries the play id. The server counts a paid check per
-       request, so eleven requests were charged as eleven checks — a grid check
-       priced at nine points cost thirty-six. The count belongs to the press of
-       the button, not to the traffic it happens to take.
-       checkGrid says which kind of press it was, so the server adds one to the
-       grid-check tally rather than eleven to the single-check one. */
-    var jobs = puzzle.entries.map(function (e, i) {
-      var typed = e.cells.map(function (c) { return letters[K(c.x, c.y)] || null; });
-      return api("/api/check-answer", {
-        token: puzzleToken, entry: i, guess: typed, detail: 1,
-        playId: i === 0 ? playId : null,
-        checkGrid: 1,
-      }).then(function (r) { return { i: i, wrong: r.wrong || [] }; });
+    /* ONE REQUEST FOR ONE PRESS. This was eleven — one per entry, because the
+       player is owed the position of every wrong letter — with the play id on
+       the first alone, so that the server counted one paid check instead of
+       eleven. It kept the price right and it made the press impossible to
+       refuse: ten of the eleven had nothing to charge, so the server had to
+       serve a check that named no attempt at all, and a paid feature anyone
+       can have for free by leaving a field out is not a paid feature.
+       The whole grid goes up in one now. It names the attempt, the server
+       charges it once and refuses it if that charge cannot land. */
+    var guesses = puzzle.entries.map(function (e) {
+      return e.cells.map(function (c) { return letters[K(c.x, c.y)] || null; });
     });
-    Promise.all(jobs).then(function (res) {
+    api("/api/check-answer", {
+      token: puzzleToken, guesses: guesses, detail: 1,
+      playId: playId, checkGrid: 1,
+    }).then(function (r) {
       var total = 0;
-      res.forEach(function (r) { total += r.wrong.length; markWrongFromServer(r.i, r.wrong); });
+      (r.results || []).forEach(function (x) {
+        if (!x) return;
+        var w = x.wrong || [];
+        total += w.length;
+        markWrongFromServer(x.entry, w);
+      });
       gridStats.wrongCells = total;
       toast("Three defeats on the bounce",
         total ? total + (total === 1 ? " letter is wrong" : " letters are wrong")

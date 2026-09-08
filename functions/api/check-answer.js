@@ -2,6 +2,7 @@
  *
  * Body: { token, entry, guess }           is this entry right?
  *       { token, entry, guess, detail:1 } ...and which letters are wrong
+ *       { token, guesses: [...] }         one press, every entry, one charge
  *       { token, grid }                   is the whole grid right?
  *
  * The answer is compared here and only a verdict goes back.
@@ -15,7 +16,7 @@
 import { normalise, json, bad, solutionString } from "../_lib/puzzle.js";
 import { lockedSource } from "../_lib/sources.js";
 import { tally } from "../_lib/tally.js";
-import { getPuzzleForToken } from "../_lib/db.js";
+import { getPuzzleForToken, hasDB } from "../_lib/db.js";
 import { boardKeyForToken } from "../_lib/attempt.js";
 import { playableDailyNo } from "../_lib/daily.js";
 import { isAdmin } from "../_lib/auth.js";
@@ -65,17 +66,53 @@ export async function onRequestPost({ request, env }) {
   /* WHICH ROW A CHARGE MAY LAND ON. The tally used to name the play id alone,
      so a crossword check could be counted against a word search's row of the
      same id; the identity goes into the UPDATE's own predicate now. See
-     _lib/tally.js and _lib/attempt.js.
-
-     WHAT IS NOT DONE HERE, and deliberately. The review asked for paid checks
-     to be refused when they cannot be charged, as /api/reveal now refuses
-     them. This endpoint cannot: a grid check is ONE press that takes eleven
-     requests, one per entry, and only the first carries the play id — so the
-     other ten cannot be charged by construction and refusing them would leave
-     a player who has paid nine points with ten failed requests. The fix is one
-     request for one press, which is a change to the protocol and to the
-     browser, not a refusal bolted onto this one. Recorded, not pretended. */
+     _lib/tally.js and _lib/attempt.js. */
   const identity = { game: "crossword", boardKey: boardKeyForToken(token, stored) };
+  /* Offline and with no database, help is served as it always was: nothing
+     there can be verified, and /api/finish says so itself. */
+  const charge = async (column) => (hasDB(env) ? tally(env, playId, column, identity) : true);
+  const refused = () =>
+    bad("That check could not be charged to this attempt. Start the board again.", 409);
+
+  /* ---- ONE PRESS, ONE REQUEST ------------------------------------------
+     A grid check is one press, and it used to take ELEVEN requests: the player
+     is owed the position of every wrong letter and each entry was a separate
+     question. Only the FIRST carried a play id, so that a nine-point press was
+     charged once instead of eleven times — which worked, and cost this
+     endpoint the ability to refuse anything. Ten of the eleven could not be
+     charged by construction, so a request with no play id had to be served,
+     and a paid feature that is free to anyone who leaves a field out is not a
+     paid feature. That is the half of the review's finding 2 — "apply the same
+     reasoning to paid checks" — that could not be done to the old protocol.
+
+     One request carries the whole press now: it names its attempt, it is
+     charged once, and it is REFUSED if the charge cannot land, which is the
+     rule /api/reveal already keeps.
+
+     THE ELEVEN-REQUEST SHAPE STILL WORKS, for one release. A player who opened
+     the board before this shipped is holding the previous js/game.js; refusing
+     their follow-ups would take the nine points and hand back ten failures.
+     When that build is out of circulation the single-entry path below takes
+     the same refusal — the note there says what to change. */
+  if (Array.isArray(body.guesses)) {
+    if (body.guesses.length !== puzzle.entries.length) {
+      return bad("That is not this board's grid.");
+    }
+    if (!(await charge("srv_check_alls"))) return refused();
+    const results = body.guesses.map((g, i) => {
+      const e = puzzle.entries[i];
+      const answer = normalise(e.row.grid);
+      const typed = asChars(g, answer.length);
+      const right = typed.every((c, k) => c === answer[k]);
+      const wrong = [];
+      for (let k = 0; k < answer.length; k++) {
+        if (typed[k] && typed[k] !== answer[k]) wrong.push(k);
+      }
+      return { entry: i, correct: right, wrong, length: answer.length,
+               source: right ? lockedSource(e.row) : null };
+    });
+    return json({ press: "grid", results });
+  }
 
   /* Whole-grid check. */
   if (grid !== undefined && grid !== null) {
@@ -131,11 +168,15 @@ export async function onRequestPost({ request, env }) {
      however the player got the verdict. */
   const source = correct ? lockedSource(puzzle.entries[idx].row) : null;
 
-  /* A grid check is one press that happens to take eleven requests — the player
-     is owed the positions of every wrong letter, and each entry is a separate
-     question. Only the first request carries a play id, and it says which kind
-     of press it was, so this counts one grid check rather than eleven single
-     ones. Charged at nine points, it was costing thirty-six. */
+  /* ONE ENTRY, THE PLAYER'S OWN CHOICE OF IT — and, until the release after
+     this one, the tail of an old grid press. checkGrid says which kind it was,
+     so eleven of those still count as one grid check rather than eleven single
+     ones; charged at nine points, that was costing thirty-six.
+
+     WHAT CHANGES NEXT. Once no live build sends the eleven-request press, this
+     becomes `if (!(await charge(...))) return refused();` and the last way to
+     take a paid check without paying for it closes. It is left lenient today
+     only for the browsers already holding the old file. */
   await tally(env, playId, checkGrid ? "srv_check_alls" : "srv_checks", identity);
   if (!detail) return json({ correct, source });
 
