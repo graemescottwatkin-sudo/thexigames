@@ -12,7 +12,7 @@
      if you go and read it. Green, because it carries information. */
   --wordbreak:var(--pitch);
   /* The separator on the selected word, where the fill is darker. */
-  --sel-line:#6BA681;
+  --sel-line:#79B7B2;
   /* Empty answer slots in the letter bank: a step darker than --line, which
      is right for a hairline between panels and invisible as a box. */
   --slot:#A9B4A4;
@@ -24,7 +24,7 @@
 }
 :root[data-theme="dark"]{
   --wordbreak:#9DB3A6;
-  --sel-line:#5E8E70;
+  --sel-line:#6E9C99;
   --slot:#6B7A66;
 }
 *{box-sizing:border-box;margin:0;padding:0}
@@ -37,10 +37,22 @@ button{font-family:inherit;cursor:pointer}
 :focus-visible{outline:2px solid var(--pitch);outline-offset:2px}
 
 /* ============ MASTHEAD ============ */
+/* THE BOARD IS WHAT THE PAGE IS FOR.
+   This block cost 80px above the grid on a 375x812 phone — a quarter of the
+   screen given to a wordmark, a slogan and a date before a single square. The
+   short-screen rule below already made the argument and only applied under
+   620px: the shared bar one row up carries the wordmark and the way out, so
+   the masthead repeats it in larger type and the BRANDLINE repeats it again in
+   a sentence. That is true at every height, so the slogan goes at every height
+   and the rest is tightened.
+   The strap stays wherever it fits — "Today's puzzle · Tue 8 Sept" is the only
+   thing here that says WHICH board is on screen. */
 header{
   border-bottom:3px double var(--pitch-deep);
-  padding:16px 20px 12px;text-align:center;
+  padding:8px 20px 8px;text-align:center;
 }
+header .brandline{display:none}
+header .masthead{font-size:clamp(19px,3.4vw,26px);letter-spacing:.1em}
 /* SHORT SCREENS GIVE THE HEIGHT BACK TO THE BOARD.
    The shared bar costs a row, and on a 320x568 phone render_test measured the
    board frame down to 112px — "the board has nowhere to go". The bar is not
@@ -720,12 +732,19 @@ body.no-pitch .cell.block{background:var(--grid-block);border-color:var(--grid-b
    carries the same information as a shape. */
 .cell.active{
   background:var(--sel);
-  box-shadow:inset 0 0 0 3px var(--pitch-deep);
+  /* THE ACTIVE LETTER IS RINGED IN INDIGO, not in the family green. The ring
+     was --pitch-deep, which is the same green as the hero, the buttons and a
+     correct answer's neighbourhood — so "the square I am typing in" was drawn
+     in the colour that everywhere else means "this is right". Indigo belongs
+     to nothing else on the board, which is what makes it readable at a
+     glance. The ring itself is unchanged: colour was never carrying this
+     alone. */
+  box-shadow:inset 0 0 0 3px var(--sel-ring);
   /* The active square has a darker fill again, so the separator that works on
      the rest of the word disappears into it. Darker still here — the ring
      already marks the square, this is only about seeing its edges. */
-  border-right-color:var(--pitch-deep);
-  border-bottom-color:var(--pitch-deep);
+  border-right-color:var(--sel-ring);
+  border-bottom-color:var(--sel-ring);
 }
 .cell.wrong{color:var(--wrong-ink);background:var(--wrong-bg)}
 .cell.wrong::after{
@@ -1890,13 +1909,23 @@ body.rotate-needed .rotate-prompt{
 
      The clue label sits above them and still opens the list. */
   position:absolute;top:0;bottom:0;width:50%;z-index:2;
-  min-width:0;min-height:0;padding:0;margin:0;
+  min-width:0;min-height:0;padding:0 8px;margin:0;
   background:none;border:0;border-radius:0;
-  color:transparent;font-size:0;line-height:1;
-  display:block;
+  /* THE CHEVRON IS DRAWN, which is what the paragraph above always claimed:
+     "a chevron sits at low opacity — enough to notice by the second or third
+     clue". The rule underneath it said color:transparent and font-size:0, so
+     the control was completely invisible and the comment had outlived its own
+     code. A player who has not been told the card is a control has no way to
+     learn it.
+     The zone is unchanged — still half the card each, still the whole height,
+     so the target is as big as it ever was. Only the mark is back, at the
+     OUTER edge of each half where a next/previous control is looked for. */
+  color:var(--ink-faint);font-size:22px;line-height:1;opacity:.5;
+  display:flex;align-items:center;
 }
-#prevClue{left:0}
-#nextClue{right:0}
+.nc-arrow:hover,.nc-arrow:focus-visible{opacity:1}
+#prevClue{left:0;justify-content:flex-start}
+#nextClue{right:0;justify-content:flex-end}
 /* A hint of where the halves are, for a pointer only — a touch screen has no
    hover and gains nothing from it. */
 .nc-arrow:hover{background:var(--sel-word)}

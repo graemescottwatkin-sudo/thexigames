@@ -33,11 +33,11 @@
 .home-card{max-width:430px}
 .home-choice{
   display:block;width:100%;text-align:left;cursor:pointer;
-  background:var(--card);border:1px solid var(--line);border-left:4px solid var(--pitch);
+  background:var(--card);border:1px solid var(--line);border-left:4px solid var(--accent);
   border-radius:8px;padding:14px 16px;margin-bottom:10px;min-height:44px;
   transition:border-color var(--t-fast) var(--ease),background var(--t-fast) var(--ease),box-shadow var(--t-fast) var(--ease);
 }
-.home-choice:hover{border-color:var(--pitch);background:var(--sel-word)}
+.home-choice:hover{border-color:var(--accent-ink);background:var(--sel-word)}
 /* KEYBOARD. The family ring on every control on the landing; there was none,
    so a keyboard player could tab through the page and see nothing move. */
 .home-choice:focus-visible,.site-nav button:focus-visible,.site-ghost:focus-visible,
@@ -50,7 +50,7 @@
 .hc-note{display:block;font-size:13px;color:var(--ink-soft);margin-top:3px;line-height:1.4}
 .hc-state{
   display:block;font-family:var(--disp);font-weight:600;font-size:11px;
-  letter-spacing:.14em;text-transform:uppercase;color:var(--pitch);margin-top:6px;
+  letter-spacing:.14em;text-transform:uppercase;color:var(--accent-ink);margin-top:6px;
 }
 .hc-state:empty{display:none}
 .home-links{margin-top:14px;font-size:13px;color:var(--ink-faint)}
@@ -83,7 +83,7 @@
 .home-choice.featured[hidden]{display:none}
 .hc-kicker{
   display:block;font-size:10px;text-transform:uppercase;letter-spacing:.1em;
-  color:var(--pitch);margin-bottom:2px
+  color:var(--accent-ink);margin-bottom:2px
 }
 
 /* A suspended track. Dimmed but legible, and still clickable — somebody
@@ -165,7 +165,7 @@
 }
 /* The current tab is the one place green still earns its keep in furniture:
    it marks where you are, which is a fact about state, not decoration. */
-.site-nav button.on{color:var(--ink);box-shadow:inset 0 -2px 0 var(--pitch)}
+.site-nav button.on{color:var(--ink);box-shadow:inset 0 -2px 0 var(--accent-ink)}
 .site-right{margin-left:auto;display:flex;gap:8px}
 .site-ghost{
   background:none;border:1px solid var(--line);color:var(--ink);
@@ -213,12 +213,28 @@
 .side-card .home-club label{display:none}
 .side-card select{width:100%}
 
-.site-sec{font-size:12px;letter-spacing:.11em;color:var(--ink-faint);margin:30px 0 12px;font-weight:700}
+/* A SECTION HEADING, NOT A SHOUT. It was set in caps in the markup — "OTHER
+   BOARDS" — which is a decision about type made in the content, where a
+   screen reader reads it letter by letter on some voices. The words are
+   sentence case now and the caps are the stylesheet's. */
+.site-sec{font-family:var(--disp);font-size:17px;letter-spacing:.02em;color:var(--ink);
+  margin:30px 0 12px;font-weight:700;text-transform:none}
 .home-choice.wide{width:100%;text-align:left}
 
 @media (max-width:860px){
   .site-grid{grid-template-columns:1fr}
-  .site-nav{display:none}
+  /* THE TABS STAY. They were display:none below 860px, so a phone got the
+     game's landing with no way to reach its clubs, its themes or its archive
+     except by finding them further down the page — the sections existed and
+     the navigation to them did not. They scroll sideways instead of
+     disappearing, which is what a row of four short words needs at 375px. */
+  .site-nav{
+    gap:2px;overflow-x:auto;flex-wrap:nowrap;
+    -webkit-overflow-scrolling:touch;scrollbar-width:none;
+    margin:0 -4px;padding:0 4px;
+  }
+  .site-nav::-webkit-scrollbar{display:none}
+  .site-nav button,.site-nav .site-navlink{white-space:nowrap;flex:0 0 auto;font-size:14px;padding:8px}
   .home-choice.hero{padding:22px}
   .home-choice.hero .hc-title{font-size:27px}
 }
@@ -315,4 +331,145 @@ a.site-mast{text-decoration:none;color:var(--ink)}
 .sr-only{
   position:absolute;width:1px;height:1px;padding:0;margin:-1px;
   overflow:hidden;clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap;border:0;
+}
+
+
+/* ============ THE GAME'S OWN IDENTITY ============
+ *
+ * Five games opened on the same screen with a different word at the top: same
+ * green, same shape, no mark. A player arriving from the hub — which HAS worn
+ * a colour per game since it was built — met a promise the games did not keep.
+ *
+ * COLOUR IS NEVER THE ONLY CARRIER. Each game has a mark, a name and a
+ * breadcrumb; the accent is the fourth signal, not the first. That is a rule
+ * for colour blindness before it is a rule for design, and it is why the mark
+ * is a shape rather than a coloured square.
+ */
+.site-ident{
+  max-width:1080px;margin:0 auto;padding:16px 20px 0;
+  display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+}
+.ident-mark{
+  flex:0 0 auto;width:52px;height:52px;border-radius:13px;
+  background:var(--accent);color:var(--accent-on);
+  display:flex;align-items:center;justify-content:center;
+}
+.ident-mark svg{width:60%;height:60%;display:block}
+.ident-say{min-width:0}
+/* FOOTBALL / CROSSWORD. The theme is the first path segment and the site says
+   so out loud — there will be other themes, and a player who arrives on a game
+   should be able to see where they are without reading the URL. */
+.site-crumb{
+  font-family:var(--disp);font-size:11.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-faint);margin:0 0 1px;
+}
+.site-crumb b{color:var(--accent-ink);font-weight:700}
+.site-ident .site-mast{font-size:clamp(24px,4.4vw,34px);letter-spacing:.01em;
+  text-transform:uppercase;line-height:1}
+/* THE XI BADGE IS SIZED IN THE MASTHEAD IT SITS IN. It was written for a 20px
+   bar and kept its 17px and its .72 line-height when the name grew to 34px —
+   so the badge sat small and low against a display-sized word, which reads as
+   a mistake rather than a mark. It scales with its parent now. */
+.site-ident .site-xi{font-size:.55em;line-height:1;padding:.14em .3em;
+  border-radius:.22em;vertical-align:.12em}
+.ident-sub{margin:3px 0 0;font-size:14.5px;color:var(--ink-soft)}
+
+/* ============ THE TWO STREAKS ============
+ *
+ * BOTH ARE NEW, and both are derived rather than stored: the day record this
+ * device already keeps says which games were finished on which day, and for a
+ * signed-in player the server's season_play table says the same. Nothing new
+ * is written, so nothing can drift out of step with the season.
+ *
+ * They are DIFFERENT FACTS and are labelled as such — a game streak is this
+ * game on consecutive days, the daily streak is any game on consecutive days —
+ * because two numbers side by side with one word between them is how somebody
+ * comes to believe their crossword run is seven when it is four.
+ */
+.home-streaks{
+  display:grid;grid-template-columns:1fr 1fr;
+  background:var(--card);border:1px solid var(--line);border-radius:12px;
+  overflow:hidden;
+}
+.home-streaks[hidden]{display:none}
+.streak{display:flex;align-items:center;gap:11px;padding:12px 14px;min-width:0}
+.streak + .streak{border-left:1px solid var(--line)}
+.streak svg{flex:0 0 auto;width:22px;height:22px;color:var(--accent-ink)}
+.st-say{min-width:0}
+.st-l{display:block;font-size:12px;color:var(--ink-soft);line-height:1.2}
+.st-n{display:block;font-family:var(--disp);font-weight:700;font-size:20px;
+  color:var(--ink);line-height:1.15}
+/* A run of nothing is not a zero to be proud of; it is an invitation. */
+.streak.none .st-n{color:var(--ink-faint);font-size:15px}
+
+/* ============ THE SEASON, QUIETLY ============
+ * It belongs to the family rather than to this game, so it sits at the bottom
+ * and is the only card here that does not wear the accent. */
+.home-season{
+  background:var(--card);border:1px solid var(--line);border-radius:12px;
+  padding:14px 16px;display:flex;align-items:center;gap:14px;flex-wrap:wrap;
+}
+.home-season[hidden]{display:none}
+.hs-say{flex:1 1 220px;min-width:0}
+.hs-k{font-family:var(--disp);font-size:11.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-faint);margin:0 0 2px}
+.hs-line{margin:0;font-size:14.5px;color:var(--ink)}
+.hs-note{margin:2px 0 0;font-size:13px;color:var(--ink-soft)}
+.hs-go{
+  margin-left:auto;background:none;border:1px solid var(--line);color:var(--ink);
+  border-radius:9px;padding:9px 15px;font-size:14px;min-height:var(--tap);
+  text-decoration:none;display:inline-flex;align-items:center;
+}
+.hs-go:hover,.hs-go:focus-visible{border-color:var(--accent-ink);color:var(--accent-ink)}
+
+/* ============ MOBILE: THE ACTION COMES FIRST ============
+ * The brief's one measurable requirement — "the primary action appears early
+ * on a real phone". The identity row collapses to a single line, the mark
+ * shrinks, and nothing decorative is allowed above the fold. */
+@media (max-width:640px){
+  .site-ident{padding:12px 16px 0;gap:11px}
+  .ident-mark{width:42px;height:42px;border-radius:11px}
+  .ident-sub{font-size:13.5px}
+  .home-streaks{grid-template-columns:1fr 1fr}
+  .streak{padding:10px 12px;gap:9px}
+  .st-n{font-size:18px}
+  .home-season{padding:12px 14px}
+  .hs-go{margin-left:0;width:100%;justify-content:center}
+}
+
+
+/* ============ THE LANDING'S BOXES MEASURE THEMSELVES ============
+ *
+ * A side card was 409px inside a 373px column on HiLo: the card stretches to
+ * the column, then its own 18px of padding is ADDED, because that game's
+ * stylesheet carries no global box-sizing reset and this file assumed one.
+ * The page then scrolled sideways at 1024px — on a layout that has been in
+ * production for weeks, which is how long it has been doing it.
+ *
+ * Set here, on the landing's own components, rather than as a global `*` rule:
+ * a reset dropped into a shared file reaches every board in every game, and
+ * the grids are laid out in pixels that were measured under the rules they
+ * have now. */
+.site-ident,.ident-mark,.home-choice,.side-card,.home-streaks,.streak,
+.home-season,.site-wrap,.site-bar,.home-club,.home-club select{box-sizing:border-box}
+
+
+/* ============ THE ACTIVE TAB'S MARK SITS UNDER ITS WORD ============
+ *
+ * The marker was an inset shadow on the button box, and the box is 44px tall
+ * because that is the tap floor — so on a phone the line drew thirteen pixels
+ * below the label and read as a stray rule under the row rather than as the
+ * tab you are on. The tap target is unchanged; only the mark moved. */
+.site-nav button{position:relative}
+.site-nav button.on{box-shadow:none}
+.site-nav button.on::after{
+  content:"";position:absolute;left:8px;right:8px;bottom:9px;height:2px;
+  background:var(--accent-ink);border-radius:2px;
+}
+
+/* And the room above the fold. Sixty pixels of nothing sat between the tabs
+   and today's card on a phone — the one place the brief measures, since the
+   primary action has to be reachable without scrolling. */
+@media (max-width:640px){
+  .site-wrap{padding-top:14px}
 }

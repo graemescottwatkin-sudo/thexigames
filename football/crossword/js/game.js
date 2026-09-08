@@ -286,7 +286,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v003g";
+  var BUILD = "v003i";
   try {
     window.CROSSWORDXI_BUILD = BUILD;
     console.log("Crossword XI build " + BUILD);
@@ -2200,8 +2200,12 @@
     // verified[] is the server's last verdict on each entry; the browser has
     // no answers to compare against.
     puzzle.entries.forEach(function (e, i) { if (verified[i]) solved++; });
-    var narrow = document.body.clientWidth <= 640;
-    $("progressChip").textContent = solved + "/" + puzzle.entries.length + (narrow ? "" : " solved");
+    /* THE COUNT SAYS WHAT IT COUNTS, at every width. "solved" was dropped
+       below 640px to save room — on the screen where the reading sits between
+       a match minute and a points total, which is exactly where "0/11" on its
+       own could be any of the three. The row has the width: the readouts end
+       well short of the edge on a 375px phone. */
+    $("progressChip").textContent = solved + "/" + puzzle.entries.length + " solved";
   }
   function updateNudge() {
     if (!puzzle) return;
@@ -5717,6 +5721,17 @@
       else if (inProgress(d)) state = "In progress";
     }
     $("homeDailyState").textContent = state;
+    /* AND THE BUTTON SAYS WHICH OF THE THREE THINGS IT DOES. It read "Kick
+       off" whatever the state was — including on a board already finished,
+       where it opens the result, and on a part-played one, where it returns
+       you to a running clock. The state line beside it was already telling the
+       truth; the button was not, and the button is the thing people read. */
+    var cta = document.querySelector("#homeDaily .hc-cta");
+    if (cta) {
+      cta.textContent = /^Played/.test(state) ? "View result"
+        : state === "In progress" ? "Resume"
+        : "Kick off";
+    }
 
     var p = savedFor("practice");
     /* While practice is suspended the state line has to say whether the tile

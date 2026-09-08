@@ -190,6 +190,69 @@
     return writeAll(days);
   }
 
+  /* ---- the streaks -------------------------------------------------------
+   *
+   * WHAT A STREAK IS HERE: consecutive CALENDAR days each carrying at least one
+   * completion. The daily streak asks "any game"; a game streak asks "this
+   * game". Both increase at most once a day because a day is counted once,
+   * however many boards were finished in it, and only a COMPLETION counts —
+   * starting a board and walking away breaks a run rather than extending it.
+   *
+   * WHERE THE RUN MAY END. Today, or yesterday. A player who has not played
+   * yet today still has a live run — the day is not over — so yesterday's
+   * completion keeps it. Anything older is a run that has already been broken,
+   * and showing it would be telling somebody they have a streak they lost.
+   *
+   * `dayGames` is [{ day, games: [ids] }] in any order; `today` is the
+   * server's day, never the device's. Days are compared as strings, which is
+   * safe for YYYY-MM-DD and avoids building a Date from a day key — the trap
+   * documented on every archive page in this project. */
+  function dayBefore(day) {
+    var at = Date.parse(String(day) + "T00:00:00Z");
+    if (isNaN(at)) return null;
+    return new Date(at - 86400000).toISOString().slice(0, 10);
+  }
+
+  function runFrom(has, today) {
+    if (!DAY.test(String(today || ""))) return 0;
+    /* Start at today if it counts, otherwise at yesterday — and if neither
+       does, the run is over. */
+    var at = today;
+    if (!has[at]) {
+      at = dayBefore(at);
+      if (!at || !has[at]) return 0;
+    }
+    var n = 0;
+    while (at && has[at]) { n++; at = dayBefore(at); }
+    return n;
+  }
+
+  /* The whole answer in one pass: the family's run, and this game's. */
+  function streaks(dayGames, game, today) {
+    var anyDay = {}, gameDay = {};
+    var g = String(game || "").toLowerCase();
+    (dayGames || []).forEach(function (d) {
+      if (!d || !DAY.test(String(d.day))) return;
+      var games = (d.games || []).map(function (x) { return String(x).toLowerCase(); });
+      if (!games.length) return;                 // started is not finished
+      anyDay[d.day] = true;
+      if (g && games.indexOf(g) !== -1) gameDay[d.day] = true;
+    });
+    return { daily: runFrom(anyDay, today), game: g ? runFrom(gameDay, today) : 0 };
+  }
+
+  /* This device's own completions, in the shape streaks() wants. The server
+     hands the account branch the same shape from season_play. */
+  function finishedDays() {
+    var all = readAll();
+    return Object.keys(all).filter(function (d) { return DAY.test(d); })
+      .sort().reverse()
+      .map(function (d) {
+        var rec = all[d] || {};
+        return { day: d, games: Array.isArray(rec.f) ? rec.f.slice() : [] };
+      });
+  }
+
   function noteStart(game, day) { return add(game, day, "s"); }
   function noteFinish(game, day) { return add(game, day, "f"); }
 
@@ -225,6 +288,8 @@
     daySettled: daySettled,
     pointsFor: pointsFor,
     season: season,
+    streaks: streaks,
+    finishedDays: finishedDays,
     noteStart: noteStart,
     noteFinish: noteFinish,
     days: days,

@@ -94,6 +94,31 @@ export async function daysFor(env, user, limit = 120) {
  * and refusing a second attempt on a round somebody never completed would take
  * the day away from them.
  */
+/* Every day this player finished something, and what they finished, newest
+   first — the shape shared/xi-season.js streaks() takes. The window is short
+   on purpose: a streak is a RUN ending today or yesterday, so a year of
+   history cannot lengthen it and reading one would be paying for rows that
+   cannot change the answer. */
+export async function finishedDaysFor(env, user, limit = 120) {
+  if (!hasDB(env) || !user || !user.id) return [];
+  try {
+    const { results } = await env.DB.prepare(
+      `SELECT day, game
+         FROM season_play
+        WHERE user_id = ? AND finished_at IS NOT NULL
+        ORDER BY day DESC
+        LIMIT ?`)
+      .bind(String(user.id), Math.max(1, Math.min(2000, Number(limit) * 8 || 960))).all();
+    const byDay = new Map();
+    for (const r of results || []) {
+      const day = String(r.day);
+      if (!byDay.has(day)) byDay.set(day, []);
+      byDay.get(day).push(String(r.game));
+    }
+    return [...byDay.entries()].map(([day, games]) => ({ day, games }));
+  } catch (e) { return []; }
+}
+
 export async function gamesFinishedOn(env, user, day) {
   if (!hasDB(env) || !user || !user.id || !day) return [];
   try {

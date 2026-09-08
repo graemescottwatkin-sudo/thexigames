@@ -15,7 +15,7 @@
  *   - no practice. There is now an archive picker and a finals catalogue; what
  *     is still missing is a practice mode, which this game may never want.
  */
-var BUILD = "v002p";
+var BUILD = "v002q";
 
 (function () {
   "use strict";
@@ -142,6 +142,26 @@ var BUILD = "v002p";
     }
     renderForm();
     fillClubs();
+    nameTodaysAction();
+  }
+
+  /* THE HERO BUTTON NAMES WHAT IT DOES. It said "Kick off" whatever the state:
+     on a board already finished, where it opens the result, and on a
+     part-played one, where it returns you to a running clock.
+
+     This game could not be wired from its status line the way the crossword
+     and HiLo are — hc-state here describes the CLOCK ("Ninety minutes in five
+     of real time"), which says nothing about progress — so it is read from the
+     save, which is the thing that actually knows. A board with no save is new;
+     one whose save is over has been played; anything else is in progress. */
+  function nameTodaysAction() {
+    var cta = document.querySelector("#homeDaily .hc-cta");
+    if (!cta) return;
+    var saved = null;
+    try { saved = load(); } catch (e) { saved = null; }
+    cta.textContent = !saved ? "Kick off"
+      : saved.over ? "View result"
+      : "Resume";
   }
 
   /* ---- previous boards, as a calendar -----------------------------------

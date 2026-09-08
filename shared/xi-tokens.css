@@ -31,9 +31,49 @@
   --body:"Public Sans",-apple-system,"Segoe UI",Arial,sans-serif;
   --radius:12px;
   --tap:44px; /* the tap floor — nothing interactive smaller than this */
+
+  /* ---- the game accents ------------------------------------------------
+     Defaults are the family's green, so a page that names no game still looks
+     like the family rather than like nothing. A game sets data-game on <html>
+     and takes its own three below. The colours are the SAME ones the hub has
+     used per shirt since it was built — one fact, two places would have been
+     two answers to "what colour is Wordsearch XI". */
+  --accent:var(--pitch); --accent-ink:var(--pitch); --accent-on:#FFFFFF;
 }
+
+/* Crossword XI wears the family green: it is the one game whose accent and the
+   family's are the same colour, which is right for the game that is the front
+   door of the set. */
+[data-game="crossword"]{--accent:#1E6B45; --accent-ink:#1E6B45; --accent-on:#FFFFFF}
+/* Sky. The tile colour is unreadable as text — 2.1:1 — so the ink is the
+   deeper sky it is recognisably the same colour as. */
+[data-game="wordsearch"]{--accent:#7BA7CC; --accent-ink:#2E6491; --accent-on:#0E2A40}
+/* Amber, and the worst offender for contrast: black on amber, and a dark amber
+   for anything set as text. */
+[data-game="scrambled"]{--accent:#F2C94C; --accent-ink:#8A6100; --accent-on:#3A2D00}
+[data-game="hilo"]{--accent:#1F4E79; --accent-ink:#1F4E79; --accent-on:#FFFFFF}
+[data-game="vowels"]{--accent:#8E2F45; --accent-ink:#8E2F45; --accent-on:#FFFFFF}
+[data-game="grid"]{--accent:#2C3E63; --accent-ink:#2C3E63; --accent-on:#FFFFFF}
+
+/* ---- the same six, read on a dark ground -------------------------------
+   Every --accent-ink above was chosen against off-white. On #121711 the navy,
+   the indigo, the claret and the forest all fall below 4.5:1 and two of them
+   below 3:1, so a game's name would be the least legible thing on its own
+   page. The MARK is unchanged — a game is still its colour — and only the
+   reading weight lifts.
+
+   Both attributes sit on <html>, so they are named together: `:root[dark]`
+   alone is (0,2,0) and would beat a bare [data-game], which is exactly how the
+   first version of this block turned all six games green in the dark. */
+:root[data-theme="dark"][data-game="crossword"]{--accent:#1E6B45; --accent-ink:#8FD9AE; --accent-on:#FFFFFF}
+:root[data-theme="dark"][data-game="wordsearch"]{--accent:#7BA7CC; --accent-ink:#A8CDEC; --accent-on:#0E2A40}
+:root[data-theme="dark"][data-game="scrambled"]{--accent:#F2C94C; --accent-ink:#F2C94C; --accent-on:#3A2D00}
+:root[data-theme="dark"][data-game="hilo"]{--accent:#1F4E79; --accent-ink:#9CC4E8; --accent-on:#FFFFFF}
+:root[data-theme="dark"][data-game="vowels"]{--accent:#8E2F45; --accent-ink:#F0A8B8; --accent-on:#FFFFFF}
+:root[data-theme="dark"][data-game="grid"]{--accent:#2C3E63; --accent-ink:#A9BCE6; --accent-on:#FFFFFF}
 :root[data-theme="dark"]{
   --paper:#121711; --card:#1B231A;
+  --accent:var(--pitch); --accent-ink:#8FD9AE; --accent-on:#0C1A11;
   --ink:#EAF0E8; --ink-soft:#A9B5A9; --ink-faint:#76816F;
   --pitch:#2C8A5C; --pitch-deep:#0D2B1C;
   --gold:#F2C94C; --gold-ink:#3A2D00; --xi-ink:#F2C94C;
@@ -113,7 +153,9 @@
   /* Draw and loss as STRONG marks — a form letter on a dark chip, the half-
      time clock — where --form-d/--form-l are the pale chip surfaces. */
   --draw:#B9922E; --loss:#B4483B;
-  --sel:#7FC29C; --sel-word:#C6E2D0;
+  /* WHERE YOU ARE, not what is right. Teal, because --correct below is a
+     pale yellow-green and the two used to sit four points of hue apart. */
+  --sel:#A6D9D4; --sel-word:#CBE7E5; --sel-ring:#33418F;
   --correct:#C0DD97; --correct-ink:#173404;
   --wrong:#C0392B; --wrong-ink:#8A2419; --wrong-bg:#FBE3E0;
   --revealed:#7A8FA6; --revealed-bg:#F8E9B8;
@@ -130,7 +172,9 @@
   --pitch-ink:#8FD9AE; --on-pitch:#FFFFFF; --pitch-hover:#3CA070;
   --on-pitch-soft:#9FE1CB;
   --draw:#B9922E; --loss:#B4483B;
-  --sel:#6E8564; --sel-word:#47513F;
+  /* The same separation in the dark theme, and the ring inverts: indigo
+     ink on a pale square, indigo LIGHT on a dark one. */
+  --sel:#3F6260; --sel-word:#2C4645; --sel-ring:#9AA8F0;
   --correct:#C0DD97; --correct-ink:#173404;
   --wrong:#E3695A; --wrong-ink:#FFD9D3; --wrong-bg:#4A231D;
   --revealed:#8AA0B6; --revealed-bg:#5C4E1E;

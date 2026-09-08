@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en-GB">
+<html lang="en-GB" data-game="crossword">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -112,15 +112,15 @@
      width:var(--tap) was invalid, not because it was styled small. Order
      matters — style.css comes after and still wins wherever the crossword
      genuinely differs. -->
-<link rel="stylesheet" href="/shared/xi-tokens.css?v=v31">
-<link rel="stylesheet" href="/shared/xi-landing.css?v=v31">
-<link rel="stylesheet" href="/shared/xi-chrome.css?v=v31">
-<link rel="stylesheet" href="/shared/xi-keys.css?v=v31">
-<link rel="stylesheet" href="/shared/xi-share.css?v=v31">
+<link rel="stylesheet" href="/shared/xi-tokens.css?v=v33">
+<link rel="stylesheet" href="/shared/xi-landing.css?v=v33">
+<link rel="stylesheet" href="/shared/xi-chrome.css?v=v33">
+<link rel="stylesheet" href="/shared/xi-keys.css?v=v33">
+<link rel="stylesheet" href="/shared/xi-share.css?v=v33">
 <!-- The theme, stamped before first paint: light unless the player chose
      dark, decided in one shared place for every page of the family. -->
-<script src="/shared/xi-theme.js?v=v31"></script>
-<link rel="stylesheet" href="css/style.css?v=v003g">
+<script src="/shared/xi-theme.js?v=v33"></script>
+<link rel="stylesheet" href="css/style.css?v=v003i">
 </head>
 <body>
 <!-- The page's only H1, first thing in the body.
@@ -764,20 +764,53 @@
        on every page; this page puts nothing in it. -->
   <header class="xic-bar">  </header>
 
+  <!-- WHOSE PAGE THIS IS. Five games opened on the same green screen with a
+       different word at the top; this row is the game's mark, its name and one
+       line saying what it is. The mark is a shape, not a coloured square: the
+       accent is the fourth signal after the mark, the name and the crumb, so a
+       player who cannot separate green from navy loses nothing. -->
+  <div class="site-ident">
+    <span class="ident-mark" aria-hidden="true">
+      <!-- A crossword: blocked squares, and letters crossing on a shared one. -->
+      <svg viewBox="0 0 24 24" fill="none">
+        <rect x="1.5" y="1.5" width="21" height="21" rx="2.5" stroke="currentColor" stroke-width="1.6"/>
+        <path d="M8.5 2v20M15.5 2v20M2 8.5h20M2 15.5h20" stroke="currentColor" stroke-width="1.2" opacity=".5"/>
+        <rect x="8.5" y="8.5" width="7" height="7" fill="currentColor"/>
+        <rect x="15.5" y="1.5" width="7" height="7" fill="currentColor" opacity=".55"/>
+      </svg>
+    </span>
+    <div class="ident-say">
+      <p class="site-crumb">Football <span aria-hidden="true">/</span> <b>Crossword</b></p>
+      <!-- A PARAGRAPH, NOT A HEADING. Every game already carries one h1 — the
+           sr-only line that says what the page IS — and a second one here gave
+           the crossword two, which is a worse document outline than the one it
+           replaced. The masthead is furniture; the heading is the sentence a
+           screen reader and a search engine read. -->
+      <p class="site-mast">Crossword <span class="site-xi">XI</span></p>
+      <p class="ident-sub">Eleven clues. One football crossword.</p>
+    </div>
+  </div>
+
   <header class="site-head">
     <div class="site-bar">
-      <div class="site-mast">Crossword <span class="site-xi">XI</span></div>
-      <nav class="site-nav">
+      <!-- ONLY THIS GAME'S REAL SECTIONS. The crossword is the one game with
+           both clubs and themes; the others get their own row, and no game
+           gets a tab for a route it does not have. -->
+      <nav class="site-nav" aria-label="Crossword XI sections">
         <button class="on" id="navToday">Today</button>
-        <button id="navClubs">Clubs</button>
+        <button id="navClubs">Clubs &amp; themes</button>
         <button id="navSeason">My season</button>
-        <a class="site-navlink" href="how-to-play.html">How to play</a>
+        <a class="site-navlink" href="#how">How to play</a>
       </nav>
     </div>
   </header>
 
   <div class="site-wrap">
-    <p class="site-lede" id="homeSub">Eleven answers. One match. A new football crossword every day.</p>
+    <!-- THE GAME IS EXPLAINED ONCE. This line and the one under the name in
+         the identity row were both saying what a football crossword is, three
+         inches apart. The identity row keeps it, because that is where a
+         player looks to find out where they are; nothing writes to this
+         element, so it goes rather than being hidden. -->
 
     <div class="site-grid">
       <div class="site-main">
@@ -810,6 +843,36 @@
       </div>
 
       <aside class="site-side">
+        <!-- THE TWO RUNS, AND THEY ARE DIFFERENT FACTS. One is this game on
+             consecutive days; the other is any game on consecutive days. Both
+             are labelled in full because two numbers side by side with one
+             word between them is how somebody comes to believe their crossword
+             run is seven when it is four.
+             Filled by shared/xi-menu.js from the day record — nothing new is
+             stored, so a streak cannot drift out of step with the season. -->
+        <div class="home-streaks" id="homeStreaks" hidden>
+          <div class="streak" id="streakGame">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 2.5s5.5 4.4 5.5 9.4a5.5 5.5 0 1 1-11 0c0-1.9.8-3.6 1.8-5 .2 1.5 1 2.6 2 2.6 1.6 0 1.2-3.6 1.7-7Z"
+                    stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+            </svg>
+            <span class="st-say">
+              <span class="st-l">Crossword streak</span>
+              <span class="st-n" id="streakGameN">&mdash;</span>
+            </span>
+          </div>
+          <div class="streak" id="streakDaily">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <rect x="3" y="4.5" width="18" height="16" rx="2.5" stroke="currentColor" stroke-width="1.6"/>
+              <path d="M3 9.5h18M8 2.5v4M16 2.5v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+            <span class="st-say">
+              <span class="st-l">Daily streak</span>
+              <span class="st-n" id="streakDailyN">&mdash;</span>
+            </span>
+          </div>
+        </div>
+
         <!-- Where the run has got to. It was a line of small grey text at the
              bottom; it is the reason to come back tomorrow, so it gets a card. -->
         <div class="side-card">
@@ -833,7 +896,7 @@
          board and it changes weekly, so calling it daily promised something
          the content cannot yet keep. Worth revisiting when there are enough
          boards to rotate one a day. -->
-    <h2 class="site-sec">OTHER BOARDS</h2>
+    <h2 class="site-sec">More to play</h2>
     <div class="site-row">
       <button class="home-choice col" id="homeFeatured" hidden>
         <span class="hc-kicker">BOARD OF THE WEEK</span>
@@ -1034,7 +1097,7 @@
 
 <footer>
   <button id="statsBtn">My Season</button> &middot; <span id="streakLine"></span><br>
-  Crossword <span class="xi">XI</span> by The <span class="xi">XI</span> Games &middot; unofficial word puzzle &middot; <span id="buildTag">v003g</span> &middot;
+  Crossword <span class="xi">XI</span> by The <span class="xi">XI</span> Games &middot; unofficial word puzzle &middot; <span id="buildTag">v003i</span> &middot;
   <a href="privacy.html">privacy</a> &middot;
   <button id="skipToggle">skip filled: off</button> &middot;
   <button id="bankToggle">letter bank: on</button> &middot;
@@ -1053,16 +1116,17 @@
      aligned_test only grepped for the class, which is true of an element
      sealed inside a hidden container. -->
 <footer class="xic-foot"></footer>
-<script src="/shared/xi-clubs.js?v=v31"></script>
-<script src="/shared/xi-chrome.js?v=v31"></script>
-<script src="/shared/xi-season.js?v=v31"></script>
-<script src="/shared/xi-plays.js?v=v31"></script>
-<script src="/shared/xi-share.js?v=v31"></script>
-<script src="/shared/xi-keys.js?v=v31"></script>
-<script src="/shared/xi-seasons.js?v=v31"></script>
-<script src="/shared/xi-clubs.js?v=v31"></script>
-<script src="/shared/xi-table.js?v=v31"></script>
-<script src="js/engine.js?v=v003g"></script>
-<script src="js/game.js?v=v003g"></script>
+<script src="/shared/xi-clubs.js?v=v33"></script>
+<script src="/shared/xi-chrome.js?v=v33"></script>
+<script src="/shared/xi-season.js?v=v33"></script>
+<script src="/shared/xi-menu.js?v=v33"></script>
+<script src="/shared/xi-plays.js?v=v33"></script>
+<script src="/shared/xi-share.js?v=v33"></script>
+<script src="/shared/xi-keys.js?v=v33"></script>
+<script src="/shared/xi-seasons.js?v=v33"></script>
+<script src="/shared/xi-clubs.js?v=v33"></script>
+<script src="/shared/xi-table.js?v=v33"></script>
+<script src="js/engine.js?v=v003i"></script>
+<script src="js/game.js?v=v003i"></script>
 </body>
 </html>

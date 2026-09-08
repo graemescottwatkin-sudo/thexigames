@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en-GB">
+<html lang="en-GB" data-game="scrambled">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
@@ -26,16 +26,16 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/shared/xi-tokens.css?v=v31">
-<link rel="stylesheet" href="/shared/xi-landing.css?v=v31">
-<link rel="stylesheet" href="/shared/xi-chrome.css?v=v31">
-<link rel="stylesheet" href="/shared/xi-keys.css?v=v31">
-<link rel="stylesheet" href="/shared/xi-share.css?v=v31">
-<link rel="stylesheet" href="/shared/xi-table.css?v=v31">
+<link rel="stylesheet" href="/shared/xi-tokens.css?v=v33">
+<link rel="stylesheet" href="/shared/xi-landing.css?v=v33">
+<link rel="stylesheet" href="/shared/xi-chrome.css?v=v33">
+<link rel="stylesheet" href="/shared/xi-keys.css?v=v33">
+<link rel="stylesheet" href="/shared/xi-share.css?v=v33">
+<link rel="stylesheet" href="/shared/xi-table.css?v=v33">
 <!-- The theme, stamped before first paint: light unless the player chose
      dark, decided in one shared place for every page of the family. -->
-<script src="/shared/xi-theme.js?v=v31"></script>
-<link rel="stylesheet" href="css/style.css?v=v002p">
+<script src="/shared/xi-theme.js?v=v33"></script>
+<link rel="stylesheet" href="css/style.css?v=v002q">
 </head>
 <body>
 
@@ -65,10 +65,30 @@
        screen reader and a search engine read. -->
   <h1 class="sr-only">Scrambled XI &mdash; the daily football anagram</h1>
 
+  <!-- WHOSE PAGE THIS IS. The mark, the name and one line saying what the
+       game is — the accent is the fourth signal, after all three of those, so
+       a player who cannot separate sky blue from navy loses nothing. -->
+  <div class="site-ident">
+    <span class="ident-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none">
+        <rect x="2.4" y="6.6" width="7.6" height="7.6" rx="1.5" transform="rotate(-13 6.2 10.4)"
+              stroke="currentColor" stroke-width="1.7"/>
+        <rect x="13.6" y="4.4" width="7.6" height="7.6" rx="1.5" transform="rotate(11 17.4 8.2)"
+              stroke="currentColor" stroke-width="1.7"/>
+        <rect x="8.4" y="13.8" width="7.6" height="7.6" rx="1.5" transform="rotate(-6 12.2 17.6)"
+              fill="currentColor" fill-opacity=".3" stroke="currentColor" stroke-width="1.7"/>
+      </svg>
+    </span>
+    <div class="ident-say">
+      <p class="site-crumb">Football <span aria-hidden="true">/</span> <b>Scrambled</b></p>
+      <p class="site-mast">Scrambled <span class="site-xi">XI</span></p>
+      <p class="ident-sub">Untangle eleven player names.</p>
+    </div>
+  </div>
+
   <header class="site-head">
     <div class="site-bar">
-      <div class="site-mast">Scrambled <span class="site-xi">XI</span></div>
-      <nav class="site-nav">
+            <nav class="site-nav">
         <button class="on" id="navToday">Today</button>
         <button id="navClubs">Matches</button>
         <a class="site-navlink" href="#how">How to play</a>
@@ -81,8 +101,6 @@
          shared/xi-landing.css — the same file the other two open on — so this
          is the same page with this game's content in it. -->
     <div class="site-wrap">
-      <p class="site-lede">Eleven names, scrambled, in the positions they
-         played. Solve in any order, on a ninety minute clock.</p>
 
       <div class="site-grid">
         <div class="site-main">
@@ -96,6 +114,33 @@
         </div>
 
         <aside class="site-side">
+        <!-- THE TWO RUNS, AND THEY ARE DIFFERENT FACTS: this game on
+             consecutive days, and any game on consecutive days. Filled by
+             shared/xi-menu.js from the completions the season already records,
+             so nothing new is stored and a run cannot drift out of step. -->
+        <div class="home-streaks" id="homeStreaks" hidden>
+          <div class="streak" id="streakGame">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 2.5s5.5 4.4 5.5 9.4a5.5 5.5 0 1 1-11 0c0-1.9.8-3.6 1.8-5 .2 1.5 1 2.6 2 2.6 1.6 0 1.2-3.6 1.7-7Z"
+                    stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+            </svg>
+            <span class="st-say">
+              <span class="st-l">Scrambled streak</span>
+              <span class="st-n" id="streakGameN">&mdash;</span>
+            </span>
+          </div>
+          <div class="streak" id="streakDaily">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <rect x="3" y="4.5" width="18" height="16" rx="2.5" stroke="currentColor" stroke-width="1.6"/>
+              <path d="M3 9.5h18M8 2.5v4M16 2.5v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+            <span class="st-say">
+              <span class="st-l">Daily streak</span>
+              <span class="st-n" id="streakDailyN">&mdash;</span>
+            </span>
+          </div>
+        </div>
+
           <div class="side-card">
             <div class="sc-kicker">YOUR FORM</div>
             <div class="sc-title" id="homeRunTitle">No run yet</div>
@@ -112,7 +157,7 @@
       </div>
 
 
-      <div class="site-sec">OTHER BOARDS</div>
+      <div class="site-sec">More to play</div>
       <div class="site-row">
         <button class="home-choice col" id="homeFeatured">
           <span class="hc-kicker">BOARD OF THE WEEK</span>
@@ -318,17 +363,18 @@
 <!-- THE SHARED FOOTER, AT TOP LEVEL. It carries the family disclaimer. -->
 <footer class="xic-foot"></footer>
 
-<script src="/shared/xi-seasons.js?v=v31"></script>
-<script src="/shared/xi-clubs.js?v=v31"></script>
-<script src="/shared/xi-table.js?v=v31"></script>
-<script src="/shared/xi-chrome.js?v=v31"></script>
-<script src="/shared/xi-season.js?v=v31"></script>
-<script src="/shared/xi-plays.js?v=v31"></script>
-<script src="/shared/xi-challenge.js?v=v31"></script>
-<script src="/shared/xi-keys.js?v=v31"></script>
-<script src="/shared/xi-share.js?v=v31"></script>
-<script src="js/config.js?v=v002p"></script>
-<script src="js/scoring.js?v=v002p"></script>
-<script src="js/game.js?v=v002p"></script>
+<script src="/shared/xi-seasons.js?v=v33"></script>
+<script src="/shared/xi-clubs.js?v=v33"></script>
+<script src="/shared/xi-table.js?v=v33"></script>
+<script src="/shared/xi-chrome.js?v=v33"></script>
+<script src="/shared/xi-season.js?v=v33"></script>
+<script src="/shared/xi-menu.js?v=v33"></script>
+<script src="/shared/xi-plays.js?v=v33"></script>
+<script src="/shared/xi-challenge.js?v=v33"></script>
+<script src="/shared/xi-keys.js?v=v33"></script>
+<script src="/shared/xi-share.js?v=v33"></script>
+<script src="js/config.js?v=v002q"></script>
+<script src="js/scoring.js?v=v002q"></script>
+<script src="js/game.js?v=v002q"></script>
 </body>
 </html>

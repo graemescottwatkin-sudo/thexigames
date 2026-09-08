@@ -22,7 +22,7 @@
  */
 import { utcDay } from "../_lib/daily.js";
 import { season, NO_SEASON_YET } from "../_lib/season.js";
-import { daysFor, seasonUser, hasDB, gamesFinishedOn } from "../_lib/season-store.js";
+import { daysFor, seasonUser, hasDB, gamesFinishedOn, finishedDaysFor } from "../_lib/season-store.js";
 
 const json = (body, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -58,6 +58,12 @@ export async function onRequestGet({ request, env }) {
      authenticates and already reads season_play, so it costs one more query
      and no new door. */
   const todayGames = await gamesFinishedOn(env, user, today);
+  /* And the days behind it, so a game's landing can show a run that follows
+     the player between devices. The RULE is not applied here — it is
+     shared/xi-season.js streaks(), the same function the anonymous branch
+     uses — because a streak computed one way on the server and another way in
+     the browser is two answers to one question. */
+  const dayGames = await finishedDaysFor(env, user);
   return json({
     account: true,
     today,
@@ -68,6 +74,9 @@ export async function onRequestGet({ request, env }) {
       played: s.played, won: s.won, drawn: s.drawn, lost: s.lost,
       points: s.points, marks: s.marks, started: s.started,
     },
+    /* Every day with a completion in it, newest first, so the landing can
+       count a run without asking for one. */
+    dayGames,
     /* Today, as it stands. Shown as provisional and not counted: a loss can
        still become a draw before midnight. */
     inFlight: s.inFlight,
