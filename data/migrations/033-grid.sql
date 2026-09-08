@@ -49,7 +49,7 @@
 CREATE TABLE IF NOT EXISTS gd_board (
   id          TEXT PRIMARY KEY,        -- the emitter's id, e.g. 'gx-0163'
   set_id      TEXT NOT NULL,           -- the verified set it was built from
-  kind        TEXT NOT NULL,           -- 'daily' for now; 'club' when there are any
+  kind        TEXT NOT NULL,           -- 'daily' (the calendar's) or 'free' (the catalogue's)
   title       TEXT NOT NULL,           -- THE ENTIRE CLUE. There is nothing else.
   rows        INTEGER NOT NULL,
   cols        INTEGER NOT NULL,

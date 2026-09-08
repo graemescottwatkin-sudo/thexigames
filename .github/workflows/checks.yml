@@ -297,10 +297,22 @@ jobs:
           # answers would only prove the handler calls it. The check the rest
           # of it exists for: no letter of any answer reaches a browser.
           node football/grid/api_test.mjs
+          # The catalogue: the SECOND door onto the same bank, and this game has
+          # already had one of those judge tomorrow's board. Free boards only,
+          # a menu of ids and titles rather than the boards themselves, a daily
+          # refused in exactly the words an unknown id gets, and no letter of an
+          # answer anywhere in what goes out.
+          node football/grid/catalog_test.mjs
           # The importer's gate, on the committed sample — because there is no
           # bank on a runner and a check that passes when it finds no problems
           # also passes when it finds nothing at all.
           node tools/import_grid.js --check
+          # And the guard on the calendar it writes. Marking a board for the
+          # catalogue takes it out of the daily run and closes the days up
+          # behind it — right for the days to come, a rewrite of history for
+          # the ones already played. The importer refuses to move a played day;
+          # this runs the comparison that decides.
+          node tools/import_grid_test.mjs
           # The published archive, for the three games that had none. An
           # answers page is the one page meant to give a board away, so the
           # checks are weighted on the seal: a sealed board, a future board and

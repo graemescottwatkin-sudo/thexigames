@@ -32,7 +32,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { publicText, boardToken } from "../functions/_lib/gd-board.js";
+import { publicText, boardToken, todayKey } from "../functions/_lib/gd-board.js";
 import { dailyDayKey, dailyNumber } from "../functions/_lib/daily.js";
 import { LAUNCHED } from "../functions/_lib/games.js";
 
@@ -125,6 +125,25 @@ function loadSource() {
   return { boards, generated: index.generated };
 }
 
+/* ---- daily, or catalogue ------------------------------------------------
+ *
+ * A BOARD SAYS WHICH IT IS, and the source says so with one field: `kind`,
+ * either "daily" (the default, and what every board was until 7 September
+ * 2026) or "free". This importer used to write the literal "daily" into every
+ * row, so the column existed and said the same thing 236 times.
+ *
+ * WHAT THE DIFFERENCE MEANS. A daily board is the calendar's for one day: the
+ * past is open and the future is shut. A FREE board is never in the calendar
+ * — it is the catalogue, playable whenever, and it is the only kind that can
+ * carry a challenge, because a challenge on a daily would be a challenge on
+ * the board everybody is already playing today.
+ *
+ * The owner's plan for these is the older and more obscure elevens: a board
+ * that is a fair daily for everybody is not the same board as one somebody
+ * goes looking for. */
+const KINDS = ["daily", "free"];
+const kindOf = (b) => (KINDS.indexOf(String(b.kind || "")) > -1 ? String(b.kind) : "daily");
+
 /* ---- the calendar ------------------------------------------------------- */
 
 /* One board a day, in order, from a start day. Written as DAYS rather than as
@@ -135,11 +154,48 @@ function buildSchedule(boards, fromDay) {
     ? dailyNumber(Date.parse(fromDay + "T00:00:00Z"))
     : dailyNumber();
   const schedule = {};
-  boards.forEach((b, i) => {
+  /* ONLY THE DAILIES, and the run is contiguous: a catalogue board taken out
+     of the middle must not leave a hole in the calendar, because a day with no
+     board is a day this game has nothing to serve. Filtered before the index
+     is used, so the days close up behind it. */
+  boards.filter((b) => kindOf(b) === "daily").forEach((b, i) => {
     const day = dailyDayKey(startNo + i);
     if (day) schedule[day] = b.id;
   });
   return schedule;
+}
+
+/* ---- what was written last time ----------------------------------------
+ *
+ * THE PAST IS NOT REBUILDABLE. The calendar is rebuilt from LAUNCHED.grid on
+ * every import, so taking ONE board out of it — which is exactly what marking
+ * a board `free` does — shifts every day after it by one. For the days still
+ * to come that is the point. For the days already played it is a rewrite of
+ * history: a player's result, that day's archive entry and that day's answers
+ * page would all then be about a board that was never that day's daily.
+ *
+ * The importer knows what it wrote last time, because it wrote it: the same
+ * data/gd-production.sql it is about to overwrite. So it reads the schedule
+ * back out and compares. Pure functions, so a suite can put two calendars side
+ * by side without going near anybody's real file. */
+export function scheduleFromSql(sql) {
+  const out = {};
+  const re = /INSERT INTO gd_schedule \(day, board_id\) VALUES \('([^']+)', '([^']+)'\);/g;
+  for (const m of String(sql || "").matchAll(re)) out[m[1]] = m[2];
+  return out;
+}
+
+/* Every day that has already happened and would now name a different board.
+   A day that is merely GONE from the new calendar counts too: a played day
+   with no board at all is the same lie by omission. */
+export function historyClash(prev, next, today) {
+  const clashes = [];
+  for (const day of Object.keys(prev || {}).sort()) {
+    if (day >= today) continue;
+    const was = prev[day], now = (next || {})[day] || null;
+    if (String(was) !== String(now)) clashes.push({ day, was, now });
+  }
+  return clashes;
 }
 
 /* ---- the sample --------------------------------------------------------- */
@@ -224,6 +280,28 @@ function main() {
   const schedule = buildSchedule(boards, from);
   const days = Object.keys(schedule).sort();
 
+  /* AND IT MUST NOT MOVE A DAY THAT HAS BEEN PLAYED. See scheduleFromSql
+     above: the first board marked `free` shifts every day behind it, and
+     without this that would land silently on days already in the archive. The
+     comparison is against the last SQL this importer emitted, which is the
+     only record of the calendar that exists outside the database. */
+  if (fs.existsSync(OUT)) {
+    const clashes = historyClash(
+      scheduleFromSql(fs.readFileSync(OUT, "utf8")), schedule, todayKey());
+    if (clashes.length && !process.argv.includes("--rewrite-history")) {
+      console.error(`REFUSED: this would rewrite ${clashes.length} day(s) that have already been played.`);
+      for (const c of clashes.slice(0, 8)) {
+        console.error(`  x ${c.day} was ${c.was}, would become ${c.now || "no board at all"}`);
+      }
+      if (clashes.length > 8) console.error(`  x ...and ${clashes.length - 8} more`);
+      console.error("\nA board taken out of the calendar closes the days up behind it, and the");
+      console.error("calendar is rebuilt from the launch day every time. To take boards out of");
+      console.error("the FUTURE only, re-import with --from set past the last played day.");
+      console.error("If you really mean to rewrite what people have played: --rewrite-history");
+      process.exit(1);
+    }
+  }
+
   if (CHECK_ONLY) {
     console.log(`\n${boards.length} boards gated, ${days.length} days; emitted ${generated}`);
     console.log(`calendar would run ${days[0]} to ${days[days.length - 1]}`);
@@ -245,7 +323,7 @@ function main() {
        stored twice and then allowed to disagree with itself. */
     const payload = { entries: b.entries, crossings: b.crossings, quality: b.quality };
     lines.push("INSERT OR REPLACE INTO gd_board (id, set_id, kind, title, rows, cols, payload, updated_at) VALUES (" +
-      [q(b.id), q(b.set_id || ""), q("daily"), q(b.title), Number(b.rows), Number(b.cols),
+      [q(b.id), q(b.set_id || ""), q(kindOf(b)), q(b.title), Number(b.rows), Number(b.cols),
        q(JSON.stringify(payload)), q(now)].join(", ") + ");");
   }
   lines.push("");
