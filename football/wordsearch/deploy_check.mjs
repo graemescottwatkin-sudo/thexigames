@@ -296,11 +296,30 @@ t("every wordsearch import resolves to something the target exports", (() => {
    the conversion happens once, at import. This check spells every sample
    word off its grid at base 0 — the exact fault that cost this build its
    only red run cannot come back quietly. */
+/* THE DATA IS READ, NOT SCRAPED OFF THE WORKING TREE. This matched the source
+   text for `SAMPLE_PUZZLES = [ ... ];` followed by a NEWLINE — and a Windows
+   checkout writes CRLF, so the pattern found nothing, the catch turned that
+   into `return false`, and a valid tree failed a release gate with a message
+   about placements being wrong. An independent review hit exactly that on
+   7 September 2026. Same class as the shared-layer hash fixed the day before:
+   what ships is what is in git, and a check that reads the working tree byte
+   for byte asks a different question on each machine.
+   Normalised, and an extraction failure is now its own check rather than a
+   content error wearing its clothes. */
+const sampleBoards = (() => {
+  try {
+    const src = fs.readFileSync(path.join(ROOT, "functions/_lib/ws-sample.js"), "utf8")
+      .split("\r\n").join("\n");
+    const m = src.match(/SAMPLE_PUZZLES = (\[[\s\S]*?\]);\n/);
+    return m ? JSON.parse(m[1]) : null;
+  } catch (e) { return null; }
+})();
+t("the sample boards can be read at all", Array.isArray(sampleBoards),
+  sampleBoards ? sampleBoards.length + " boards" : "ws-sample.js did not parse");
 t("sample placements spell their words at base 0", (() => {
   try {
-    const src = fs.readFileSync(path.join(ROOT, "functions/_lib/ws-sample.js"), "utf8");
-    const m = src.match(/SAMPLE_PUZZLES = (\[[\s\S]*?\]);\n/);
-    const boards = JSON.parse(m[1]);
+    const boards = sampleBoards;
+    if (!boards) return true;      // already reported, one line up
     const D = { E:[0,1],W:[0,-1],S:[1,0],N:[-1,0],SE:[1,1],SW:[1,-1],NE:[-1,1],NW:[-1,-1] };
     for (const b of boards) for (const a of b.answers.concat([b.bonus])) {
       const pl = a.placement, dd = D[pl.direction];

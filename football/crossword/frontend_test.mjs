@@ -546,7 +546,7 @@ server.listen(0, "127.0.0.1", async () => {
        came through. */
     const src = fs.readFileSync(path.join(DIR, "../../functions/api/check-answer.js"), "utf8")
       .replace(/\/\*[\s\S]*?\*\//g, "");
-    return /await tally\(env, playId, checkGrid \? "srv_check_alls" : "srv_checks"\)/.test(src) &&
+    return /await tally\(env, playId, checkGrid \? "srv_check_alls" : "srv_checks", identity\)/.test(src) &&
       !/\bpaid\b/.test(src);
   })());
 

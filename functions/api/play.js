@@ -176,8 +176,21 @@ export async function onRequestPost({ request, env }) {
     /* An update, not an insert: an attempt that ends twice — finished, then the
        tab closed, or abandoned and then come back to and finished — is still
        one attempt, and the last word wins. */
+    /* COMPLETION IS MONOTONIC ONCE THE SERVER HAS VERIFIED IT. /api/finish
+       marks the whole grid itself and writes solved, total and completed = 1
+       from what it judged. This beacon fires when the tab closes, which can be
+       minutes later and can carry the browser's own idea of an unfinished
+       board — an independent review pointed out on 7 September 2026 that it
+       would then overwrite a confirmed completion with completed = 0, leaving
+       a row with a verified score on it and "abandoned" beside it.
+       So the two fields the finish is authoritative about are kept where it
+       has spoken. Everything else the beacon knows better: the clock it ran,
+       the help it counted, its own detail. */
     await env.DB.prepare(
-      `UPDATE plays SET solved = ?, completed = ?, elapsed_secs = ?,
+      `UPDATE plays
+          SET solved = CASE WHEN srv_score IS NULL THEN ? ELSE solved END,
+              completed = CASE WHEN srv_score IS NULL THEN ? ELSE completed END,
+              elapsed_secs = ?,
               checks = ?, reveals = ?, detail = ?, ended_at = datetime('now')
         WHERE play_id = ?`)
       .bind(int(body.solved, 50), body.completed ? 1 : 0,

@@ -201,7 +201,7 @@ console.log("\nA press is charged once, whatever traffic it takes");
   const src = fs.readFileSync(path.join(DIR, "../../functions/api/check-answer.js"), "utf8");
   const js = fs.readFileSync(path.join(DIR, "js/game.js"), "utf8");
   t("a grid check is tallied as one grid check, not many single ones",
-    /tally\(env, playId, checkGrid \? "srv_check_alls" : "srv_checks"\)/.test(src));
+    /tally\(env, playId, checkGrid \? "srv_check_alls" : "srv_checks", identity\)/.test(src));
   t("and only one of its requests carries the play id", (() => {
     /* The tally is keyed on the play id, so the other ten cannot count even if
        the flag were ever lost. Two guards, because this one was expensive. */

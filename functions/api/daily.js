@@ -9,7 +9,7 @@
  */
 import { publicPuzzle, json, bad } from "../_lib/puzzle.js";
 import { getDailyPuzzle, makeToken } from "../_lib/db.js";
-import { dailyNumber, ANSWERS_AFTER_DAYS } from "../_lib/daily.js";
+import { dailyNumber, dailyDayKey, ANSWERS_AFTER_DAYS } from "../_lib/daily.js";
 import { mayOpenArchive, archiveRefusal, backForBoard, FREE_ARCHIVE_DAYS } from "../_lib/archive.js";
 
 export async function onRequestGet({ request, env }) {
@@ -62,6 +62,14 @@ export async function onRequestGet({ request, env }) {
   return json({
     mode: "daily",
     dailyNo: no,
+    /* THE DAY THIS BOARD IS, named by the server that decides it. The hub used
+       to write its own date from the device clock, and an independent review
+       read "Tuesday 8 September" on the front page beside "Mon 7 Sept" in the
+       game — a UK evening after local midnight and before UTC midnight, which
+       is an hour of every summer night. The number was already here; the day
+       it stands for was not, so the only way to name it on the client was a
+       second copy of the epoch. This is the first fact, said once. */
+    day: dailyDayKey(no),
     /* How many days until a board's answers page is published. The client
        needs the number for the calendar badges and the strap link, and this
        payload is how it learns it — copying the constant into game.js would

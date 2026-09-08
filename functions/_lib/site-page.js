@@ -35,7 +35,7 @@ const MAST = {
     name: "Wordsearch", home: "/football/wordsearch/",
     nav: [["Today", "/football/wordsearch/"], ["Themes", "/football/wordsearch/themes/"],
           ["Archive", "/football/wordsearch/archive/"],
-          ["Answers", "/football/wordsearch/answers/"], ["How to play", "/football/crossword/how-to-play"]],
+          ["Answers", "/football/wordsearch/answers/"], ["How to play", "/football/wordsearch/#how"]],
   },
   hilo: {
     name: "HiLo", home: "/football/hilo/",
@@ -50,19 +50,19 @@ const MAST = {
     name: "Scrambled", home: "/football/scrambled/",
     nav: [["Today", "/football/scrambled/"], ["Archive", "/football/scrambled/archive/"],
           ["Answers", "/football/scrambled/answers/"],
-          ["How to play", "/football/crossword/how-to-play"]],
+          ["How to play", "/football/scrambled/#how"]],
   },
   grid: {
     name: "Grid", home: "/football/grid/",
     nav: [["Today", "/football/grid/"], ["Archive", "/football/grid/archive/"],
           ["Answers", "/football/grid/answers/"],
-          ["How to play", "/football/crossword/how-to-play"]],
+          ["How to play", "/football/grid/#how"]],
   },
   vowels: {
     name: "Vowels", home: "/football/vowels/",
     nav: [["Today", "/football/vowels/"], ["Archive", "/football/vowels/archive/"],
           ["Answers", "/football/vowels/answers/"],
-          ["How to play", "/football/crossword/how-to-play"]],
+          ["How to play", "/football/vowels/#how"]],
   },
 };
 

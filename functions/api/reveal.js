@@ -15,7 +15,8 @@
  */
 import { normalise, json, bad } from "../_lib/puzzle.js";
 import { tally } from "../_lib/tally.js";
-import { getPuzzleForToken } from "../_lib/db.js";
+import { getPuzzleForToken, hasDB } from "../_lib/db.js";
+import { boardKeyForToken } from "../_lib/attempt.js";
 import { playableDailyNo } from "../_lib/daily.js";
 import { isAdmin } from "../_lib/auth.js";
 
@@ -46,8 +47,22 @@ export async function onRequestPost({ request, env }) {
   }
   const answer = normalise(puzzle.entries[idx].row.grid);
 
+  /* HELP THAT CANNOT BE CHARGED IS NOT SERVED, and until 8 September 2026 it
+     was. An independent review asked for entry 0 with NO play id and got the
+     whole answer back while the tally recorded nothing — so the help never
+     reached the row that was later submitted for a verified score. The board
+     is judged where the answers are and the score is written where the clock
+     is; a reveal has to touch both or it is free.
+     Offline and with no database this is unchanged: nothing there can be
+     verified, and /api/finish says so on its own. */
+  const identity = { game: "crossword", boardKey: boardKeyForToken(token, stored) };
+  const charge = async (column) => {
+    if (!hasDB(env)) return true;
+    return tally(env, playId, column, identity);
+  };
+
   if (index === undefined || index === null) {
-    await tally(env, playId, "srv_reveal_answers");
+    if (!(await charge("srv_reveal_answers"))) return refused();
     return json({ entry: idx, answer });
   }
 
@@ -58,6 +73,13 @@ export async function onRequestPost({ request, env }) {
   /* A substitution is free to the player but still a revealed letter, and it
      comes through this same call. The server cannot tell the two apart and
      should not try: what it counts is letters it handed over. */
-  await tally(env, playId, "srv_reveal_letters");
+  if (!(await charge("srv_reveal_letters"))) return refused();
   return json({ entry: idx, index: i, letter: answer[i] });
+}
+
+/* One refusal, and it says what to do about it. A player whose attempt never
+   reached the server — a start that failed on a flaky connection — sees this
+   rather than a silent nothing, and starting the board again fixes it. */
+function refused() {
+  return bad("That help could not be charged to this attempt. Start the board again.", 409);
 }

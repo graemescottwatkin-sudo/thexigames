@@ -28,6 +28,7 @@ import { getPuzzleForToken, hasDB } from "../_lib/db.js";
 import { playableDailyNo } from "../_lib/daily.js";
 import { isAdmin } from "../_lib/auth.js";
 import { computeScore, gridIsComplete, SCORING } from "../_lib/scoring.js";
+import { attemptMatches, ATTEMPT_COLUMNS } from "../_lib/attempt.js";
 
 export async function onRequestPost({ request, env }) {
   let body;
@@ -57,14 +58,29 @@ export async function onRequestPost({ request, env }) {
   }
 
   const row = await env.DB.prepare(
-    `SELECT started_at, srv_checks, srv_check_alls,
+    `SELECT ${ATTEMPT_COLUMNS}, started_at, srv_checks, srv_check_alls,
             srv_reveal_letters, srv_reveal_answers, srv_score
        FROM plays WHERE play_id = ? LIMIT 1`).bind(String(playId || "")).first();
   if (!row) return json({ complete: true, verified: false });
 
+  /* THE PLAY MUST BE THIS BOARD'S. Until 8 September 2026 this loaded a row by
+     id alone and stamped a score onto whatever it found: an independent review
+     solved a bundled practice board and had score 114 written onto a row whose
+     own columns said game "hilo", board "hl:999". The grid is marked where the
+     answers are and the score is written where the clock is, and nothing joined
+     the two. See _lib/attempt.js, which is that join.
+
+     The board is COMPLETE and the player is told so — what they lose is the
+     verification, because there is nothing here to verify against. */
+  if (!attemptMatches(row, token, stored)) {
+    return json({ complete: true, verified: false });
+  }
+
   /* Already scored: hand back what was recorded rather than scoring again. A
      second call cannot improve on the first, which is what stops a finished
-     board being re-submitted with a better time. */
+     board being re-submitted with a better time. Reached only after the
+     identity check above: a score belonging to another board must not be
+     handed back as this one's either. */
   if (row.srv_score !== null && row.srv_score !== undefined) {
     return json({ complete: true, verified: true, score: row.srv_score, already: true });
   }
@@ -115,7 +131,13 @@ export async function onRequestPost({ request, env }) {
                overwrites. */
             solved = ?, total = ?,
             completed = 1, ended_at = COALESCE(ended_at, datetime('now'))
-      WHERE play_id = ?`)
+      /* THE IDENTITY IS IN THE PREDICATE, not only in the check above. The
+         check is what the code believes; this is what the database enforces,
+         and between the two lines a row can be rewritten by another request.
+         srv_score IS NULL makes the first score the one that stands: a second
+         finish cannot overwrite it, which is the atomicity the review asked
+         for. */
+      WHERE play_id = ? AND game = 'crossword' AND srv_score IS NULL`)
     .bind(res.score, elapsed + helpSeconds,
           stored.puzzle.entries.length, stored.puzzle.entries.length,
           String(playId || "")).run();

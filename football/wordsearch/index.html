@@ -54,7 +54,7 @@
      squad. -->
 <header class="xic-bar">
   <div class="xic-right">
-    <button class="xic-ghost" id="wsHowTo" data-optional>How to play</button>
+    <a class="xic-ghost" href="#how" data-optional>How to play</a>
   </div>
 </header>
 
@@ -277,7 +277,24 @@
            lives on the hub. -->
       <div class="tb-table xit" id="tablePanel"></div>
     </aside>
-  </main>
+  
+  <!-- HOW TO PLAY, THIS GAME'S OWN. See the note in Grid XI's page: the button
+       had no handler and the masthead pointed at the crossword's rules. -->
+  <section class="how" id="how">
+    <h2>How to play</h2>
+    <p><b>Eleven names, hidden in the grid.</b> A starting eleven on a theme,
+       written in any direction — across, down, or diagonally, forwards or
+       backwards. Drag from the first letter to the last.</p>
+    <p><b>Ninety minutes, in ten.</b> The match clock runs the full ninety
+       while ten real minutes pass, and your score falls as it goes.</p>
+    <p><b>A twelfth word is hidden too.</b> The secret bonus is not in the
+       list — there is a clue for it instead — and finding it is worth ten.</p>
+    <p><b>Help cards cost match minutes</b> rather than points, so the clock
+       pays for them.</p>
+    <p><b>114 is the ceiling</b>, the eleven and the bonus together.</p>
+  </section>
+
+</main>
 
   <div class="finishPrompt" id="finishPrompt"><strong>XI complete.</strong> Keep hunting for the secret bonus?
     <span class="finishBtns"><button class="action" id="keepBtn">Keep hunting</button><button class="action gold" id="finishBtn">Full time</button></span>

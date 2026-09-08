@@ -95,6 +95,13 @@ jobs:
       # board has been played.
       - name: One challenge flow, for every game
         run: node tools/challenge_client_test.mjs
+      # The crossword's verified score, and the three ways an independent
+      # review had it for nothing on 7 Sep 2026: a finish stamped onto another
+      # game's play row, help served without being charged, and a free grid
+      # checker that answered "is this letter right?" one letter at a time.
+      # Every check here was seen to fail against the code as it was.
+      - name: A verified score belongs to the attempt it was played on
+        run: node tools/attempt_test.mjs
       # The crossword's GENERATOR, which nothing has run since the games moved
       # under football/ — it was written to live inside the private archive and
       # required ./engine.js and ./data.json beside it. It now runs against a

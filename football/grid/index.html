@@ -38,7 +38,7 @@
      shared/xi-chrome.js; only this game's own control is written here. -->
 <header class="xic-bar">
   <div class="xic-right">
-    <button class="xic-ghost" id="gdHowTo" data-optional>How to play</button>
+    <a class="xic-ghost" href="#how" data-optional>How to play</a>
   </div>
 </header>
 
@@ -88,6 +88,29 @@
 
   <!-- Full time. Written by the page when the server says the round is over. -->
   <section class="gd-ft" id="gdFullTime" hidden></section>
+
+
+  <!-- HOW TO PLAY, THIS GAME'S OWN. The button beside the wordmark had no
+       handler and the masthead pointed at the crossword's rules — a grid, a
+       thirty-minute clock and a bench, none of which this game has. Four games
+       carried that same pair; an independent review found the Vowels one on
+       7 September 2026 and this is the same fix. -->
+  <section class="how" id="how">
+    <h2>How to play</h2>
+    <p><b>Eleven footballers, one grid, no clues but the title.</b> The title
+       says what the eleven have in common — a final, a squad, a season — and
+       that is the whole of what you are given. Nothing is revealed at the
+       start.</p>
+    <p><b>Type a full name into an entry.</b> Every letter comes back marked:
+       right letter in the right square, right letter in the wrong square, or
+       not in the name at all.</p>
+    <p><b>Fifteen turns, shared across the board.</b> A wrong answer spends
+       one; a right answer hands one back. Solving an entry gives its letters
+       to everything that crosses it, so the board opens up as you go.</p>
+    <p><b>A hint costs four turns</b> and fills one letter.</p>
+    <p><b>114 is the ceiling</b>: eight for every entry solved, and up to
+       twenty-six more for finishing with turns to spare.</p>
+  </section>
 
 </main>
 

@@ -16,6 +16,7 @@ import { normalise, json, bad, solutionString } from "../_lib/puzzle.js";
 import { lockedSource } from "../_lib/sources.js";
 import { tally } from "../_lib/tally.js";
 import { getPuzzleForToken } from "../_lib/db.js";
+import { boardKeyForToken } from "../_lib/attempt.js";
 import { playableDailyNo } from "../_lib/daily.js";
 import { isAdmin } from "../_lib/auth.js";
 
@@ -61,6 +62,21 @@ export async function onRequestPost({ request, env }) {
     return Array.from({ length: len }, (_, i) => n.charAt(i) || null);
   };
 
+  /* WHICH ROW A CHARGE MAY LAND ON. The tally used to name the play id alone,
+     so a crossword check could be counted against a word search's row of the
+     same id; the identity goes into the UPDATE's own predicate now. See
+     _lib/tally.js and _lib/attempt.js.
+
+     WHAT IS NOT DONE HERE, and deliberately. The review asked for paid checks
+     to be refused when they cannot be charged, as /api/reveal now refuses
+     them. This endpoint cannot: a grid check is ONE press that takes eleven
+     requests, one per entry, and only the first carries the play id — so the
+     other ten cannot be charged by construction and refusing them would leave
+     a player who has paid nine points with ten failed requests. The fix is one
+     request for one press, which is a change to the protocol and to the
+     browser, not a refusal bolted onto this one. Recorded, not pretended. */
+  const identity = { game: "crossword", boardKey: boardKeyForToken(token, stored) };
+
   /* Whole-grid check. */
   if (grid !== undefined && grid !== null) {
     const want = normalise(solutionString(puzzle));
@@ -68,7 +84,7 @@ export async function onRequestPost({ request, env }) {
     const got = chars.map((c) => c || " ").join("");
     const complete = chars.every((c) => c !== null);
     const allRight = complete && chars.every((c, i) => c === want[i]);
-    await tally(env, playId, "srv_check_alls");
+    await tally(env, playId, "srv_check_alls", identity);
     if (!detail) return json({ correct: allRight });
     /* The nudge ("six letters are wrong") is free information the game has
        always shown once the grid is full. It says how much, never where.
@@ -120,7 +136,7 @@ export async function onRequestPost({ request, env }) {
      question. Only the first request carries a play id, and it says which kind
      of press it was, so this counts one grid check rather than eleven single
      ones. Charged at nine points, it was costing thirty-six. */
-  await tally(env, playId, checkGrid ? "srv_check_alls" : "srv_checks");
+  await tally(env, playId, checkGrid ? "srv_check_alls" : "srv_checks", identity);
   if (!detail) return json({ correct, source });
 
   // Positions that are filled and wrong. A blank square is not "wrong" — it has

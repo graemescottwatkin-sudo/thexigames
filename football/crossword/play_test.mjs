@@ -47,10 +47,23 @@ function makeEnv() {
           const row = { completed: 0, ended_at: null };
           cols.forEach((c, i) => { row[c] = b[i]; });
           rows.push(row);
-        } else if (sql.includes("UPDATE plays SET solved")) {
+        } else if (/UPDATE plays\s+SET solved/.test(sql)) {
+          /* MATCHED ON THE STATEMENT, NOT ON ONE LINE OF IT. This looked for
+             the literal "UPDATE plays SET solved", and the day the route put
+             the SET on its own line the stub stopped recognising the beacon
+             altogether — every check here failed for a reason that had nothing
+             to do with what they guard.
+             And the rule in it is modelled rather than skipped: solved and
+             completed are the finish's once it has scored, so a stub that
+             wrote them anyway would pass the old statement and the new one
+             alike, which is the vacuous check this project keeps finding. */
           const r = rows.find((x) => x.play_id === b[b.length - 1]);
-          if (r) { r.solved = b[0]; r.completed = b[1]; r.elapsed_secs = b[2];
-                   r.checks = b[3]; r.reveals = b[4]; r.detail = b[5]; r.ended_at = "now"; }
+          if (r) {
+            const held = /srv_score IS NULL/.test(sql) && r.srv_score != null;
+            if (!held) { r.solved = b[0]; r.completed = b[1]; }
+            r.elapsed_secs = b[2];
+            r.checks = b[3]; r.reveals = b[4]; r.detail = b[5]; r.ended_at = "now";
+          }
         }
         return { success: true };
       },

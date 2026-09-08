@@ -17,7 +17,8 @@
  */
 import { normalise, json, bad, solutionString } from "../_lib/puzzle.js";
 import { lockedSource } from "../_lib/sources.js";
-import { getPuzzleForToken } from "../_lib/db.js";
+import { getPuzzleForToken, hasDB } from "../_lib/db.js";
+import { limited, tooMany } from "../_lib/limit.js";
 import { playableDailyNo } from "../_lib/daily.js";
 import { isAdmin } from "../_lib/auth.js";
 
@@ -41,6 +42,29 @@ export async function onRequestPost({ request, env }) {
     const want = normalise(solutionString(stored.puzzle));
     const chars = Array.from({ length: want.length },
       (_, i) => normalise(String(grid || "")).charAt(i) || null);
+
+    /* A PARTIAL GRID IS NOT A NUDGE, IT IS AN ORACLE. A blank square does not
+       count as wrong, so a grid holding ONE letter answered "is that letter
+       right?" for nothing — and an independent review walked the alphabet a
+       square at a time and recovered the first twelve letters of a bundled
+       board in 148 free requests, with no play id and no cost.
+       The nudge exists for one moment: the last square has just been filled
+       and something is off. The page only ever asks then — game.js sends this
+       inside `if (gridFull())` — so requiring a full grid takes nothing away
+       from a player and takes the walk away from everyone else. */
+    if (chars.some((c) => c === null)) {
+      return json({ full: false, wrongCells: null, wrongEntries: null, total: want.length });
+    }
+
+    /* AND NOT AS OFTEN AS YOU LIKE. A full grid still answers "did that one
+       change help?" if you flip a square and ask again, which is the same walk
+       at thirteen times the price. A player refilling a grid trips this a
+       handful of times; a walk needs hundreds. The limiter is the family's own
+       and fails open, so a database hiccup cannot take the nudge away. */
+    if (hasDB(env) && await limited(env, request, "verify-grid", 40, 3600)) {
+      return tooMany(json);
+    }
+
     let wrongCells = 0;
     for (let i = 0; i < want.length; i++) if (chars[i] && chars[i] !== want[i]) wrongCells++;
     const order = Object.keys(stored.puzzle.cells).sort();

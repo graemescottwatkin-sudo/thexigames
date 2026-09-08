@@ -43,7 +43,7 @@
      shared/xi-chrome.js; only this game's own control is written here. -->
 <header class="xic-bar">
   <div class="xic-right">
-    <button class="xic-ghost" id="scHowTo" data-optional>How to play</button>
+    <a class="xic-ghost" href="#how" data-optional>How to play</a>
   </div>
 </header>
 
@@ -71,7 +71,7 @@
       <nav class="site-nav">
         <button class="on" id="navToday">Today</button>
         <button id="navClubs">Matches</button>
-        <a class="site-navlink" href="/football/scrambled/how-to-play">How to play</a>
+        <a class="site-navlink" href="#how">How to play</a>
       </nav>
     </div>
   </header>
@@ -230,6 +230,33 @@
       <div id="shareRow"></div>
     </div>
     <button class="btn quiet" id="playAgain">Clear this board and replay</button>
+  </section>
+
+
+  <!-- HOW TO PLAY, THIS GAME'S OWN. Both ways in used to lead somewhere wrong:
+       the nav link pointed at /football/scrambled/how-to-play, which has
+       answered 404 on production since the game launched, and the button
+       beside the wordmark had no handler at all. Vowels XI, generated from
+       this file, pointed its nav at the CROSSWORD's rules — thirty minutes and
+       a grid, for a game with neither — which is what an independent review
+       found on 7 September 2026. HiLo XI already had the right shape: the
+       rules on the page, at #how, reachable from both. -->
+  <section class="how" id="how">
+    <h2>How to play</h2>
+    <p><b>Eleven names, scrambled.</b> A starting eleven, in the positions they
+       played, with the letters of every surname shuffled. Solve them in any
+       order — there are no crossings, so nothing unlocks anything else.</p>
+    <p><b>Ninety minutes, in fifteen.</b> The match clock runs the full ninety
+       while fifteen real minutes pass, and your score falls as it goes. It
+       pauses when you leave the tab.</p>
+    <p><b>The bench costs points.</b> A hint is three, a letter two, and giving
+       up a whole name is nine — the same prices the crossword charges, so a
+       point costs the same across the family.</p>
+    <p><b>The team talk is free.</b> At half time every hint is given, because
+       eleven anagrams get no easier as you solve: what is left at the end is
+       what you had no way into.</p>
+    <p><b>114 is the ceiling</b>, and what you keep of it is the clock and the
+       bench taken off.</p>
   </section>
 
   <!-- The family's keyboard, built by shared/xi-keys.js. Outside the screens

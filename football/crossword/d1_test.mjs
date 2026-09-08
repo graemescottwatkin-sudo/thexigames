@@ -32,6 +32,12 @@ const env = { DB: { prepare(sql) {
       const seen = [...new Set(rows.filter(r => r.mode === "practice" && r.category).map(r => r.category))];
       return { results: seen.map(category => ({ category })) };
     },
+    /* THE PLAYS TABLE THE CHARGE LANDS ON. A reveal is served only when it can
+       be charged to the attempt asking for it — see functions/_lib/tally.js —
+       so a stub with no run() is a database where no charge can land, and this
+       suite would fail on a rule it is not about. One row changed, which is
+       what the real UPDATE reports for an attempt that exists. */
+    async run() { return { success: true, meta: { changes: 1 } }; },
   };
   return api;
 } } };
@@ -43,7 +49,11 @@ for (let i = 0; i < 6; i++) {
   const r = await practice({ request: req("https://x/api/practice"), env });
   const b = await r.json();
   const idNum = Number(String(b.token).split(":")[1]);
-  const rv = await reveal({ request: req("https://x", { token: b.token, entry: 0 }), env });
+  /* WITH THE ATTEMPT IT BELONGS TO. The request used to carry no play id at
+     all, which is the shape an independent review used to collect answers for
+     nothing on 7 September 2026; the game has always sent one. */
+  const rv = await reveal({ request: req("https://x", {
+    token: b.token, entry: 0, playId: "p-d1-" + i + "-0000" }), env });
   t(`practice token ${b.token} resolves for reveal`, rv.status === 200, "status " + rv.status);
   t(`  token id ${idNum} is a real practice row id, not a 1..N counter`,
     rows.some(r2 => r2.id === idNum && r2.mode === "practice"));
