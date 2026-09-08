@@ -1,6 +1,6 @@
 /* gd-sample.js — two Grid XI boards, so the game runs with no database.
  *
- * The same arrangement HiLo and the word search keep: the BANK is 236 boards
+ * The same arrangement HiLo and the word search keep: the BANK is 256 boards
  * and lives outside the repository, and this is a sample small enough to commit
  * and complete enough for a suite to play. Every offline run — every check in
  * CI, and `wrangler pages dev` on a machine with no D1 — sees these two and
@@ -8,7 +8,7 @@
  *
  * YES, THE ANSWERS ARE IN HERE, and that is the same trade the other two make.
  * A sample carrying no answers could not be played and so could not be tested,
- * and two boards out of 236 is not the bank. What must never happen is a
+ * and two boards out of 256 is not the bank. What must never happen is a
  * board reaching a BROWSER with its letters, which is a different question and
  * is what gd-board.js publicBoard and football/grid/api_test.mjs are for.
  *
@@ -19,6 +19,7 @@ export const GD_SAMPLE_BOARDS = [
  {
   "id": "gx-0082",
   "set_id": "fifpro-world-11-2008",
+  "kind": "daily",
   "title": "FIFPro World XI — 2008",
   "rows": 9,
   "cols": 13,
@@ -340,9 +341,10 @@ export const GD_SAMPLE_BOARDS = [
   }
  },
  {
-  "id": "gx-0169",
-  "set_id": "premier-league-founder-members",
-  "title": "Founder members of the Premier League",
+  "id": "gx-0256",
+  "set_id": "premier-league-grounds-over-30000-2026-27",
+  "kind": "daily",
+  "title": "Premier League grounds with a capacity above 30,000 (2026–27)",
   "rows": 16,
   "cols": 16,
   "entries": [
@@ -370,17 +372,38 @@ export const GD_SAMPLE_BOARDS = [
      "8,14",
      "8,15"
     ],
-    "answer": "NOTTINGHAMFOREST",
-    "member": "Nottingham Forest"
+    "answer": "TOTTENHAMHOTSPUR",
+    "member": "Tottenham Hotspur Stadium"
    },
    {
     "n": 2,
     "dir": "down",
-    "r": 0,
-    "c": 0,
-    "len": 15,
+    "r": 2,
+    "c": 12,
+    "len": 11,
     "cells": [
-     "0,0",
+     "2,12",
+     "3,12",
+     "4,12",
+     "5,12",
+     "6,12",
+     "7,12",
+     "8,12",
+     "9,12",
+     "10,12",
+     "11,12",
+     "12,12"
+    ],
+    "answer": "STJAMESPARK",
+    "member": "St James' Park"
+   },
+   {
+    "n": 3,
+    "dir": "down",
+    "r": 1,
+    "c": 0,
+    "len": 13,
+    "cells": [
      "1,0",
      "2,0",
      "3,0",
@@ -393,39 +416,34 @@ export const GD_SAMPLE_BOARDS = [
      "10,0",
      "11,0",
      "12,0",
-     "13,0",
-     "14,0"
+     "13,0"
     ],
-    "answer": "BLACKBURNROVERS",
-    "member": "Blackburn Rovers"
-   },
-   {
-    "n": 3,
-    "dir": "down",
-    "r": 1,
-    "c": 2,
-    "len": 14,
-    "cells": [
-     "1,2",
-     "2,2",
-     "3,2",
-     "4,2",
-     "5,2",
-     "6,2",
-     "7,2",
-     "8,2",
-     "9,2",
-     "10,2",
-     "11,2",
-     "12,2",
-     "13,2",
-     "14,2"
-    ],
-    "answer": "MANCHESTERCITY",
-    "member": "Manchester City"
+    "answer": "ETIHADSTADIUM",
+    "member": "City of Manchester Stadium"
    },
    {
     "n": 4,
+    "dir": "down",
+    "r": 1,
+    "c": 14,
+    "len": 10,
+    "cells": [
+     "1,14",
+     "2,14",
+     "3,14",
+     "4,14",
+     "5,14",
+     "6,14",
+     "7,14",
+     "8,14",
+     "9,14",
+     "10,14"
+    ],
+    "answer": "CITYGROUND",
+    "member": "Stamford Bridge"
+   },
+   {
+    "n": 5,
     "dir": "down",
     "r": 4,
     "c": 5,
@@ -442,151 +460,134 @@ export const GD_SAMPLE_BOARDS = [
      "12,5",
      "13,5"
     ],
-    "answer": "ASTONVILLA",
-    "member": "Aston Villa"
-   },
-   {
-    "n": 5,
-    "dir": "down",
-    "r": 1,
-    "c": 13,
-    "len": 9,
-    "cells": [
-     "1,13",
-     "2,13",
-     "3,13",
-     "4,13",
-     "5,13",
-     "6,13",
-     "7,13",
-     "8,13",
-     "9,13"
-    ],
-    "answer": "MANUNITED",
-    "member": "Manchester United"
+    "answer": "ELLANDROAD",
+    "member": "Elland Road"
    },
    {
     "n": 6,
     "dir": "down",
-    "r": 4,
-    "c": 15,
-    "len": 7,
+    "r": 0,
+    "c": 10,
+    "len": 11,
     "cells": [
-     "4,15",
-     "5,15",
-     "6,15",
-     "7,15",
-     "8,15",
-     "9,15",
-     "10,15"
+     "0,10",
+     "1,10",
+     "2,10",
+     "3,10",
+     "4,10",
+     "5,10",
+     "6,10",
+     "7,10",
+     "8,10",
+     "9,10",
+     "10,10"
     ],
-    "answer": "EVERTON",
-    "member": "Everton"
+    "answer": "PORTMANROAD",
+    "member": "Hill Dickinson Stadium"
    },
    {
     "n": 7,
-    "dir": "down",
-    "r": 0,
-    "c": 9,
-    "len": 16,
+    "dir": "across",
+    "r": 5,
+    "c": 0,
+    "len": 7,
     "cells": [
-     "0,9",
-     "1,9",
-     "2,9",
-     "3,9",
-     "4,9",
-     "5,9",
-     "6,9",
-     "7,9",
-     "8,9",
-     "9,9",
-     "10,9",
-     "11,9",
-     "12,9",
-     "13,9",
-     "14,9",
-     "15,9"
+     "5,0",
+     "5,1",
+     "5,2",
+     "5,3",
+     "5,4",
+     "5,5",
+     "5,6"
     ],
-    "answer": "TOTTENHAMHOTSPUR",
-    "member": "Tottenham Hotspur"
+    "answer": "ANFIELD",
+    "member": "Anfield"
    },
    {
     "n": 8,
-    "dir": "down",
-    "r": 7,
-    "c": 7,
-    "len": 7,
+    "dir": "across",
+    "r": 0,
+    "c": 5,
+    "len": 9,
     "cells": [
-     "7,7",
-     "8,7",
-     "9,7",
-     "10,7",
-     "11,7",
-     "12,7",
-     "13,7"
+     "0,5",
+     "0,6",
+     "0,7",
+     "0,8",
+     "0,9",
+     "0,10",
+     "0,11",
+     "0,12",
+     "0,13"
     ],
-    "answer": "CHELSEA",
-    "member": "Chelsea"
+    "answer": "VILLAPARK",
+    "member": "Villa Park"
    },
    {
     "n": 9,
+    "dir": "down",
+    "r": 3,
+    "c": 3,
+    "len": 8,
+    "cells": [
+     "3,3",
+     "4,3",
+     "5,3",
+     "6,3",
+     "7,3",
+     "8,3",
+     "9,3",
+     "10,3"
+    ],
+    "answer": "EMIRATES",
+    "member": "Emirates Stadium"
+   },
+   {
+    "n": 10,
+    "dir": "down",
+    "r": 2,
+    "c": 8,
+    "len": 14,
+    "cells": [
+     "2,8",
+     "3,8",
+     "4,8",
+     "5,8",
+     "6,8",
+     "7,8",
+     "8,8",
+     "9,8",
+     "10,8",
+     "11,8",
+     "12,8",
+     "13,8",
+     "14,8",
+     "15,8"
+    ],
+    "answer": "STADIUMOFLIGHT",
+    "member": "Stadium of Light"
+   },
+   {
+    "n": 11,
     "dir": "across",
     "r": 15,
-    "c": 8,
-    "len": 7,
+    "c": 5,
+    "len": 11,
     "cells": [
+     "15,5",
+     "15,6",
+     "15,7",
      "15,8",
      "15,9",
      "15,10",
      "15,11",
      "15,12",
      "15,13",
-     "15,14"
+     "15,14",
+     "15,15"
     ],
-    "answer": "ARSENAL",
-    "member": "Arsenal"
-   },
-   {
-    "n": 10,
-    "dir": "down",
-    "r": 1,
-    "c": 11,
-    "len": 9,
-    "cells": [
-     "1,11",
-     "2,11",
-     "3,11",
-     "4,11",
-     "5,11",
-     "6,11",
-     "7,11",
-     "8,11",
-     "9,11"
-    ],
-    "answer": "LIVERPOOL",
-    "member": "Liverpool"
-   },
-   {
-    "n": 11,
-    "dir": "across",
-    "r": 12,
-    "c": 5,
-    "len": 11,
-    "cells": [
-     "12,5",
-     "12,6",
-     "12,7",
-     "12,8",
-     "12,9",
-     "12,10",
-     "12,11",
-     "12,12",
-     "12,13",
-     "12,14",
-     "12,15"
-    ],
-    "answer": "LEEDSUNITED",
-    "member": "Leeds United"
+    "answer": "OLDTRAFFORD",
+    "member": "Old Trafford"
    }
   ],
   "crossings": [
@@ -594,29 +595,29 @@ export const GD_SAMPLE_BOARDS = [
     "cell": "8,0",
     "entries": [
      1,
-     2
-    ],
-    "at": [
-     0,
-     8
-    ]
-   },
-   {
-    "cell": "8,2",
-    "entries": [
-     1,
      3
     ],
     "at": [
-     2,
+     0,
      7
+    ]
+   },
+   {
+    "cell": "8,3",
+    "entries": [
+     1,
+     9
+    ],
+    "at": [
+     3,
+     5
     ]
    },
    {
     "cell": "8,5",
     "entries": [
      1,
-     4
+     5
     ],
     "at": [
      5,
@@ -624,102 +625,102 @@ export const GD_SAMPLE_BOARDS = [
     ]
    },
    {
-    "cell": "8,7",
-    "entries": [
-     1,
-     8
-    ],
-    "at": [
-     7,
-     1
-    ]
-   },
-   {
-    "cell": "8,9",
-    "entries": [
-     1,
-     7
-    ],
-    "at": [
-     9,
-     8
-    ]
-   },
-   {
-    "cell": "8,11",
+    "cell": "8,8",
     "entries": [
      1,
      10
     ],
     "at": [
-     11,
-     7
+     8,
+     6
     ]
    },
    {
-    "cell": "8,13",
-    "entries": [
-     1,
-     5
-    ],
-    "at": [
-     13,
-     7
-    ]
-   },
-   {
-    "cell": "8,15",
+    "cell": "8,10",
     "entries": [
      1,
      6
     ],
     "at": [
-     15,
-     4
+     10,
+     8
     ]
    },
    {
-    "cell": "12,5",
+    "cell": "8,12",
     "entries": [
-     4,
-     11
+     1,
+     2
     ],
     "at": [
-     8,
+     12,
+     6
+    ]
+   },
+   {
+    "cell": "8,14",
+    "entries": [
+     1,
+     4
+    ],
+    "at": [
+     14,
+     7
+    ]
+   },
+   {
+    "cell": "5,0",
+    "entries": [
+     3,
+     7
+    ],
+    "at": [
+     4,
      0
     ]
    },
    {
-    "cell": "12,9",
+    "cell": "5,5",
     "entries": [
-     7,
-     11
+     5,
+     7
     ],
     "at": [
-     12,
-     4
+     1,
+     5
     ]
    },
    {
-    "cell": "15,9",
+    "cell": "0,10",
+    "entries": [
+     6,
+     8
+    ],
+    "at": [
+     0,
+     5
+    ]
+   },
+   {
+    "cell": "5,3",
     "entries": [
      7,
      9
     ],
     "at": [
-     15,
-     1
+     3,
+     2
     ]
    },
    {
-    "cell": "12,7",
+    "cell": "15,8",
     "entries": [
-     8,
+     10,
      11
     ],
     "at": [
-     5,
-     2
+     13,
+     3
     ]
    }
   ],
@@ -733,4 +734,4 @@ export const GD_SAMPLE_BOARDS = [
 
 /* The calendar, as OFFSETS from today. -1 is yesterday, so the archive has one
    board and today has the other. */
-export const GD_SAMPLE_SCHEDULE = {"0":"gx-0169","-1":"gx-0082"};
+export const GD_SAMPLE_SCHEDULE = {"0":"gx-0256","-1":"gx-0082"};
