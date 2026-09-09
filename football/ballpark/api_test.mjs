@@ -23,6 +23,7 @@ import { onRequestGet as daily } from "../../functions/api/ballpark/daily.js";
 import { onRequestPost as open } from "../../functions/api/ballpark/open.js";
 import { onRequestPost as answer } from "../../functions/api/ballpark/answer.js";
 import { onRequestPost as narrow } from "../../functions/api/ballpark/narrow.js";
+import { onRequestGet as archive } from "../../functions/api/ballpark/archive.js";
 import {
   loadBank, boardForDay, todayKey, boardToken, publicBoard, narrowWindow, RULES,
 } from "../../functions/_lib/bp-board.js";
@@ -216,6 +217,34 @@ async function run() {
         { token: tomorrow, playId: "p-future", idx: 1, guess: 1 }), env: envF });
       t(`${name} refuses a board whose day has not come`, r.status === 404, `status ${r.status}`);
     }
+  }
+
+  /* ---- 2b. the archive stops at today ---------------------------------- */
+  {
+    /* THE FAULT THIS EXISTS FOR. bp_schedule holds 175 days and most of them
+       are ahead. The word search built its archive index the same way, offered
+       238 boards from days it had never reached, and its answers pages then
+       published 233 future dailies — names, placements and the secret bonus
+       word. An index is a promise about what has already happened. */
+    const envF = { DB: makeDb(futureBank()) };
+    const a = await bodyOf(await archive({ env: envF }));
+    const listed = a.days.map((d) => d.id);
+    t("the archive lists the days that have run", listed.includes("bp-0001") &&
+      listed.includes("bp-0002"), listed.join(", "));
+    t("and not tomorrow's, which the same table holds",
+      !listed.includes("bp-0003"), listed.join(", "));
+    t("newest first", a.days.length > 1 && a.days[0].day > a.days[1].day,
+      a.days.map((d) => d.day).join(" > "));
+    /* NUMBERED BY THE FAMILY'S DAY COUNT, not by position in this list — a
+       game that starts after the epoch has gaps, and a running index would
+       renumber them quietly. */
+    t("today is numbered as the family numbers it", a.days[0].no === today,
+      `${a.days[0].no} vs ${today}`);
+    t("yesterday is one less", a.days[1].no === today - 1, String(a.days[1].no));
+    /* A MENU IS IDS, NEVER PAYLOADS — Grid XI's catalogue lesson. */
+    const txt = JSON.stringify(a);
+    t("the archive carries no question and no answer",
+      !/"questions"/.test(txt) && !/"answer"/.test(txt), "");
   }
 
   /* ---- 3. the clock is the server's ------------------------------------ */

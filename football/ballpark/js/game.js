@@ -376,6 +376,103 @@
     });
   }
 
+  /* ---- previous boards ---------------------------------------------------
+   *
+   * The days the calendar has actually reached, from the server, newest first.
+   * The page does not work out which days exist and does not work out what day
+   * it is: both come from /api/ballpark/archive, which stops at today.
+   */
+  var archiveDays = null, serverDay = null, freeArchiveDays = null, todayNo = null;
+
+  function dayLabel(day) {
+    var d = new Date(day + "T00:00:00Z");
+    return d.toLocaleDateString("en-GB",
+      { weekday: "short", day: "numeric", month: "short", timeZone: "UTC" });
+  }
+
+  /* BEYOND THE FREE WINDOW NEEDS AN ACCOUNT, and the rule is the server's — the
+     archive route refuses it whatever this says. Shown here so a locked row
+     looks locked before it is pressed, rather than answering with a 401. */
+  function archiveLocked(day) {
+    if (freeArchiveDays == null || !serverDay) return false;
+    var chrome = window.XIChrome && window.XIChrome.account;
+    if (!chrome) return false;
+    if (chrome.user()) return false;
+    if (chrome.available && !chrome.available()) return false;
+    var back = Math.round(
+      (Date.parse(serverDay + "T00:00:00Z") - Date.parse(day + "T00:00:00Z")) / 86400000);
+    return back > freeArchiveDays;
+  }
+
+  function renderArchive() {
+    var list = $("archiveList");
+    if (!list || !archiveDays) return;
+    list.innerHTML = "";
+    if (!archiveDays.length) {
+      var empty = document.createElement("li");
+      empty.className = "arch-empty";
+      empty.textContent = "The first board is today — come back tomorrow.";
+      list.appendChild(empty);
+      $("archiveSub").textContent = "";
+      return;
+    }
+    archiveDays.forEach(function (e) {
+      var li = document.createElement("li");
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "arch-row" + (archiveLocked(e.day) ? " locked" : "");
+      b.setAttribute("data-no", e.no);
+      var day = document.createElement("span");
+      day.className = "arch-day"; day.textContent = dayLabel(e.day);
+      var theme = document.createElement("span");
+      theme.className = "arch-theme";
+      theme.textContent = e.no === todayNo ? "Today" : "Board " + e.no;
+      var state = document.createElement("span");
+      state.className = "arch-state"; state.textContent = "To play";
+      b.appendChild(day); b.appendChild(theme); b.appendChild(state);
+      li.appendChild(b); list.appendChild(li);
+    });
+    $("archiveSub").textContent = archiveDays.length +
+      (archiveDays.length === 1 ? " day so far" : " days so far");
+  }
+
+  function toggleArchive() {
+    var panel = $("archivePanel");
+    if (!panel.classList.contains("hidden")) {
+      panel.classList.add("hidden");
+      $("homePrevious").setAttribute("aria-expanded", "false");
+      return;
+    }
+    panel.classList.remove("hidden");
+    $("homePrevious").setAttribute("aria-expanded", "true");
+    renderArchive();
+    if (panel.scrollIntoView) panel.scrollIntoView({ block: "nearest" });
+  }
+
+  $("homePrevious").addEventListener("click", toggleArchive);
+  $("archiveList").addEventListener("click", function (ev) {
+    var row = ev.target.closest && ev.target.closest(".arch-row");
+    if (!row) return;
+    if (row.classList.contains("locked")) {
+      $("archiveSub").textContent = "The last " + freeArchiveDays +
+        " days are free for everyone. Sign in to play the rest.";
+      return;
+    }
+    kickOff(Number(row.getAttribute("data-no")));
+  });
+
+  fetch("/api/ballpark/archive").then(function (r) { return r.json(); })
+    .then(function (d) {
+      if (!d || !d.days) return;
+      archiveDays = d.days;
+      todayNo = d.today;
+      serverDay = d.days.length ? d.days[0].day : null;
+      freeArchiveDays = d.freeArchiveDays;
+      $("homePreviousCount").textContent = archiveDays.length
+        ? archiveDays.length + (archiveDays.length === 1 ? " day so far" : " days so far")
+        : "The first board is today";
+    }).catch(function () {});
+
   /* ---- kick off ----------------------------------------------------------- */
 
   function startRound(data) {
@@ -396,7 +493,13 @@
     show();
   }
 
-  $("homeDaily").addEventListener("click", function () {
+  $("homeDaily").addEventListener("click", function () { kickOff(null); });
+
+  /* ONE WAY IN, whichever card was pressed. `no` is null for today and a board
+     number for a previous day; the server decides whether that number may be
+     opened at all, and answers 403 for a day that has not come and 401 for one
+     past the free window. */
+  function kickOff(no) {
     $("homeDaily").disabled = true;
     /* THE PLAY ID, AND WHY THIS GAME MINTS ITS OWN FOR NOW.
        /api/play refuses a game that is not in GAMES, and this one is not: it is
@@ -418,16 +521,18 @@
     }).then(function (r) { return r.json(); }).catch(function () { return {}; })
       .then(function (p) {
         if (p && p.playId) playId = p.playId;
-        return fetch("/api/ballpark/daily").then(function (r) { return r.json(); });
+        return fetch("/api/ballpark/daily" + (no ? "?no=" + no : ""))
+          .then(function (r) { return r.json(); });
       })
       .then(function (data) {
         if (!data || !data.board) {
-          $("startState").textContent = "No board today.";
+          $("startState").textContent = data && data.error
+            ? data.error : "No board for that day.";
           $("homeDaily").disabled = false;
           return;
         }
         startRound(data);
       })
       .catch(function () { $("homeDaily").disabled = false; });
-  });
+  }
 })();
