@@ -237,6 +237,46 @@
   font:500 13px/1.5 "Public Sans",system-ui,sans-serif; color:var(--ink-soft);
 }
 
+/* ---- previous boards ----------------------------------------------------
+ *
+ * These classes are each game's own, not the shared landing's — HiLo and the
+ * word search both carry their own copy, and a game that renders the markup
+ * without them gets a list of rows with no columns: "Wed 9 SeptTodayTo play",
+ * which is what this page shipped with for one deploy. Same structure and the
+ * same tokens, so the list reads identically across the family.
+ */
+.arch-head{display:flex; align-items:baseline; justify-content:space-between; gap:12px}
+.arch-head .site-sec{margin:0}
+.arch-sub{font-size:12px; color:var(--ink-soft)}
+.arch-list{
+  list-style:none; margin:8px 0 0; padding:0;
+  max-height:min(52vh,420px); overflow:auto;
+  border:1px solid var(--line); border-radius:8px; background:var(--card);
+}
+.arch-row{
+  display:grid; grid-template-columns:78px 1fr auto; gap:10px; align-items:center;
+  width:100%; min-height:var(--tap); padding:9px 12px;
+  border:0; border-bottom:1px solid var(--line); background:none; color:var(--ink);
+  text-align:left; font:inherit; cursor:pointer;
+}
+.arch-list li:last-child .arch-row{border-bottom:0}
+.arch-row:hover{background:var(--sel-word)}
+.arch-row:focus-visible{outline:none; box-shadow:var(--ring)}
+.arch-day{
+  font-family:var(--disp); font-weight:700; font-size:13px; letter-spacing:.04em;
+  text-transform:uppercase; color:var(--ink-soft);
+}
+.arch-theme{font-size:14px}
+.arch-state{
+  font-family:var(--disp); font-weight:600; font-size:11px; letter-spacing:.12em;
+  text-transform:uppercase; color:var(--pitch);
+}
+/* PAST THE FREE WINDOW. Dimmed AND padlocked, because dimming alone is a
+   colour-only signal. The server refuses these whatever the page shows. */
+.arch-row.locked{opacity:.62}
+.arch-row.locked .arch-state::after{content:" F512"}
+.arch-empty{padding:12px; font-size:13px; color:var(--ink-soft)}
+
 /* HIDDEN MEANS HIDDEN. A rule that sets `display` on an element beats the user
    agent's `[hidden]{display:none}`, because both are plain declarations and the
    author's wins — so `.ft{display:flex}` put the full-time card on screen over
