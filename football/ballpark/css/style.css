@@ -134,25 +134,34 @@
 /* ---- the track ---------------------------------------------------------- */
 
 .track{position:relative; height:44px; margin:6px auto 2px; max-width:560px}
+/* A BAR, NOT A LINE. It was a 6px rule and read as a hairline the control
+   happened to sit on rather than as the thing being set. At 16px it is a
+   trough: the ballpark lights up inside it, the answer's mark crosses it, and
+   the thumb rides on it. The tap target is unchanged — .track is still 44px
+   tall and the input still covers all of it, so what grew is what you see and
+   not what you have to hit. */
 .track::before{
-  content:""; position:absolute; left:0; right:0; top:50%; height:6px;
-  transform:translateY(-50%); background:var(--line); border-radius:4px;
+  content:""; position:absolute; left:0; right:0; top:50%; height:16px;
+  transform:translateY(-50%); background:var(--line); border-radius:9px;
 }
 .track>span{position:absolute; top:50%; transform:translateY(-50%); pointer-events:none}
 
 /* The ballpark's WIDTH, drawn around the player's own knob — how precise they
    must be. It says nothing about where the answer is. */
 .ghost{
-  height:14px; border-radius:8px; background:var(--accent); opacity:0;
+  height:16px; border-radius:9px; background:var(--accent); opacity:0;
   transition:opacity .15s ease;
 }
 .ghost.on{opacity:.22}
 
 /* Both of these appear only after the lock. */
-.band{height:14px; border-radius:8px; background:var(--ok); opacity:0}
-.band.on{opacity:.3}
+/* Filling the trough exactly, so the ballpark reads as a lit stretch OF the
+   bar rather than a shape floating over it. */
+.band{height:16px; border-radius:9px; background:var(--ok); opacity:0}
+.band.on{opacity:.42}
+/* The true value, crossing the bar so it is legible against a lit band. */
 .mark{
-  width:3px; height:26px; border-radius:2px; background:var(--ink);
+  width:3px; height:30px; border-radius:2px; background:var(--ink);
   opacity:0; margin-left:-1.5px;
 }
 .mark.on{opacity:1}
