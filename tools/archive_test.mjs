@@ -23,7 +23,7 @@ import { onRequestGet as crosswordAnswers } from "../functions/football/crosswor
 import {
   PERMA_GAMES, boardKeys, permalinkPath, permalinkRoute, todayKeyFor, gamePath, gameDir,
 } from "../functions/_lib/permalink.js";
-import { dailyNoForDay, dailyDayKey } from "../functions/_lib/daily.js";
+import { dailyNoForDay, dailyDayKey, dailyNumber, ANSWERS_AFTER_DAYS } from "../functions/_lib/daily.js";
 import { FREE_ARCHIVE_DAYS } from "../functions/_lib/archive.js";
 import { GAMES, BUILT, launchNumber, LAUNCHED } from "../functions/_lib/games.js";
 import fs from "node:fs";
@@ -234,15 +234,41 @@ console.log("\nThe pages that link to it");
      a board was the state on production. All three shapes are covered — the
      shared module, the crossword's own copy, and a game whose answers are
      addressed by DAY while its boards are addressed by number. */
-  /* SCRAMBLED HAS NOTHING PUBLISHED YET and that is now correct rather than a
-     gap: it launched on board 7 and the seal is ANSWERS_AFTER_DAYS, so its
-     first answers page opens a week after launch. Before 6 Sep 2026 it
-     published boards 1 to 4 — days the game did not exist — which is what
-     made this checkable at all. So the empty state is what is asserted, and
-     the play link itself is proved below on a game that has one. */
+  /* SCRAMBLED'S ANSWERS INDEX, ASKED AS A PROPERTY RATHER THAN AS A MOMENT.
+     It launched on board 7 and the seal is ANSWERS_AFTER_DAYS, so it published
+     nothing at all until board 14. This check used to assert the EMPTY state —
+     "The game is new" — and that was true when it was written on 6 Sep 2026 and
+     stopped being true overnight on the 9th, when board 14 arrived and the
+     first page opened. It then failed CI for a change that had nothing to do
+     with it: a test pinned to a passing moment enforces the drift instead of
+     catching it.
+     What is actually being claimed is that the index offers the archive in
+     EITHER state, and says something true about which state it is in. Which
+     state applies is derived from the same two constants the page uses, so this
+     needs no revisiting on the day HiLo and Vowels open theirs. */
   const sc = await (await scrambledAnswers({ env, params: { path: [] } })).text();
-  t("scrambled's answers index offers the archive even with nothing published",
-    sc.includes('href="/football/scrambled/archive/"') && sc.includes("The game is new"));
+  const scOpensAt = launchNumber("scrambled") + ANSWERS_AFTER_DAYS;
+  const scPublishing = dailyNumber(Date.now()) >= scOpensAt;
+  t("scrambled's answers index offers the archive, published or not",
+    sc.includes('href="/football/scrambled/archive/"'), "");
+  t(scPublishing
+      ? `scrambled is past its seal (board ${scOpensAt}), so the index links boards`
+      : `scrambled is still sealed until board ${scOpensAt}, so the index says the game is new`,
+    scPublishing
+      ? /href="\/football\/scrambled\/answers\/\d+"/.test(sc) &&
+        /href="\/football\/scrambled\/daily\/\d+"/.test(sc)
+      : sc.includes("The game is new"),
+    "");
+  /* AND NOTHING BEFORE THE SEAL, WHICHEVER STATE IT IS IN — the half that
+     matters, and the one the word search got wrong when it published 233 boards
+     that had not run. Every board the index names must be old enough. */
+  {
+    const named = [...sc.matchAll(/href="\/football\/scrambled\/answers\/(\d+)"/g)]
+      .map((m) => Number(m[1]));
+    const tooNew = named.filter((n) => n + ANSWERS_AFTER_DAYS > dailyNumber(Date.now()));
+    t("and it names no board whose seal has not expired", tooNew.length === 0,
+      tooNew.length ? `boards ${tooNew.join(", ")}` : `${named.length} board(s) named`);
+  }
   const cw = await (await crosswordAnswers({ env })).text();
   t("the crossword's own answers index does too",
     /href="\/football\/crossword\/daily\/\d+"/.test(cw) &&
