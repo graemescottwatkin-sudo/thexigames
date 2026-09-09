@@ -68,9 +68,9 @@
      own — the team sheet and the kit colours. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared/xi-tokens.css?v=v33">
-<link rel="stylesheet" href="shared/xi-chrome.css?v=v33">
-<script src="shared/xi-theme.js?v=v33"></script>
+<link rel="stylesheet" href="shared/xi-tokens.css?v=v34">
+<link rel="stylesheet" href="shared/xi-chrome.css?v=v34">
+<script src="shared/xi-theme.js?v=v34"></script>
 <style>
 :root{
 
@@ -97,6 +97,8 @@
   --kit-07:#D96C2C;        /* tangerine     */
   --kit-08:#5B4B8A;         /* purple        */
   --kit-09:#4C8C7A;         /* teal          */
+  --kit-10:#6B7D8C;         /* slate         */
+  --kit-11:#8A6D3B;         /* bronze        */
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
@@ -275,7 +277,7 @@ a.shirt{display:flex;align-items:center;gap:9px;min-height:44px;
   display:flex;align-items:center;justify-content:center;gap:16px}
 .rest-line::before,.rest-line::after{content:"";height:1px;background:var(--line);
   flex:1 1 auto;max-width:200px}
-.soon-grid{display:flex;justify-content:center}
+.soon-grid{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
 .soon-card{background:transparent;border:1px dashed var(--line);border-radius:999px;
   padding:7px 16px 7px 7px;display:inline-flex;align-items:center;gap:10px;
   min-height:44px}
@@ -677,16 +679,32 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
          built under.
 
          GRID XI TOOK THE SIX ON 7 SEP 2026, so the tail moved down one and the
-         squad lost an unsigned slot rather than growing a twelfth. QuickFire is
-         in testing and holds no shirt: it sits on the first number no launched
-         game wears, which is now seven. -->
+         squad lost an unsigned slot rather than growing a twelfth. Two games
+         are in testing and neither holds a shirt: they sit on numbers no
+         launched game wears, on the seven and the eleven, which is the owner's
+         ordering of what is next rather than anything the numbers mean. -->
     <p class="rest-line">The squad keeps growing &mdash;
        <span id="toSignProse">five</span> more to come</p>
     <div class="soon-grid">
-      <a class="soon-card open" href="/football/quickfire/" rel="nofollow"
+      <!-- TWO IN TESTING, AND EACH IS A NUMBER AND A STATUS, never a name —
+           for the reason set out above: this page is indexed, and naming an
+           unfinished game hands the roadmap away. The path in the href is not
+           markup a reader sees and is what makes the card openable at all; the
+           game's own page is where it is named.
+           NEITHER HOLDS A SHIRT. These are the numbers no launched game wears,
+           and the order across them is the owner's — which is next up, and
+           which is last. A shirt is taken at LAUNCH, and only then does the
+           kit-belongs-to-the-game rule above start to bind: until a game has
+           been played under a colour, there is no colour to keep. -->
+      <a class="soon-card open" href="/football/ballpark/" rel="nofollow"
          title="In testing — not finished, and not yet a daily game">
         <span class="sq" style="background:var(--kit-07)">7</span>
         <span class="nm">Number seven<span>In testing</span></span>
+      </a>
+      <a class="soon-card open" href="/football/quickfire/" rel="nofollow"
+         title="In testing — not finished, and not yet a daily game">
+        <span class="sq" style="background:var(--kit-11)">11</span>
+        <span class="nm">Number eleven<span>In testing</span></span>
       </a>
     </div>
   </section>
@@ -730,8 +748,8 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
      and the one page list, so the front door's footer and every game's are
      the same footer. -->
 <footer class="xic-foot"></footer>
-<script src="shared/xi-season.js?v=v33"></script>
-<script src="shared/xi-chrome.js?v=v33"></script>
+<script src="shared/xi-season.js?v=v34"></script>
+<script src="shared/xi-chrome.js?v=v34"></script>
 
 <script>
 /* Progressive enhancement only: everything above renders complete without
@@ -1048,7 +1066,7 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
       if (ladderLibs) return ladderLibs;
       ladderLibs = new Promise(function (done) {
         var left = 2, ok = true;
-        ["shared/xi-seasons.js?v=v33", "shared/xi-table.js?v=v33"].forEach(function (src) {
+        ["shared/xi-seasons.js?v=v34", "shared/xi-table.js?v=v34"].forEach(function (src) {
           var el = document.createElement("script");
           el.src = src;
           el.onload = function () { if (!--left) done(ok); };

@@ -58,13 +58,21 @@
        moved from 5 to 6 when Vowels went out: a game in testing does not hold
        a shirt, and it moves down when a game ships past it. */
     { n: 6,  name: "Grid XI",        href: "/football/grid/" },
-    { n: 7,  status: "In testing",   href: "/football/quickfire/" },
+    /* TWO GAMES ARE IN TESTING, and neither holds a shirt — a shirt is taken
+       at LAUNCH. What the numbers say here is the OWNER'S ORDERING of what is
+       next, decided on 9 September 2026: the newer of the two on the seven and
+       QuickFire on the eleven. That is a change of intent, not of status, and
+       nothing about either game moved.
+       Both open, and both say a number and a status and nothing else. The
+       link is for whoever is testing it; the name stays off every served page
+       until the day it launches. */
+    { n: 7,  status: "In testing",   href: "/football/ballpark/" },
     { n: 8,  status: "In build" },
     { n: 9,  status: "On the drawing board" },
     { n: 10, status: "On the drawing board" },
     /* Eleven shirts, and a game launching pushes the tail down one — so the
        squad loses an unsigned slot rather than growing a twelfth. */
-    { n: 11, status: "Not yet signed" }
+    { n: 11, status: "In testing",   href: "/football/quickfire/" }
   ];
 
   /* WHERE A GAME LIVES, read off the squad rather than assembled from its id.

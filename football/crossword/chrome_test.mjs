@@ -36,7 +36,12 @@ function render(path, url) {
   dom.window.eval(themeJs);
   dom.window.eval(chromeJs);
   dom.window.XIChrome.init();
-  return dom.window.document;
+  const doc = dom.window.document;
+  /* The DECLARED squad, carried on the document alongside the markup it just
+     built — so a check can ask the list itself rather than re-deriving it from
+     its own output, which would only prove the renderer is self-consistent. */
+  doc.chrome = dom.window.XIChrome;
+  return doc;
 }
 
 const cw = render("football/crossword/index.html", "https://www.thexigames.com/football/crossword/");
@@ -148,11 +153,15 @@ console.log("\nA game in testing is reachable, and still not named");
    opens — while the name stays off every served page, which is the standing
    rule and the checks above still hold it. */
 const testingSlots = [...cw.querySelectorAll(".xic-squad .xic-slot.soon[href]")];
-t("the slot for a game in testing opens", testingSlots.length === 1,
-  testingSlots.map((e) => e.getAttribute("href")).join(", "));
-t("and says only its number and its status, never a name", (() => {
-  const e = testingSlots[0];
-  if (!e) return false;
+/* HOW MANY THERE ARE IS NOT WRITTEN DOWN. This asked for exactly one, because
+   for a while there was exactly one — and it went red the day a second game
+   went into testing, for a change it was never about. The squad list is the one
+   place that says which games are in testing, so it is asked. */
+const testingInSquad = cw.chrome.squad.filter((g) => g.href && !g.name);
+t("every game the squad has in testing has a slot that opens",
+  testingSlots.length === testingInSquad.length && testingSlots.length > 0,
+  `${testingSlots.length} slots, ${testingInSquad.length} in the squad`);
+t("and each says only its number and its status, never a name", testingSlots.every((e) => {
   const status = e.querySelector(".xic-status");
   return !!e.querySelector(".xic-shirt") && !!status && /testing/i.test(status.textContent) &&
     /* The whole of its text is the shirt and the status: nothing else has
@@ -164,15 +173,17 @@ t("and says only its number and its status, never a name", (() => {
        nowhere else, and that includes here. */
     e.textContent.replace(/\s+/g, " ").trim() ===
       `${e.querySelector(".xic-shirt").textContent.trim()}${status.textContent}`;
-})());
-t("the route in is marked nofollow, so it is not an announcement",
-  !!testingSlots[0] && testingSlots[0].getAttribute("rel") === "nofollow");
+}));
+t("every route in is marked nofollow, so none is an announcement",
+  testingSlots.length > 0 &&
+  testingSlots.every((e) => e.getAttribute("rel") === "nofollow"));
 /* The footer lists games by NAME. A slot with a href and no name put an
    empty link into the footer of every page on the site. */
 t("the footer names released games only, with no empty link", (() => {
   const links = [...cw.querySelectorAll(".xic-foot-in a")];
+  const testingHrefs = new Set(testingInSquad.map((g) => g.href));
   return links.length > 0 && links.every((a) => a.textContent.trim().length > 0) &&
-    !links.some((a) => a.getAttribute("href") === "/football/quickfire/");
+    !links.some((a) => testingHrefs.has(a.getAttribute("href")));
 })());
 /* THE NUMBER IS DERIVED, BECAUSE AN UNLAUNCHED GAME DOES NOT HOLD ONE.
    A shirt is taken when a game LAUNCHES, first come first served; a game in
@@ -186,22 +197,29 @@ t("the footer names released games only, with no empty link", (() => {
    hub, under the rest of the XI rather than Out now, unnamed and nofollow.
    The number it happens to sit on is the first shirt no launched game wears,
    which the squad already states — so it is read from there. */
-t("the hub carries the same route in, on a card under the rest of the XI", (() => {
-  const card = hub.querySelector(".soon-grid a.soon-card");
-  if (!card) return false;
+t("the hub carries every one of those routes in, under the rest of the XI", (() => {
+  const cards = [...hub.querySelectorAll(".soon-grid a.soon-card")];
   const strip = hub.querySelector(".xi-strip");
-  /* The first shirt no launched game wears, read off the drawer the chrome
-     just built rather than off a number typed here. */
-  const firstFree = cw.querySelector(".xic-squad .xic-slot.soon .xic-shirt");
-  const shirt = card.querySelector(".sq");
-  return card.getAttribute("href") === "/football/quickfire/" &&
-    card.getAttribute("rel") === "nofollow" &&
-    /in testing/i.test(card.textContent) &&
-    !!firstFree && !!shirt && shirt.textContent.trim() === firstFree.textContent.trim() &&
-    /* Not in Out now, and not promoted to a live shirt in the roll-call. The
-       count of live shirts is the count of launched games, derived above for
-       the same reason rather than written down. */
-    !card.closest("section").textContent.includes("Out now") &&
+  if (cards.length !== testingInSquad.length || !cards.length) return false;
+  /* THE NUMBER ON THE CARD IS THE NUMBER IN THE SQUAD, whatever that is. It
+     used to be "the first shirt no launched game wears", which was a fair
+     derivation while one game was in testing and stopped being one the moment
+     the owner ordered two of them — the seven and the eleven. The squad list is
+     the one place a shirt number lives, so both the hub and this read it from
+     there and cannot disagree. */
+  const bySquad = new Map(testingInSquad.map((g) => [g.href, String(g.n)]));
+  return cards.every((card) => {
+    const shirt = card.querySelector(".sq");
+    const href = card.getAttribute("href");
+    return bySquad.has(href) &&
+      card.getAttribute("rel") === "nofollow" &&
+      /in testing/i.test(card.textContent) &&
+      !!shirt && shirt.textContent.trim() === bySquad.get(href) &&
+      /* Not in Out now, and not promoted to a live shirt in the roll-call. */
+      !card.closest("section").textContent.includes("Out now");
+  }) &&
+    /* The count of live shirts is the count of launched games, derived rather
+       than written down. */
     !!strip && strip.querySelectorAll("a.shirt.live").length === releasedSlots;
 })());
 
