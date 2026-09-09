@@ -93,9 +93,47 @@
    showing a number is a slider that has already guessed for them. */
 .big.empty span{font:500 15px/1.3 "Public Sans",system-ui,sans-serif; color:var(--ink-faint)}
 
+/* WHAT HESITATING COSTS, WHERE THE HESITATING HAPPENS. The clock and the
+   falling points were only in the scoreboard at the top — the one place a
+   player is not looking while they drag. The same two numbers, from the same
+   tick, repeated tight to the value being set: the drama of a per-question
+   clock is watching the points fall while you decide, and that only works if
+   both are in one glance. Hidden from screen readers because the scoreboard
+   already announces them and saying it twice is noise, not emphasis. */
+.tension{
+  display:flex; gap:14px; justify-content:center; align-items:baseline;
+  margin:14px 0 0; min-height:18px;
+}
+.tension span{
+  font:700 17px/1 "Barlow Condensed",system-ui,sans-serif; color:var(--ink-soft);
+  font-variant-numeric:tabular-nums; letter-spacing:.02em;
+}
+.tension i{
+  font:600 10px/1 "Public Sans",system-ui,sans-serif; font-style:normal;
+  letter-spacing:.1em; text-transform:uppercase; color:var(--ink-faint);
+  margin-left:3px;
+}
+.tension span.warn{color:var(--danger)}
+
+/* ---- the column --------------------------------------------------------
+ *
+ * A RANGE INPUT WITH NOTHING HOLDING IT STRETCHES TO THE VIEWPORT. At 1500px
+ * this game's one control rendered 1,431px wide — a hairline across the whole
+ * screen with Lock it in stranded at x=27, which is what the owner saw and
+ * called "a line and a lock in on the far left".
+ * The reason is NOT that it becomes imprecise. Measured on the board that was
+ * live: a 43-unit range over 1,431px is 33 pixels per unit, which is the
+ * opposite problem — over-precise, and needing an arm's sweep to move three
+ * caps. It reads as imprecise only on a wide range, an attendance say. Either
+ * way the answer is the same: a control you can cross with one movement, and a
+ * column that holds the whole game together instead of four elements each
+ * finding their own width.
+ */
+.game{max-width:720px; margin-left:auto; margin-right:auto}
+
 /* ---- the track ---------------------------------------------------------- */
 
-.track{position:relative; height:44px; margin:6px 0 2px}
+.track{position:relative; height:44px; margin:6px auto 2px; max-width:560px}
 .track::before{
   content:""; position:absolute; left:0; right:0; top:50%; height:6px;
   transform:translateY(-50%); background:var(--line); border-radius:4px;
@@ -144,10 +182,12 @@
   box-shadow:0 0 0 3px var(--card),0 0 0 6px var(--accent);
 }
 
+/* TIED TO THE TRACK, not to the edges of the screen — the two ends of the
+   slider have to sit at the two ends of the slider. */
 .ends{
-  display:flex; justify-content:space-between;
+  display:flex; justify-content:space-between; max-width:560px; margin:0 auto 12px;
   font:600 13px/1 "Public Sans",system-ui,sans-serif; color:var(--ink-faint);
-  font-variant-numeric:tabular-nums; margin-bottom:12px;
+  font-variant-numeric:tabular-nums;
 }
 
 .verdict{
@@ -159,7 +199,9 @@
 
 /* ---- the buttons -------------------------------------------------------- */
 
-.acts{display:flex; flex-wrap:wrap; gap:8px; align-items:center}
+/* Under the control rather than at the far left of whatever width the page
+   happens to be, so the thing you press is where you were just looking. */
+.acts{display:flex; flex-wrap:wrap; gap:8px; align-items:center; justify-content:center}
 .ghostBtn{
   appearance:none; background:transparent; border:1px solid var(--line);
   color:var(--ink); border-radius:10px; padding:9px 13px; cursor:pointer;

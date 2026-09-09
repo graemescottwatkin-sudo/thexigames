@@ -152,6 +152,11 @@
     el.innerHTML = Math.ceil(left) + "<small>s</small>";
     el.className = "secs" + (left <= 3 ? " warn" : "");
     $("worth").textContent = Math.round(worth);
+    /* The same two numbers, beside the value. Written from this tick rather
+       than from a second timer, so they cannot disagree with the scoreboard. */
+    $("tSecs").innerHTML = Math.ceil(left) + "<i>sec</i>";
+    $("tSecs").className = left <= 3 ? "warn" : "";
+    $("tPts").innerHTML = Math.round(worth) + "<i>pts</i>";
     drawGrades(board.questions[step], worth, null);
     if (left <= 0) lock(true);
   }
@@ -247,6 +252,10 @@
     $("secs").innerHTML = lockedSecs + "<small>s</small>";
     $("secs").className = "secs";
     $("worth").textContent = points[step];
+    /* Frozen where the clock stopped, rather than left running or blanked. */
+    $("tSecs").innerHTML = lockedSecs + "<i>sec</i>";
+    $("tSecs").className = "";
+    $("tPts").innerHTML = points[step] + "<i>pts</i>";
     drawGrades(q, points[step], r.grade);
 
     var v = $("verdict");

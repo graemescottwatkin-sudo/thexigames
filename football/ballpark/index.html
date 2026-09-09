@@ -25,7 +25,7 @@
 <!-- The theme, stamped before first paint: light unless the player chose
      dark, decided in one shared place for every page of the family. -->
 <script src="/shared/xi-theme.js?v=v34"></script>
-<link rel="stylesheet" href="css/style.css?v=v001a">
+<link rel="stylesheet" href="css/style.css?v=v001b">
 <!-- NO data-game ON <html>, DELIBERATELY. The accent palette lives in
      shared/xi-tokens.css, which every page of the site loads, and this game has
      not launched — naming it there would name it to everybody. QuickFire XI is
@@ -213,6 +213,15 @@
         <p class="eyebrow" id="modeLabel">Today</p>
         <h2 class="q" id="q"></h2>
 
+        <!-- The clock and what the question is worth, beside the number being
+             set. Same two values as the scoreboard, from the same tick — one
+             fact, rendered twice, because the cost of hesitating has to be
+             visible at the moment of hesitating. -->
+        <p class="tension" id="tension" aria-hidden="true">
+          <span id="tSecs">20<i>sec</i></span>
+          <span id="tPts">10<i>pts</i></span>
+        </p>
+
         <div class="big empty" id="big">
           <span id="val">Tap the track to place your guess</span>
           <em id="unit"></em>
@@ -276,6 +285,6 @@
      clock and what a substitution costs — and no answers, which is the whole
      arrangement: see the note at the top of it. -->
 <script src="js/rules.js?v=v001"></script>
-<script src="js/game.js?v=v001a"></script>
+<script src="js/game.js?v=v001b"></script>
 </body>
 </html>
