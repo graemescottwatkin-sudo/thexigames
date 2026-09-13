@@ -211,6 +211,15 @@ jobs:
           # second one is the point: every check in that file is watched
           # failing before it is trusted.
           node football/quickfire/gate_test.mjs
+          # And what the page tells a player when there is no board. That branch
+          # was wrong in production for weeks with no report: /api/quickfire/daily
+          # answered 500 because the qf_ tables did not exist, and the page said
+          # "try again in a moment" — a permanent fault dressed as a passing one,
+          # which nobody escalates because they are told to wait. It needs a
+          # runner: it asserts the RIGHT message per cause, and a suite that only
+          # checked "an error appears" would have passed the version that was
+          # wrong. Needs jsdom.
+          node football/quickfire/loadfail_test.mjs
           # Scrambled XI, shirt 3, released. It has its own gate, its own
           # live_check and a row in aligned_test now, so it is held to the
           # same law as the other two.
@@ -317,6 +326,17 @@ jobs:
           # the runner, and a check that passes when it finds no problems also
           # passes when it finds nothing at all.
           node tools/import_ballpark.js --check
+          # And the guards on the calendar it writes, which until now were
+          # proved only by hand-sabotage in one evening's session. The boundary
+          # is the one that matters: rebuilding from tomorrow must carry TODAY
+          # forward, because today's board has already been served — three
+          # sessions read that boundary three different ways on 13 September and
+          # the one in the tree was right by luck. A rule read three ways gets
+          # "fixed" in the wrong direction eventually, and the fix looks like a
+          # tidy-up. The last block reads the real emitted dump when one is
+          # beside the checkout and SKIPS on a runner, so the fixtures above are
+          # deliberately wide enough to catch a broken reader without it.
+          node tools/import_ballpark_test.mjs
           # The importer's gate, on the committed sample — because there is no
           # bank on a runner and a check that passes when it finds no problems
           # also passes when it finds nothing at all.

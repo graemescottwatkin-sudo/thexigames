@@ -116,8 +116,16 @@ and diagnose before anything ships. Never push past a red gate.
 - `results`/`plays` sanity via wrangler if relevant:
   `npx wrangler d1 execute crosswordxi --remote --command="..."`.
   **Never run a migration that is already applied** — `ALTER TABLE` is not
-  idempotent. Migration state: **001–033 all applied** (002 was applied late,
-  27 Aug; there is no 022 in the tree — the numbering skips it). Verified 5 Sep
+  idempotent. Migration state: **001–034 all applied** (002 was applied late,
+  27 Aug; 022 was the slot 023 reserved for QuickFire XI and stayed empty for
+  weeks — written and applied 13 Sep 2026, five tables and three indexes
+  confirmed live, `qf_question` carrying the four option columns and the
+  `status` filter that decides whether a row is ever served. It is eight
+  `CREATE ... IF NOT EXISTS` and nothing else, so it is safe to re-run.
+  THE TABLES ARE EMPTY: there is no `bank.json` for QuickFire — the source is
+  an xlsx — so `/api/quickfire/daily` answers 404 "no board published for
+  today" rather than the 500 it answered before, and the game is still not
+  playable). Verified 5 Sep
   2026 against the live database: every table each migration creates exists,
   and `results.game` and `plays.game` are present for the two that only ALTER.
   031 (`ws_round`, `ws_find`, `ws_foul`) and 032 (`season_play`) confirmed

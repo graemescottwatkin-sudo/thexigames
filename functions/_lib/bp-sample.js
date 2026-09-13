@@ -24,7 +24,7 @@ export const BP_SAMPLE_BOARDS = [
    {
     "id": "appointed-alan-pardew-newcastle-united",
     "question": "In which year was Alan Pardew first appointed manager of Newcastle United?",
-    "detail": "His first permanent spell at the club. Caretakers are not counted.",
+    "detail": "His first spell in charge of the club, whether or not it began as a caretaker appointment.",
     "answer": 2010,
     "lo": 2007,
     "hi": 2024,
@@ -88,8 +88,8 @@ export const BP_SAMPLE_BOARDS = [
    },
    {
     "id": "facup-drought-chelsea",
-    "question": "How many years has it been since Chelsea last won the FA Cup?",
-    "detail": "As at the end of the 2025/26 season. They last won it in 2018, one of 8, from 17 finals.",
+    "question": "As at the end of the 2025/26 season, how many years had it been since Chelsea last won the FA Cup?",
+    "detail": "They last won it in 2018, one of 8, from 17 finals.",
     "answer": 8,
     "lo": 0,
     "hi": 36,
@@ -251,8 +251,8 @@ export const BP_SAMPLE_BOARDS = [
    },
    {
     "id": "facup-drought-liverpool",
-    "question": "How many years has it been since Liverpool last won the FA Cup?",
-    "detail": "As at the end of the 2025/26 season. They last won it in 2022, one of 8, from 15 finals.",
+    "question": "As at the end of the 2025/26 season, how many years had it been since Liverpool last won the FA Cup?",
+    "detail": "They last won it in 2022, one of 8, from 15 finals.",
     "answer": 4,
     "lo": 0,
     "hi": 25,

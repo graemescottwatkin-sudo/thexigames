@@ -15,6 +15,40 @@
  * relearning is that the second door must not inherit the first door's
  * assumptions. Two gates on one silent fault is right when the cost is a
  * scored day.
+ *
+ * THE SEQUENCE, IN ORDER, AND THE SECOND CAPTURE IS THE ONE PEOPLE SKIP:
+ *
+ *   0. VERIFY this side matches theirs before touching anything:
+ *        node tools/db_archive.mjs --check data/bp-production.sql   (their repo)
+ *      It compares BOARD ROWS and ignores the generation header, which moves on
+ *      every run — a check that fires on every regeneration gets switched off
+ *      within a week and is then still there, meaning nothing.
+ *   1. ask the content side to FREEZE and wait for its confirmation
+ *   2. CAPTURE the current dump into their dated archive (tools/db_archive.mjs
+ *      on their side, or send them data/bp-production.sql)
+ *   3. run this tool, then apply the SQL
+ *   4. CAPTURE AGAIN
+ *
+ * Step 4 exists because an archive only answers for days AFTER it is taken. If
+ * the import lands and nobody captures, the first day that passes afterwards
+ * becomes unprovable in exactly the way bp-0001..bp-0013 already are — they ran
+ * before the only import this database has had, so what they served is not in
+ * the seed and is nowhere else.
+ *
+ * AND ONE OBLIGATION THAT RUNS THE OTHER WAY, which is not optional:
+ *
+ *   IF AN IMPORT LANDS INSIDE A DAY THAT HAS BEEN SERVED, the content side
+ *   cannot tell whether the copy played was the old one or the new one — it
+ *   has no access to D1, and "no play recorded" and "no play happened" are the
+ *   same string to it. Send it the play times:
+ *
+ *       SELECT board_id, started_ms, datetime(started_ms/1000,'unixepoch')
+ *       FROM bp_round ORDER BY started_ms;
+ *
+ *   Their register fails closed on an unresolved straddle rather than assuming
+ *   the day is clean, so silence from here reads as unresolved — which is the
+ *   correct behaviour and the reason the obligation is written down here, at
+ *   the point somebody runs the import, rather than in a note nobody opens.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -129,16 +163,112 @@ function loadBoards() {
   return { idx, boards };
 }
 
+/* ---- the calendar, and the days it must not rewrite --------------------
+ *
+ * THE PAST IS NOT REBUILDABLE. A re-import is generated from a bank that has
+ * moved, and if the day somebody played now names a different board, their
+ * result is filed against a board they never saw. Grid XI shipped that fault
+ * and had to grow these three functions to close it; this is the same shape
+ * for the same reason, and the reason it is here BEFORE it was needed is that
+ * on 13 September the bank had gained five boards and the question "does any
+ * played day move" could not be answered by reading the importer.
+ */
+
+/* The calendar as it was last written, read back out of the SQL this tool
+   emits — the only record of it that lives outside D1. */
+function scheduleFromSql(sql) {
+  const out = {};
+  const re = /INSERT INTO bp_schedule \(day, board_id\) VALUES \('([^']+)', '([^']+)'\);/g;
+  for (const m of String(sql || "").matchAll(re)) out[m[1]] = m[2];
+  return out;
+}
+
+/* Everything before the start day, kept exactly as it was. Without this a
+   `--from` of tomorrow leaves yesterday with no board at all — the emitted SQL
+   clears the table and writes only what it built — which is a rewrite by
+   omission and the history guard below refuses it as one. */
+function carryForward(prev, fromDay) {
+  const keep = {};
+  for (const day of Object.keys(prev || {})) {
+    if (!fromDay || day < fromDay) keep[day] = prev[day];
+  }
+  return keep;
+}
+
+/* The BOARDS as last written, id -> payload, read back out of the same SQL.
+   Needed because the schedule guard below compares ids, and an id is not a
+   board. */
+function boardsFromSql(sql) {
+  const out = {};
+  const re = /INSERT OR REPLACE INTO bp_board \(id, ordinal, payload, updated_at\) VALUES \('([^']+)', \d+, '((?:[^']|'')*)'/g;
+  for (const m of String(sql || "").matchAll(re)) out[m[1]] = m[2].replace(/''/g, "'");
+  return out;
+}
+
+/* THE CHECK THE ID COMPARISON CANNOT MAKE.
+ *
+ * "Does the day still name the same board" and "is it still the same board" are
+ * different questions, and the guard below only asked the first. On 14 September
+ * the Ballpark content side reissued three times; bp-0014 and bp-0015 kept their
+ * ids and SIX OF ELEVEN QUESTIONS MOVED OFF EACH. Somebody answered eleven
+ * questions on bp-0014 and most of them are no longer on it. The id guard would
+ * have passed that without a murmur, because the id never moved.
+ *
+ * So: for any board that has actually been SERVED, the payload must be
+ * byte-identical to what was served. The served list cannot come from here —
+ * this tool has no database — so it is passed in, and its ABSENCE is refused
+ * rather than assumed, for the same reason the missing-calendar case is.
+ */
+function contentClash(prevBoards, nextBoards, servedIds) {
+  const clashes = [];
+  for (const id of servedIds || []) {
+    const was = prevBoards[id], now = nextBoards[id];
+    if (was === undefined) continue;          // never written here; nothing to compare
+    if (now === undefined) { clashes.push({ id, why: "gone from the bank" }); continue; }
+    if (was !== now) clashes.push({ id, why: "questions changed" });
+  }
+  return clashes;
+}
+
+/* Every day that has already happened and would now name a DIFFERENT board.
+   A day that is merely gone from the new calendar counts too: a played day
+   with no board is the same lie told by omission. */
+function historyClash(prev, next, today) {
+  const clashes = [];
+  for (const day of Object.keys(prev || {}).sort()) {
+    if (day >= today) continue;
+    const was = prev[day], now = (next || {})[day] || null;
+    if (String(was) !== String(now)) clashes.push({ day, was, now });
+  }
+  return clashes;
+}
+
 /* One board a day from a start day, in the order they were ISSUED — which is
-   the ordinal the content side froze, not the order they happen to be read. */
-function buildSchedule(boards, fromDay) {
+   the ordinal the content side froze, not the order they happen to be read.
+   Days already written are carried in and never reassigned. */
+function buildSchedule(boards, fromDay, keep = {}) {
   const start = Date.parse(String(fromDay) + "T00:00:00Z");
   if (!Number.isFinite(start)) return null;
-  const schedule = {};
-  [...boards].sort((a, b) => Number(a.ordinal || a.day) - Number(b.ordinal || b.day))
-    .forEach((b, i) => {
-      schedule[new Date(start + i * 86400000).toISOString().slice(0, 10)] = b.id;
-    });
+  const schedule = { ...keep };
+  /* AND NOTHING THE PAST HAS ALREADY SERVED. Rebuilding from a day forward
+     restarts the run at the first board, so without this the boards the
+     carried-forward past already used are handed out a SECOND time — bp-0014
+     played on 8 September and scheduled again for the 27th, with its content
+     frozen, so the same eleven questions twice. Invisible on the day of the
+     change and obvious a fortnight later, which is the shape Grid XI's
+     importer carries the same guard against.
+     Found by reading the emitted SQL rather than the check's summary: the
+     summary said 179 boards and a sensible date range, and was right about
+     both. */
+  const alreadyServed = new Set(Object.values(keep).map(String));
+  let i = 0;
+  for (const b of [...boards].sort((a, b2) =>
+      Number(a.ordinal || a.day) - Number(b2.ordinal || b2.day))) {
+    if (alreadyServed.has(String(b.id))) continue;
+    const day = new Date(start + i * 86400000).toISOString().slice(0, 10);
+    if (!(day in schedule)) schedule[day] = b.id;
+    i++;
+  }
   return schedule;
 }
 
@@ -182,6 +312,9 @@ function main() {
   }
 
   let refused = 0;
+  /* Which boards must not be rewritten, carried from the guard down to the
+     writer so the two cannot disagree about what "served" means. */
+  let servedIdsForWrite = [];
   const seen = new Set();
   /* Named and counted, never swallowed. A warning nobody prints is a warning
      that does not exist; see the note beside the endpoint rule in gate(). */
@@ -228,7 +361,89 @@ ${warned.length} warning(s). Not refusals — nothing here stops a write:`);
   }
 
   const from = arg("from") || null;
-  const days = from ? Object.keys(buildSchedule(boards, from) || {}).sort() : [];
+  /* THE CALENDAR AS IT STANDS, before this run replaces it. Read from the file
+     this tool last wrote, because the emitted SQL clears bp_schedule and is
+     therefore the only thing that remembers what the past served. */
+  const previous = fs.existsSync(OUT) ? scheduleFromSql(fs.readFileSync(OUT, "utf8")) : {};
+  const kept = carryForward(previous, from);
+  const schedule = from ? buildSchedule(boards, from, kept) : null;
+  const days = schedule ? Object.keys(schedule).sort() : [];
+
+  /* AND IT MUST NOT MOVE A DAY THAT HAS ALREADY RUN. Checked in --check as
+     well as on a write, because the whole point is to find out BEFORE the
+     command that touches production. */
+  if (schedule) {
+    const today = new Date().toISOString().slice(0, 10);
+
+    /* NO RECORD IS NOT THE SAME AS NO CLASH, and this is the hole the guard
+       above would otherwise have. `previous` comes from a FILE — data/
+       bp-production.sql, which is gitignored and regenerated. Delete it, or run
+       on a machine that never had it, and historyClash() compares against an
+       empty object, finds nothing, and returns green on the one question it
+       exists to answer. A check whose input is absent must not report a pass:
+       that is the same fault as a grep that skipped a binary file and a
+       verifier that skipped an unparseable board, both found on 12 September.
+       So: no previous calendar AND a start day in the past is REFUSED, because
+       days between that start and today would be written blind over whatever
+       was served on them. --first-import says "there is genuinely no history",
+       which is a claim a person makes, not one this tool may assume. */
+    if (!Object.keys(previous).length && from < today &&
+        !process.argv.includes("--first-import")) {
+      console.error(`
+REFUSED: no previous calendar to check against, and --from=${from} is before today.`);
+      console.error(`  ${OUT} is missing, so what those days already served cannot be known.`);
+      console.error("  Days between that start and today would be overwritten blind.");
+      console.error("  If this really is the first import, pass --first-import.");
+      process.exit(1);
+    }
+
+    /* WHICH BOARDS HAVE ACTUALLY BEEN SERVED. Not derivable here — this tool
+       never touches D1 — so it is passed in and its absence is loud:
+         --served bp-0014,bp-0015     ids directly
+         --served-none                an explicit claim that nothing has run
+       A register nobody updates is worse than no register, because it looks
+       like a guard. So this one cannot be defaulted into existence. */
+    const servedArg = arg("served");
+    const servedIds = servedArg ? servedArg.split(",").map((x) => x.trim()).filter(Boolean) : null;
+    servedIdsForWrite = servedIds || [];
+    if (servedIds === null && !process.argv.includes("--served-none") && from < today) {
+      console.error("");
+      console.error("REFUSED: --served or --served-none is required for a calendar that starts in the past.");
+      console.error("  An id keeping its place does NOT mean the board is unchanged: on 14 Sep 2026");
+      console.error("  bp-0014 and bp-0015 kept their ids while six of eleven questions moved off each.");
+      console.error("  Ask D1 which boards have rounds against them:");
+      console.error("    SELECT DISTINCT board_id FROM bp_round;");
+      process.exit(1);
+    }
+
+    if (servedIds && servedIds.length) {
+      const prevBoards = boardsFromSql(fs.existsSync(OUT) ? fs.readFileSync(OUT, "utf8") : "");
+      const nextBoards = {};
+      for (const b of boards) nextBoards[b.id] = JSON.stringify({ questions: b.questions });
+      const cc = contentClash(prevBoards, nextBoards, servedIds);
+      /* NOT A REFUSAL ANY MORE, BECAUSE THE WRITER NOW SKIPS THESE. It was a
+         refusal while the writer would have overwritten them; now it is the
+         report that says which boards are deliberately behind the bank and
+         why, so the next person does not read them as a failed import. */
+      if (cc.length) {
+        console.log(`
+${cc.length} served board(s) FROZEN — left as D1 holds them:`);
+        for (const c of cc) console.log(`  = ${c.id}: ${c.why} in the bank, not rewritten here`);
+      }
+    }
+
+    const clashes = historyClash(previous, schedule, today);
+    if (clashes.length) {
+      console.error(`
+REFUSED: ${clashes.length} day(s) that have already run would name a different board.`);
+      for (const c of clashes.slice(0, 8)) {
+        console.error(`  x ${c.day}: served ${c.was}, would now serve ${c.now || "NOTHING"}`);
+      }
+      if (clashes.length > 8) console.error(`  x ...and ${clashes.length - 8} more`);
+      console.error("A day somebody played must keep the board they played.");
+      process.exit(1);
+    }
+  }
 
   if (CHECK_ONLY) {
     console.log(`\n${boards.length} boards gated, ${boards.length * QUESTIONS} questions; emitted ${idx.generated}`);
@@ -241,18 +456,56 @@ ${warned.length} warning(s). Not refusals — nothing here stops a write:`);
     process.exit(1);
   }
 
-  const schedule = buildSchedule(boards, from);
   const q = (v) => "'" + String(v).replace(/'/g, "''") + "'";
   const now = new Date().toISOString();
   const lines = [
     "-- Ballpark XI: the boards and the calendar. GENERATED by tools/import_ballpark.js.",
     "-- Never commit this file: it holds every answer. Apply 034-ballpark.sql first.",
+    /* THE STAMP THIS SCRIPT WILL WRITE IF IT IS EVER RUN — and the name matters.
+       This was called LAST_IMPORT for one message and that was wrong in a way
+       that invited a false record. THIS FILE IS NOT AN EXPORT OF THE DATABASE.
+       The body is INSERT OR REPLACE; the header says GENERATED. So this value
+       is what the rows WOULD carry after application, not what any row holds
+       now, and a regenerated script that is never applied describes a database
+       state that never existed.
+       The Ballpark side needs last_import — the moment something actually
+       reached D1 — and only somebody who RAN the thing knows that. Generation
+       and application look identical in a text file and differ in whether they
+       happened. So this is labelled as what it is, and the end-of-run message
+       asks a person to confirm application rather than offering this as a
+       substitute for one. */
+    `-- WOULD_STAMP_IF_APPLIED: ${now}  (generation time, NOT evidence of an import)`,
     `-- ${boards.length} boards, ${Object.keys(schedule).length} days, from ${days[0]} to ${days[days.length - 1]}.`,
     "",
     "DELETE FROM bp_schedule;",
     "",
   ];
+  /* A PLAYED BOARD IS A HISTORICAL RECORD, NOT CONTENT, so it is not written.
+   *
+   * Scores were computed against those exact eleven questions. A permalink to
+   * bp-0014 that returns different questions is a different board wearing the
+   * same name, and anybody who played it — or is ranked against somebody who
+   * did — is misrepresented without being told. So served boards are FROZEN:
+   * no INSERT is emitted for them at all and D1 keeps what it served.
+   *
+   * This is why `--from <a future day>` is not on its own enough. The schedule
+   * is rebuilt from that day forward, but this loop writes EVERY board in the
+   * bank regardless of which day it falls on — so without the skip below, a
+   * calendar starting tomorrow would still overwrite the questions on a board
+   * played last week. The calendar and the content are two different things and
+   * only one of them is dated.
+   *
+   * A frozen board may point at a question the bank has since retired. That is
+   * not a dangling reference: it is what was served, and the master bank holds
+   * those rows as `live` so the record survives the game dropping them. */
+  const frozen = new Set(servedIdsForWrite || []);
+  let skipped = 0;
   for (const b of boards) {
+    if (frozen.has(b.id)) {
+      skipped++;
+      lines.push(`-- ${b.id} FROZEN: served and played, left exactly as D1 holds it.`);
+      continue;
+    }
     lines.push("INSERT OR REPLACE INTO bp_board (id, ordinal, payload, updated_at) VALUES (" +
       [q(b.id), Number(b.ordinal || b.day), q(JSON.stringify({ questions: b.questions })), q(now)].join(", ") + ");");
   }
@@ -261,11 +514,48 @@ ${warned.length} warning(s). Not refusals — nothing here stops a write:`);
     lines.push(`INSERT INTO bp_schedule (day, board_id) VALUES (${q(day)}, ${q(schedule[day])});`);
   }
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
+
+  /* CAPTURE BEFORE OVERWRITING, AND DO NOT ASK ANYBODY TO REMEMBER IT.
+   *
+   * The file about to be replaced is the only record on this side of what the
+   * live boards hold. bp-0001..bp-0013 are the standing proof of what losing it
+   * costs: they ran before the only import this database has had, so what they
+   * served is not in the seed and is nowhere else - unknowable, permanently,
+   * because nobody captured.
+   *
+   * This was a line in the header telling a person to capture first. The
+   * Ballpark session turned their equivalent reminder into a build that
+   * refuses, and was right that a step depending on somebody reading a comment
+   * is not a step. So the archive is taken here, automatically, and an existing
+   * archive for the same day is NEVER overwritten - the first capture of a day
+   * is the one that predates that day s changes.
+   *
+   * The name keeps the -production.sql suffix deliberately: .gitignore matches
+   * data/*-production.sql, and an archive of the bank that did not match it
+   * would be a file full of answers waiting to be committed. */
+  if (fs.existsSync(OUT)) {
+    const stamp = new Date().toISOString().slice(0, 10);
+    const archive = path.join(path.dirname(OUT), 'bp-' + stamp + '-production.sql');
+    if (fs.existsSync(archive)) {
+      console.log('archive for ' + stamp + ' already exists, left untouched -> ' + path.basename(archive));
+    } else {
+      fs.copyFileSync(OUT, archive);
+      console.log('captured the previous bank -> ' + path.basename(archive));
+    }
+  }
+
   fs.writeFileSync(OUT, lines.join("\n") + "\n");
   fs.writeFileSync(SAMPLE, sampleModule(boards));
   console.log(`\n${boards.length} boards, ${Object.keys(schedule).length} days -> data/bp-production.sql`);
   console.log(`calendar runs ${days[0]} to ${days[days.length - 1]}`);
   console.log(`sample rewritten -> functions/_lib/bp-sample.js`);
+  console.log("");
+  console.log("AFTER the SQL is actually applied, SEND THIS to the Ballpark session:");
+  console.log(`    last_import: ${now}   (only if the wrangler command above SUCCEEDED)`);
+  console.log("  If you generated this and did not apply it, send NOTHING — the dump");
+  console.log("  header records generation, not application, and they are not the same.");
+  console.log("  Without it their freeze refuses every newly-past day rather than");
+  console.log("  risking overwriting a correctly served board with a stale copy.");
   console.log("\nApply with:\n  npx wrangler d1 execute crosswordxi --remote --file=data/bp-production.sql\n");
 }
 
@@ -295,4 +585,11 @@ const isMain = process.argv[1] &&
   path.resolve(process.argv[1]) === fileURLToPath(import.meta.url);
 if (isMain) main();
 
-export { gate, buildSchedule };
+/* EXPORTED SO THEY CAN BE TESTED RATHER THAN DEMONSTRATED. Every guard in this
+   file was proved by hand-sabotage in a session on 13 September 2026 — which
+   proves it worked that evening and nothing thereafter. The Ballpark content
+   side pinned its equivalent boundary with a failing test and was right that a
+   rule three sessions read three ways will eventually be "fixed" in the wrong
+   direction, and that the fix will look like a tidy-up. */
+export { gate, buildSchedule, carryForward, historyClash, contentClash,
+         scheduleFromSql, boardsFromSql };

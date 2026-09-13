@@ -10,7 +10,7 @@
  * browser is the fault the word search rebuild retired; this game never had it
  * and must not acquire it.
  */
-var BUILD = "v001c";
+var BUILD = "v001d";
 
 (function bootstrap() {
   'use strict';
@@ -33,9 +33,50 @@ var BUILD = "v001c";
     ? "/api/quickfire/challenge?x=" + encodeURIComponent(code)
     : "/api/quickfire/daily";
 
+  /* WHAT THE PLAYER IS TOLD WHEN THERE IS NO BOARD, and the rule is that a
+   * PERMANENT condition must not be dressed as a transient one.
+   *
+   * Until 13 September 2026 every failure here produced one sentence — "Today's
+   * questions didn't load. Try again in a moment." — and the commonest cause
+   * was that the qf_ tables did not exist in the database at all. The retry it
+   * invited could never succeed. Nobody reported it in the weeks it was live,
+   * because a visitor who is told to wait a moment waits, and then leaves. That
+   * is the whole cost of the wrong word: a fault that reports itself as
+   * temporary is a fault nobody escalates.
+   *
+   * So the cause is separated here. 404 means the server answered correctly and
+   * there is no board — retrying changes nothing. 503 means our binding is
+   * missing, which is ours to fix and not the player's to wait out. Anything
+   * else — a dropped connection, a 5xx, a parse failure — genuinely may pass,
+   * and only that one keeps the invitation to try again.
+   */
+  function failure(status, isChallenge) {
+    if (status === 404 && isChallenge) {
+      return ["No such game",
+        "That challenge link has expired or was never valid. Ask whoever sent it for a new one."];
+    }
+    if (status === 404) {
+      return ["No board today",
+        "There is no QuickFire board for today. That is not a connection problem, so trying again will not help."];
+    }
+    if (status === 503) {
+      return ["Our end",
+        "QuickFire cannot reach its questions. This is a fault on our side, not yours, and we can see it."];
+    }
+    return ["No connection",
+      "Today's questions didn't load. Try again in a moment."];
+  }
+
   api(url)
     .then(function (r) {
-      if (!r.ok) throw new Error("HTTP " + r.status);
+      /* The CODE is carried on the error rather than left inside its message:
+         the catch has three cases to tell apart, and "HTTP 404" in a string is
+         a format the next person reasonably reformats. */
+      if (!r.ok) {
+        var e = new Error("HTTP " + r.status);
+        e.status = r.status;
+        throw e;
+      }
       return r.json();
     })
     .then(function (payload) {
@@ -46,11 +87,18 @@ var BUILD = "v001c";
     .catch(function (err) {
       console.error("Could not load " + url + ":", err);
       var loading = document.getElementById("screenLoading");
-      if (loading) {
-        loading.innerHTML =
-          '<p class="kicker">Not today</p>' +
-          "<p class=\"blurb\">Today's questions didn't load. Try again in a moment.</p>";
-      }
+      if (!loading) return;
+      /* Write INTO the card, not over it. The old branch replaced the whole
+         section — destroying .pmCard — and then styled its replacement with
+         .kicker and .blurb, which this game does not define and never has, so
+         the message it did show arrived unstyled. */
+      var card = loading.querySelector(".pmCard") || loading;
+      var said = failure(err && err.status, !!code);
+      card.innerHTML = '<div class="eyebrow"></div>' +
+                       '<p class="pmDate">QuickFire XI</p>' +
+                       '<p class="pmLede"></p>';
+      card.querySelector(".eyebrow").textContent = said[0];
+      card.querySelector(".pmLede").textContent = said[1];
     });
 })();
 
