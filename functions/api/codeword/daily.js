@@ -23,7 +23,7 @@
  */
 import { json } from "../../_lib/puzzle.js";
 import {
-  hasDB, todayKey, boardForDay, boardByNo, publicBoard, lastDay,
+  hasDB, todayKey, boardForDay, boardByFamilyNo, publicBoard, lastDay,
 } from "../../_lib/cw-board.js";
 
 /* ONE 404 FOR EVERY REASON THERE IS NO BOARD, and the reason is not in it.
@@ -49,13 +49,19 @@ export async function onRequestGet({ request, env }) {
      board and gets the same 404 as one that has not run — the malformed and
      the sealed must be indistinguishable, or the difference is a way to ask
      what exists. */
+  /* THE NUMBER IS THE FAMILY'S, NOT CODEWORD'S OWN. Every address on this site
+     counts from the family's day one, 26 August 2026 — /football/<game>/daily/12
+     is 6 September in all of them. Codeword's cw_board.no counts from ITS epoch
+     of 13 September, so its board 1 is family number 20. Taking the internal
+     number here would have served the wrong board for every archive link, and
+     silently, because both are small integers and either looks fine in a URL. */
   const raw = new URL(request.url).searchParams.get("no");
   let board;
   try {
     if (raw === null) {
       board = await boardForDay(env, day);
     } else {
-      board = /^[0-9]{1,6}$/.test(raw) ? await boardByNo(env, Number(raw), day) : null;
+      board = /^[0-9]{1,6}$/.test(raw) ? await boardByFamilyNo(env, Number(raw), day) : null;
     }
   } catch (e) { return NOTHING(); }
   if (!board) return NOTHING();

@@ -93,6 +93,7 @@ const GAMES = [
   { id: "hilo",       dir: "football/hilo",       name: "HiLo XI",       prefix: "xihl" },
   { id: "vowels",     dir: "football/vowels",     name: "Vowels XI",     prefix: "xivw" },
   { id: "grid",       dir: "football/grid",       name: "Grid XI",       prefix: "xigd" },
+  { id: "codeword",   dir: "football/codeword",   name: "Codeword XI",   prefix: "xicw" },
 ];
 
 const workflow = read(".github/workflows/checks.yml");
@@ -377,8 +378,8 @@ t("no game carries a private copy of a shared file",
 
    Move both constants together, in the post-deploy commit, exactly as a game's
    LAST_SHIPPED and LAST_SHIPPED_ASSETS move together. */
-const SHARED_TAG = "v36";
-const SHARED_HASH = "bc8ec9253204b62d";
+const SHARED_TAG = "v37";
+const SHARED_HASH = "b96987fe46376501";
 /* EVERY PAGE THAT LINKS THE SHARED LAYER, not the games alone. The hub, the
    two static pages and the unlaunched game all carry the chrome now, and the
    server-rendered shell writes the tag from a constant of its own — so a tag

@@ -209,8 +209,28 @@ const squad = (() => {
 })();
 t("it wears the sixth shirt", /n: 6,[^}]*name: "Grid XI"/.test(squad),
   "a launched game takes the next free number");
-t("and QuickFire moved down to make room", /n: 7,[^}]*status: "In testing"/.test(squad),
-  "a game in testing does not hold a shirt, and moves when one ships past it");
+/* AND THE TAIL MOVED DOWN, which is the rule rather than a fact about any one
+   game. This asserted `n: 7 ... "In testing"` — true on 7 September, when the
+   seven was the next unsigned slot behind Grid. Codeword XI launched on
+   14 September and took it, so the seven now carries a NAME and the unsigned
+   games are one place further down. Pinning the assertion to whoever happened
+   to be sitting at seven made it a fact about QuickFire's position rather than
+   about the rule, and it went red the moment the rule was obeyed. What is
+   asserted now is the rule: no unlaunched game holds a number at or below
+   Grid's, and the shirts below it are unsigned or named by a launched game. */
+t("and no game in testing sits on a shirt at or below Grid's", (() => {
+  /* ENTRY BY ENTRY, because scanning misreads the roster. The first version
+     swept the text for `n: (\d+),[^}]*status:` and read the eleventh shirt as
+     the first — `n: 11` matched as `n: 1` once the scan drifted across an entry
+     boundary — so it reported an unsigned game sitting on shirt one and failed
+     a squad that was correct. A check that cannot parse the thing it judges
+     fails honest data, which is how a check gets deleted rather than fixed. */
+  return squad.split("{").slice(1).every((entry) => {
+    const n = Number((entry.match(/n:\s*(\d+)\s*,/) || [])[1]);
+    if (!Number.isInteger(n)) return true;
+    return n > 6 || !/status:/.test(entry.split("}")[0]);
+  });
+})(), "a game that is not out does not hold a shirt, and moves when one ships past it");
 t("its own page still says its name", /Grid XI/.test(html));
 t("and the hub says it too, now that it is out", (() => {
   const hub = read("index.html");

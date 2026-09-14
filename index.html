@@ -68,9 +68,9 @@
      own — the team sheet and the kit colours. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared/xi-tokens.css?v=v36">
-<link rel="stylesheet" href="shared/xi-chrome.css?v=v36">
-<script src="shared/xi-theme.js?v=v36"></script>
+<link rel="stylesheet" href="shared/xi-tokens.css?v=v37">
+<link rel="stylesheet" href="shared/xi-chrome.css?v=v37">
+<script src="shared/xi-theme.js?v=v37"></script>
 <style>
 :root{
 
@@ -761,8 +761,8 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
      and the one page list, so the front door's footer and every game's are
      the same footer. -->
 <footer class="xic-foot"></footer>
-<script src="shared/xi-season.js?v=v36"></script>
-<script src="shared/xi-chrome.js?v=v36"></script>
+<script src="shared/xi-season.js?v=v37"></script>
+<script src="shared/xi-chrome.js?v=v37"></script>
 
 <script>
 /* Progressive enhancement only: everything above renders complete without
@@ -911,6 +911,16 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
          like the two cypher games rather than by day. */
       { n: 6, id: "grid", name: "Grid XI", key: "xigd.results",
         api: "/api/grid/daily",
+        today: function (d) { return d.no; },
+        done: function (r, t) { return r.no === t; } },
+      /* Codeword XI launched 14 Sep 2026 and its queue starts the same day, so
+         board one and the launch are the same date. Its payload carries the
+         board's own number — cw_board.no, counted from ITS epoch — which is not
+         the family board number an address uses; this table is judging "did
+         you play today", so the board's own number is the right one to compare
+         and the two never meet here. */
+      { n: 7, id: "codeword", name: "Codeword XI", key: "xicw.results",
+        api: "/api/codeword/daily",
         today: function (d) { return d.no; },
         done: function (r, t) { return r.no === t; } }
     ];
@@ -1079,7 +1089,7 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
       if (ladderLibs) return ladderLibs;
       ladderLibs = new Promise(function (done) {
         var left = 2, ok = true;
-        ["shared/xi-seasons.js?v=v36", "shared/xi-table.js?v=v36"].forEach(function (src) {
+        ["shared/xi-seasons.js?v=v37", "shared/xi-table.js?v=v37"].forEach(function (src) {
           var el = document.createElement("script");
           el.src = src;
           el.onload = function () { if (!--left) done(ok); };

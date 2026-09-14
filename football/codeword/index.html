@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Codeword XI</title>
+<!-- The family's permalink machinery rewrites these per board, by plain string
+     replacement over the served bytes, so every one must EXIST with a
+     placeholder value or the rewrite has nothing to replace and a shared link
+     cannot name the board it opens. Values here are deliberately the game's
+     front door; the machinery overwrites them. -->
+<link rel="canonical" href="https://www.thexigames.com/football/codeword/">
+<meta name="description" content="A daily football codeword: a filled grid with every letter replaced by a number, three letters given and eleven football answers.">
+<meta property="og:url" content="https://www.thexigames.com/football/codeword/">
+<meta property="og:title" content="Codeword XI">
+<meta property="og:description" content="A daily football codeword: a filled grid with every letter replaced by a number, three letters given and eleven football answers.">
+<meta name="twitter:title" content="Codeword XI">
+<meta property="og:type" content="website">
+<meta property="og:site_name" content="The XI Games">
+<meta name="twitter:card" content="summary_large_image">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication",
+ "name":"Codeword XI","applicationCategory":"Game",
+ "url":"https://www.thexigames.com/football/codeword/",
+ "operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"GBP"},
+ "publisher":{"@type":"Organization","name":"The XI Games","url":"https://www.thexigames.com/"}}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700&family=Public+Sans:wght@400;600&display=swap" rel="stylesheet">
+<!-- THE SHARED LAYER, and tokens BEFORE chrome: the chrome's rules read the
+     tokens' custom properties, so the other order leaves the bar unstyled for
+     one paint. Every reference carries ?v=v37, which moves when the shared
+     files move and never with this game's own tag. -->
+<link rel="stylesheet" href="/shared/xi-tokens.css?v=v37">
+<link rel="stylesheet" href="/shared/xi-landing.css?v=v37">
+<link rel="stylesheet" href="/shared/xi-chrome.css?v=v37">
+<script src="/shared/xi-theme.js?v=v37"></script>
+<link rel="stylesheet" href="css/style.css?v=v001">
+</head>
+<body>
+<!-- The bar and the footer are MOUNTED, not written: shared/xi-chrome.js fills
+     them, and that is what carries the drawer, the squad list, the theme switch,
+     sign-in and settings. A game that draws its own bar is a game outside all of
+     them, which is what this page did until 14 September 2026 — its masthead was
+     hand-built and looked correct, which is precisely how it hid. -->
+<header class="xic-bar"></header>
+<h1 class="sr-only">Codeword XI &mdash; the daily football codeword</h1>
+<!-- ===================================================================
+     FURNITURE — everything from here to the end of the masthead is the
+     page's own chrome, and the SITE SESSION REPLACES ALL OF IT with the
+     family's shared bar, footer and theme handling.
+
+     It exists so this file plays on its own: opened from disk with no
+     server and no shared/ directory, which is how anyone judges the game
+     without deploying it. It is deliberately NOT the family chrome and
+     must not be mistaken for it.
+
+     Division of labour, Graeme, 14 Sep 2026: "they pass you a game, you
+     get it to the template, with or without data". The game is this
+     repo's; the template is the site's.
+     =================================================================== -->
+<main class="wrap game">
+  <section>
+    <div class="card">
+      <div class="grid" id="grid" role="grid" aria-label="The board"></div>
+      <div class="readout"><b id="rNum"></b><span id="rHint">Tap a square to select its number</span></div>
+      <div class="keys" id="keys"></div>
+    </div>
+  </section>
+
+  <aside style="display:flex;flex-direction:column;gap:14px;min-width:0">
+    <div class="card">
+      <h2>The key</h2>
+      <div class="key" id="key"></div>
+      <div class="alpha" id="alpha"></div>
+    </div>
+
+    <div class="card">
+      <h2>Match clock</h2>
+      <div class="clock">
+        <div class="min"><span id="minute">0</span><small>'</small></div>
+        <div class="worth"><span>Worth now</span><b id="worth">114</b></div>
+      </div>
+      <div class="subs" id="subs"><i></i><i></i><i></i><span>3 substitutions</span></div>
+      <div class="acts">
+        <button class="btn" id="check">Check grid <small>+5 minutes</small></button>
+        <button class="btn" id="reveal">Reveal a number <small>1 sub, +7 minutes</small></button>
+        <button class="btn" id="whistle" hidden>Blow the final whistle <small>end it here</small></button>
+      </div>
+    </div>
+
+    <div class="card">
+      <h2>Answers</h2>
+      <div class="prog"><b id="solved">0</b><span>of 11 locked</span></div>
+      <ul class="hints" id="hints"></ul>
+    </div>
+
+    <div class="card note">
+      Clock: <label><input type="radio" name="spd" value="3" checked> 4&frac12; real minutes</label>
+      &nbsp;<label><input type="radio" name="spd" value="20"> 30 minutes</label>
+    </div>
+  </aside>
+</main>
+
+<!-- Full time. GAME, not furniture: the score, the result and the share text
+     are the game's own and travel with it. -->
+<div class="ft" id="ft" role="dialog" aria-modal="true" aria-labelledby="ftTitle">
+  <div class="ftcard">
+    <div class="k">Full time</div>
+    <h3 id="ftTitle"><span id="ftScore">0</span> <span class="of">/ 114</span></h3>
+    <span class="res" id="ftRes">Win</span>
+    <pre id="ftShare"></pre>
+    <div class="row"><button class="btn primary" id="copy">Copy result</button><button class="btn" id="again">Play again</button></div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+<footer class="xic-foot"></footer>
+
+<script src="/shared/xi-chrome.js?v=v37"></script>
+<script src="/shared/xi-plays.js?v=v37"></script>
+<script>XIChrome.init({ game: "codeword" });</script>
+<script src="js/game.js?v=v001"></script>
+</body>
+</html>

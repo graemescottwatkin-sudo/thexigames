@@ -1,6 +1,6 @@
 /* gd-sample.js — two Grid XI boards, so the game runs with no database.
  *
- * The same arrangement HiLo and the word search keep: the BANK is 256 boards
+ * The same arrangement HiLo and the word search keep: the BANK is 273 boards
  * and lives outside the repository, and this is a sample small enough to commit
  * and complete enough for a suite to play. Every offline run — every check in
  * CI, and `wrangler pages dev` on a machine with no D1 — sees these two and
@@ -8,7 +8,7 @@
  *
  * YES, THE ANSWERS ARE IN HERE, and that is the same trade the other two make.
  * A sample carrying no answers could not be played and so could not be tested,
- * and two boards out of 256 is not the bank. What must never happen is a
+ * and two boards out of 273 is not the bank. What must never happen is a
  * board reaching a BROWSER with its letters, which is a different question and
  * is what gd-board.js publicBoard and football/grid/api_test.mjs are for.
  *

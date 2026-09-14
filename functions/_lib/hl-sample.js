@@ -429,236 +429,312 @@ export const HL_SAMPLE_BOARDS = [
   "sourceLine": "Source: The FA's official England legend profiles (englandfootball.com), opened 2 September 2026."
  },
  {
-  "id": "587",
-  "category": "Real Madrid head coaches",
-  "subtitle": "Manager appointed",
-  "unit": "year",
-  "valueClass": "fixed-by-nature",
-  "trueAsOf": "2026-09-02",
+  "id": "1000",
+  "category": "West Bromwich Albion Premier League goals",
+  "subtitle": "Most Premiership goals as at 14 September 2026",
+  "unit": "count",
+  "valueClass": "snapshot",
+  "trueAsOf": "2026-09-14",
   "chain": [
    {
-    "name": "Luis Molowny",
-    "value": 1973,
-    "context": "Left in 1974, came back in 1977, 1982 and 1985",
+    "name": "Marc-Antoine Fortune",
+    "value": 11,
+    "context": "French forward, born 1981",
     "detail": {
-     "spells": 4,
-     "sequence": 18,
-     "renderedRange": "Luis Molowny 1973 - 1974",
-     "clubRecordStart": "1974-01",
-     "clubRecordEnd": "1974-05"
+     "nameRaw": "Marc-Antoine Fortuné",
+     "born": "2 July 1981",
+     "nationalTeam": "France",
+     "position": "F",
+     "leaguePlayerId": "3754",
+     "club": "West Bromwich Albion",
+     "sequence": 13,
+     "canMove": false,
+     "basis": "the league's own ranked list for the club as fetched on 14 September 2026; active players included, the value is fixed by its date"
     },
     "source": {
-     "publisher": "Real Madrid",
-     "url": "https://www.realmadrid.com/en-US/the-club/history/football/first-team/coaches",
-     "quote": "Luis Molowny 1973 - 1974",
-     "accessed": "2026-09-02"
+     "publisher": "Premier League",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=36&pageSize=100&page=0",
+     "page": "the league feed, one hundred rows a page; this row is rank 13 on page 1",
+     "quote": "\"display\":\"Marc-Antoine Fortuné\",\"first\":\"Marc-Antoine\",\"last\":\"Fortuné\"},\"id\":3754,\"altIds\":{\"opta\":\"p14279\"}},\"rank\":13,\"name\":\"goals\",\"value\":11",
+     "accessed": "2026-09-14",
+     "tier": "official"
     }
    },
    {
-    "name": "Alfredo Di Stefano",
-    "value": 1982,
-    "context": "Left in 1984, came back in 1990",
+    "name": "Gareth McAuley",
+    "value": 15,
+    "context": "Northern Irish defender, born 1979",
     "detail": {
-     "spells": 2,
-     "sequence": 21,
-     "renderedRange": "Alfredo Di Stefano 1982 - 1984",
-     "clubRecordStart": "1982-07",
-     "clubRecordEnd": "1984-06"
+     "nameRaw": "Gareth McAuley",
+     "born": "5 December 1979",
+     "nationalTeam": "Northern Ireland",
+     "position": "D",
+     "leaguePlayerId": "4437",
+     "club": "West Bromwich Albion",
+     "sequence": 8,
+     "canMove": false,
+     "basis": "the league's own ranked list for the club as fetched on 14 September 2026; active players included, the value is fixed by its date"
     },
     "source": {
-     "publisher": "Real Madrid",
-     "url": "https://www.realmadrid.com/en-US/the-club/history/football/first-team/coaches",
-     "quote": "Alfredo Di Stefano 1982 - 1984",
-     "accessed": "2026-09-02"
+     "publisher": "Premier League",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=36&pageSize=100&page=0",
+     "page": "the league feed, one hundred rows a page; this row is rank 8 on page 1",
+     "quote": "\"display\":\"Gareth McAuley\",\"first\":\"Gareth\",\"last\":\"McAuley\"},\"id\":4437,\"altIds\":{\"opta\":\"p19272\"}},\"rank\":8,\"name\":\"goals\",\"value\":15",
+     "accessed": "2026-09-14",
+     "tier": "official"
     }
    },
    {
-    "name": "Miljan Miljanic",
-    "value": 1974,
-    "context": "In charge until 1977",
+    "name": "Chris Brunt",
+    "value": 24,
+    "context": "Northern Irish midfielder, born 1984",
     "detail": {
-     "spells": 1,
-     "sequence": 19,
-     "renderedRange": "Miljan Miljanic 1974 - 1977",
-     "clubRecordStart": "1974-07",
-     "clubRecordEnd": "1977-09"
+     "nameRaw": "Chris Brunt",
+     "born": "14 December 1984",
+     "nationalTeam": "Northern Ireland",
+     "position": "M",
+     "leaguePlayerId": "3744",
+     "club": "West Bromwich Albion",
+     "sequence": 3,
+     "canMove": false,
+     "basis": "the league's own ranked list for the club as fetched on 14 September 2026; active players included, the value is fixed by its date"
     },
     "source": {
-     "publisher": "Real Madrid",
-     "url": "https://www.realmadrid.com/en-US/the-club/history/football/first-team/coaches",
-     "quote": "Miljan Miljanic 1974 - 1977",
-     "accessed": "2026-09-02"
+     "publisher": "Premier League",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=36&pageSize=100&page=0",
+     "page": "the league feed, one hundred rows a page; this row is rank 3 on page 1",
+     "quote": "\"display\":\"Chris Brunt\",\"first\":\"Chris\",\"last\":\"Brunt\"},\"id\":3744,\"altIds\":{\"opta\":\"p19151\"}},\"rank\":3,\"name\":\"goals\",\"value\":24",
+     "accessed": "2026-09-14",
+     "tier": "official"
     }
    },
    {
-    "name": "Amancio Amaro",
-    "value": 1984,
-    "context": "In charge until 1985",
+    "name": "Peter Odemwingie",
+    "value": 30,
+    "context": "Nigerian forward, born 1981",
     "detail": {
-     "spells": 1,
-     "sequence": 22,
-     "renderedRange": "Amancio Amaro 1984 - 1985",
-     "clubRecordStart": "1984-06",
-     "clubRecordEnd": "1985-04"
+     "nameRaw": "Peter Odemwingie",
+     "born": "15 July 1981",
+     "nationalTeam": "Nigeria",
+     "position": "F",
+     "leaguePlayerId": "4204",
+     "club": "West Bromwich Albion",
+     "sequence": 1,
+     "canMove": false,
+     "basis": "the league's own ranked list for the club as fetched on 14 September 2026; active players included, the value is fixed by its date"
     },
     "source": {
-     "publisher": "Real Madrid",
-     "url": "https://www.realmadrid.com/en-US/the-club/history/football/first-team/coaches",
-     "quote": "Amancio Amaro 1984 - 1985",
-     "accessed": "2026-09-02"
+     "publisher": "Premier League",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=36&pageSize=100&page=0",
+     "page": "the league feed, one hundred rows a page; this row is rank 1 on page 1",
+     "quote": "\"display\":\"Peter Odemwingie\",\"first\":\"Peter\",\"middle\":\"Osaze\",\"last\":\"Odemwingie\"},\"id\":4204,\"altIds\":{\"opta\":\"p26900\"}},\"rank\":1,\"name\":\"goals\",\"value\":30",
+     "accessed": "2026-09-14",
+     "tier": "official"
     }
    },
    {
-    "name": "Vujadin Boskov",
-    "value": 1979,
-    "context": "In charge until 1982",
+    "name": "Salomon Rondon",
+    "value": 24,
+    "context": "Venezuelan forward, born 1989",
     "detail": {
-     "spells": 1,
-     "sequence": 20,
-     "renderedRange": "Vujadin Boskov 1979 - 1982",
-     "clubRecordStart": "1979-07",
-     "clubRecordEnd": "1982-03"
+     "nameRaw": "Salomón Rondón",
+     "born": "16 September 1989",
+     "nationalTeam": "Venezuela",
+     "position": "F",
+     "leaguePlayerId": "6030",
+     "club": "West Bromwich Albion",
+     "sequence": 3,
+     "canMove": false,
+     "basis": "the league's own ranked list for the club as fetched on 14 September 2026; active players included, the value is fixed by its date"
     },
     "source": {
-     "publisher": "Real Madrid",
-     "url": "https://www.realmadrid.com/en-US/the-club/history/football/first-team/coaches",
-     "quote": "Vujadin Boskov 1979 - 1982",
-     "accessed": "2026-09-02"
+     "publisher": "Premier League",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=36&pageSize=100&page=0",
+     "page": "the league feed, one hundred rows a page; this row is rank 3 on page 1",
+     "quote": "\"display\":\"Salomón Rondón\",\"first\":\"Salomón\",\"last\":\"Rondón\"},\"id\":6030,\"altIds\":{\"opta\":\"p57134\"}},\"rank\":3,\"name\":\"goals\",\"value\":24",
+     "accessed": "2026-09-14",
+     "tier": "official"
     }
    },
    {
-    "name": "Leo Beenhakker",
-    "value": 1986,
-    "context": "Left in 1989, came back in 1991",
+    "name": "James Morrison",
+    "value": 29,
+    "context": "Scottish midfielder, born 1986",
     "detail": {
-     "spells": 2,
-     "sequence": 23,
-     "renderedRange": "Leo Beenhakker 1986 - 1989",
-     "clubRecordStart": "1986-06",
-     "clubRecordEnd": "1989-06"
+     "nameRaw": "James Morrison",
+     "born": "25 May 1986",
+     "nationalTeam": "Scotland",
+     "position": "M",
+     "leaguePlayerId": "2529",
+     "club": "West Bromwich Albion",
+     "sequence": 2,
+     "canMove": false,
+     "basis": "the league's own ranked list for the club as fetched on 14 September 2026; active players included, the value is fixed by its date"
     },
     "source": {
-     "publisher": "Real Madrid",
-     "url": "https://www.realmadrid.com/en-US/the-club/history/football/first-team/coaches",
-     "quote": "Leo Beenhakker 1986 - 1989",
-     "accessed": "2026-09-02"
+     "publisher": "Premier League",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=36&pageSize=100&page=0",
+     "page": "the league feed, one hundred rows a page; this row is rank 2 on page 1",
+     "quote": "\"display\":\"James Morrison\",\"first\":\"James\",\"last\":\"Morrison\"},\"id\":2529,\"altIds\":{\"opta\":\"p18008\"}},\"rank\":2,\"name\":\"goals\",\"value\":29",
+     "accessed": "2026-09-14",
+     "tier": "official"
     }
    },
    {
-    "name": "Radomir Antic",
-    "value": 1991,
-    "context": "In charge until 1991",
+    "name": "Romelu Lukaku",
+    "value": 17,
+    "context": "Belgian forward, born 1993",
     "detail": {
-     "spells": 1,
-     "sequence": 25,
-     "renderedRange": "Radomir Antic 1991 - 1991",
-     "clubRecordStart": "1991-03",
-     "clubRecordEnd": "1992-01"
+     "nameRaw": "Romelu Lukaku",
+     "born": "13 May 1993",
+     "nationalTeam": "Belgium",
+     "position": "F",
+     "leaguePlayerId": "4290",
+     "club": "West Bromwich Albion",
+     "sequence": 7,
+     "canMove": false,
+     "basis": "the league's own ranked list for the club as fetched on 14 September 2026; active players included, the value is fixed by its date"
     },
     "source": {
-     "publisher": "Real Madrid",
-     "url": "https://www.realmadrid.com/en-US/the-club/history/football/first-team/coaches",
-     "quote": "Radomir Antic 1991 - 1991",
-     "accessed": "2026-09-02"
+     "publisher": "Premier League",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=36&pageSize=100&page=0",
+     "page": "the league feed, one hundred rows a page; this row is rank 7 on page 1",
+     "quote": "\"display\":\"Romelu Lukaku\",\"first\":\"Romelu\",\"last\":\"Lukaku\"},\"id\":4290,\"altIds\":{\"opta\":\"p66749\"}},\"rank\":7,\"name\":\"goals\",\"value\":17",
+     "accessed": "2026-09-14",
+     "tier": "official"
     }
    },
    {
-    "name": "Vicente Del Bosque",
-    "value": 1994,
-    "context": "Left in 1994, came back in 1995 and 1999",
+    "name": "Zoltan Gera",
+    "value": 12,
+    "context": "Hungarian midfielder, born 1979",
     "detail": {
-     "spells": 3,
-     "sequence": 28,
-     "renderedRange": "Vicente Del Bosque 1994 - 1994",
-     "clubRecordStart": "1994-03",
-     "clubRecordEnd": "1994-06"
+     "nameRaw": "Zoltán Gera",
+     "born": "22 April 1979",
+     "nationalTeam": "Hungary",
+     "position": "M",
+     "leaguePlayerId": "2390",
+     "club": "West Bromwich Albion",
+     "sequence": 9,
+     "canMove": false,
+     "basis": "the league's own ranked list for the club as fetched on 14 September 2026; active players included, the value is fixed by its date"
     },
     "source": {
-     "publisher": "Real Madrid",
-     "url": "https://www.realmadrid.com/en-US/the-club/history/football/first-team/coaches",
-     "quote": "Vicente Del Bosque 1994 - 1994",
-     "accessed": "2026-09-02"
+     "publisher": "Premier League",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=36&pageSize=100&page=0",
+     "page": "the league feed, one hundred rows a page; this row is rank 9 on page 1",
+     "quote": "\"display\":\"Zoltán Gera\",\"first\":\"Zoltán\",\"last\":\"Gera\"},\"id\":2390,\"altIds\":{\"opta\":\"p18430\"}},\"rank\":9,\"name\":\"goals\",\"value\":12",
+     "accessed": "2026-09-14",
+     "tier": "official"
     }
    },
    {
-    "name": "Jupp Heynckes",
-    "value": 1997,
-    "context": "In charge until 1998",
+    "name": "Saido Berahino",
+    "value": 23,
+    "context": "Burundian forward, born 1993",
     "detail": {
-     "spells": 1,
-     "sequence": 31,
-     "renderedRange": "Josep Jupp Heynckes 1997 - 1998",
-     "clubRecordStart": "1997-07",
-     "clubRecordEnd": "1998-06"
+     "nameRaw": "Saido Berahino",
+     "born": "4 August 1993",
+     "nationalTeam": "Burundi",
+     "position": "F",
+     "leaguePlayerId": "4205",
+     "club": "West Bromwich Albion",
+     "sequence": 5,
+     "canMove": false,
+     "basis": "the league's own ranked list for the club as fetched on 14 September 2026; active players included, the value is fixed by its date"
     },
     "source": {
-     "publisher": "Real Madrid",
-     "url": "https://www.realmadrid.com/en-US/the-club/history/football/first-team/coaches",
-     "quote": "Josep Jupp Heynckes 1997 - 1998",
-     "accessed": "2026-09-02"
+     "publisher": "Premier League",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=36&pageSize=100&page=0",
+     "page": "the league feed, one hundred rows a page; this row is rank 5 on page 1",
+     "quote": "\"display\":\"Saido Berahino\",\"first\":\"Saido\",\"last\":\"Berahino\"},\"id\":4205,\"altIds\":{\"opta\":\"p91972\"}},\"rank\":5,\"name\":\"goals\",\"value\":23",
+     "accessed": "2026-09-14",
+     "tier": "official"
     }
    },
    {
-    "name": "Fabio Capello",
-    "value": 1996,
-    "context": "Left in 1997, came back in 2006",
+    "name": "Craig Dawson",
+    "value": 12,
+    "context": "English defender, born 1990",
     "detail": {
-     "spells": 2,
-     "sequence": 30,
-     "renderedRange": "Fabio Capello 1996 - 1997",
-     "clubRecordStart": "1996-07",
-     "clubRecordEnd": "1997-07"
+     "nameRaw": "Craig Dawson",
+     "born": "6 May 1990",
+     "nationalTeam": "England",
+     "position": "D",
+     "leaguePlayerId": "4198",
+     "club": "West Bromwich Albion",
+     "sequence": 9,
+     "canMove": false,
+     "basis": "the league's own ranked list for the club as fetched on 14 September 2026; active players included, the value is fixed by its date"
     },
     "source": {
-     "publisher": "Real Madrid",
-     "url": "https://www.realmadrid.com/en-US/the-club/history/football/first-team/coaches",
-     "quote": "Fabio Capello 1996 - 1997",
-     "accessed": "2026-09-02"
+     "publisher": "Premier League",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=36&pageSize=100&page=0",
+     "page": "the league feed, one hundred rows a page; this row is rank 9 on page 1",
+     "quote": "\"display\":\"Craig Dawson\",\"first\":\"Craig\",\"last\":\"Dawson\"},\"id\":4198,\"altIds\":{\"opta\":\"p60232\"}},\"rank\":9,\"name\":\"goals\",\"value\":12",
+     "accessed": "2026-09-14",
+     "tier": "official"
     }
    },
    {
-    "name": "Carlos Queiroz",
-    "value": 2003,
-    "context": "In charge until 2004",
+    "name": "Shane Long",
+    "value": 19,
+    "context": "Irish forward, born 1987",
     "detail": {
-     "spells": 1,
-     "sequence": 33,
-     "renderedRange": "Carlos Queiroz 2003 - 2004",
-     "clubRecordStart": "2003-06",
-     "clubRecordEnd": "2004-06"
+     "nameRaw": "Shane Long",
+     "born": "22 January 1987",
+     "nationalTeam": "Ireland",
+     "position": "F",
+     "leaguePlayerId": "3206",
+     "club": "West Bromwich Albion",
+     "sequence": 6,
+     "canMove": false,
+     "basis": "the league's own ranked list for the club as fetched on 14 September 2026; active players included, the value is fixed by its date"
     },
     "source": {
-     "publisher": "Real Madrid",
-     "url": "https://www.realmadrid.com/en-US/the-club/history/football/first-team/coaches",
-     "quote": "Carlos Queiroz 2003 - 2004",
-     "accessed": "2026-09-02"
+     "publisher": "Premier League",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=36&pageSize=100&page=0",
+     "page": "the league feed, one hundred rows a page; this row is rank 6 on page 1",
+     "quote": "\"display\":\"Shane Long\",\"first\":\"Shane\",\"middle\":\"Patrick\",\"last\":\"Long\"},\"id\":3206,\"altIds\":{\"opta\":\"p20452\"}},\"rank\":6,\"name\":\"goals\",\"value\":19",
+     "accessed": "2026-09-14",
+     "tier": "official"
     }
    },
    {
-    "name": "Vanderlei Luxemburgo",
-    "value": 2004,
-    "context": "In charge until 2005",
+    "name": "Robert Earnshaw",
+    "value": 12,
+    "context": "Welsh forward, born 1981",
     "detail": {
-     "spells": 1,
-     "sequence": 36,
-     "renderedRange": "Vanderlei Luxemburgo 2004 - 2005",
-     "clubRecordStart": "2004-12",
-     "clubRecordEnd": "2005-12"
+     "nameRaw": "Robert Earnshaw",
+     "born": "6 April 1981",
+     "nationalTeam": "Wales",
+     "position": "F",
+     "leaguePlayerId": "2819",
+     "club": "West Bromwich Albion",
+     "sequence": 9,
+     "canMove": false,
+     "basis": "the league's own ranked list for the club as fetched on 14 September 2026; active players included, the value is fixed by its date"
     },
     "source": {
-     "publisher": "Real Madrid",
-     "url": "https://www.realmadrid.com/en-US/the-club/history/football/first-team/coaches",
-     "quote": "Vanderlei Luxemburgo 2004 - 2005",
-     "accessed": "2026-09-02"
+     "publisher": "Premier League",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=36&pageSize=100&page=0",
+     "page": "the league feed, one hundred rows a page; this row is rank 9 on page 1",
+     "quote": "\"display\":\"Robert Earnshaw\",\"first\":\"Robert\",\"last\":\"Earnshaw\"},\"id\":2819,\"altIds\":{\"opta\":\"p3227\"}},\"rank\":9,\"name\":\"goals\",\"value\":12",
+     "accessed": "2026-09-14",
+     "tier": "official"
     }
    }
   ],
-  "direction": {
-   "higher": "Later",
-   "lower": "Earlier"
-  },
-  "sourceLine": "Source: Real Madrid official website (realmadrid.com), coaches page, opened 2 September 2026.",
-  "sequenceStep": 3
+  "sourceLine": "Source: Premier League official statistics (premierleague.com), the club's ranked list, as at 14 September 2026.",
+  "sequenceStep": 5,
+  "nearTieMax": 0,
+  "flipGuard": {
+   "serve": "2026-10-12",
+   "trueAsOf": "2026-09-14",
+   "gamesBeforeServe": 2,
+   "perGame": 0.75,
+   "gain": 1
+  }
  }
 ];
 export const HL_SAMPLE_SCHEDULE = {

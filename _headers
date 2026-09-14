@@ -83,6 +83,22 @@
 /football/grid/js/*
   Cache-Control: public, max-age=31536000, immutable
 
+# Codeword XI. The page is no-store like every other game page: the board it
+# shows is chosen by the SERVER from the day, so a cached page is yesterday's
+# puzzle served as today's. Its css and js are immutable because every
+# reference to them carries a ?v= that moves with the build tag.
+/football/codeword/
+  Cache-Control: no-store
+
+/football/codeword/index.html
+  Cache-Control: no-store
+
+/football/codeword/css/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/football/codeword/js/*
+  Cache-Control: public, max-age=31536000, immutable
+
 # The shared token layer. Immutable is safe because every reference carries a
 # ?v= tag and the wordsearch gate asserts the version marker in the file.
 /shared/*

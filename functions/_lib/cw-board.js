@@ -23,7 +23,7 @@
  * being readable in the response. Fixing either alone leaves the puzzle
  * solvable without being played.
  */
-import { utcDay } from "./daily.js";
+import { utcDay, dailyDayKey } from "./daily.js";
 
 export function hasDB(env) { return !!(env && env.DB); }
 
@@ -72,6 +72,32 @@ export async function boardByNo(env, no, today) {
   if (!row) return null;
   try { return { no: row.no, day: row.day, ...JSON.parse(row.payload) }; }
   catch (e) { return null; }
+}
+
+/* A BOARD BY THE NUMBER THE REST OF THE SITE CALLS IT.
+ *
+ * TWO NUMBERINGS EXIST AND THEY ARE NOT THE SAME, which is the thing this
+ * function is for. cw_board.no is Codeword's own 1..365, counted from ITS epoch
+ * of 13 September 2026. Every address on this site is a FAMILY board number
+ * counted from the family's day one, 26 August 2026 — /football/<game>/daily/12
+ * is 6 September in all of them, and the number means the same thing
+ * everywhere. So Codeword's board 1 is family number 20, not 1.
+ *
+ * Found by asking keyLabel what /football/codeword/daily/1 would be called and
+ * being told 26 August 2026 — a date three weeks before the game existed. The
+ * two numberings differ by nineteen and the endpoint would have served the
+ * wrong board for every archive link on the site, quietly, because both numbers
+ * are small positive integers and either looks reasonable in a URL.
+ *
+ * THE TRANSLATION IS A DAY, and the day is the only thing both schemes agree
+ * about. The family number becomes a date by the shared arithmetic in daily.js
+ * — not restated here — and the date is looked up in cw_schedule, which is
+ * also what bounds it: a day at or before today, or nothing. */
+export async function boardByFamilyNo(env, familyNo, today) {
+  if (!hasDB(env) || !Number.isInteger(familyNo) || familyNo < 1) return null;
+  const day = dailyDayKey(familyNo);
+  if (!day || day > String(today)) return null;
+  return await boardForDay(env, day);
 }
 
 /* The highest day the queue holds, for the runway check and for knowing when

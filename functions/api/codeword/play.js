@@ -10,7 +10,7 @@
  */
 
 import { json } from "../../_lib/puzzle.js";
-import { hasDB, todayKey, boardForDay, boardByNo } from "../../_lib/cw-board.js";
+import { hasDB, todayKey, boardForDay, boardByFamilyNo } from "../../_lib/cw-board.js";
 import { validRate } from "../../_lib/cw-round.js";
 import { startRound } from "../../_lib/cw-play.js";
 
@@ -44,7 +44,7 @@ export async function onRequestPost({ request, env }) {
   try {
     board = raw === undefined || raw === null
       ? await boardForDay(env, day)
-      : (/^[0-9]{1,6}$/.test(String(raw)) ? await boardByNo(env, Number(raw), day) : null);
+      : (/^[0-9]{1,6}$/.test(String(raw)) ? await boardByFamilyNo(env, Number(raw), day) : null);
   } catch (e) { return NO(); }
   if (!board) return NO("no board");
 

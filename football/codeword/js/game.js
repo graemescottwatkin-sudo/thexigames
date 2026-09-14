@@ -1,0 +1,882 @@
+(function () {
+  "use strict";
+  /* THE BUILD, PAIRED WITH THE ?v= ON THIS FILE'S OWN SCRIPT TAG. A stale
+     cached script is otherwise invisible: the page loads, the game runs, and
+     it is yesterday's code. aligned_test asserts the two agree. */
+  var BUILD = "v001";
+  if (window.XIPlays && document.documentElement) {
+    document.documentElement.setAttribute("data-build", BUILD);
+  }
+})();
+
+
+/* ===================================================================
+   THE GAME. Everything below this line is the thing being transplanted:
+   the loader, the renderer, the cipher rules, the clock, the scoring and
+   the endpoint calls. None of it draws chrome, reads a theme or touches
+   storage, so it can be lifted into a family-shaped page whole.
+
+   The seam, for whoever is lifting it:
+
+     boot(BOARD)      builds the grid, the key and the hints from a SEALED
+                      board -- cells, given, slots, absent -- and nothing
+                      else. It never sees a solution live.
+     serverOracle()   the five endpoint calls: play, mark, mark?check,
+                      reveal, finish. The only place the page talks to a
+                      server about a round.
+     localOracle()    the same three questions answered from a stamped
+                      solution, offline only. Live it does not exist.
+     loadDaily()      live: asks /api/codeword/daily, unwraps .board.
+     loadToday()      local preview of the staged package; no endpoint.
+     dayNumber/wantedBoard  static-path date arithmetic. LIVE DOES NOT USE
+                      THESE -- the server decides the day.
+
+   What it does NOT do, on purpose: no localStorage, no sessionStorage, no
+   theme resolver of its own beyond the tokens in the <style> above, and no
+   knowledge of the family's board numbering. An address's ?no= is passed
+   through untouched.
+   =================================================================== */
+
+/* Set true only in the built drop. A review page has one board stamped into it
+   and must not go looking for a queue that is not there. */
+var DAILY = true;
+
+function boot(BOARD){
+  var ROWS = [];
+  var WORDS = [];
+  var N = 13;
+  var CODE = {};
+  var GIVEN = [];
+  var BOARD_NO = "demo", BOARD_NO_N = null;
+  var HINTS = [];
+  var BREAKS = [];
+  var DOT = "·", SQ_ON = "🟩", SQ_OFF = "🟥";
+
+  // A board from the daily queue replaces every one of the above. The stamped
+  // values are what a review page uses and what the loader falls back to.
+  if (BOARD){
+    ROWS = BOARD.rows; WORDS = BOARD.words; CODE = BOARD.code;
+    GIVEN = BOARD.given; N = BOARD.size;
+    HINTS = BOARD.hints || []; BREAKS = BOARD.breaks || [];
+    BOARD_NO = ("00" + BOARD.no).slice(-3);
+    BOARD_NO_N = BOARD.no;
+    var tagEl = document.getElementById("tag");
+    if (tagEl) tagEl.innerHTML = "Codeword XI " + DOT + " board " + BOARD_NO;
+  }
+
+  var ALPHA = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+
+  /* THE SEALED BOARD. Everything the page needs to draw itself, and nothing
+     that gives the puzzle away.
+
+     A board file holds `rows` (the filled grid), `words` (every answer) and
+     `code` (the whole cipher), and ANY ONE of the three ends the puzzle -- code
+     plus the numbers already on screen inverts to rows in a single pass. So the
+     live page is never sent them. It is sent numbers, the three givens, and the
+     shape and clue of each slot, which is enough to render and not enough to
+     solve. Decision of 14 Sep 2026: the server checks.
+
+     `SOLUTION` is the deliberate exception and it is only ever present offline:
+     the demo and the review pages stamp a whole board in so the file plays with
+     no server behind it. Live it is null, and check and reveal become calls
+     rather than lookups. The rendering path below reads the sealed values in
+     both cases, so the live path has no local answer to fall back to even by
+     accident. */
+  var CELLS, GIVEN_N, SLOTS, ABSENT, SOLUTION, LETTER = {}, usedNum = {};
+
+  if (BOARD && BOARD.cells){
+    CELLS = BOARD.cells;
+    GIVEN_N = BOARD.given;
+    SLOTS = BOARD.slots;
+    ABSENT = BOARD.absent || [];
+    N = BOARD.size;
+    SOLUTION = null;
+  } else {
+    CELLS = ROWS.map(function(row){
+      return row.split("").map(function(ch){ return ch === "." ? null : CODE[ch]; });
+    });
+    GIVEN_N = GIVEN.map(function(l){ return { n: CODE[l], letter: l }; });
+    SLOTS = WORDS.map(function(w, i){
+      var h = HINTS[i] || {};
+      return { row: w[1], col: w[2], dir: w[3], len: w[0].length,
+               sense: h.sense || "", cat: h.cat || "answer",
+               enum: h.enum || String(w[0].length), text: h.text || "",
+               breaks: BREAKS[i] || [] };
+    });
+    var seen = {};
+    ROWS.forEach(function(row){
+      row.split("").forEach(function(ch){ if (ch !== ".") seen[ch] = true; });
+    });
+    ABSENT = ALPHA.split("").filter(function(l){ return !seen[l]; });
+    SOLUTION = { rows: ROWS, code: CODE };
+    Object.keys(CODE).forEach(function(l){ LETTER[CODE[l]] = l; });
+  }
+
+  // Which NUMBERS the grid actually uses. Derived from the numbers themselves,
+  // so it needs no cipher: a number nobody can type is one the board never
+  // prints.
+  CELLS.forEach(function(row){
+    row.forEach(function(n){ if (n !== null && n !== undefined) usedNum[n] = true; });
+  });
+  // Which LETTERS the board leaves out. Sealed boards are told; stamped boards
+  // worked it out from the solution above. Either way it is public -- the page
+  // prints it, and a solver hunting for a letter the board does not contain is
+  // wasting the only thing this game charges for.
+  var absentList = ABSENT;
+  var nPresent = 26 - absentList.length;
+  var present = {};
+  ALPHA.split("").forEach(function(l){ present[l] = absentList.indexOf(l) === -1; });
+
+  /* THE ONLY THREE THINGS THAT NEED THE ANSWER, behind one seam.
+
+     Rendering above never touches a solution. These three do, by definition:
+     confirming a finished answer, finding a wrong letter, and giving a letter
+     away. Offline they read the stamped solution; live they are calls, and the
+     page has nothing to fall back on because SOLUTION is null.
+
+     Note what the confirm step may and may not say. It marks a slot done only
+     when the slot is COMPLETELY filled and right -- which is exactly what the
+     client used to do for itself, so it is no weaker than the game already was.
+     It never says which letter is wrong. That is Check Grid's job, and Check
+     Grid costs five minutes; a confirm that volunteered the wrong letter would
+     make the helper you pay for worthless.  */
+  var oracle;
+
+  /* The round, when the server is holding one. `scored` false is a replay: it
+     plays and finishes exactly like a first sitting and is not recorded, which
+     is the owner's shape -- showing somebody the grid must not be
+     indistinguishable from cheating. */
+  var round = null;
+
+  function localOracle(){
+    return {
+      confirm: function(then){
+        var done = [];
+        SLOTS.forEach(function(w, i){
+          var ok = wordCells(w).every(function(rc){
+            var ch = SOLUTION.rows[rc[0]][rc[1]];
+            return guess[SOLUTION.code[ch]] === ch;
+          });
+          if (ok) done.push(i);
+        });
+        then(done);
+      },
+      wrongNumbers: function(then){
+        var bad = [];
+        Object.keys(guess).forEach(function(n){
+          if (guess[n] !== LETTER[n]) bad.push(Number(n));
+        });
+        then(bad);
+      },
+      reveal: function(n, then){ then(LETTER[n], false); },
+      // Offline there is nobody to ask, so the page keeps its own arithmetic.
+      finish: function(then){ then(null); }
+    };
+  }
+
+  /* The live half. Shapes are the site session's to fix and it is sending them;
+     these are written to the agreed division of labour and will be corrected to
+     its wire format rather than guessed at further. Each one fails CLOSED: if
+     the call does not answer, nothing is marked, nothing is revealed and no
+     minutes are charged, because charging for a helper that did not help is
+     worse than the helper being unavailable. */
+  function serverOracle(){
+    function post(what, body, then, fail){
+      fetch(API + what, {
+        method: "POST", headers: {"Content-Type": "application/json", "X-XI-Games": "1"},
+        body: JSON.stringify(body)
+      }).then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); })
+        .then(then)
+        .catch(function(){ toast("Could not reach the referee"); if (fail) fail(); });
+    }
+    return {
+      confirm: function(then){
+        if (!round) return;
+        post("mark", { playId: round.playId, guess: guess }, function(d){
+          then(d.solved || []);
+        });
+      },
+      wrongNumbers: function(then){
+        if (!round) return;
+        post("mark", { playId: round.playId, guess: guess, check: true }, function(d){
+          // The server's minute count is the one that decides, so the page
+          // takes spentMinutes rather than adding COST.check itself.
+          if (typeof d.spentMinutes === "number") extraMinutes = d.spentMinutes;
+          then(d.wrong || []);
+        });
+      },
+      reveal: function(n, then){
+        if (!round) return;
+        post("reveal", { playId: round.playId, n: n }, function(d){
+          if (d && d.error) { toast(d.error); return; }
+          if (!d || !d.letter) return;
+          // subsLeft and spentMinutes are the server's; `charged` false means a
+          // number already revealed, which costs nothing and says the same thing.
+          if (typeof d.subsLeft === "number") subsUsed = SUBS - d.subsLeft;
+          if (typeof d.spentMinutes === "number") extraMinutes = d.spentMinutes;
+          then(d.letter, d.charged === false);
+        });
+      },
+      finish: function(then){
+        if (!round) return then(null);
+        post("finish", { playId: round.playId }, function(d){ then(d); });
+      }
+    };
+  }
+
+  // What the two helpers cost in match minutes. At +10 and +14 they were
+  // priced off the top of the curve, where ten minutes is 17 of the 114 points
+  // -- a check cost a seventh of the board and a reveal a fifth on top of a
+  // substitution, so neither was ever worth taking.
+  var MAX = 114, SUBS = 3, COST = { check: 5, reveal: 7 };
+  var CURVE = [[0,114],[10,97],[20,86],[30,78],[45,68],[60,58],[75,47],[90,36]];
+  function scoreAt(m){
+    if (m <= 0) return MAX; if (m >= 90) return 36;
+    for (var i=1;i<CURVE.length;i++){ if (m <= CURVE[i][0]){ var a=CURVE[i-1], b=CURVE[i]; var t=(m-a[0])/(b[0]-a[0]); return a[1]+(b[1]-a[1])*t; } }
+    return 36;
+  }
+
+  var guess = {}, pencil = {}, locked = {}, wrongMark = {}, solvedWords = {};
+  var selected = null, selCell = null, selWord = null, pencilMode = false;
+  var subsUsed = 0, extraMinutes = 0, startedAt = null, over = false, timer = null, secondsPerMinute = 3;
+
+  GIVEN_N.forEach(function(g){ guess[g.n] = g.letter; locked[g.n] = "given"; });
+
+  var gridEl = document.getElementById("grid"), keyEl = document.getElementById("key"),
+      keysEl = document.getElementById("keys"), alphaEl = document.getElementById("alpha");
+  gridEl.style.gridTemplateColumns = "repeat(" + N + ",minmax(0,1fr))";
+  var cellEls = [];
+  for (var r=0;r<N;r++){ cellEls[r]=[]; for (var c=0;c<N;c++){
+    var n0 = CELLS[r][c];
+    // A block is a square with no number, which is what `null` means in cells.
+    var blocked = (n0 === null || n0 === undefined);
+    var el = document.createElement(blocked ? "div" : "button");
+    el.className = "cell" + (blocked ? " block" : "");
+    if (!blocked){
+      el.type = "button";
+      el.dataset.n = n0;
+      el.setAttribute("aria-label", "Square, number " + n0);
+      el.innerHTML = '<span class="n">' + n0 + '</span><span class="l"></span>';
+      el.dataset.r = r; el.dataset.c = c;
+      el.addEventListener("click", function(e){
+        var t = e.currentTarget;
+        var rr = Number(t.dataset.r), cc = Number(t.dataset.c), here = wordsAt(rr, cc);
+        var same = selCell && selCell[0] === rr && selCell[1] === cc;
+        if (!here.length) selWord = null;
+        else if (same && here.length > 1) selWord = here[(here.indexOf(selWord) + 1) % here.length];
+        else if (here.indexOf(selWord) === -1) selWord = here[0];
+        focusCell(rr, cc);
+        if (over) return;
+        start(); paint();
+      });
+    }
+    gridEl.appendChild(el); cellEls[r][c] = el;
+  }}
+
+  for (var n=1;n<=26;n++){
+    var k = document.createElement("div"); k.dataset.n = n;
+    k.innerHTML = '<span class="kn">' + n + '</span><span class="kl"></span>';
+    if (!usedNum[n]) k.classList.add("absent");
+    k.addEventListener("click", function(e){ var nn = Number(e.currentTarget.dataset.n);
+      if (usedNum[nn]) { selCell = null; selWord = null; select(nn); } });
+    keyEl.appendChild(k);
+  }
+
+  // Draw the word breaks onto the grid. A square can end a word in both
+  // directions -- the third letter of an across answer may also be the fourth
+  // of a down one -- so the bars are separate elements rather than one border.
+  SLOTS.forEach(function(w, i){
+    var cells = wordCells(w);
+    (w.breaks || []).forEach(function(at){
+      var rc = cells[at];
+      if (!rc) return;
+      var el = cellEls[rc[0]][rc[1]];
+      if (!el || el.classList.contains("block")) return;
+      var bar = document.createElement("span");
+      bar.className = "bk " + (w.dir === "a" ? "r" : "d");
+      el.appendChild(bar);
+    });
+  });
+
+  "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").forEach(function(l){
+    var b = document.createElement("button"); b.type="button"; b.textContent = l; b.dataset.l = l;
+    if (!present[l]) b.classList.add("absent");
+    b.addEventListener("click", function(e){ typeLetter(e.currentTarget.dataset.l); });
+    keysEl.appendChild(b);
+  });
+  var pen = document.createElement("button"); pen.type="button"; pen.className="wide"; pen.id="pen"; pen.textContent="Pencil";
+  pen.addEventListener("click", function(){ pencilMode = !pencilMode; paint(); });
+  keysEl.appendChild(pen);
+  var del = document.createElement("button"); del.type="button"; del.className="wide"; del.textContent="Clear";
+  del.addEventListener("click", clearSelected); keysEl.appendChild(del);
+
+  var hintEls = [];
+  (function(){
+    var el = document.getElementById("hints");
+    var order = SLOTS.map(function(h,i){ return {h:h, i:i}; }).sort(function(a,b){
+      return (a.h.text < b.h.text) ? -1 : (a.h.text > b.h.text) ? 1 : 0;
+    });
+    order.forEach(function(o){
+      var li = document.createElement("li");
+      // Crossword enumeration. The grid runs the letters together, so without
+      // it OLDTRAFFORD is just eleven squares; (3,8) says where the break is
+      // and lets a hint be matched to a slot by length.
+      li.innerHTML = (o.h.sense ? "<b>" + o.h.sense + "</b> / " + o.h.cat : "<b>" + o.h.cat + "</b>")
+                   + (o.h.enum ? ' <span class="en">(' + o.h.enum + ")</span>" : "");
+      // Clicking a hint selects that answer on the grid. It lands on the first
+      // square still open -- going to square one of a half-finished word would
+      // make the click useless on exactly the answers a player is working on.
+      li.tabIndex = 0;
+      li.addEventListener("click", function(){ goToWord(o.i); });
+      li.addEventListener("keydown", function(e){
+        if (e.key === "Enter" || e.key === " "){ goToWord(o.i); e.preventDefault(); }
+      });
+      el.appendChild(li); hintEls[o.i] = li;
+    });
+  })();
+
+  function goToWord(i){
+    if (over) return;
+    var cells = wordCells(SLOTS[i]);
+    var at = cells.find(function(rc){ return !locked[CELLS[rc[0]][rc[1]]]; }) || cells[0];
+    selWord = i;
+    focusCell(at[0], at[1]);
+    start(); paint();
+    cellEls[at[0]][at[1]].scrollIntoView({block: "nearest", inline: "nearest"});
+  }
+
+  function wordCells(w){
+    var out = [];
+    for (var i = 0; i < w.len; i++){
+      out.push(w.dir === "a" ? [w.row, w.col + i] : [w.row + i, w.col]);
+    }
+    return out;
+  }
+
+  // Which of the eleven pass through a square. Most squares are in one; the
+  // crossings are in two, and clicking a crossing twice turns the corner.
+  function wordsAt(r, c){
+    var out = [];
+    SLOTS.forEach(function(w, i){
+      if (wordCells(w).some(function(rc){ return rc[0] === r && rc[1] === c; })) out.push(i);
+    });
+    return out;
+  }
+
+  function focusCell(r, c){
+    selCell = [r, c];
+    selected = CELLS[r][c];
+  }
+
+  // Step along the word you are in, the way a crossword does: type a letter and
+  // the cursor moves on. Squares already fixed -- a given letter, a revealed
+  // one, a number locked by a finished answer -- are stepped over, since there
+  // is nothing to type there. Running off either end simply stops.
+  function step(dir){
+    if (selWord === null || !selCell) return false;
+    var cells = wordCells(SLOTS[selWord]), at = -1;
+    for (var i = 0; i < cells.length; i++){
+      if (cells[i][0] === selCell[0] && cells[i][1] === selCell[1]) at = i;
+    }
+    if (at < 0) return false;
+    for (var j = at + dir; j >= 0 && j < cells.length; j += dir){
+      if (!locked[CELLS[cells[j][0]][cells[j][1]]]){
+        focusCell(cells[j][0], cells[j][1]);
+        return true;
+      }
+    }
+    return false;
+  }
+
+  function countOf(num){
+    var total = 0, empty = 0;
+    for (var r=0;r<N;r++) for (var c=0;c<N;c++){
+      if (CELLS[r][c] !== num) continue;
+      total++; if (!guess[num]) empty++;
+    }
+    return { total: total, empty: empty };
+  }
+
+  function paint(){
+    var inWord = [];
+    for (var q=0;q<N;q++) inWord.push(new Array(N));
+    if (selWord !== null){
+      wordCells(SLOTS[selWord]).forEach(function(rc){ inWord[rc[0]][rc[1]] = true; });
+    }
+    for (var r=0;r<N;r++) for (var c=0;c<N;c++){
+      var n = CELLS[r][c]; if (n === null || n === undefined) continue;
+      var el = cellEls[r][c], slot = el.querySelector(".l");
+      if (guess[n]){ slot.textContent = guess[n]; slot.className = "l"; }
+      else if (pencil[n]){ slot.textContent = pencil[n]; slot.className = "l pencil"; }
+      else { slot.textContent = ""; slot.className = "l"; }
+      el.classList.toggle("sel", !!selCell && selCell[0] === r && selCell[1] === c);
+      el.classList.toggle("same", n === selected);
+      el.classList.toggle("inword", !!(selWord !== null && inWord[r][c]));
+      // Any locked number is settled everywhere on the grid, not only inside
+      // the answer that settled it. One rule for all three kinds of certainty
+      // -- given at kick-off, revealed for a substitution, or confirmed by a
+      // finished answer -- because they are all facts and a guess is not. A
+      // revealed letter keeps its own gold, which is painted after this.
+      el.classList.toggle("known", !!locked[n]);
+      el.classList.toggle("revealed", locked[n] === "revealed");
+      el.classList.toggle("wrong", !!wrongMark[n]);
+      el.classList.remove("done");
+    }
+    var count = 0;
+    SLOTS.forEach(function(w,i){
+      var cells = wordCells(w), ok = !!solvedWords[i];
+      if (ok){
+        count++;
+        cells.forEach(function(rc){
+          cellEls[rc[0]][rc[1]].classList.add("done");
+          var n = CELLS[rc[0]][rc[1]];
+          if (!locked[n]) locked[n] = "confirmed";
+        });
+      }
+      if (hintEls[i]) {
+        hintEls[i].classList.toggle("done", ok);
+        // Follow the word the cursor is in. Before there was a cursor this
+        // could only ask "is my square in this answer", which lit BOTH answers
+        // at a crossing; now that clicking a crossing turns the corner, the
+        // hint should say which of the two you are actually typing into.
+        var here = selWord !== null ? i === selWord
+                 : !!selCell && cells.some(function(rc){
+                     return rc[0] === selCell[0] && rc[1] === selCell[1];
+                   });
+        hintEls[i].classList.toggle("here", here && !ok);
+      }
+    });
+    document.getElementById("solved").textContent = count;
+
+    Array.prototype.forEach.call(keyEl.children, function(k){
+      var n = Number(k.dataset.n);
+      k.querySelector(".kl").textContent = guess[n] || (pencil[n] ? pencil[n].toLowerCase() : "");
+      k.classList.toggle("sel", n === selected);
+      k.classList.toggle("cracked", !!guess[n]);
+      k.classList.toggle("fixed", !!locked[n]);
+    });
+
+    var used = {}; Object.keys(guess).forEach(function(n){ used[guess[n]] = true; });
+    // Three states, not two. A letter can be spent (you have placed it), or it
+    // can be absent -- not on this board at all. A board need not carry all 26,
+    // so an absent letter would otherwise sit there looking available forever.
+    alphaEl.innerHTML = ALPHA.split("").map(function(l){
+      if (!present[l]) return '<s class="out" title="not on this board">' + l + "</s>";
+      return used[l] ? "<s>" + l + "</s>" : l;
+    }).join(" ") + '<span class="cap">' + nPresent + " letters on this board" +
+      (absentList.length ? " · no " + absentList.join(", ") : "") + "</span>";
+    Array.prototype.forEach.call(keysEl.children, function(b){ if (b.dataset.l) b.classList.toggle("used", !!used[b.dataset.l]); });
+    document.getElementById("pen").classList.toggle("on", pencilMode);
+
+    var rNum = document.getElementById("rNum"), rHint = document.getElementById("rHint");
+    if (selected === null){ rNum.textContent = ""; rHint.textContent = "Tap a square to select its number"; }
+    else {
+      var c2 = countOf(selected);
+      rNum.textContent = "Number " + selected;
+      rHint.textContent = c2.total + (c2.total === 1 ? " square" : " squares")
+        + (c2.empty ? " " + DOT + " " + c2.empty + " still empty" : " " + DOT + " all filled")
+        + (pencilMode ? " " + DOT + " pencil on" : "");
+    }
+
+    var subsEl = document.getElementById("subs");
+    Array.prototype.forEach.call(subsEl.querySelectorAll("i"), function(dot,i){ dot.classList.toggle("spent", i < subsUsed); });
+    subsEl.querySelector("span").textContent = subsUsed >= SUBS ? "No substitutions left" : (SUBS - subsUsed) + (SUBS - subsUsed === 1 ? " substitution" : " substitutions");
+    document.getElementById("reveal").disabled = over || selected === null || !!locked[selected];
+    document.getElementById("check").disabled = over;
+    if (count === SLOTS.length && !over) fullTime();
+  }
+
+  function select(n){ if (over) return; selected = n; start(); paint(); }
+  function typeLetter(l){
+    if (over || selected === null) return;
+    if (locked[selected]){
+      toast(locked[selected] === "confirmed"
+        ? "That number is locked by a finished answer"
+        : locked[selected] === "revealed" ? "That number was revealed" : "That letter was given");
+      return;
+    }
+    if (!present[l]){ toast(l + " is not on this board"); return; }
+    start();
+    if (pencilMode){ pencil[selected] = l; step(1); paint(); return; }
+    // One letter, one number. If this letter is already fixed to a locked
+    // number, typing it elsewhere must be refused, not quietly duplicated:
+    // the old code skipped locked numbers when clearing the letter away and
+    // then assigned it regardless, leaving the same letter on two numbers.
+    var holder = holderOf(l);
+    if (holder !== null && holder !== selected && locked[holder]){
+      toast(l + " is already fixed at number " + holder);
+      return;
+    }
+    Object.keys(guess).forEach(function(n){ if (guess[n] === l && !locked[n]) delete guess[n]; });
+    guess[selected] = l; delete pencil[selected]; delete wrongMark[selected];
+    step(1); paint(); refreshSolved();
+  }
+  /* Ask whether any newly-finished answer is right.
+
+     Only ever asked about slots that are COMPLETELY filled and not already
+     done, so offline it is a few comparisons and live it is at most eleven
+     calls in a game rather than one per keystroke. A slot half full is not a
+     question anybody can answer. */
+  var asking = false;
+  function refreshSolved(){
+    if (asking || over) return;
+    var ripe = SLOTS.some(function(w, i){
+      return !solvedWords[i] && wordCells(w).every(function(rc){
+        return guess[CELLS[rc[0]][rc[1]]];
+      });
+    });
+    if (!ripe) return;
+    asking = true;
+    oracle.confirm(function(done){
+      asking = false;
+      var fresh = done.some(function(i){ return !solvedWords[i]; });
+      done.forEach(function(i){ solvedWords[i] = true; });
+      if (fresh) paint();
+    });
+  }
+
+  function holderOf(l){
+    var found = null;
+    Object.keys(guess).forEach(function(n){ if (guess[n] === l) found = Number(n); });
+    return found;
+  }
+  function clearSelected(){
+    if (over || selected === null) return;
+    if (locked[selected]){
+      toast(locked[selected] === "confirmed"
+        ? "That number is locked by a finished answer" : "That letter cannot be cleared");
+      return;
+    }
+    delete guess[selected]; delete pencil[selected]; delete wrongMark[selected];
+    step(-1); paint();
+  }
+  document.addEventListener("keydown", function(e){
+    if (e.metaKey || e.ctrlKey || e.altKey) return;
+    if (/^[a-zA-Z]$/.test(e.key)){ typeLetter(e.key.toUpperCase()); e.preventDefault(); }
+    else if (e.key === "Backspace" || e.key === "Delete"){ clearSelected(); e.preventDefault(); }
+    else if (e.key === " "){ pencilMode = !pencilMode; paint(); e.preventDefault(); }
+  });
+
+  document.getElementById("check").addEventListener("click", function(){
+    if (over) return; start();
+    oracle.wrongNumbers(function(bad){
+      extraMinutes += COST.check;
+      bad.forEach(function(n){ wrongMark[n] = true; });
+      toast(bad.length
+        ? bad.length + (bad.length === 1 ? " number wrong " : " numbers wrong ") + DOT + " +" + COST.check + "'"
+        : "All correct so far " + DOT + " +" + COST.check + "'");
+      paint(); tick();
+    });
+  });
+  document.getElementById("reveal").addEventListener("click", function(){
+    if (over || selected === null || locked[selected]) return; start();
+    var n = selected;
+    oracle.reveal(n, function(l){
+      subsUsed++; extraMinutes += COST.reveal;
+      Object.keys(guess).forEach(function(k){ if (guess[k] === l && !locked[k]) delete guess[k]; });
+      guess[n] = l; locked[n] = "revealed"; delete pencil[n]; delete wrongMark[n];
+      toast(subsUsed > SUBS ? "Over your substitutions: a draw at best"
+                            : "Substitution used " + DOT + " +" + COST.reveal + "'");
+      paint(); tick(); refreshSolved();
+    });
+  });
+  /* The clock rate is fixed AT KICK-OFF and cannot be changed after it.
+
+     It used to be changeable at any moment, and because the minute is computed
+     as elapsed/rate over the WHOLE match rather than accumulated, switching to
+     the slower clock mid-game rewound the match clock: a minute of real play at
+     3 seconds is 20 match minutes, and flipping to 20 turns the same minute into
+     3. Twenty minutes of decay handed back for one click, and the higher score
+     to go with it.
+     Nobody reported it. It is the kind of thing found by asking what a control
+     does to state it did not create, which is the same question that found the
+     stamped fallback. It also could not survive the server holding the clock --
+     the rate is part of the round, issued once. */
+  function setRate(v){
+    if (startedAt) return false;              // the round has a rate already
+    secondsPerMinute = Number(v) === 20 ? 20 : 3;
+    return true;
+  }
+  Array.prototype.forEach.call(document.querySelectorAll('input[name="spd"]'), function(i){
+    i.addEventListener("change", function(){
+      if (!setRate(i.value)) {
+        toast("The clock is set at kick-off");
+        Array.prototype.forEach.call(document.querySelectorAll('input[name="spd"]'), function(o){
+          o.checked = Number(o.value) === secondsPerMinute;
+        });
+      }
+    });
+  });
+
+  /* Kick-off. Live this opens a ROUND -- the server issues the id, owns the
+     clock and counts the substitutions, so nothing about a helper's cost can be
+     argued with afterwards. The rate goes up because the server cannot turn
+     elapsed time into a match minute without knowing whether a minute costs 3
+     real seconds or 20.
+
+     The display clock still starts here and runs locally, so it is smooth; the
+     CHARGED clock is the server's and arrives on every response that costs
+     something. Where they disagree the server wins and the display corrects. */
+  var opening = false;
+  function start(){
+    if (startedAt) return;
+    startedAt = Date.now();
+    timer = setInterval(tick, 500);
+    if (SOLUTION || round || opening) return;
+    opening = true;
+    if (window.XIPlays) XIPlays.start({ game: "codeword", mode: "daily" });
+    fetch(API + "play", {
+      method: "POST", headers: {"Content-Type": "application/json", "X-XI-Games": "1"},
+      body: JSON.stringify({ rate: secondsPerMinute, no: BOARD_NO_N })
+    }).then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); })
+      .then(function(d){
+        opening = false;
+        if (!d || !d.playId) { toast("Could not start the match"); return; }
+        round = d;
+        if (typeof d.subsLeft === "number") subsUsed = SUBS - d.subsLeft;
+        if (d.scored === false) toast("Replay " + DOT + " this one is not recorded");
+        paint();
+      })
+      .catch(function(){ opening = false; toast("Could not reach the referee"); });
+  }
+  // No cap at 90. The match is not taken off anyone for running out of time:
+  // the clock goes into stoppage time and the board stays playable. The score
+  // has already bottomed out at 36 by then (scoreAt returns the floor from 90
+  // on), so playing past the whistle costs nothing further -- it just means a
+  // draw rather than a win.
+  function matchMinute(){ if (!startedAt) return 0; var real = (Date.now() - startedAt) / 1000; return Math.floor(real / secondsPerMinute) + extraMinutes; }
+  function minuteText(m){ return m > 90 ? "90+" + (m - 90) : String(m); }
+
+  // What a finished match is worth and what it counts as. Kept out of the DOM
+  // so it can be checked: see tools/typing_test.mjs.
+  //   all eleven inside ninety   -> Win
+  //   all eleven in stoppage     -> Draw
+  //   whistle blown short of all -> Loss, scored on what was locked
+  function outcome(m, solvedNow, total){
+    return { score: Math.round(scoreAt(m) * solvedNow / total),
+             res: solvedNow < total ? "L" : (m <= 90 ? "W" : "D") };
+  }
+  function tick(){
+    if (over) return; var m = matchMinute();
+    document.getElementById("minute").textContent = minuteText(m);
+    document.getElementById("worth").textContent = Math.round(scoreAt(m));
+    // past ninety there is a way to stop, since nothing stops it for you
+    document.getElementById("whistle").hidden = m < 90;
+  }
+
+  // The match now ends one of two ways: the board is finished, or the player
+  // blows the whistle on it. Nothing ends it for them. A part-finished board
+  // scores what it is worth rather than nothing -- eight of eleven at 36 a
+  // board is 26, not a blank -- because walking away from a board you nearly
+  // had should not read the same as never starting.
+  function fullTime(){
+    if (window.XIPlays && XIPlays.active()) XIPlays.end(true);
+    over = true; clearInterval(timer); paint();
+    // Live, the SERVER computes the result. Choosing server-marking to stop a
+    // forged score and then letting the page post its own would be the front
+    // door locked and the back door open, so the page displays what comes back
+    // and computes only when there is nobody to ask.
+    oracle.finish(function(d){ showFullTime(d); });
+  }
+
+  function showFullTime(fromServer){
+    var m = matchMinute(), solvedNow = Object.keys(solvedWords).length;
+    var out = outcome(m, solvedNow, SLOTS.length), score = out.score, res = out.res;
+    if (fromServer && typeof fromServer.score === "number"){
+      score = fromServer.score;
+      res = fromServer.result || res;
+      solvedNow = typeof fromServer.solved === "number" ? fromServer.solved : solvedNow;
+      m = typeof fromServer.minute === "number" ? fromServer.minute : m;
+    }
+    var words = {W:"Win",D:"Draw",L:"Loss"};
+    var solved = solvedNow;
+    var squares = ""; for (var i=0;i<10;i++){ squares += i < Math.round(score/MAX*10) ? SQ_ON : SQ_OFF; }
+    var share = "Codeword XI " + DOT + " board " + BOARD_NO + "\n" + squares + "\n" + score + " pts " + DOT + " " + solved + "/11 " + DOT + " " + minuteText(m) + "' " + DOT + " " + words[res] + "\nthexigames.com";
+    document.getElementById("ftScore").textContent = score;
+    var rr = document.getElementById("ftRes"); rr.textContent = words[res]; rr.className = "res " + res;
+    document.getElementById("ftShare").textContent = share;
+    document.getElementById("ft").classList.add("on");
+    document.getElementById("copy").onclick = function(){ try { navigator.clipboard.writeText(share); toast("Copied"); } catch(e){ toast("Select and copy the text"); } };
+  }
+  document.getElementById("whistle").addEventListener("click", function(){ if (!over) fullTime(); });
+  document.getElementById("again").addEventListener("click", restart);
+  function restart(){
+    clearInterval(timer);
+    guess = {}; pencil = {}; locked = {}; wrongMark = {}; solvedWords = {};
+    selected = null; selCell = null; selWord = null; pencilMode = false;
+    subsUsed = 0; extraMinutes = 0; startedAt = null; over = false; timer = null;
+    document.getElementById("whistle").hidden = true;
+    GIVEN_N.forEach(function(g){ guess[g.n] = g.letter; locked[g.n] = "given"; });
+    document.getElementById("ft").classList.remove("on");
+    document.getElementById("minute").textContent = "0";
+    document.getElementById("worth").textContent = MAX;
+    paint();
+  }
+
+  var toastT; function toast(s){ var t = document.getElementById("toast"); t.textContent = s; t.classList.add("on"); clearTimeout(toastT); toastT = setTimeout(function(){ t.classList.remove("on"); }, 1800); }
+
+  oracle = SOLUTION ? localOracle() : serverOracle();
+  paint();
+  refreshSolved();
+}
+
+/* Which board is today's, and where to get it.
+
+   The day is counted in UTC from the epoch, the same arithmetic the crossword
+   uses, and from the SERVER's clock where one is available: the manifest's HTTP
+   Date header. That is not caution for its own sake -- the crossword shipped a
+   version that counted device-local days against a server that counted UTC, and
+   for an hour every British summer night the two named different boards. The
+   device clock is the fallback, because offline the server cannot contradict
+   anyone anyway. */
+var DAILY_EPOCH = Date.UTC(2026, 8, 13);   // board 1 is the day after
+
+/* Where boards come from. Two shapes, and the difference is not cosmetic.
+
+   "daily/" serves the queue as STATIC FILES, which means every board in it is
+   public the moment it is deployed: anyone can fetch daily/0200.json today and
+   read the solution to a puzzle six months out. That is fine for a review host
+   and wrong for a live game, and it is not fixable inside a static folder --
+   pre-staging a year and hiding it are the same folder asking for opposite
+   things.
+
+   An endpoint that answers with TODAY's board, chosen by the server's own clock,
+   is the fix. Point BOARD_SOURCE at it and the loader below is unchanged: it
+   still asks for the manifest and then a board, and the server decides what it
+   is allowed to hand over. */
+var BOARD_SOURCE = "daily/";
+
+/* The five endpoints, read off the committed source rather than guessed at:
+   functions/api/codeword/{daily,play,mark,reveal,finish}.js.
+
+     GET  daily[?no=N] -> { day, no, board: {no,day,size,cells,given,absent,slots}, lastDay }
+     POST play   {rate,no?}          -> { playId, startedMs, rate, scored, subsLeft }
+     POST mark   {playId,guess}      -> { solved: [...], capped }
+     POST mark   {playId,guess,check}-> { wrong: [...], spentMinutes }
+     POST reveal {playId,n}          -> { letter, subsLeft, spentMinutes, charged }
+     POST finish {playId}            -> { score, solved, minute, result }
+
+   Note `board` is NESTED in the daily response and the page unwraps it, and
+   that `scored` is false for a replay -- the round still plays and finishes,
+   and nothing is banked. */
+var API = "/api/codeword/";
+
+/* Whether there is a server behind this page. The built drop sets it; a local
+   copy of the package has no endpoints and reads the staged files instead. */
+var LIVE = true;
+
+function dayNumber(ms){
+  var d = new Date(ms);
+  var mid = Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+  return Math.max(1, Math.round((mid - DAILY_EPOCH) / 86400000));
+}
+
+/* Which board the address is asking for.
+
+   Nothing, normally: the day decides, and that is the safe case because no
+   number travels. An archive link names one, and the site session's rule is
+   that a board is reachable when its DAY IS TODAY OR EARLIER -- bounded by the
+   schedule rather than by arithmetic, so a board with no day is not a board.
+
+   That bound is the server's and this function does not duplicate it. What it
+   does is refuse to ASK for anything the bound would refuse: a number that is
+   not a number, or one past today. A client that asks only for what it may have
+   is not a security measure -- the server still has to say no -- but it keeps an
+   honest mistake from looking like an attack in somebody's logs, and it means a
+   mistyped URL shows a message rather than an error. */
+function wantedBoard(today){
+  // PRESENT but unreadable is refused, not quietly replaced with today. The
+  // first version matched digits only, so "?no=-2" and "?no=abc" fell through
+  // and served today's board to somebody who had followed an archive link --
+  // they would have played the wrong puzzle believing it was the one they
+  // asked for. Absent means today; present means exactly what it says or
+  // nothing at all.
+  var m = /[?&]no=([^&]*)/.exec(location.search);
+  if (!m) return today;
+  var raw = m[1];
+  if (!/^\d+$/.test(raw)) return null;
+  var n = Number(raw);
+  if (!isFinite(n) || n < 1 || n > today) return null;
+  return n;
+}
+
+/* Live, the day is the SERVER'S and the board arrives nested in the response.
+   The page does no date arithmetic at all in that case: asking a server that
+   already knows what day it is to be told by the client is how two clocks come
+   to disagree. The static path below stays for local preview of the package,
+   where there is no endpoint to ask. */
+function loadDaily(){
+  /* Present but unreadable is REFUSED, not quietly replaced with today. The
+     first version dropped an unparseable ?no= and asked for today instead, so
+     somebody following a broken archive link would have played today's puzzle
+     believing it was the one they asked for. That was fixed on the static path
+     an hour earlier and written again here from the same instinct, which is
+     why the check below covers both.
+
+     The number in an address is the FAMILY's board number, counted from the
+     family's day one and not from this game's epoch -- the two differ by
+     nineteen. The page passes it through untouched and the server translates
+     it via the day, which is the only thing the two schemes agree about. */
+  var m = /[?&]no=([^&]*)/.exec(location.search);
+  if (m && !/^\d+$/.test(m[1])) return Promise.reject(new Error("no such board"));
+  var q = m ? "?no=" + m[1] : "";
+  return fetch(API + "daily" + q, {cache: "no-cache"}).then(function(r){
+    if (!r.ok) throw new Error("no board");
+    return r.json();
+  }).then(function(d){
+    if (!d || !d.board) throw new Error("no board");
+    return d.board;
+  });
+}
+
+function loadToday(){
+  return fetch(BOARD_SOURCE + "manifest.json", {cache: "no-cache"}).then(function(r){
+    if (!r.ok) throw new Error("no manifest");
+    var served = Date.parse(r.headers.get("date") || "");
+    var ms = isFinite(served) ? served : Date.now();
+    return r.json().then(function(man){
+      var today = dayNumber(ms);
+      var have = man.boards && man.boards.length
+                 ? man.boards[man.boards.length - 1].no : 0;
+      // Past the end of the queue, serve the last board rather than nothing: a
+      // day with no game is worse than a day with yesterday's.
+      if (today > have) today = have;
+      if (today < 1) throw new Error("queue is empty");
+      var n = wantedBoard(today);
+      if (n === null) throw new Error("no such board");
+      var id = ("000" + n).slice(-4);
+      return fetch(BOARD_SOURCE + id + ".json", {cache: "no-cache"}).then(function(b){
+        if (!b.ok) throw new Error("no board " + id);
+        return b.json();
+      });
+    });
+  });
+}
+
+function noBoard(why){
+  /* Live, there is nothing to fall back TO. The page used to stamp board 1 in
+     as a fallback so a failed fetch cost freshness rather than the game -- and
+     that was right until the day the server became the only thing holding the
+     answers. A stamped fallback in a sealed build is board 1's solution sitting
+     in view-source for anyone who looks, which is the leak we closed in the
+     folder arriving again in the page. So the live build carries no board, and
+     a failure says so. */
+  var el = document.getElementById("grid");
+  if (el) {
+    el.style.gridTemplateColumns = "1fr";
+    el.innerHTML = '<div style="padding:26px 18px;text-align:center;color:var(--ink-soft)">'
+      + "<b style=\"display:block;font-family:var(--disp);font-size:19px;letter-spacing:.06em;"
+      + 'text-transform:uppercase;color:var(--ink)">No game today</b>'
+      + "Today's board could not be reached. Try again in a minute."
+      + "</div>";
+  }
+  if (window.console) console.warn("no board:", why);
+}
+
+if (!DAILY) {
+  boot(null);
+} else {
+  (LIVE ? loadDaily() : loadToday()).then(boot).catch(function(e){
+    noBoard(e);
+  });
+}

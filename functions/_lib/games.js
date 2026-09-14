@@ -17,7 +17,7 @@
    already keep about naming unbuilt games. */
 import { dailyKey, dailyDayKey, dailyNoForDay } from "./daily.js";
 
-export const GAMES = ["crossword", "wordsearch", "scrambled", "hilo", "vowels", "grid", "quickfire"];
+export const GAMES = ["crossword", "wordsearch", "scrambled", "hilo", "vowels", "grid", "quickfire", "codeword"];
 
 export const DEFAULT_GAME = "crossword";
 
@@ -68,6 +68,11 @@ export const LAUNCHED = {
      because LAUNCHED is what every list counts from and a later date would
      hide the boards it has already run. */
   quickfire: "2026-09-14",
+  /* Codeword XI took the seventh shirt on 14 September 2026 — the next free
+     number, which is what launching does. Its queue starts the same day, so
+     the launch day and board one are the same day and nothing counts from
+     before the game existed. */
+  codeword: "2026-09-14",
   grid: "2026-09-07",       // the sixth shirt; board #13
 };
 
@@ -213,6 +218,7 @@ export const LABELS = {
   scrambled: "Scrambled XI",
   vowels: "Vowels XI",
   quickfire: "QuickFire XI",
+  codeword: "Codeword XI",
   hilo: "HiLo XI",
   /* Grid XI is in BUILT and not GAMES, like QuickFire — and it needs a label
      for a reason beyond the report menu. chrome_test derives the names that

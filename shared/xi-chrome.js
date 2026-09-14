@@ -66,9 +66,13 @@
        Both open, and both say a number and a status and nothing else. The
        link is for whoever is testing it; the name stays off every served page
        until the day it launches. */
-    { n: 7,  status: "In testing",   href: "/football/ballpark/" },
-    { n: 8,  status: "In build" },
-    { n: 9,  status: "On the drawing board" },
+    /* Codeword XI launched on 14 September 2026 and took the next free number,
+       which is what launching does. Ballpark was sitting on the seven as the
+       owner ORDERING of what came next and moves down: that was never a shirt,
+       and the comment above says so. */
+    { n: 7,  name: "Codeword XI",   href: "/football/codeword/" },
+    { n: 8,  status: "In testing",   href: "/football/ballpark/" },
+    { n: 9,  status: "In build" },
     { n: 10, status: "On the drawing board" },
     /* Eleven shirts, and a game launching pushes the tail down one — so the
        squad loses an unsigned slot rather than growing a twelfth. */

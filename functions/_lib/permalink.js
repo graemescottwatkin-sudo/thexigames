@@ -78,6 +78,15 @@ export const PERMA_GAMES = {
      calendar does not hold is not a board — the same question the word search
      and HiLo are asked. */
   grid: { name: "Grid XI", schedule: "day" },
+  /* Codeword XI. SCHEDULED AND FINITE, which is the distinction that matters
+     here rather than the one between ring and day: cw_schedule names one board
+     per day out of a queue that ENDS, so unlike the three ring games it can run
+     out. Past its last day the page clamps to the highest board it holds and
+     serves that to everyone, every day, with every health check green — silent
+     by construction. The schedule being a TABLE rather than a formula is what
+     puts it in the runway check, which asks sqlite_master for every table whose
+     name ends _schedule and so needs no list to be added to. */
+  codeword: { name: "Codeword XI", schedule: "day" },
 };
 
 /* WHAT A BOARD IS CALLED OUT LOUD: the day it ran, in every game.
@@ -172,7 +181,10 @@ export function keyForOldDate(raw, now = Date.now()) {
    things to change the day a game's storage moves. Never interpolated from
    anything a request can reach: the key is a game name already matched
    against PERMA_GAMES. */
-const SCHEDULE_TABLE = { wordsearch: "ws_schedule", hilo: "hl_schedule", grid: "gd_schedule" };
+const SCHEDULE_TABLE = {
+  wordsearch: "ws_schedule", hilo: "hl_schedule", grid: "gd_schedule",
+  codeword: "cw_schedule",
+};
 
 export async function ranOn(env, game, key) {
   const g = PERMA_GAMES[game];
@@ -278,6 +290,7 @@ export async function boardKeys(env, game, now = Date.now()) {
 export const THEME_OF = {
   crossword: "football", wordsearch: "football", scrambled: "football",
   hilo: "football", vowels: "football", quickfire: "football", grid: "football",
+  codeword: "football",
 };
 export const themeOf = (game) => THEME_OF[game] || "football";
 export const gamePath = (game) => `/${themeOf(game)}/${game}/`;

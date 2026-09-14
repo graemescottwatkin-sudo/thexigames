@@ -16,7 +16,7 @@
  * day.
  */
 import {
-  publicBoard, leaksSolution, boardByNo, boardForDay, absentLetters, cipherGrid,
+  publicBoard, leaksSolution, boardByNo, boardByFamilyNo, boardForDay, absentLetters, cipherGrid,
 } from "../../functions/_lib/cw-board.js";
 import { scoreAt, outcome, confirmSlots, wrongNumbers, letterFor, validRate, minuteOf } from "../../functions/_lib/cw-round.js";
 
@@ -125,6 +125,32 @@ console.log("\n=== The past opens, the future never does ===");
     seen.args && seen.args[1] === TODAY, JSON.stringify(seen.args));
   t("boardForDay asks for the day it was given",
     !!(await boardForDay(db(ROWS), TODAY)));
+}
+
+console.log("\n=== Two numberings, and only one of them is an address ===");
+{
+  /* CODEWORD'S OWN no COUNTS FROM ITS EPOCH, 13 September 2026. Every address
+     on this site counts from the FAMILY's day one, 26 August — so board 1 is
+     family number 20 and the two differ by nineteen. Both are small positive
+     integers and either looks reasonable in a URL, which is exactly why taking
+     the wrong one would have served the wrong board for every archive link
+     without anything failing. Found by asking keyLabel what
+     /football/codeword/daily/1 would be called and being told a date three
+     weeks before the game existed. */
+  const { dailyDayKey } = await import("../../functions/_lib/daily.js");
+  t("family number 20 is the day Codeword board 1 ran",
+    dailyDayKey(20) === "2026-09-14", dailyDayKey(20));
+  t("and family number 1 is three weeks before this game existed",
+    dailyDayKey(1) === "2026-08-26", dailyDayKey(1));
+  const rows = [{ no: 1, day: "2026-09-14" }, { no: 2, day: "2026-09-15" }];
+  const today = "2026-09-14";
+  t("asking by FAMILY number finds the board that ran that day",
+    (await boardByFamilyNo(db(rows), 20, today))?.no === 1, "family 20 -> board 1");
+  t("asking by family number 1 finds nothing, because nothing ran that day",
+    (await boardByFamilyNo(db(rows), 1, today)) === null,
+    "26 August is before the queue starts");
+  t("and TOMORROW's family number is refused",
+    (await boardByFamilyNo(db(rows), 21, today)) === null, "family 21 is 15 September");
 }
 
 console.log("\n=== The scoring is the producing side's, to the point ===");
