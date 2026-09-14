@@ -17,7 +17,7 @@
    already keep about naming unbuilt games. */
 import { dailyKey, dailyDayKey, dailyNoForDay } from "./daily.js";
 
-export const GAMES = ["crossword", "wordsearch", "scrambled", "hilo", "vowels", "grid"];
+export const GAMES = ["crossword", "wordsearch", "scrambled", "hilo", "vowels", "grid", "quickfire"];
 
 export const DEFAULT_GAME = "crossword";
 
@@ -43,17 +43,31 @@ export const DEFAULT_GAME = "crossword";
  * the GAME, not about its storage, so it lives here beside the family list.
  *
  * The day a game first served its daily, UTC, as YYYY-MM-DD. Null means not
- * launched: QuickFire and Grid XI have boards and no page, and the day one of
- * them launches is the day its date is written here — the same edit that puts
- * it in GAMES, and the importer reads it rather than being told twice.
- */
+ * launched: a game can have boards and no page, and the day it launches is the
+ * day its date is written here — the same edit that puts it in GAMES, and the
+ * importer reads it rather than being told twice.
+ * IT USED TO NAME THE TWO GAMES IN THAT STATE, "QuickFire and Grid XI". Grid
+ * launched on 7 September 2026 and the line went stale the same day. A comment
+ * listing WHICH games are in a state is a second copy of what the table below
+ * already says, and it drifts every time one ships — the same fault the content
+ * banks are being audited for this week. The rule is stated instead; the list
+ * is the data. */
 export const LAUNCHED = {
   crossword: "2026-08-26",    // day one of the family, the epoch reset
   wordsearch: "2026-08-27",   // the day after; board #2
   scrambled: "2026-09-01",    // "takes the number 3 shirt: released"; board #7
   hilo: "2026-09-03",         // and hl_schedule's own first day agrees
   vowels: "2026-09-04",       // the fifth shirt; board #10
-  quickfire: null,
+  /* QUICKFIRE WENT LIVE ON 14 SEPTEMBER 2026 AND BANKED NOTHING FOR HOURS.
+     It was serving boards while absent from GAMES, so entryKey() returned null
+     for it and every result a player produced was computed, returned and
+     silently dropped — the client believing it had banked. That is the
+     Scrambled fault this file already carries a comment about, arriving in a
+     second game: "no key, no row", and nobody finds out.
+     The date is the day it started serving, not the day this line was written,
+     because LAUNCHED is what every list counts from and a later date would
+     hide the boards it has already run. */
+  quickfire: "2026-09-14",
   grid: "2026-09-07",       // the sixth shirt; board #13
 };
 
@@ -251,6 +265,20 @@ export function entryKey(game, row) {
     const n = Number(row && row.no);
     if (!Number.isFinite(n) || n <= 0) return null;
     return (game === "vowels" ? "vw:" : "sc:") + Math.floor(n);
+  }
+  if (game === "quickfire") {
+    /* A QuickFire daily is addressed by its play date — qf_daily is keyed on
+       play_date and a board is served on that date and not before — so the key
+       is the day, like the word search's and HiLo's.
+       THE KEY IS ABOUT IDENTITY, NOT CONTENT, which is why this branch could be
+       written before the game's result SHAPE is settled. QuickFire is moving
+       from a typing game to four options and what a result CONTAINS will change
+       with it; what makes a result UNIQUE for a player will not. That
+       separation is the whole reason the banking could land without waiting for
+       the rewrite, and every hour it waited was results lost rather than
+       results wrongly shaped. */
+    const d = String((row && (row.day || row.date || row.play_date)) || "");
+    return /^\d{4}-\d{2}-\d{2}$/.test(d) ? "qf:" + d : null;
   }
   if (game === "hilo") {
     /* A HiLo daily is addressed by its day, like the word search's: the
