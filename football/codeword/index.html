@@ -46,6 +46,43 @@
      hand-built and looked correct, which is precisely how it hid. -->
 <header class="xic-bar"></header>
 <h1 class="sr-only">Codeword XI &mdash; the daily football codeword</h1>
+
+<!-- THE LANDING, which every game in the family opens on and this one did not.
+     It went straight into a playing board: no way to reach yesterday's, and a
+     clock that starts because you arrived rather than because you chose to.
+     HiLo, Wordsearch and Scrambled all open on this; Codeword now does too.
+
+     Simpler than theirs by one choice. HiLo offers a board of the week and a
+     clubs page because it HAS those; a codeword has a board a day and nothing
+     else, so inventing a third card would be furniture pretending to be a
+     feature. Today, and the ones that have gone. -->
+<main class="site-wrap" id="cwHome">
+  <div class="site-grid">
+    <div class="site-main">
+      <button class="home-choice hero" id="cwToday" type="button">
+        <span class="hc-kicker" id="cwTodayKicker">TODAY</span>
+        <span class="hc-title">Today&rsquo;s board</span>
+        <span class="hc-note">Every letter is a number. Three are given, eleven
+          football answers, and the cipher is the puzzle.</span>
+        <span class="hc-state" id="cwTodayState"></span>
+      </button>
+    </div>
+  </div>
+
+  <div class="site-sec">More to play</div>
+  <div class="site-row">
+    <a class="home-choice col" href="/football/codeword/archive/">
+      <span class="hc-kicker">PAST BOARDS</span>
+      <span class="hc-title">Every board that has gone</span>
+      <span class="hc-note">One address each, and they stay playable.</span>
+    </a>
+  </div>
+</main>
+
+<!-- The game itself, not shown until a board is chosen. Hidden with the HTML
+     hidden ATTRIBUTE rather than a class, so it is hidden to a screen reader
+     as well and not merely invisible. -->
+<div id="cwGame" hidden>
 <!-- ===================================================================
      FURNITURE — everything from here to the end of the masthead is the
      page's own chrome, and the SITE SESSION REPLACES ALL OF IT with the
@@ -115,11 +152,36 @@
   </div>
 </div>
 <div class="toast" id="toast"></div>
+</div>
 <footer class="xic-foot"></footer>
 
 <script src="/shared/xi-chrome.js?v=v37"></script>
 <script src="/shared/xi-plays.js?v=v37"></script>
 <script>XIChrome.init({ game: "codeword" });</script>
 <script src="js/game.js?v=v001"></script>
+<!-- THE SWITCH, and it is only a switch. The board loads and renders behind
+     the landing exactly as it did before; this shows it. The game's own clock
+     starts on the first interaction rather than on load, so nothing is running
+     while the landing is up and choosing "today" costs no minutes.
+     Kept out of game.js deliberately: game.js is the producing side's file,
+     transplanted whole and re-derived from their drop every time it is re-cut.
+     Page furniture belongs to the page. -->
+<script>
+(function () {
+  var home = document.getElementById("cwHome");
+  var game = document.getElementById("cwGame");
+  var today = document.getElementById("cwToday");
+  if (!home || !game || !today) return;
+  today.addEventListener("click", function () {
+    home.hidden = true;
+    game.hidden = false;
+    /* Move the focus with the view. Leaving it on a button that is now hidden
+       strands anybody navigating by keyboard at the top of a page that has
+       changed under them. */
+    var first = game.querySelector("[tabindex], button, a, input");
+    if (first && first.focus) first.focus();
+  });
+})();
+</script>
 </body>
 </html>
