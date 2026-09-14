@@ -85,19 +85,71 @@ for (const x of questions) {
      reason its bank can be re-checked years later. */
   if (!x.source || !String(x.source).trim()) fault(`${at}: no source`);
   const chars = typeable(x.answer || "");
-  if (chars < 4 || chars > MAX_CHARS) {
-    fault(`${at}: ${chars} typeable characters, the board holds 4 to ${MAX_CHARS}`);
+  /* THE CEILING STAYS, THE FLOOR GOES. They were one check and they are not one
+     rule: MAX_CHARS is about LAYOUT — "past this the answer row wraps on a
+     phone" — and an option has to fit a phone exactly as a typed answer did.
+     The floor was about TYPING, and nothing is typed under four options. It was
+     rejecting ten live rows whose answers are Law, Son, Low and QPR, none of
+     which is a defect under any presentation. Measured before removing: 0 of
+     the 1,924 eligible rows exceed 16 typeable characters and the longest is
+     15, so the ceiling blocks nothing today — but it has a live reason to stay
+     and one character of margin, so it will start biting on rows added later.
+     That will be a layout question, not a rule to delete. */
+  if (chars > MAX_CHARS) {
+    fault(`${at}: ${chars} typeable characters, the board holds at most ${MAX_CHARS}`);
   }
-  /* THE BOARD IS THE INPUT, so it fixes the character count. An alias of a
-     different length can never be entered — it is not a lenient alternative,
-     it is a dead row that makes the bank look more forgiving than it is. */
-  for (const a of x.aliases || []) {
-    if (typeable(a) !== chars) {
-      fault(`${at}: alias "${a}" is a different length and can never be typed`);
-    }
-  }
+  /* THE ALIAS-LENGTH RULE IS GONE, and it was never doing the job it named.
+     It refused any alias whose typeable length differed from the answer's, on
+     the reasoning that a different length can never be entered. Across 1,939
+     validated rows there are 812 aliases and NOT ONE matches its answer's
+     length — 344 longer, 468 shorter — because an alias exists precisely when a
+     form was shortened. A filter with a 100% rejection rate is indistinguishable
+     from a field nobody uses, which is why it went unnoticed for so long, and
+     it absorbed 0 of the 116 rows where the bank's answer and D1's disagree,
+     which is the one job it might plausibly have been doing.
+     It is also blocking a fix rather than merely sitting there: two answer
+     strings each cover two different people — "Ronaldo" across 13 rows
+     (Cristiano and Nazario), "Ramsey" across 2 (Alf and Aaron) — and the agreed
+     repair is an alias on 15 of them. Every one faults this rule, and a fault
+     writes no file at all, so the repair would have refused the whole import
+     and blamed the bank. */
   if (norm(x.clue || "").includes(norm(x.answer || ""))) {
     fault(`${at}: the clue contains its own answer`);
+  }
+  /* THE FOUR OPTIONS, AND THE ONE RULE THAT MAKES THEM SAFE TO SERVE.
+   *
+   * Exactly one option must equal the answer. Until now that sentence lived in
+   * migration 022's comment and nowhere in code — the columns have been in the
+   * database since 13 September and are written by nothing and read by nothing.
+   * A rule stated only in a comment is a rule the next import ignores.
+   *
+   * COMPARED AGAINST THE SAME SOURCE THE ANSWER CAME FROM, which is the whole
+   * of it: `x.answer` on this row, not a lookup elsewhere. Crossword XI found
+   * 116 rows where the bank's answer string and D1's disagree — bank "Man Utd",
+   * D1 "Manchester United". Build the options from one source and check them
+   * against another and a player picks the right option and is told they are
+   * wrong, on roughly one question in eleven. It reads as a broken game rather
+   * than a data problem, and nothing in the pipeline reports it.
+   *
+   * POSITION IS NOT STORED, DELIBERATELY. It is derivable from this rule, and a
+   * stored copy is a second statement of which option is correct that can drift
+   * from the first. That is the same fault one table over.
+   *
+   * Options are OPTIONAL on a row — the bank is mid-pivot and rows without them
+   * still import — but a row that has any must have all four and satisfy this. */
+  const opts = [x.option_1, x.option_2, x.option_3, x.option_4];
+  const present = opts.filter((o) => o !== undefined && o !== null && String(o).trim() !== "");
+  if (present.length) {
+    if (present.length !== 4) {
+      fault(`${at}: ${present.length} options, a question with options needs four`);
+    } else if (new Set(present.map((o) => norm(String(o)))).size !== 4) {
+      fault(`${at}: two options are the same, so one right answer has two buttons`);
+    } else {
+      const hits = present.filter((o) => norm(String(o)) === norm(x.answer || "")).length;
+      if (hits !== 1) {
+        fault(`${at}: ${hits} of four options equal the answer, and exactly one must`);
+      }
+    }
   }
 }
 
@@ -173,12 +225,20 @@ const out = [
 
 for (const x of questions) {
   const chars = typeable(x.answer);
+  /* The options are written in the order the bank gives them. That order IS the
+     presentation, and it is the only record of where the right answer sits — so
+     a row emitted here and a row read back must agree without anything storing
+     a position. A row with no options writes four NULLs and is invisible to the
+     reader's filter until it has them. */
+  const opt = (v) => (v === undefined || v === null || String(v).trim() === "" ? "NULL" : q(String(v)));
   out.push("INSERT INTO qf_question (id, answer, answer_norm, answer_type, aliases, " +
-    "clue, source, difficulty, char_count, word_count, status, origin, verified_at) VALUES (" +
+    "clue, source, difficulty, char_count, word_count, status, origin, verified_at, " +
+    "option_1, option_2, option_3, option_4) VALUES (" +
     [x.id, q(x.answer), q(norm(x.answer)), q(x.answerType || "unknown"),
      q((x.aliases || []).join("|")), q(x.clue), q(x.source),
      q(x.difficulty || "medium"), chars, words(x.answer),
-     "'verified'", q(x.origin || "authored"), "datetime('now')"].join(", ") + ");");
+     "'verified'", q(x.origin || "authored"), "datetime('now')",
+     opt(x.option_1), opt(x.option_2), opt(x.option_3), opt(x.option_4)].join(", ") + ");");
 }
 
 for (const d of dailies) {

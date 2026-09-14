@@ -16,8 +16,22 @@ export function hasDB(env) {
   return !!(env && env.DB);
 }
 
+/* THE FOUR OPTIONS ARE SELECTED, and the order they come back in IS the order
+   they are shown — there is no stored position, because position is derivable
+   from the rule the importer enforces: exactly one option equals `answer`.
+   Storing it too would be a second statement of which button is correct, free
+   to drift from the first.
+   SELECTED ONLY BECAUSE THE IMPORTER NOW REFUSES A ROW THAT BREAKS THAT RULE.
+   These columns existed in the schema from 13 September, written by nothing and
+   read by nothing; selecting them before anything validated them would have
+   served unvalidated options to players, which is worse than serving none — a
+   player picks the right option and is told they are wrong. The order is
+   importer first, reader second, and it is not interchangeable.
+   A row mid-pivot has four NULLs here, which renders as no options rather than
+   as four blank buttons. */
 const QUESTION_COLUMNS = `
-  q.id, q.answer, q.aliases, q.clue, q.answer_type, q.difficulty
+  q.id, q.answer, q.aliases, q.clue, q.answer_type, q.difficulty,
+  q.option_1, q.option_2, q.option_3, q.option_4
 `;
 
 function shape(row) {
