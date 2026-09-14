@@ -15,7 +15,7 @@
  *   - no practice. There is now an archive picker and a finals catalogue; what
  *     is still missing is a practice mode, which this game may never want.
  */
-var BUILD = "v001l";
+var BUILD = "v001m";
 
 (function () {
   "use strict";
@@ -918,7 +918,12 @@ var BUILD = "v001l";
         cl.textContent = got.clubs.map(function (c) {
           /* No number where the bank has no count. Printing 0 would claim he
              never played for them, which is not what missing data means. */
-          return c.apps ? c.club + " " + c.apps : c.club;
+          /* AND THE LOAN IS SAID, because a loan and the transfer that followed
+             it are now two entries at one club and would otherwise read as the
+             same club printed twice — a mistake rather than a career. Same
+             wording as the career hint uses, so one player reads the same way
+             whether he was bought or solved. */
+          return (c.apps ? c.club + " " + c.apps : c.club) + (c.loan ? " (loan)" : "");
         }).join(" · ");
         el.appendChild(cl);
       }
@@ -927,7 +932,8 @@ var BUILD = "v001l";
         slot.pos + ", " + (got
           ? got.name + (got.clubs && got.clubs.length
               ? ", " + got.clubs.map(function (c) {
-                  return c.apps ? c.club + ", " + c.apps + " appearances" : c.club;
+                  return (c.apps ? c.club + ", " + c.apps + " appearances" : c.club) +
+                    (c.loan ? ", on loan" : "");
                 }).join("; ")
               : "")
           : (bagless()

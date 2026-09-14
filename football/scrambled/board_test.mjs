@@ -472,14 +472,31 @@ const REPEATER = SC_BOARDS.flatMap((b) => b.slots).find((sl) => {
 });
 t("the bank contains a player with two spells at one club", !!REPEATER,
   REPEATER ? REPEATER.display : "none — the summing rule is untested");
-t("whose spells are summed, not listed twice", (() => {
+/* SUMMED PER CLUB **AND LOAN STATUS**, which is a narrower rule than the one
+   this checked until 14 September 2026.
+   It used to demand that no club appear twice in the output at all. That folded
+   a loan into the permanent transfer that followed it — Cedric Soares is the
+   bank's own example, two Arsenal spells where the first was a loan — and the
+   content side states the rule the other way: loans are never merged into
+   permanent deals, while genuine repeats at one club are. The old assertion was
+   a pinned literal defending the behaviour it was written to describe, so it
+   went red on the fix rather than on a fault, which is the tell.
+   A club MAY now appear twice, and when it does the two entries must be
+   distinguishable — otherwise the reveal reads as the same club printed twice,
+   which is a mistake rather than a career. */
+t("spells are summed per club and loan status, never listed twice under one", (() => {
   if (!REPEATER) return false;
   const got = topClubs(REPEATER, 99);
-  const names = got.map((c) => c.club);
-  if (new Set(names).size !== names.length) return false;
-  /* and the total is the sum of every spell at that club */
-  return got.every((c) => c.apps === (REPEATER.clubs || [])
-    .filter((sp) => sp.club === c.club)
+  const keys = got.map((c) => c.club + "|" + (c.loan ? "L" : "P"));
+  if (new Set(keys).size !== keys.length) return false;
+  /* Any club appearing more than once differs by the flag the reveal renders. */
+  for (const name of new Set(got.map((c) => c.club))) {
+    const rows = got.filter((c) => c.club === name);
+    if (rows.length > 1 && new Set(rows.map((r) => !!r.loan)).size !== rows.length) return false;
+  }
+  /* and each total is the sum of every spell matching that club AND status */
+  return got.every((c) => !("apps" in c) || c.apps === (REPEATER.clubs || [])
+    .filter((sp) => sp.club === c.club && (sp.loan === true) === (c.loan === true))
     .reduce((n, sp) => n + (typeof sp.apps === "number" && sp.apps > 0 ? sp.apps : 0), 0));
 })());
 
@@ -512,6 +529,69 @@ t("and it is NARROWER than the career the hint sells", !!NARROWER,
   NARROWER ? NARROWER.display + ": " + NARROWER.clubs.length + " clubs, " +
     NARROWER.premClubs.length + " in the league" : "every career is all-league");
 
+/* THE REVEAL'S LOAN AND ONGOING RULES, against the content side's own cases.
+   Fixtures rather than bank boards, because the bank does not yet carry the
+   flags — the staged packages do, and they are not imported. A suite that
+   waited for the data would be a suite that first ran in production. */
+console.log("\nA loan is not the transfer that followed it");
+{
+  const MINGS = { premClubs: [
+    { club: "Ipswich Town", from: 2012, to: 2015 },
+    { club: "Bournemouth", from: 2015, to: 2019 },
+    { club: "Aston Villa", from: 2019, to: 2019, loan: true },
+    { club: "Aston Villa", from: 2019, to: null, ongoing: true },
+  ]};
+  const m = topClubs(MINGS, 99);
+  const villa = m.filter((c) => c.club === "Aston Villa");
+  t("Mings' Villa loan and Villa career are two entries", villa.length === 2,
+    m.map((c) => c.club + (c.loan ? " (loan)" : "")).join(" · "));
+  t("and the flag tells them apart",
+    villa.some((c) => c.loan) && villa.some((c) => !c.loan));
+  t("the ongoing spell is the permanent one, not the loan",
+    villa.find((c) => !c.loan).ongoing === true &&
+    villa.find((c) => c.loan).ongoing === false);
+
+  /* TWO LOANS AT ONE CLUB ARE STILL ONE ENTRY. Kalvin Phillips has a finished
+     and a running loan at Sheffield United in the same year; they share a club
+     and a status, so the merge that exists for repeat spells applies. */
+  const p = topClubs({ premClubs: [
+    { club: "Sheffield United", from: 2026, to: 2026, loan: true, apps: 3 },
+    { club: "Sheffield United", from: 2026, to: null, loan: true, ongoing: true, apps: 4 },
+  ]}, 99);
+  t("two loans at one club merge, and the row is ongoing because one is",
+    p.length === 1 && p[0].loan === true && p[0].apps === 7 && p[0].ongoing === true,
+    JSON.stringify(p));
+}
+
+console.log("\nOngoing is read, never derived");
+{
+  /* `to === from` is a genuine single season on some rows and an open end on
+     others, and they are the same bytes. Coleman's 2010 Blackpool loan is real.
+     A rule like "print a dash when to equals from" moves the error into the
+     cases nobody checks instead of removing it. */
+  const c = topClubs({ premClubs: [
+    { club: "Everton", from: 2009, to: 2026 },
+    { club: "Blackpool", from: 2010, to: 2010, loan: true },
+  ]}, 99);
+  t("a real one-season spell is not ongoing just because to equals from",
+    c.find((x) => x.club === "Blackpool").ongoing === false);
+  t("and nothing is ongoing unless the flag says so",
+    c.every((x) => x.ongoing === false));
+}
+
+console.log("\nNo appearance counts: no zeroes, and career order");
+{
+  /* premClubs stopped carrying apps, so every entry is level and the stable
+     sort leaves career order. Asserted because the alternative is a silent
+     reshuffle of which clubs survive the cap. */
+  const v = topClubs({ premClubs: [
+    { club: "Southampton", from: 2015, to: 2018 },
+    { club: "Liverpool", from: 2018, to: null, ongoing: true },
+  ]}, 99);
+  t("no apps key is invented where nothing was recorded",
+    v.every((x) => !("apps" in x)), JSON.stringify(v));
+  t("career order is preserved", v[0].club === "Southampton");
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
-

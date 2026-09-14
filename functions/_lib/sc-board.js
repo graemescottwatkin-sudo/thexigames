@@ -424,9 +424,15 @@ export function revealName(slot) {
    repeat club, so this is the common case, not the corner.
 
    A total of zero means nobody recorded the appearances, not that the player
-   never played: twenty-four spells in the bank carry no count. The number is
-   left off those rather than printed as 0, which would be a claim the data
-   does not make. Ordering is stable, so clubs level on appearances stay in
+   never played: SOME spells in the bank carry no count. The number is left off
+   those rather than printed as 0, which would be a claim the data does not
+   make.
+   IT USED TO SAY "twenty-four spells", and by the function's own test there
+   are now four. A comment stating a QUANTITY about a bank that is regenerated
+   is stale the moment the bank moves — it is exactly the `can-drift` fault the
+   games are being audited for this week, sitting in the file that serves the
+   drifting facts. Rewritten to state the RULE, which cannot go out of date,
+   rather than a count that has to be maintained and never is. Ordering is stable, so clubs level on appearances stay in
    career order. */
 export function topClubs(slot, max) {
   const cap = typeof max === "number" ? max : 2;
@@ -439,11 +445,45 @@ export function topClubs(slot, max) {
 
      Falls back to the career where a board carries no premClubs, so a board
      authored before the split still names something rather than nothing. */
+  /* A LOAN IS NOT THE SAME SPELL AS THE TRANSFER THAT FOLLOWED IT, so the key
+     is the club AND whether it was a loan — not the club alone.
+     Merging on the club alone folded Tyrone Mings' 2019 Villa loan into the
+     permanent deal that followed it, Odegaard's Arsenal loan into his Arsenal
+     career, and both of Kalvin Phillips' Sheffield United loans into one row
+     with the club's permanent players. The content side states the rule the
+     other way round and it is theirs to state: loans are never merged into
+     permanent deals, while genuine repeats at one club ARE — Carlton Cole is
+     one West Ham spell, and that merge is the whole reason this function
+     exists, because two half-spells each lose to a bigger single one and push
+     a player's real second club off a two-line summary.
+     So same club, same loan status, merged. Same club, different status, not. */
   for (const spell of (slot && (slot.premClubs || slot.clubs)) || []) {
     if (!spell || !spell.club) continue;
-    const at = byClub.get(spell.club) || { club: spell.club, apps: 0 };
-    if (typeof spell.apps === "number" && spell.apps > 0) at.apps += spell.apps;
-    byClub.set(spell.club, at);
+    const loan = spell.loan === true;
+    const key = spell.club + " " + (loan ? "L" : "P");
+    const at = byClub.get(key) ||
+      { club: spell.club, apps: 0, loan, ongoing: false, counted: false };
+    if (typeof spell.apps === "number" && spell.apps > 0) {
+      at.apps += spell.apps;
+      at.counted = true;          // SOMETHING was recorded, as against summing to 0
+    }
+    /* ONGOING IS READ, NEVER DERIVED. `to === from` means an open-ended spell
+       on some rows and a genuine single season on others — Seamus Coleman's
+       2010 Blackpool loan is real — and the two are the same bytes. Only the
+       flag separates them, so a rule like "print a dash when to equals from"
+       would move the error into the cases nobody checks rather than remove it. */
+    if (spell.ongoing === true) at.ongoing = true;
+    byClub.set(key, at);
   }
-  return [...byClub.values()].sort((a, b) => b.apps - a.apps).slice(0, cap);
+  /* Appearances decide the order where they exist. They no longer reach the
+     reveal at all — premClubs stopped carrying them — so every entry is level
+     and the sort, which is stable, leaves them in career order. That is the
+     honest degradation rather than a silent reshuffle, but it does mean a
+     capped reveal now shows a player's FIRST clubs rather than his biggest.
+     The career fallback still carries counts, so the ranking survives there. */
+  return [...byClub.values()]
+    .sort((a, b) => b.apps - a.apps)
+    .slice(0, cap)
+    .map(({ club, apps, loan, ongoing, counted }) =>
+      counted ? { club, apps, loan, ongoing } : { club, loan, ongoing });
 }
