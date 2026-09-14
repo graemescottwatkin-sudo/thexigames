@@ -12,8 +12,13 @@
  * No names on the chain, no values, no sources. A page that listed the
  * twelve would let the board be read without being played.
  */
-import { loadBank, clubCatalog } from "./hl-board.js";
+import { loadBank, clubCatalog, themeCatalog } from "./hl-board.js";
 import { sitePage, htmlResponse, esc } from "./site-page.js";
+/* WHERE A BOARD LIVES IS ONE FACT IN ONE PLACE. permalinkPath builds the
+   address and dailyNoForDay turns a day into the number a board is addressed
+   by; neither is restated here, and neither is date-shaped. */
+import { permalinkPath, keyLabel } from "./permalink.js";
+import { dailyNoForDay } from "./daily.js";
 
 const SITE = "https://www.thexigames.com";
 const INDEX = "/football/hilo/clubs/";
@@ -41,21 +46,43 @@ function notFound(what) {
 const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
 
 /* ---- /football/hilo/clubs/ ---- */
-export async function indexPage({ env }) {
-  let clubs = [];
-  try { clubs = clubCatalog(await loadBank(env)); } catch (e) { clubs = []; }
+export async function indexPage({ env, now = Date.now() }) {
+  let clubs = [], themes = [];
+  /* ONE READ, TWO CATALOGUES, so the counts on this page cannot disagree with
+     the pages they link to. */
+  try {
+    const bank = await loadBank(env);
+    clubs = clubCatalog(bank);
+    themes = themeCatalog(bank, now);
+  } catch (e) { clubs = []; themes = []; }
+  const themeItems = themes.map((t) =>
+    `<li><a href="${esc(themePath(t.slug))}">${esc(t.name)}</a>` +
+    `<span class="meta">${plural(t.boards.length, "board", "boards")}</span></li>`).join("");
   const items = clubs.map((c) =>
     `<li><a href="${esc(clubPath(c.slug))}">${esc(c.name)}</a>` +
     `<span class="meta">${plural(c.boards.length, "board", "boards")}</span></li>`).join("");
+  /* THE HEADING PROMISED THEMES BEFORE THERE WERE ANY. It has read "Clubs and
+     themes" since the page was written, and listed clubs alone — the quietest
+     kind of wrong, because nothing fails and the reader simply never finds the
+     half that was advertised. The themes half now exists.
+     THE TWO HALVES ARE NOT THE SAME KIND OF THING, and the page says so rather
+     than leaving it to be inferred from a heading. A club board is free play
+     and has never been a daily; a theme board is a daily that has already run.
+     One list under one heading with no such sentence would invite a reader to
+     go looking for today's board in it. */
   const body = `<h1>Clubs and themes</h1>
 <p class="sub">A club's managers by the year they took charge: twelve names, eleven calls,
 earlier or later. Every board here is free to play, and none of them touch your run.</p>
-${items ? `<ul>${items}</ul>` : `<p class="sub">No club boards have been released yet.</p>`}
+${themeItems ? `<h2>By theme</h2>
+<p class="sub">Dailies that have already run, grouped by what they rank.</p>
+<ul>${themeItems}</ul>` : ""}
+${items ? `<h2>By club</h2>
+<ul>${items}</ul>` : `<p class="sub">No club boards have been released yet.</p>`}
 <a class="cta" href="/football/hilo/">Play today's board</a>`;
   return htmlResponse(sitePage({
-    title: "HiLo XI by club — the higher-or-lower football game",
-    description: "HiLo XI club boards: a club's managers by the year they took charge. " +
-      "Twelve names, eleven calls, earlier or later, three substitutions.",
+    title: "HiLo XI by club and theme — the higher-or-lower football game",
+    description: "HiLo XI boards by club and by theme: a club's managers by the year " +
+      "they took charge, and every daily that has run, grouped by what it ranks.",
     canonical: SITE + INDEX,
     game: "hilo", current: INDEX,
     body,
@@ -88,32 +115,30 @@ export async function treeRoute({ params, env }) {
  * "Most Premiership appearances". Now the label is written once and every
  * board wearing it is a numbered target beside it.
  *
- * THE NUMBER IS THE ADDRESS. It counts across the whole club rather than
- * restarting inside each row, so the number a player presses is the number in
- * the URL it opens and no door moves when the rows are regrouped. The word
- * search's theme pages hold the same rule for the same reason — a chip reading
- * "#2" that opens ".../3" is one thing with two numbers, which is the fault
- * this project pays for most often.
+ * THE NUMBER IS THE ADDRESS, AND IT IS THE ORDINAL WITHIN A FAMILY — not the
+ * position in the club's whole list. The number a player presses is the number
+ * in the URL it opens, which is the rule the word search's theme pages hold as
+ * well: a chip reading "#2" that opens ".../3" is one thing with two numbers,
+ * and it is the fault this project pays for most often.
+ *
+ * IT COUNTED ACROSS THE WHOLE CLUB UNTIL 14 SEPTEMBER 2026, and this comment
+ * said so as though that were the safe choice. It was the bug. "The third
+ * board" meant the third when this club's boards are sorted by id, and BOTH of
+ * those inputs move at every international break: HiLo re-snapshots the club
+ * stat boards and REASSIGNS THEIR IDS, and the rebuild yields a different count
+ * — that day took appearances 95 to 88 and assists 18 to 16. So /club/arsenal/3
+ * did not break at a refresh. It silently began opening a DIFFERENT BOARD, the
+ * page still rendered, and nothing reported anything. A dead link tells you it
+ * is dead; that does not.
+ *
+ * Scoped to the family, an address moves only when that family's own membership
+ * changes, which is honest and rare. familyOf() already computed it and
+ * clubCatalog() already carried it on every board, so the data was there before
+ * the bug was.
  */
 export function boardRows(club) {
   const rows = [];
   const byLabel = new Map();
-  /* THE ADDRESS IS FAMILY PLUS ORDINAL WITHIN THAT FAMILY, not position in the
-   * club's whole list. The comment above is right about regrouping and was
-   * silent about the thing that actually moves these doors.
-   *
-   * It used to number across the club — the third board when this club's boards
-   * are sorted by id. Both of those inputs move at every international break:
-   * HiLo re-snapshots the club stat boards and REASSIGNS THEIR IDS, and the
-   * rebuild yields a different count (14 September took appearances 95 to 88
-   * and assists 18 to 16). So /club/arsenal/3 did not break at a refresh. It
-   * silently began opening a DIFFERENT BOARD, the page still rendered, and
-   * nothing reported anything. A dead link tells you it is dead; that does not.
-   *
-   * Scoped to the family, an address moves only when that family's own
-   * membership changes, which is honest and rare. familyOf() already computes
-   * it and clubCatalog() already carries it on every board, so the data was
-   * there before the bug was. */
   const seen = new Map();
   (club.boards || []).forEach((b) => {
     const family = b.family || "other";
@@ -273,4 +298,89 @@ function boardDoor(club, family, raw) {
  * belongs, it is an admission that we cannot know. */
 function staleBoardDoor(club) {
   return Response.redirect(`${SITE}${clubPath(club.slug)}`, 302);
+}
+
+/* ---- /football/hilo/theme/<theme>/ ----
+ *
+ * THE DAILIES, GROUPED BY WHAT THEY RANK. A club board is reached from its
+ * club; a daily board had no address but the day it ran, so 103 of them sat
+ * behind a reverse-chronological list and nothing else. The heading on the
+ * index has said "Clubs and themes" since it was written, which was a promise
+ * the page could not keep.
+ *
+ * EVERY BOARD HERE HAS ALREADY RUN, and that is the whole safety of the page
+ * rather than a detail of it. These are dailies: on 14 September 2026 eleven
+ * of the 103 had run and the rest run through to 14 December. A page built
+ * from the board table would have listed ninety-two boards that are dailies
+ * still to come — the word search's fault of 6 September exactly, where a
+ * schedule pre-filled with inventory published 233 unrun boards. themeCatalog
+ * asks archive(), which is bounded by LAUNCHED.hilo and by today, so an unrun
+ * board cannot appear here even by accident.
+ *
+ * AND EVERY LINK IS AN ADDRESS THAT ALREADY EXISTED. A board that has run is
+ * /football/hilo/daily/<no>, built by permalinkPath from the number
+ * dailyNoForDay derives. Nothing is numbered here — no new ordinal, no new
+ * list to index into, and therefore none of the drift the club addresses were
+ * fixed for this morning. Asking permalink.js rather than assembling the path
+ * is the same rule: where a board lives is one fact in one place.
+ *
+ * NOT date-shaped. /football/hilo/daily/2026-09-03 was the address until
+ * 6 September 2026 and now 301s to /daily/9 — every game is addressed by a
+ * board number counted from the family's day one. A link built the old way
+ * would work, via a redirect, and would be wrong on every page. */
+export function themePath(slug) { return `/football/hilo/theme/${slug}/`; }
+
+function dailyHref(day) { return permalinkPath("hilo", dailyNoForDay(day)); }
+
+/* THE DAY IS IN THE LINK, NOT ONLY BESIDE IT. A subtitle is a description of
+   what the number means, so boards of the same kind share one word for word:
+   of the eleven that had run on 14 September, two pairs were identical — the
+   year a club was founded, twice, and the year a ground opened, twice. Four
+   links reading the same thing and going to different places, told apart only
+   by a span the link text does not include, which for anyone moving between
+   links rather than reading the page is four links that all say the same and
+   no way to choose. The visible text stays short; the accessible name carries
+   the date that makes it unique. */
+function themeEntry(e) {
+  const no = dailyNoForDay(e.day);
+  const label = keyLabel("hilo", no);
+  const what = e.subtitle || e.category;
+  return `<li><a href="${esc(dailyHref(e.day))}" aria-label="${esc(what)} — the board from ${esc(label)}">` +
+    `${esc(what)}</a><span class="meta">${esc(label)}</span></li>`;
+}
+
+function themePage(theme) {
+  const body = `<p class="crumb"><a href="${INDEX}">Clubs and themes</a></p>
+<h1>${esc(theme.name)}</h1>
+<p class="sub">${plural(theme.boards.length, "board", "boards")} that have already
+run as the daily. Each one opens at its own address, free to play, and none of
+them touch your run.</p>
+<p class="note">${esc(theme.rule)}</p>
+<ul>${theme.boards.map(themeEntry).join("")}</ul>
+<a class="cta" href="/football/hilo/">Play today's board</a>`;
+  return htmlResponse(sitePage({
+    title: `${theme.name} — HiLo XI`,
+    description: `${plural(theme.boards.length, "HiLo XI board", "HiLo XI boards")} of ` +
+      `${theme.name.toLowerCase()}, higher or lower. Every one has already run as the ` +
+      `daily, and all of them are free to play.`,
+    canonical: SITE + themePath(theme.slug),
+    game: "hilo", current: INDEX,
+    body,
+  }));
+}
+
+export async function themeRoute({ params, env, now = Date.now() }) {
+  const parts = (params && params.path) || [];
+  const list = Array.isArray(parts) ? parts.filter(Boolean) : [parts].filter(Boolean);
+  if (!list.length) return Response.redirect(SITE + INDEX, 301);
+  const slug = String(list[0]).toLowerCase();
+  if (!SLUG.test(slug) || list.length > 1) return notFound("theme");
+  let themes = [];
+  try { themes = themeCatalog(await loadBank(env), now); } catch (e) { return notFound("theme"); }
+  const theme = themes.find((t) => t.slug === slug);
+  /* A theme with nothing in it yet is NOT FOUND rather than an empty page, and
+     it comes back on its own the day a board of that kind runs. themeCatalog
+     drops the empty ones, so this is one decision in one place. */
+  if (!theme) return notFound("theme");
+  return themePage(theme);
 }

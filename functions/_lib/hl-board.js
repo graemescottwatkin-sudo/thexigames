@@ -308,3 +308,98 @@ export function archive(bank, now) {
     return { day, id: String(s[day]), category: b ? b.category : null, subtitle: b ? b.subtitle : null };
   }).filter((e) => e.category);
 }
+
+/* ---- the themes: what a DAILY board ranks ----
+ *
+ * A club board says which club it is about and is reached from that club's
+ * page. A daily board says no such thing: its category is the whole of its
+ * identity, and until now the 103 of them were one undifferentiated heap
+ * reachable only by the day they ran. The theme is the answer to WHAT IS
+ * BEING RANKED — players, clubs, managers, grounds — which is the only
+ * grouping a reader could guess at from outside.
+ *
+ * NAMED EXPLICITLY, AND EVERYTHING ELSE IS VISIBLE RATHER THAN BURIED. This
+ * is the same job CLUB_CATEGORY does and it is the job that went wrong twice:
+ * a rule that must name every member buries what it misses, and both times
+ * the missed boards were invisible with no error anywhere. So the failure
+ * mode is inverted here. An unrecognised category does not vanish and does
+ * not throw — it lands in "other", which is a real page with a real heading,
+ * and themeCatalog reconciles: every board in the archive is on exactly one
+ * theme page. A relabel of the kind that buried board 641 would show up as
+ * "other" gaining a board, which somebody can see.
+ *
+ * THE OLD WORDING IS KEPT BESIDE THE NEW for the same reason CLUB_CATEGORY
+ * keeps both: the content side relabelled "longest spell" to "longest
+ * completed spell" on 12 September 2026, D1 and the bank disagreed for the
+ * length of an import, and a map that knew only one of them would have been
+ * wrong about half the rows for the whole of that day. */
+const THEME_OF_CATEGORY = new Map([
+  ["premier league players by age", "players"],
+  ["premier league appearances", "players"],
+  ["premier league goals", "players"],
+  ["premier league assists", "players"],
+  ["premier league clean sheets", "players"],
+  ["premier league yellow cards", "players"],
+  ["goals in a single season", "players"],
+  ["england caps", "players"],
+  ["clubs by year formed", "clubs"],
+  ["points in a premier league season", "clubs"],
+  ["fa cup finals reached", "clubs"],
+  ["top-flight league titles", "clubs"],
+  ["most recent fa cup win", "clubs"],
+  ["first fa cup win", "clubs"],
+  ["big-club appointments", "managers"],
+  ["longest completed spell in charge", "managers"],
+  ["longest spell in charge", "managers"],
+  ["grounds by year opened", "grounds"],
+]);
+
+/* The order they are shown in, and the only list of themes there is. "other"
+   is last and is not a fallback dressed as a category: it is named here so
+   that a page for it exists the moment it has anything in it. */
+export const BOARD_THEMES = [
+  { slug: "players", name: "Players",
+    rule: "Players ranked by a career figure — appearances, goals, assists, caps, " +
+      "clean sheets, cards or age." },
+  { slug: "clubs", name: "Clubs",
+    rule: "Clubs ranked by their own history — the year they formed, a season's " +
+      "points, or what they have won." },
+  { slug: "managers", name: "Managers",
+    rule: "Managers ranked by when they were appointed or how long they lasted." },
+  { slug: "grounds", name: "Grounds",
+    rule: "Grounds ranked by the year they opened." },
+  { slug: "other", name: "Other",
+    rule: "Boards whose subject has not been grouped yet. Nothing is hidden here — " +
+      "a board lands in this list rather than disappearing from the site." },
+];
+
+/* NOT CALLED themeOf. permalink.js exports a themeOf already and it answers a
+   different question — which THEME a game lives under, as in the first path
+   segment. Two exported functions of one name meaning two things is how a
+   reader ends up importing the wrong answer and never finding out. */
+export function boardTheme(board) {
+  const c = String((board && board.category) || "").trim().toLowerCase();
+  return THEME_OF_CATEGORY.get(c) || "other";
+}
+
+/* ---- the theme catalogue ----
+ *
+ * BUILT ON archive(), WHICH IS THE WHOLE SAFETY OF IT. These boards are
+ * DAILIES, unlike the club boards, so most of them have not run yet: on
+ * 14 September 2026 eleven of the 103 had, and the rest run through to
+ * 14 December. A theme page built from the board table would have published
+ * ninety-two boards that are dailies still to come — which is not a new
+ * mistake, it is the word search's exactly, where a schedule pre-filled with
+ * inventory published 233 unrun boards including the answers. archive()
+ * already bounds by LAUNCHED.hilo and by today, so asking it rather than the
+ * bank means an unrun board cannot appear here even by accident.
+ *
+ * A club board is not expected on the calendar — there are none today — but
+ * if one ever is, it lands in "other" and is seen, rather than being filtered
+ * out by a rule nobody would think to check. */
+export function themeCatalog(bank, now) {
+  const runs = archive(bank, now);
+  const by = new Map(BOARD_THEMES.map((t) => [t.slug, { ...t, boards: [] }]));
+  for (const e of runs) by.get(boardTheme(e)).boards.push(e);
+  return BOARD_THEMES.map((t) => by.get(t.slug)).filter((t) => t.boards.length);
+}

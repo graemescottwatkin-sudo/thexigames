@@ -5,9 +5,11 @@
  * numbered targets on its page, a board address that is a door into the
  * game, and nothing on any page that plays the board for you.
  */
-import { indexPage, treeRoute, clubPath } from "../../functions/_lib/hl-pages.js";
+import { indexPage, treeRoute, themeRoute, clubPath } from "../../functions/_lib/hl-pages.js";
 import { HL_SAMPLE_BOARDS } from "../../functions/_lib/hl-sample.js";
-import { clubOf, clubSlug, familyOf } from "../../functions/_lib/hl-board.js";
+import { clubOf, clubSlug, familyOf, loadBank, themeCatalog, archive } from "../../functions/_lib/hl-board.js";
+import { permalinkPath, keyLabel } from "../../functions/_lib/permalink.js";
+import { dailyNoForDay } from "../../functions/_lib/daily.js";
 
 let pass = 0, fail = 0;
 const t = (n, ok, d) => { ok ? pass++ : fail++; console.log(`${ok ? "  ok  " : "FAIL  "}${n}${d ? "  — " + d : ""}`); };
@@ -205,6 +207,138 @@ for (const [label, path] of [
 }
 const root = await treeRoute(ctx([]));
 t("the bare tree root is the index", root.status === 301 && root.headers.get("Location") === "https://www.thexigames.com/football/hilo/clubs/");
+
+console.log("\n=== The themes: what a daily board ranks ===");
+{
+  /* A BANK THAT SPANS THE BOUNDARY, because the boundary is the whole point.
+     Four themes with a board apiece that has RUN, one board that has not run
+     yet, and one whose category nothing recognises. HiLo launched 2026-09-03
+     (LAUNCHED.hilo), so "today" is pinned here and the days are placed either
+     side of it deliberately — a suite must not decide for itself what day it
+     is, so the reading is taken once and handed to the page. */
+  const NOW = Date.parse("2026-09-14T09:00:00Z");
+  const mk = (id, category, subtitle) => ({ ...club, id, category, subtitle });
+  const bank = [
+    mk("d1", "England caps", "Most England caps"),
+    mk("d2", "Clubs by year formed", "Year the club formed"),
+    mk("d3", "Big-club appointments", "Year he was appointed"),
+    mk("d4", "Grounds by year opened", "Year the ground opened"),
+    mk("d5", "Sandwiches by filling", "Best sandwich"),
+    /* THE SAME SUBTITLE TWICE, which is the ordinary case rather than a corner:
+       a subtitle describes what the number means, so every board of a kind
+       shares one. Four of the eleven boards that had run on 14 September were
+       two such pairs. */
+    mk("d7", "England caps", "Most England caps"),
+    mk("d6", "England caps", "A board that has not run yet"),
+  ];
+  const schedule = {
+    "2026-09-05": "d1", "2026-09-06": "d2", "2026-09-07": "d3",
+    "2026-09-09": "d5", "2026-09-10": "d7",
+    "2026-11-01": "d4", "2026-12-01": "d6",
+  };
+  const env = { DB: { prepare: (sql) => ({ all: async () => ({
+    results: /hl_board/.test(sql)
+      ? bank.map((b) => ({ payload: JSON.stringify(b) }))
+      : Object.keys(schedule).map((day) => ({ day, board_id: schedule[day] })),
+  }) }) } };
+
+  const idx = await (await indexPage({ env, now: NOW })).text();
+  const listed = [...idx.matchAll(/href="\/football\/hilo\/theme\/([a-z-]+)\/"/g)].map((m) => m[1]);
+  t("the index lists a page for every theme with a board in it",
+    listed.join(",") === "players,clubs,managers,other", listed.join(","));
+
+  /* THE RECONCILIATION, and it is the check that cannot go stale. Every board
+     that has run is on exactly one theme page. A category nobody has grouped
+     does not fall out of the site — it lands in "other" and is counted here,
+     so a relabel of the kind that buried board 641 shows up as a number
+     moving rather than as a board nobody can find. */
+  const bank2 = themeCatalog(await loadBank(env), NOW);
+  const ran = archive(await loadBank(env), NOW);
+  const total = bank2.reduce((a, th) => a + th.boards.length, 0);
+  t("every board that has run is on exactly one theme page",
+    total === ran.length && total === 5, `${total} across themes, ${ran.length} in the archive`);
+  t("and a category nothing recognises is visible rather than buried",
+    (bank2.find((th) => th.slug === "other") || { boards: [] }).boards
+      .some((b) => b.id === "d5"), "d5 is the ungrouped one");
+
+  /* THE BOARD THAT HAS NOT RUN. This is the word search's 233 published
+     boards in miniature: d6 is a real board on a real schedule row, and the
+     only thing keeping it off the site is that its day has not come. */
+  t("a board scheduled for a future day is on no theme page",
+    !bank2.some((th) => th.boards.some((b) => b.id === "d6")), "d6 runs 2026-12-01");
+  t("and its subtitle appears nowhere on the index",
+    !idx.includes("A board that has not run yet"));
+
+  const page = await themeRoute({ params: { path: ["players"] }, env, now: NOW });
+  const html = await page.text();
+  t("a theme page is served and indexable",
+    page.status === 200 && !/noindex/.test(html), String(page.status));
+  t("it is canonical at its own address",
+    html.includes(`rel="canonical" href="https://www.thexigames.com/football/hilo/theme/players/"`));
+
+  /* THE LINKS ARE THE ADDRESS THE BOARD ALREADY HAD, and they are NUMBER
+     shaped. /football/hilo/daily/2026-09-05 was the address until 6 September
+     2026 and now 301s; a page full of redirects would still work, which is
+     exactly why nothing would report it. Checked by asking permalink.js what
+     the address is rather than by restating the format. */
+  const hrefs = [...html.matchAll(/href="(\/football\/hilo\/daily\/[^"]+)"/g)].map((m) => m[1]);
+  /* NEWEST FIRST, which is archive()s order and not this page inventing one.
+     It matters enough to pin: a reader arriving at a theme wants the board
+     they nearly played yesterday, not the one from launch week, and the day
+     this silently flips is the day the top of every theme page becomes the
+     oldest thing on it. */
+  t("every board links to the address it already had, newest first",
+    hrefs.join(",") === ["2026-09-10", "2026-09-05"]
+      .map((d) => permalinkPath("hilo", dailyNoForDay(d))).join(","),
+    hrefs.join(" "));
+  t("and that address is a board number, not a date",
+    hrefs.every((h) => /\/daily\/\d+$/.test(h)), hrefs.join(" "));
+  t("the page says when the board ran",
+    html.includes(keyLabel("hilo", dailyNoForDay("2026-09-05"))),
+    keyLabel("hilo", dailyNoForDay("2026-09-05")));
+  t("the rule behind the theme is stated on the page",
+    /Players ranked by a career figure/.test(html));
+
+  /* TWO LINKS THAT READ THE SAME AND GO TO DIFFERENT PLACES. The visible text
+     is the subtitle and the subtitle repeats, so the day has to be inside the
+     accessible name and not only in the span beside it — otherwise anyone
+     moving between links rather than reading the page hears the same sentence
+     twice with nothing to choose by. */
+  const names = [...html.matchAll(/<a [^>]*aria-label="([^"]*)"[^>]*>([^<]*)</g)]
+    .map((m) => ({ name: m[1], text: m[2] }));
+  const dupes = names.filter((a) => a.text === "Most England caps");
+  t("two boards with the same subtitle are two links that read the same",
+    dupes.length === 2, dupes.map((d) => d.text).join(" | "));
+  t("and each one is named by the day it ran, so they can be told apart",
+    dupes.length === 2 && dupes[0].name !== dupes[1].name &&
+      dupes.every((d) => d.name.includes("2026")),
+    dupes.map((d) => d.name).join(" | "));
+
+  /* A theme with nothing in it is not an empty page. */
+  for (const [label, path] of [
+    /* GROUNDS IS A REAL THEME WITH A REAL BOARD, and its board runs on
+       2026-11-01. It must be refused rather than served empty, and it comes
+       back on its own the day d4 runs. This case read ["assists"] until it
+       was sabotage-tested: assists is a club FAMILY and never a theme slug, so
+       it 404d whatever the code did and the assertion was a second copy of the
+       one below it wearing a different name. */
+    ["a theme that exists but has nothing that has run yet", ["grounds"]],
+    ["a theme that does not exist", ["sandwiches"]],
+    ["a slug never issued", ["DROP TABLE"]],
+    ["a path too deep", ["players", "1"]],
+  ]) {
+    let r;
+    try { r = await themeRoute({ params: { path }, env, now: NOW }); }
+    catch (e) { r = new Response(String(e), { status: 500 }); }
+    t(`${label} is refused, not cacheable, not indexed`,
+      r.status === 404 && r.headers.get("Cache-Control") === "no-store" &&
+        r.headers.get("X-Robots-Tag") === "noindex", "HTTP " + r.status);
+  }
+  const root = await themeRoute({ params: { path: [] }, env, now: NOW });
+  t("the bare theme root is the index",
+    root.status === 301 &&
+      root.headers.get("Location") === "https://www.thexigames.com/football/hilo/clubs/");
+}
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

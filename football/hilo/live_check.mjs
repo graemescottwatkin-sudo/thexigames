@@ -19,13 +19,23 @@ let pass = 0, fail = 0, warn = 0;
 const t = (n, ok, d) => { ok ? pass++ : fail++; console.log(`${ok ? "  ok  " : "FAIL  "}${n}${d ? "  — " + d : ""}`); };
 const w = (n, d) => { warn++; console.log(`  ??  ${n}${d ? "  — " + d : ""}`); };
 
-/* Twenty-five assertions run with --expect, a club page and a board chip on
-   it; twenty is the honest floor. THE FLOOR DID NOT MOVE WHEN TWO WERE ADDED,
+/* FORTY-FOUR assertions run with --expect, a club page with a chip on it and
+   a theme page with a board on it; thirty-four is the honest floor.
+
+   THE NUMBER IN THIS COMMENT WAS WRONG UNTIL 14 SEPTEMBER 2026. It said
+   twenty-five when thirty-seven were running, so the floor of twenty was not
+   set below the count by what could skip — it was a number nobody had checked
+   against the run, which is the sentinel fault wearing a floors clothes: it
+   could not have refused a block going quiet because seventeen assertions
+   could vanish before it noticed. Counted from an actual run this time.
+   Skippable: one for the tag without --expect, four in the club block when
+   the index links no club, five in the theme block when it links no theme.
+   44 - 10 = 34. THE FLOOR DID NOT MOVE WHEN TWO WERE ADDED,
    and that is arithmetic rather than inertia: both new ones are inside the
    club block, so the worst legitimate run — no --expect, no club linked —
    skips four there and one tag, and 25 - 5 is the number below. Raising it to
    22 by reflex would flap on any day the clubs index came back empty. */
-const MIN_ASSERTIONS = 20;
+const MIN_ASSERTIONS = 34;
 let finished = false;
 process.on("exit", () => {
   if (!finished) { console.log("\nTHE RUN DID NOT REACH THE END."); process.exit(1); }
@@ -117,6 +127,59 @@ if (firstClub) {
       (stale.headers.get("location") || "").endsWith("/football/hilo/club/" + firstClub + "/"),
     String(stale.status) + " " + (stale.headers.get("location") || ""));
 }
+
+console.log("\nThe themes");
+/* DERIVED FROM THE PAGE, like the club block above: which themes exist today
+   is a fact about what has run, not about this file. */
+const themeSlug = (clubsHtml.match(/href="\/football\/hilo\/theme\/([a-z-]+)\/"/) || [])[1];
+t("the index links a theme page", !!themeSlug, themeSlug);
+if (themeSlug) {
+  const tp = await get("/football/hilo/theme/" + themeSlug + "/");
+  const tpHtml = tp.status === 200 ? await tp.text() : "";
+  t("a theme page is served and indexable",
+    tp.status === 200 && !/noindex/.test(tpHtml), String(tp.status));
+
+  /* THE SEALING CLAIM, AND IT CANNOT BE PROVED OFFLINE. A suite stubs the
+     database and re-applies the rule in JS; what a theme page must never do is
+     name a board that has not run, and the only place the real schedule and
+     the real clock meet is here. Every link on the page is asked for its board
+     number and none may exceed today's — the same DERIVED shape as the answers
+     index, which may not list more boards than the game has had days, rather
+     than a pinned id that stops meaning anything the next time the bank moves. */
+  const nos = [...tpHtml.matchAll(/href="\/football\/hilo\/daily\/(\d+)"/g)].map((m) => Number(m[1]));
+  t("every board on it has an address, and they are numbers not dates",
+    nos.length > 0 && !/\/football\/hilo\/daily\/\d{4}-/.test(tpHtml), nos.length + " board(s)");
+  /* TODAY'S NUMBER, FROM THE PAGE THAT SERVES TODAY — not from the game page.
+     That was the first attempt and it was a check that COULD NOT FAIL: the
+     game page carries no daily link at all, so the scrape found nothing,
+     todayNo was null, and the comparison below skipped on every run while the
+     block reported a pass. Six vacuous checks are on this project's record and
+     this would have been the seventh, written the same afternoon as a rule
+     about them. /football/hilo/daily serves today and its canonical names the
+     number. The derivation is ASSERTED rather than assumed, so a page that
+     stops carrying it is a red line instead of a silent skip. */
+  const todayHtml = await (await get("/football/hilo/daily")).text();
+  const todayNo = Number((todayHtml
+    .match(/rel="canonical" href="[^"]*\/football\/hilo\/daily\/(\d+)"/) || [])[1]) || null;
+  t("today's board number is discoverable, so the comparison below can run",
+    !!todayNo, String(todayNo));
+  if (todayNo && nos.length) {
+    t("and not one board listed is one that has not run yet",
+      Math.max(...nos) < todayNo, `highest ${Math.max(...nos)}, today ${todayNo}`);
+  }
+
+  /* The first link must actually open a board rather than 404, which is the
+     difference between a page that lists and a page that works. */
+  if (nos.length) {
+    const board = await get("/football/hilo/daily/" + nos[0]);
+    t("the first board on the theme page opens", board.status === 200, String(board.status));
+  }
+}
+t("a theme that does not exist is refused, not indexed",
+  await (async () => {
+    const r = await get("/football/hilo/theme/sandwiches/");
+    return r.status === 404 && (r.headers.get("x-robots-tag") || "").includes("noindex");
+  })());
 
 console.log("\nIt is part of the family");
 t("the shared chrome is loaded, not a copy of it", html.indexOf("/shared/xi-chrome.js") > -1);
