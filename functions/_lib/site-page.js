@@ -58,6 +58,15 @@ const MAST = {
           ["Answers", "/football/grid/answers/"],
           ["How to play", "/football/grid/#how"]],
   },
+  /* Codeword XI, launched 14 September 2026. No Answers entry: a codeword has
+     no answer page to publish — the solution IS the grid, and a page that
+     showed it would be the leak this game's whole integration was built to
+     close, arriving by the one door nobody was watching. */
+  codeword: {
+    name: "Codeword", home: "/football/codeword/",
+    nav: [["Today", "/football/codeword/"], ["Archive", "/football/codeword/archive/"],
+          ["How to play", "/football/codeword/#how"]],
+  },
   vowels: {
     name: "Vowels", home: "/football/vowels/",
     nav: [["Today", "/football/vowels/"], ["Archive", "/football/vowels/archive/"],

@@ -42,10 +42,17 @@ const RAN = {
      a number the calendar does not hold is not a board. Two days, so the
      fixture can tell "lists what exists" from "lists one to today". */
   gd_schedule: ["2026-09-08", "2026-09-07"],
+  /* Codeword XI launched 14 September 2026 and its queue starts the same day,
+     so on its launch day exactly one board has run. One is the honest number
+     here and it is also the number that catches a reader treating "in the
+     schedule" as "has run" — the queue holds 365 days and 364 of them are
+     still to come. */
+  cw_schedule: ["2026-09-14"],
 };
 const tableOf = (sql) => (/ws_schedule/.test(sql) ? "ws_schedule"
   : /hl_schedule/.test(sql) ? "hl_schedule"
-  : /gd_schedule/.test(sql) ? "gd_schedule" : null);
+  : /gd_schedule/.test(sql) ? "gd_schedule"
+  : /cw_schedule/.test(sql) ? "cw_schedule" : null);
 const env = {
   DB: {
     prepare: (sql) => ({
