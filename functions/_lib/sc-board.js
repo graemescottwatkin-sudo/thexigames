@@ -482,8 +482,52 @@ export function topClubs(slot, max) {
      capped reveal now shows a player's FIRST clubs rather than his biggest.
      The career fallback still carries counts, so the ranking survives there. */
   return [...byClub.values()]
+    /* THIS SORT IS LOAD-BEARING PRECISELY BECAUSE IT DOES NOTHING.
+     *
+     * premClubs no longer carries appearance counts, so every entry is level,
+     * every comparison is 0, and a stable sort returns the array untouched.
+     * That is not an accident to be tidied away: the content side now RANKS
+     * premClubs before it ships, on this exact merge key, and the reveal prints
+     * neither years nor counts — it is two club names, and which two is decided
+     * entirely by the order that arrives. So the sort's whole job today is to
+     * preserve an order somebody else computed.
+     *
+     * Give it a real key again and it silently undoes that ranking. The symptom
+     * is not a crash or an empty tile: it is the WRONG TWO CLUBS on a tile that
+     * looks perfectly normal, which is what 2,083 of 4,015 tiles showed until
+     * 14 September 2026 — Emiliano Martinez reading "Arsenal + Sheffield
+     * Wednesday" rather than "Aston Villa + Reading". Nothing failed anywhere.
+     *
+     * orderKept() below is the guard. The content side's packer refuses to SEND
+     * a wrongly ordered array; this refuses to REORDER a correct one. Either
+     * alone leaves the other free to break it in silence, and the two repos
+     * cannot see each other. */
     .sort((a, b) => b.apps - a.apps)
     .slice(0, cap)
     .map(({ club, apps, loan, ongoing, counted }) =>
       counted ? { club, apps, loan, ongoing } : { club, loan, ongoing });
+}
+
+/* DID topClubs KEEP THE ORDER IT WAS GIVEN? Asserted by the suite, not thrown
+   at runtime — a reveal that refuses to render because two clubs are the wrong
+   way round is worse than the fault it is guarding, and this can be caught on
+   every push instead.
+   It compares the output against the order the spells ARRIVE in, collapsed on
+   the same key topClubs merges by, so it is a statement about this function's
+   contract rather than about any particular board. It says nothing about
+   whether the incoming order is CORRECT — that is the content side's to
+   guarantee and their packer refuses to stage a set that is out of significance
+   order. This half only says we did not shuffle it. */
+export function orderKept(spells, out) {
+  const seen = [];
+  for (const s of spells || []) {
+    if (!s || !s.club) continue;
+    const key = s.club + " " + (s.loan === true ? "L" : "P");
+    if (!seen.includes(key)) seen.push(key);
+  }
+  const got = (out || []).map((c) => c.club + " " + (c.loan ? "L" : "P"));
+  /* The output is a PREFIX of the input's distinct order — same members, same
+     sequence, truncated by the cap. A re-sort breaks the sequence; a dropped
+     merge breaks the membership. */
+  return got.every((k, i) => k === seen[i]);
 }

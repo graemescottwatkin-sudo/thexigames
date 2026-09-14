@@ -76,7 +76,15 @@ const fault = (m) => problems.push(m);
 const seenIds = new Set();
 for (const x of questions) {
   const at = `question ${x.id} (${x.answer || "no answer"})`;
-  if (!Number.isInteger(x.id)) fault(`${at}: id must be a whole number`);
+  /* THE BANK'S OWN ID, AS A STRING. It was checked as a whole number against a
+     column typed INTEGER, and 1,829 of 1,924 rows are V30288 or PL0708 — so the
+     check and the column together rejected nearly the whole bank. Migration 035
+     makes the column TEXT, which is what 022's own comment always said it held.
+     Everything outside this database keys on that string; minting an integer
+     beside it would make the real id a non-key column. */
+  if (typeof x.id !== "string" || !x.id.trim()) {
+    fault(`${at}: id must be a non-empty string — the bank's own id`);
+  }
   if (seenIds.has(x.id)) fault(`${at}: duplicate id`);
   seenIds.add(x.id);
   if (!x.answer || !String(x.answer).trim()) fault(`${at}: no answer`);
@@ -135,21 +143,25 @@ for (const x of questions) {
    * stored copy is a second statement of which option is correct that can drift
    * from the first. That is the same fault one table over.
    *
-   * Options are OPTIONAL on a row — the bank is mid-pivot and rows without them
-   * still import — but a row that has any must have all four and satisfy this. */
+   * FOUR OPTIONS ARE NOW REQUIRED, not optional. They were optional while the
+   * columns were nullable and the bank was mid-pivot; migration 035 made them
+   * NOT NULL, so a row without them is no longer a row this database can hold.
+   * It is refused HERE rather than left to SQLite, because a constraint that
+   * fires during `wrangler d1 execute` fails partway through a file with no
+   * useful line and nothing gated — the whole point of this tool is that a bad
+   * bank writes no file at all. */
   const opts = [x.option_1, x.option_2, x.option_3, x.option_4];
   const present = opts.filter((o) => o !== undefined && o !== null && String(o).trim() !== "");
-  if (present.length) {
-    if (present.length !== 4) {
-      fault(`${at}: ${present.length} options, a question with options needs four`);
-    } else if (new Set(present.map((o) => norm(String(o)))).size !== 4) {
-      fault(`${at}: two options are the same, so one right answer has two buttons`);
-    } else {
-      const hits = present.filter((o) => norm(String(o)) === norm(x.answer || "")).length;
-      if (hits !== 1) {
-        fault(`${at}: ${hits} of four options equal the answer, and exactly one must`);
-      }
-    }
+  if (present.length !== 4) {
+    fault(`${at}: ${present.length} options, and every question needs four`);
+  } else if (new Set(present.map((o) => norm(String(o)))).size !== 4) {
+    fault(`${at}: two options are the same, so one right answer has two buttons`);
+  } else if (present.filter((o) => norm(String(o)) === norm(x.answer || "")).length !== 1) {
+    /* Only ever 0 in practice — two options equal to the answer are equal to
+       each other and the duplicate check above catches them first. Stated as
+       "exactly one" anyway, because that is the rule, and because the check
+       above is free to change. */
+    fault(`${at}: no option equals the answer, and exactly one must`);
   }
 }
 
@@ -230,11 +242,17 @@ for (const x of questions) {
      a row emitted here and a row read back must agree without anything storing
      a position. A row with no options writes four NULLs and is invisible to the
      reader's filter until it has them. */
-  const opt = (v) => (v === undefined || v === null || String(v).trim() === "" ? "NULL" : q(String(v)));
+  /* No NULL branch: the gate above refuses a row that does not carry four, and
+     the column is NOT NULL, so emitting NULL here could only ever produce SQL
+     that fails halfway through an import. q() would turn "" into NULL of its
+     own accord, which is why the string is passed through String() first — a
+     helper that quietly nulls an empty value is the wrong helper for a required
+     column. */
+  const opt = (v) => q(String(v));
   out.push("INSERT INTO qf_question (id, answer, answer_norm, answer_type, aliases, " +
     "clue, source, difficulty, char_count, word_count, status, origin, verified_at, " +
     "option_1, option_2, option_3, option_4) VALUES (" +
-    [x.id, q(x.answer), q(norm(x.answer)), q(x.answerType || "unknown"),
+    [q(x.id), q(x.answer), q(norm(x.answer)), q(x.answerType || "unknown"),
      q((x.aliases || []).join("|")), q(x.clue), q(x.source),
      q(x.difficulty || "medium"), chars, words(x.answer),
      "'verified'", q(x.origin || "authored"), "datetime('now')",
@@ -245,11 +263,11 @@ for (const d of dailies) {
   out.push(`INSERT INTO qf_daily (play_date, status) VALUES (${q(d.date)}, 'published');`);
   (d.questionIds || []).forEach((id, i) => {
     out.push("INSERT INTO qf_daily_slot (play_date, slot, question_id, role) VALUES (" +
-      `${q(d.date)}, ${i + 1}, ${id}, 'xi');`);
+      `${q(d.date)}, ${i + 1}, ${q(id)}, 'xi');`);
   });
   (d.benchIds || []).forEach((id, i) => {
     out.push("INSERT INTO qf_daily_slot (play_date, slot, question_id, role) VALUES (" +
-      `${q(d.date)}, ${i + 1}, ${id}, 'bench');`);
+      `${q(d.date)}, ${i + 1}, ${q(id)}, 'bench');`);
   });
 }
 
@@ -258,11 +276,11 @@ for (const w of weeks) {
     `${q(w.weekEnding)}, ${q(w.label || "The Last 7 Days")}, 'published');`);
   (w.questionIds || []).forEach((id, i) => {
     out.push("INSERT INTO qf_week_slot (week_ending, slot, question_id, role, theme) VALUES (" +
-      `${q(w.weekEnding)}, ${i + 1}, ${id}, 'xi', ${q((w.themes || [])[i])});`);
+      `${q(w.weekEnding)}, ${i + 1}, ${q(id)}, 'xi', ${q((w.themes || [])[i])});`);
   });
   (w.benchIds || []).forEach((id, i) => {
     out.push("INSERT INTO qf_week_slot (week_ending, slot, question_id, role, theme) VALUES (" +
-      `${q(w.weekEnding)}, ${i + 1}, ${id}, 'bench', NULL);`);
+      `${q(w.weekEnding)}, ${i + 1}, ${q(id)}, 'bench', NULL);`);
   });
 }
 

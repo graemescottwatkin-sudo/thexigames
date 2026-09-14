@@ -72,14 +72,18 @@
     { n: 10, status: "On the drawing board" },
     /* Eleven shirts, and a game launching pushes the tail down one — so the
        squad loses an unsigned slot rather than growing a twelfth. */
-    /* NO href UNTIL THE DOOR OPENS. Eleven is built and reachable, but its
-       tables are empty — there is no bank for it yet — so every visit answers
-       "no board published for today". A link on the estate is a promise that
-       something is behind it, and this one has nothing behind it for as long as
-       that stays true. The number and the status remain, which is all an
-       unreleased game is entitled to show anyway. Put the href back the day it
-       has a board, not the day it has a page. */
-    { n: 11, status: "In testing" }
+    /* THE href IS BACK, on the condition it was removed under. It came off on
+       14 September because eleven's tables were empty — reachable page, no bank,
+       every visit answering "no board published for today" — and a link is a
+       promise that something is behind it. The rule written here then was "put
+       it back the day it has a board, not the day it has a page", and it now
+       has fourteen: 1,921 questions and boards from 15 to 28 September.
+       WHAT WILL MAKE THIS WRONG AGAIN, and it will not announce itself: the
+       fortnight ENDS on 28 September. A day past the end answers exactly what an
+       empty database answered — same 404, same body, same source "d1" — so the
+       honest error is indistinguishable from silent expiry. Extending is one
+       command on the content side; nothing here will tell anyone to run it. */
+    { n: 11, status: "In testing",   href: "/football/quickfire/" }
   ];
 
   /* WHERE A GAME LIVES, read off the squad rather than assembled from its id.

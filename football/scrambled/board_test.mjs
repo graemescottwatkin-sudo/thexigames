@@ -16,7 +16,7 @@ import {
 } from "../../tools/build_scrambled.js";
 import { SC_BOARDS } from "../../functions/_lib/sc-boards.js";
 import {
-  publicBoard, boardForNumber, playableTokenNo, slotHint, topClubs, sellsHint, hintLabel,
+  publicBoard, boardForNumber, playableTokenNo, slotHint, topClubs, orderKept, sellsHint, hintLabel,
 } from "../../functions/_lib/sc-board.js";
 import { normalise, letterBag, isEnglishForm } from "../../functions/_lib/sc-names.js";
 
@@ -591,6 +591,76 @@ console.log("\nNo appearance counts: no zeroes, and career order");
   t("no apps key is invented where nothing was recorded",
     v.every((x) => !("apps" in x)), JSON.stringify(v));
   t("career order is preserved", v[0].club === "Southampton");
+}
+
+console.log("\nThe reveal keeps the order it is given");
+{
+  /* WHY THIS IS A CHECK AND NOT A COMMENT. The reveal prints no years and no
+     counts — it is two club names — so WHICH two is decided entirely by the
+     order the content side sends. premClubs stopped carrying appearance counts,
+     which makes this file's sort a no-op that preserves their ranking, and a
+     no-op is the easiest thing in a codebase to "tidy up". Give that sort a real
+     key again and it silently undoes the ranking: 2,083 of 4,015 tiles showed
+     the wrong two clubs that way until 14 September 2026, with nothing failing.
+     Their packer refuses to SEND a wrongly ordered array; this refuses to
+     REORDER a correct one. Either alone leaves the other free to break it. */
+  const RANKED = { premClubs: [
+    { club: "Aston Villa", from: 2019, to: null, ongoing: true },
+    { club: "Reading", from: 2012, to: 2019 },
+    { club: "Arsenal", from: 2010, to: 2012 },
+    { club: "Sheffield Wednesday", from: 2013, to: 2014, loan: true },
+  ]};
+  t("the order out is the order in", orderKept(RANKED.premClubs, topClubs(RANKED, 99)),
+    topClubs(RANKED, 99).map((c) => c.club).join(" · "));
+  t("and capped, it is the FIRST two rather than a re-ranking",
+    topClubs(RANKED).map((c) => c.club).join(" · ") === "Aston Villa · Reading",
+    topClubs(RANKED).map((c) => c.club).join(" · "));
+
+  /* THE GUARD MUST ALSO BE ABLE TO SAY NO, or it is decoration. A shuffled
+     output against the same input has to fail it. */
+  const out = topClubs(RANKED, 99);
+  t("orderKept refuses a shuffled output",
+    !orderKept(RANKED.premClubs, [out[1], out[0], ...out.slice(2)]),
+    "asserted so the guard cannot pass vacuously");
+  t("and refuses one with a club that was never sent",
+    !orderKept(RANKED.premClubs, [{ club: "Barcelona", loan: false }]));
+
+  /* A loan and the permanent spell at one club are two entries, so the order
+     has to survive the merge key rather than the club name alone. */
+  const MINGS = { premClubs: [
+    { club: "Aston Villa", from: 2019, to: null, ongoing: true },
+    { club: "Bournemouth", from: 2015, to: 2019 },
+    { club: "Aston Villa", from: 2019, to: 2019, loan: true },
+  ]};
+  t("order is kept across the loan/permanent split too",
+    orderKept(MINGS.premClubs, topClubs(MINGS, 99)),
+    topClubs(MINGS, 99).map((c) => c.club + (c.loan ? " (loan)" : "")).join(" · "));
+
+  /* THE CONTRACT IS CONDITIONAL, and stating it unconditionally was wrong.
+     topClubs RANKS by appearances where it has them — which is right, and is
+     what the career fallback still needs. It preserves the incoming order only
+     where it has no ranking signal, which is the shape premClubs now arrives
+     in. Every one of the 44 slots in the shipped sample still carries apps, so
+     asserting "order is always kept" failed on 32 of them against correct code.
+     Written first, failed, and corrected rather than deleted.
+
+     So the bank is exercised on the arm that applies to it — apps present,
+     ranked — and the order-preserving arm is proved on REAL bank slots with
+     their counts stripped, which is exactly the shape the content side now
+     sends. A fixture would only have proved I can write a fixture. */
+  const stripped = (sl) => ({
+    premClubs: (sl.premClubs || sl.clubs || []).map(({ apps, ...rest }) => rest),
+  });
+  t("with counts present, every shipped slot is ranked by them",
+    SC_BOARDS.every((b) => b.slots.every((sl) => {
+      const got = topClubs(sl, 99);
+      return got.every((c, i) => i === 0 || (got[i - 1].apps ?? 0) >= (c.apps ?? 0));
+    })), SC_BOARDS.reduce((n, b) => n + b.slots.length, 0) + " slots");
+  t("with counts stripped, every shipped slot keeps the order it was sent",
+    SC_BOARDS.every((b) => b.slots.every((sl) => {
+      const s = stripped(sl);
+      return orderKept(s.premClubs, topClubs(s, 99));
+    })), "the shape premClubs now arrives in");
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
