@@ -50,6 +50,30 @@ export async function boardForDay(env, day) {
   catch (e) { return null; }
 }
 
+/* A BOARD BY ITS NUMBER, BOUNDED BY THE CALENDAR RATHER THAN BY THE NUMBER.
+ *
+ * The past opens and the future never does, and the bound is the SCHEDULE's:
+ * a board is reachable when the day it was given is today or earlier. Nothing
+ * here does epoch arithmetic to decide that — it joins on cw_schedule and lets
+ * the calendar answer, so a re-based queue moves what is reachable without
+ * this function knowing a reset happened.
+ *
+ * A board with no scheduled day is not a board. That is the word search's rule
+ * of 6 September stated for this game: its schedule held two years of
+ * inventory and every reader that treated "in the table" as "has run"
+ * published 233 boards nobody had played. Here the day must EXIST and be past.
+ */
+export async function boardByNo(env, no, today) {
+  if (!hasDB(env) || !Number.isInteger(no) || no < 1) return null;
+  const row = await env.DB.prepare(
+    "SELECT b.no, b.day, b.payload FROM cw_board b " +
+    "JOIN cw_schedule s ON s.board_no = b.no WHERE b.no = ? AND s.day <= ?"
+  ).bind(no, today).first();
+  if (!row) return null;
+  try { return { no: row.no, day: row.day, ...JSON.parse(row.payload) }; }
+  catch (e) { return null; }
+}
+
 /* The highest day the queue holds, for the runway check and for knowing when
    the game is about to run out. Asked of the schedule, not computed. */
 export async function lastDay(env) {

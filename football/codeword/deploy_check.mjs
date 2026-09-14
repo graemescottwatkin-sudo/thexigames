@@ -159,9 +159,24 @@ t("the daily endpoint exists", has("functions/api/codeword/daily.js"));
 {
   const api = stripped("functions/api/codeword/daily.js");
   t("it hands over publicBoard, never the row it read", /publicBoard/.test(api));
-  t("it takes no board number, so there is no past or future to open",
-    !/searchParams/.test(api) && !/\?no=/.test(api),
-    "a parameter that opens the past must be checked against the future forever");
+  /* THE PAST OPENS AND THE FUTURE NEVER DOES. This shipped asserting the
+     opposite — that there was no board number at all — on the reasoning that a
+     parameter which must be checked against the future forever is a check that
+     can eventually be got wrong. The owner's standard for every game is a daily
+     board plus the ones that have gone, so the past has to open; the instinct
+     survives as the SHAPE of the bound, which is the schedule's rather than
+     arithmetic anybody here does. */
+  t("it takes a board number, so the boards that have gone can be opened",
+    /searchParams\.get\("no"\)/.test(api));
+  t("and a malformed one is refused rather than coerced",
+    /\^\[0-9\]\{1,6\}\$/.test(api),
+    "the malformed and the sealed must get the same answer");
+  {
+    const lib = stripped("functions/_lib/cw-board.js");
+    t("the bound is the calendar's: a board is reachable only once its day has come",
+      /JOIN cw_schedule s ON s\.board_no = b\.no WHERE b\.no = \? AND s\.day <= \?/.test(lib),
+      "a board with no scheduled day is not a board — the word search's 233");
+  }
   t("its 404 says nothing about why there is no board",
     /"no board"/.test(api) && !/not yet|coming|expired|ended/i.test(api),
     "the difference between two 404s tells a reader the queue depth");

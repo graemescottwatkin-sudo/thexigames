@@ -22,7 +22,7 @@
 -- that to everyone, every day, with every health check green. Silent expiry by
 -- construction. tools/runway_check.mjs asks sqlite_master for every table whose
 -- name ends _schedule, so shipping this table is what puts the game in the
--- check; there is no list to add it to and no list to forget.
+-- check, and there is no list to add it to and no list to forget.
 --
 -- Applied once. Every statement is CREATE ... IF NOT EXISTS and there is
 -- nothing else here, so re-running it is safe.

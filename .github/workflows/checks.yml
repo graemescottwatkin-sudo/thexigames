@@ -365,6 +365,8 @@ jobs:
           # ordinal is computed in UTC, because a local-time one is invisible
           # for most of the year and is the bug the crossword already shipped.
           node tools/import_codeword_test.mjs
+          node football/codeword/board_test.mjs
+          node football/codeword/play_test.mjs
           # The importer's gate, on the committed sample — because there is no
           # bank on a runner and a check that passes when it finds no problems
           # also passes when it finds nothing at all.

@@ -8,18 +8,23 @@
  * word search publishing 233 boards that had never run. The queue lives in D1
  * now and this hands over ONE board, chosen by this server's clock.
  *
- * NO ?no= PARAMETER, deliberately, and this is the difference from Grid XI's
- * daily endpoint. Grid takes a board number and opens the past, because its
- * past is free archive. Codeword has no archive, no persistence and no launch
- * date yet; until it has, the smallest thing that serves the page is the right
- * thing, and a parameter that opens the past is a parameter that has to be
- * checked against the future forever. Adding one later is a decision with a
- * test attached. Leaving one in now is a hole nobody remembers opening.
+ * ?no= OPENS THE PAST AND NEVER THE FUTURE, which is the family's shape and
+ * was a deliberate reversal. This endpoint shipped with no parameter at all on
+ * the reasoning that a parameter which must be checked against the future
+ * forever is a check that can eventually be got wrong, and no parameter cannot.
+ * That was the right instinct and the wrong call: the owner's standard for
+ * every game is a daily board plus the boards that have already gone, so the
+ * past has to open. The instinct survives as the shape of the check — the
+ * bound is derived from the SCHEDULE rather than from a number anyone sends,
+ * and a board with no day at or before today is not a board.
  *
- * THE SERVER DECIDES WHAT DAY IT IS, in UTC. A date sent up is not read.
+ * THE SERVER DECIDES WHAT DAY IT IS, in UTC. A date sent up is not read, and
+ * the number that is read is checked against this server's calendar.
  */
 import { json } from "../../_lib/puzzle.js";
-import { hasDB, todayKey, boardForDay, publicBoard, lastDay } from "../../_lib/cw-board.js";
+import {
+  hasDB, todayKey, boardForDay, boardByNo, publicBoard, lastDay,
+} from "../../_lib/cw-board.js";
 
 /* ONE 404 FOR EVERY REASON THERE IS NO BOARD, and the reason is not in it.
  * Contract 9.4: a 404 for a day past the end of the queue must not differ from
@@ -36,12 +41,23 @@ const NOTHING = () => new Response(JSON.stringify({ error: "no board" }), {
   },
 });
 
-export async function onRequestGet({ env }) {
+export async function onRequestGet({ request, env }) {
   if (!hasDB(env)) return NOTHING();
   const day = todayKey();
+
+  /* A number, or today. Anything that is not a plain positive integer is not a
+     board and gets the same 404 as one that has not run — the malformed and
+     the sealed must be indistinguishable, or the difference is a way to ask
+     what exists. */
+  const raw = new URL(request.url).searchParams.get("no");
   let board;
-  try { board = await boardForDay(env, day); }
-  catch (e) { return NOTHING(); }
+  try {
+    if (raw === null) {
+      board = await boardForDay(env, day);
+    } else {
+      board = /^[0-9]{1,6}$/.test(raw) ? await boardByNo(env, Number(raw), day) : null;
+    }
+  } catch (e) { return NOTHING(); }
   if (!board) return NOTHING();
 
   const served = publicBoard(board);
