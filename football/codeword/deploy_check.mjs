@@ -251,8 +251,20 @@ console.log("\nAnd it is NOT launched, which is the point of this gate");
      so. */
   t("codeword wears the seventh shirt", /n: 7,\s*name: "Codeword XI"/.test(squad),
     "a launched game takes the next free number");
-  t("and Ballpark moved down to make room", /n: 8,\s*status: "In testing"/.test(squad),
-    "a game in testing does not hold a shirt, and moves when one ships past it");
+  /* AND NOTHING UNRELEASED SITS ABOVE IT. This asked for `n: 8, status: "In
+     testing"` — Ballpark's slot on the day Codeword launched — and went red the
+     moment QuickFire launched on the eight and pushed Ballpark to the nine.
+     That is the assertion being wrong rather than the squad: it pinned a
+     literal that MOVES every time a game ships, so it could only ever hold
+     until the next launch, and it would have been "fixed" by bumping the number
+     to whatever it is this week. The rule it was reaching for does not move —
+     an unreleased game carries a status and no name, wherever it sits. Checked
+     for every slot above this game's, which is where a launch pushes things. */
+  t("and every slot is either a launched name or a status, never both", (() => {
+    const rows = [...squad.matchAll(/\{\s*n:\s*(\d+),([^}]*)\}/g)];
+    if (rows.length !== 11) return false;      // eleven shirts, never a twelfth
+    return rows.every(([, , body]) => /name:/.test(body) !== /status:/.test(body));
+  })(), "a game in testing does not hold a shirt, and is named nowhere until it launches");
 }
 {
   /* NAMED NOWHERE IN SERVED MARKUP. The family rule, and the one that has to

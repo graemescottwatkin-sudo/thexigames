@@ -175,18 +175,6 @@
 /football/hilo/js/*
   Cache-Control: public, max-age=31536000, immutable
 
-# QuickFire XI — the same three rules again, one pair per game.
-/football/quickfire/
-  Cache-Control: no-store
-
-/football/quickfire/index.html
-  Cache-Control: no-store
-
-/football/quickfire/css/*
-  Cache-Control: public, max-age=31536000, immutable
-
-/football/quickfire/js/*
-  Cache-Control: public, max-age=31536000, immutable
 
 # The shared token layer. Immutable is safe because every reference carries a
 # ?v= tag and the wordsearch gate asserts the version marker in the file.

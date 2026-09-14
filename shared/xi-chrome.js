@@ -58,36 +58,36 @@
        moved from 5 to 6 when Vowels went out: a game in testing does not hold
        a shirt, and it moves down when a game ships past it. */
     { n: 6,  name: "Grid XI",        href: "/football/grid/" },
-    /* TWO GAMES ARE IN TESTING, and neither holds a shirt — a shirt is taken
-       at LAUNCH. What the numbers say here is the OWNER'S ORDERING of what is
-       next, decided on 9 September 2026: the newer of the two on the seven and
-       QuickFire on the eleven. That is a change of intent, not of status, and
-       nothing about either game moved.
-       Both open, and both say a number and a status and nothing else. The
-       link is for whoever is testing it; the name stays off every served page
-       until the day it launches. */
+    /* A GAME IN TESTING DOES NOT HOLD A SHIRT. Where one sits in this list
+       while it is unreleased is the OWNER'S ORDERING of what comes next, not a
+       number it owns — it says a status and nothing else, and its name stays
+       off every served page until the day it launches. The link is for whoever
+       is testing it. */
     /* Codeword XI launched on 14 September 2026 and took the next free number,
        which is what launching does. Ballpark was sitting on the seven as the
-       owner ORDERING of what came next and moves down: that was never a shirt,
-       and the comment above says so. */
+       owner's ORDERING of what came next and moves down: that was never a
+       shirt, and the comment above says so. */
     { n: 7,  name: "Codeword XI",   href: "/football/codeword/" },
-    { n: 8,  status: "In testing",   href: "/football/ballpark/" },
-    { n: 9,  status: "In build" },
-    { n: 10, status: "On the drawing board" },
-    /* Eleven shirts, and a game launching pushes the tail down one — so the
-       squad loses an unsigned slot rather than growing a twelfth. */
-    /* THE href IS BACK, on the condition it was removed under. It came off on
-       14 September because eleven's tables were empty — reachable page, no bank,
-       every visit answering "no board published for today" — and a link is a
-       promise that something is behind it. The rule written here then was "put
-       it back the day it has a board, not the day it has a page", and it now
-       has fourteen: 1,921 questions and boards from 15 to 28 September.
-       WHAT WILL MAKE THIS WRONG AGAIN, and it will not announce itself: the
-       fortnight ENDS on 28 September. A day past the end answers exactly what an
-       empty database answered — same 404, same body, same source "d1" — so the
-       honest error is indistinguishable from silent expiry. Extending is one
-       command on the content side; nothing here will tell anyone to run it. */
-    { n: 11, status: "In testing",   href: "/football/quickfire/" }
+    /* QUICKFIRE XI LAUNCHED ON 15 SEPTEMBER 2026 and takes the eight, the next
+       free number. It had sat on the eleven as the owner's ordering since
+       9 September; Ballpark moves from eight to nine for the same reason
+       QuickFire itself moved from five to six and six to seven while it was in
+       testing. The tail drops one and the squad loses an unsigned slot rather
+       than growing a twelfth.
+       WHAT ACTUALLY CHANGED ON THE DAY, because "in testing" had stopped
+       describing it: the game served the ANSWER to every question in its
+       payload — eleven a day, in plain text — because the page was a typing
+       game that revealed letters out of the answer string. It became a
+       four-option picker with the marking, the clock and the score on the
+       server, and it banked its first result ever; until then a finished round
+       reached neither the account nor the season. LAUNCHED in games.js reads
+       2026-09-14 and stays there: that is the day its first BOARD ran, which is
+       what board numbering counts from, and it is not the same question as
+       which day the game was released. */
+    { n: 8,  name: "QuickFire XI",  href: "/football/quickfire/" },
+    { n: 9,  status: "In testing",   href: "/football/ballpark/" },
+    { n: 10, status: "In build" },
+    { n: 11, status: "On the drawing board" }
   ];
 
   /* WHERE A GAME LIVES, read off the squad rather than assembled from its id.

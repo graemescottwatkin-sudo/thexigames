@@ -78,6 +78,9 @@ export const PERMA_GAMES = {
      calendar does not hold is not a board — the same question the word search
      and HiLo are asked. */
   grid: { name: "Grid XI", schedule: "day" },
+  /* QuickFire XI launched 15 September 2026. SCHEDULED by day, and its table is
+     the board table rather than a schedule beside one — see SCHEDULE_SHAPE. */
+  quickfire: { name: "QuickFire XI", schedule: "day" },
   /* Codeword XI. SCHEDULED AND FINITE, which is the distinction that matters
      here rather than the one between ring and day: cw_schedule names one board
      per day out of a queue that ENDS, so unlike the three ring games it can run
@@ -183,8 +186,26 @@ export function keyForOldDate(raw, now = Date.now()) {
    against PERMA_GAMES. */
 const SCHEDULE_TABLE = {
   wordsearch: "ws_schedule", hilo: "hl_schedule", grid: "gd_schedule",
-  codeword: "cw_schedule",
+  codeword: "cw_schedule", quickfire: "qf_daily",
 };
+
+/* WHICH COLUMN HOLDS THE DAY, and which rows count as real.
+ *
+ * Four of these tables are schedules with a `day` column and every row in them
+ * is a scheduled board. QuickFire's is not a schedule at all — qf_daily IS the
+ * board table, keyed on `play_date`, and it carries a `status` that decides
+ * whether a row is ever served. Two differences, and both of them silent: a
+ * query for `day` against qf_daily throws and is swallowed by the catch below
+ * as "no boards", which advertises nothing and looks like a game with an empty
+ * archive rather than a bug; and a query that ignored `status` would advertise
+ * boards the game has decided not to publish.
+ *
+ * So the shape is named per game rather than assumed. The default is the one
+ * four games already use, so nothing moves for them. */
+const SCHEDULE_SHAPE = {
+  quickfire: { day: "play_date", where: "status = 'published'" },
+};
+const shapeOf = (game) => SCHEDULE_SHAPE[game] || { day: "day", where: null };
 
 export async function ranOn(env, game, key) {
   const g = PERMA_GAMES[game];
@@ -199,8 +220,10 @@ export async function ranOn(env, game, key) {
     /* The table name is not interpolated from anything a request can reach:
        it comes from the map above, keyed by a game name this route has already
        matched against PERMA_GAMES. The DAY is bound. */
+    const shape = shapeOf(game);
+    const extra = shape.where ? ` AND ${shape.where}` : "";
     const row = await env.DB.prepare(
-      `SELECT 1 AS n FROM ${table} WHERE day = ?`).bind(day).first();
+      `SELECT 1 AS n FROM ${table} WHERE ${shape.day} = ?${extra}`).bind(day).first();
     return !!row;
   } catch (e) {
     /* The table is absent or unreadable. Refusing every board on a database
@@ -257,8 +280,11 @@ export async function boardKeys(env, game, now = Date.now()) {
   if (!table || !env || !env.DB) return [];
   let days = [];
   try {
+    const shape = shapeOf(game);
+    const extra = shape.where ? ` AND ${shape.where}` : "";
     const { results } = await env.DB
-      .prepare(`SELECT day FROM ${table} WHERE day <= ? ORDER BY day DESC`)
+      .prepare(`SELECT ${shape.day} AS day FROM ${table} ` +
+               `WHERE ${shape.day} <= ?${extra} ORDER BY ${shape.day} DESC`)
       .bind(dailyDayKey(today)).all();
     days = (results || []).map((r) => String(r.day)).filter(Boolean);
   } catch (e) {

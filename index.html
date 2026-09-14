@@ -22,7 +22,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>The XI Games — daily football puzzles</title>
-<meta name="description" content="Eleven daily football puzzles, one for every shirt. Crossword XI, Wordsearch XI, Scrambled XI, HiLo XI, Vowels XI, Grid XI and Codeword XI are out now — a new board every day.">
+<meta name="description" content="Eleven daily football puzzles, one for every shirt. Crossword XI, Wordsearch XI, Scrambled XI, HiLo XI, Vowels XI, Grid XI, Codeword XI and QuickFire XI are out now — a new board every day.">
 <link rel="canonical" href="https://www.thexigames.com/">
 <script type="application/ld+json">
 {
@@ -68,9 +68,9 @@
      own — the team sheet and the kit colours. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared/xi-tokens.css?v=v37">
-<link rel="stylesheet" href="shared/xi-chrome.css?v=v37">
-<script src="shared/xi-theme.js?v=v37"></script>
+<link rel="stylesheet" href="shared/xi-tokens.css?v=v38">
+<link rel="stylesheet" href="shared/xi-chrome.css?v=v38">
+<script src="shared/xi-theme.js?v=v38"></script>
 <style>
 :root{
 
@@ -418,9 +418,14 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
         <a class="shirt live" id="shirt7" href="/football/codeword/" title="Codeword XI" aria-label="Codeword XI">
           <span class="dot" style="background:var(--kit-07)" aria-hidden="true">7</span>
           <span class="lbl">Codeword<span class="xi"> XI</span></span></a>
+        <!-- QuickFire XI launched 15 September 2026 on the eighth, the next
+             free number, and keeps the purple it was already wearing — a kit
+             belongs to the game, not to the number. -->
+        <a class="shirt live" id="shirt8" href="/football/quickfire/" title="QuickFire XI" aria-label="QuickFire XI">
+          <span class="dot" style="background:var(--kit-08)" aria-hidden="true">8</span>
+          <span class="lbl">QuickFire<span class="xi"> XI</span></span></a>
       </div>
       <div class="strip-row soon-row">
-        <span class="shirt soon" title="Not out yet">8</span>
         <span class="shirt soon" title="Not out yet">9</span>
         <span class="shirt soon" title="Not out yet">10</span>
         <span class="shirt soon" title="Not out yet">11</span>
@@ -672,6 +677,33 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
         </div>
       </article>
 
+      <article class="game">
+        <div class="cap" style="background:var(--kit-08)">
+          <span class="num">8</span>
+          <!-- PLACEHOLDER ART, generic until the owner has the real thing, the
+               same standing as Codeword's. Four bars with one filled: enough to
+               read as "pick one of four" at card size, and not a drawing of
+               QuickFire. Swap the <g> below for the artwork and nothing else on
+               the card needs to change. -->
+          <svg class="prev" viewBox="0 0 220 120" aria-hidden="true">
+            <g>
+              <rect x="46" y="16" width="128" height="20" rx="5" fill="#fff" fill-opacity=".28"/>
+              <rect x="46" y="44" width="128" height="20" rx="5" fill="#fff" fill-opacity=".9"/>
+              <rect x="46" y="72" width="128" height="20" rx="5" fill="#fff" fill-opacity=".28"/>
+              <rect x="46" y="100" width="128" height="14" rx="5" fill="#fff" fill-opacity=".28"/>
+            </g>
+          </svg>
+        </div>
+        <div class="body">
+          <h3>QuickFire XI</h3>
+          <p>Eleven questions, four answers, one clock.</p>
+          <div class="acts">
+            <a class="btn" href="/football/quickfire/" aria-label="Play QuickFire XI today">Play today</a>
+            <a class="past" href="/football/quickfire/archive/" aria-label="QuickFire XI past puzzles">Past puzzles</a>
+          </div>
+        </div>
+      </article>
+
     </div>
   </section>
 
@@ -719,53 +751,37 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
          of which ship regularly and already hold the names two of these were
          built under.
 
-         GRID XI TOOK THE SIX ON 7 SEP 2026, so the tail moved down one and the
-         squad lost an unsigned slot rather than growing a twelfth. Two games
-         are in testing and neither holds a shirt: they sit on numbers no
-         launched game wears, on the seven and the eleven, which is the owner's
-         ordering of what is next rather than anything the numbers mean. -->
+         QUICKFIRE XI TOOK THE EIGHT ON 15 SEP 2026, so the tail moved down one
+         again and the squad lost an unsigned slot rather than growing a
+         twelfth. ONE game is in testing now and it does not hold a shirt: it
+         sits on the first number no launched game wears, which is the owner's
+         ordering of what is next rather than anything the number means. -->
     <p class="rest-line">The squad keeps growing &mdash;
        <span id="toSignProse">five</span> more to come</p>
     <div class="soon-grid">
-      <!-- TWO IN TESTING, AND EACH IS A NUMBER AND A STATUS, never a name —
+      <!-- ONE IN TESTING, AND IT IS A NUMBER AND A STATUS, never a name —
            for the reason set out above: this page is indexed, and naming an
            unfinished game hands the roadmap away. The path in the href is not
            markup a reader sees and is what makes the card openable at all; the
            game's own page is where it is named.
-           NEITHER HOLDS A SHIRT. These are the numbers no launched game wears,
-           and the order across them is the owner's — which is next up, and
-           which is last. A shirt is taken at LAUNCH, and only then does the
+           IT HOLDS NO SHIRT. This is the first number no launched game wears,
+           and where it sits is the owner's ordering of what is next rather than
+           a number it owns. A shirt is taken at LAUNCH, and only then does the
            kit-belongs-to-the-game rule above start to bind: until a game has
            been played under a colour, there is no colour to keep. -->
-      <!-- BALLPARK MOVED FROM SEVEN TO EIGHT on 14 September 2026, because
-           Codeword XI launched and took the next free number. A game that is
-           not out does not hold a shirt and moves when one ships past it — the
-           same thing that happened to QuickFire twice. The kit moves with the
-           game rather than with the number, so the tangerine goes with it.
-           Still unnamed: "Number eight" and a status, because an unreleased
-           game is named nowhere in served markup. -->
+      <!-- BALLPARK MOVED TO NINE on 15 September 2026, because QuickFire XI
+           launched and took the eight. It was on the seven until Codeword took
+           that on the 14th, so this is the second move in two days — which is
+           the rule working rather than churn: a game that is not out does not
+           hold a shirt, and moves when one ships past it. The kit moves with
+           the GAME rather than with the number, which is why the swatch below
+           is still the tangerine it was wearing on the seven.
+           Still unnamed: a number and a status, because an unreleased game is
+           named nowhere in served markup. -->
       <a class="soon-card open" href="/football/ballpark/" rel="nofollow"
          title="In testing — not finished, and not yet a daily game">
-        <span class="sq" style="background:var(--kit-08)">8</span>
-        <span class="nm">Number eight<span>In testing</span></span>
-      </a>
-      <!-- ELEVEN IS OPENABLE AGAIN, on the condition it was closed under. It
-           stopped being a link on 14 September because its tables were empty —
-           the page answered, but every visit reached "no board published for
-           today", and an openable card is a promise that something is behind it.
-           The rule set down then was "the href goes back the day it has a board
-           rather than the day it has a page", and it now has fourteen: boards
-           from 15 to 28 September against 1,921 questions.
-           THE FORTNIGHT ENDS ON THE 28th, and a day past the end answers exactly
-           what an empty database answered — the same 404, the same body. The
-           honest error is indistinguishable from silent expiry, so nothing here
-           will say when this card is a promise again.
-           Its counterpart in shared/xi-chrome.js moves with it, always: split
-           them and the drawer offers a door the hub does not, or the reverse. -->
-      <a class="soon-card open" href="/football/quickfire/" rel="nofollow"
-         title="In testing — not finished, and not yet a daily game">
-        <span class="sq" style="background:var(--kit-11)">11</span>
-        <span class="nm">Number eleven<span>In testing</span></span>
+        <span class="sq" style="background:var(--kit-07)">9</span>
+        <span class="nm">Number nine<span>In testing</span></span>
       </a>
     </div>
   </section>
@@ -809,8 +825,8 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
      and the one page list, so the front door's footer and every game's are
      the same footer. -->
 <footer class="xic-foot"></footer>
-<script src="shared/xi-season.js?v=v37"></script>
-<script src="shared/xi-chrome.js?v=v37"></script>
+<script src="shared/xi-season.js?v=v38"></script>
+<script src="shared/xi-chrome.js?v=v38"></script>
 
 <script>
 /* Progressive enhancement only: everything above renders complete without
@@ -970,7 +986,18 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
       { n: 7, id: "codeword", name: "Codeword XI", key: "xicw.results",
         api: "/api/codeword/daily",
         today: function (d) { return d.no; },
-        done: function (r, t) { return r.no === t; } }
+        done: function (r, t) { return r.no === t; } },
+      /* QuickFire XI launched 15 Sep 2026. Judged by DAY rather than by number,
+         like the word search and HiLo: its boards are keyed on play_date in
+         qf_daily and a result is banked under that day, so the day is the thing
+         both sides already hold. The payload does carry a board number and it
+         would work too — but it is the FAMILY number, derived from the day, and
+         picking the derived value over the one it is derived from is how two
+         numberings get a chance to disagree. */
+      { n: 8, id: "quickfire", name: "QuickFire XI", key: "qfx.results.v1",
+        api: "/api/quickfire/daily",
+        today: function (d) { return d.day; },
+        done: function (r, t) { return r.day === t; } }
     ];
 
     var listOf = function (key) {
@@ -1137,7 +1164,7 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
       if (ladderLibs) return ladderLibs;
       ladderLibs = new Promise(function (done) {
         var left = 2, ok = true;
-        ["shared/xi-seasons.js?v=v37", "shared/xi-table.js?v=v37"].forEach(function (src) {
+        ["shared/xi-seasons.js?v=v38", "shared/xi-table.js?v=v38"].forEach(function (src) {
           var el = document.createElement("script");
           el.src = src;
           el.onload = function () { if (!--left) done(ok); };

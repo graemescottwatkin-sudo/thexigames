@@ -20,7 +20,7 @@
 /* THE SHARED LAYER'S TAG, as every page carries it in its ?v=. One more
    place the tag is written; tools/aligned_test.mjs asserts it agrees with the
    pages, so it cannot fall behind them quietly. */
-export const SHARED_TAG = "v37";
+export const SHARED_TAG = "v38";
 
 /* What each game's masthead says and where its tabs go. The current tab is
    marked by path; a page with no game (a hub-level page) gets no masthead. */
@@ -66,6 +66,15 @@ const MAST = {
     name: "Codeword", home: "/football/codeword/",
     nav: [["Today", "/football/codeword/"], ["Archive", "/football/codeword/archive/"],
           ["How to play", "/football/codeword/#how"]],
+  },
+  /* NO ANSWERS TAB, and that is the game rather than an omission: QuickFire's
+     answers are the three options a player did not pick, and publishing them
+     a week later would publish the board. Every other entry here has one
+     because its puzzle has a solution worth reading after the fact. */
+  quickfire: {
+    name: "QuickFire", home: "/football/quickfire/",
+    nav: [["Today", "/football/quickfire/"], ["Archive", "/football/quickfire/archive/"],
+          ["How to play", "/football/quickfire/#how"]],
   },
   vowels: {
     name: "Vowels", home: "/football/vowels/",

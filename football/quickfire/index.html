@@ -12,7 +12,13 @@
 <meta property="og:title" content="QuickFire XI — the daily football quiz">
 <meta property="og:description" content="Eleven questions, four answers each, and a 0-90 match clock. Answer early, score more.">
 <meta property="og:site_name" content="The XI Games">
-<meta property="og:image" content="https://www.thexigames.com/football/quickfire/og-image.png">
+<!-- A PLACEHOLDER CARD, and it is the crossword's, which is what the hub's own
+     card already does while a game waits for artwork of its own. This named
+     football/quickfire/og-image.png for weeks and that file has never existed:
+     a card that 404s shows no picture at all, which is worse than showing the
+     wrong one, and worse still because nothing about a share link tells you it
+     is broken. Replace with QuickFire's own image when there is one. -->
+<meta property="og:image" content="https://www.thexigames.com/football/crossword/og-image.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="QuickFire XI — the daily football quiz">
 <meta name="twitter:description" content="Eleven questions, four answers each, and a 0-90 match clock.">
@@ -26,9 +32,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/shared/xi-tokens.css?v=v37">
-<link rel="stylesheet" href="/shared/xi-chrome.css?v=v37">
-<script src="/shared/xi-theme.js?v=v37"></script>
+<link rel="stylesheet" href="/shared/xi-tokens.css?v=v38">
+<link rel="stylesheet" href="/shared/xi-chrome.css?v=v38">
+<!-- The family's pre-match card, which every other game's landing screen is
+     built from. QuickFire drew its own until it launched; a game that looks
+     like itself on the front door and like nothing else once you are inside is
+     the fault the shared layer exists to stop. -->
+<link rel="stylesheet" href="/shared/xi-landing.css?v=v38">
+<script src="/shared/xi-theme.js?v=v38"></script>
 <link rel="stylesheet" href="css/style.css?v=v001e">
 </head>
 <body>
@@ -154,10 +165,10 @@
 <!-- THE SHARED FOOTER, AT TOP LEVEL. It carries the family disclaimer. -->
 <footer class="xic-foot"></footer>
 
-<script src="/shared/xi-chrome.js?v=v37"></script>
+<script src="/shared/xi-chrome.js?v=v38"></script>
 <script src="js/config.js?v=v001e"></script>
-<script src="/shared/xi-season.js?v=v37"></script>
-<script src="/shared/xi-plays.js?v=v37"></script>
+<script src="/shared/xi-season.js?v=v38"></script>
+<script src="/shared/xi-plays.js?v=v38"></script>
 <script src="js/game.js?v=v001e"></script>
 </body>
 </html>

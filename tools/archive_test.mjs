@@ -48,11 +48,20 @@ const RAN = {
      schedule" as "has run" — the queue holds 365 days and 364 of them are
      still to come. */
   cw_schedule: ["2026-09-14"],
+  /* QuickFire XI launched 15 September 2026 and its boards start on the 14th,
+     so on launch day two have run. AND ITS TABLE IS NOT A SCHEDULE: qf_daily is
+     the board table, keyed on play_date rather than day and carrying a status
+     that decides whether a row is served. Named here under its real name so the
+     stub exercises the same SQL the route builds — a fixture keyed on a column
+     the code does not ask for would answer nothing and read as "this game has
+     no boards", which is what it did before this entry existed. */
+  qf_daily: ["2026-09-15", "2026-09-14"],
 };
 const tableOf = (sql) => (/ws_schedule/.test(sql) ? "ws_schedule"
   : /hl_schedule/.test(sql) ? "hl_schedule"
   : /gd_schedule/.test(sql) ? "gd_schedule"
-  : /cw_schedule/.test(sql) ? "cw_schedule" : null);
+  : /cw_schedule/.test(sql) ? "cw_schedule"
+  : /qf_daily/.test(sql) ? "qf_daily" : null);
 const env = {
   DB: {
     prepare: (sql) => ({
