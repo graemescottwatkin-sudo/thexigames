@@ -126,6 +126,7 @@ for (const p of plan) {
   console.log(tagLine);
   console.log(hashLine);
 }
+reportRunway();
 if (!changes) { console.log("\nAlready up to date. Nothing to write."); process.exit(0); }
 
 if (!WRITE) {
@@ -162,3 +163,41 @@ if (unwritten) {
   process.exitCode = 1;
 }
 console.log("\nCommit as: LAST_SHIPPED " + plan.map((p) => p.newTag).join(" / ") + " + asset hashes");
+
+function reportRunway() {
+  /* ---- HOW MANY DAYS OF BOARDS ARE LEFT ------------------------------------
+   *
+   * Reported here because this is the script somebody actually runs after a
+   * deploy, and a runway is the one fault in this family that NOTHING ELSE CAN
+   * SEE. A game whose schedule has ended answers exactly what a game whose
+   * schedule has not started answers — the same 404, the same body, the same
+   * source "d1" — so every gate, suite and live_check stays green while the game
+   * quietly stops. QuickFire XI ran to 25 October with nothing anywhere saying so.
+   *
+   * IT REPORTS, IT DOES NOT BLOCK, and that is deliberate. A short runway is not a
+   * reason to refuse recording a deploy that has already landed: the tag is live
+   * whether or not the calendar is short, and a gate that goes red for an
+   * unrelated reason is a gate people learn to push past. The exit code stays the
+   * business of the LAST_SHIPPED write above. Run tools/runway_check.mjs on its
+   * own when you want the refusal.
+   *
+   * NEEDS THE NETWORK, so a failure to reach D1 is reported and swallowed —
+   * post_deploy's job is recording the bump, and it must not fail because a
+   * secondary read timed out. A silent skip would be wrong; a loud one is fine. */
+  try {
+    const runway = execFileSync(process.execPath,
+      [path.join(ROOT, "tools", "runway_check.mjs"), "--report"],
+      { encoding: "utf8", maxBuffer: 1 << 22 });
+    console.log(runway.replace(/^/gm, "  ").trimEnd());
+    if (/^\s*(SHORT|EXPIRED|UNREADABLE)/m.test(runway)) {
+      console.log("\n  A SHORT RUNWAY IS NOT FIXED BY RE-RUNNING A GENERATOR. For a\n" +
+        "  scheduled game the limit is usually the CONTENT — QuickFire's is distinct\n" +
+        "  answers, not questions, and asking its builder for more days returns the\n" +
+        "  same number. Check what the game is actually short of before regenerating.");
+    }
+  } catch (err) {
+    console.log("\n  runway check did not run: " + String(err.message).split("\n")[0]);
+    console.log("  (this does not affect the LAST_SHIPPED result above — run" +
+      " tools/runway_check.mjs by hand)");
+  }
+}

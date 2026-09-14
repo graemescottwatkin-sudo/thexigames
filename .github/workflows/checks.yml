@@ -337,6 +337,14 @@ jobs:
           # beside the checkout and SKIPS on a runner, so the fixtures above are
           # deliberately wide enough to catch a broken reader without it.
           node tools/import_ballpark_test.mjs
+          # And how many days of boards each scheduled game has left. It is the
+          # one fault in this family that nothing else can see: a game whose
+          # schedule has ENDED answers exactly what a game whose schedule has not
+          # STARTED answers — same 404, same body, same source "d1" — so every
+          # other check stays green while the game quietly stops. The suite runs
+          # the judgement against a schedule truncated to yesterday and watches it
+          # refuse; the tool itself needs D1 and runs from post_deploy.
+          node tools/runway_test.mjs
           # The importer's gate, on the committed sample — because there is no
           # bank on a runner and a check that passes when it finds no problems
           # also passes when it finds nothing at all.
