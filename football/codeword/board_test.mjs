@@ -15,6 +15,7 @@
  * breaks first if the epoch moves again — which it has done three times in a
  * day.
  */
+import fs from "node:fs";
 import {
   publicBoard, leaksSolution, boardByNo, boardByFamilyNo, boardForDay, absentLetters, cipherGrid,
 } from "../../functions/_lib/cw-board.js";
@@ -151,6 +152,21 @@ console.log("\n=== Two numberings, and only one of them is an address ===");
     "26 August is before the queue starts");
   t("and TOMORROW's family number is refused",
     (await boardByFamilyNo(db(rows), 21, today)) === null, "family 21 is 15 September");
+
+  /* THE NUMBER THAT GOES OUT MUST BE THE NUMBER THAT COMES BACK, and this is
+     the assertion that was missing when the game shipped. The endpoint READ a
+     family number and REPORTED the internal one, and the page round-trips what
+     it is given: it sent a 1 back to an endpoint that read 1 as 26 August, so
+     kick-off 400'd, `round` stayed null, and every later call began
+     `if (!round) return;`. Nothing errored. The board drew, the clock ran, and
+     completing a word did nothing — reported by the owner minutes after deploy.
+     Each end was right about a different thing, which is not the same as both
+     being right. */
+  const api = fs.readFileSync("functions/api/codeword/daily.js", "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, " ");
+  t("the daily response reports the FAMILY number, the same one ?no= reads",
+    /no: familyNo/.test(api) && !/no: served\.no/.test(api),
+    "what goes out and what comes back must be the same scheme");
 }
 
 console.log("\n=== The scoring is the producing side's, to the point ===");

@@ -22,6 +22,7 @@
  * the number that is read is checked against this server's calendar.
  */
 import { json } from "../../_lib/puzzle.js";
+import { dailyNoForDay } from "../../_lib/daily.js";
 import {
   hasDB, todayKey, boardForDay, boardByFamilyNo, publicBoard, lastDay,
 } from "../../_lib/cw-board.js";
@@ -77,7 +78,22 @@ export async function onRequestGet({ request, env }) {
   let last = null;
   try { last = await lastDay(env); } catch (e) { last = null; }
 
-  return json({ day, no: served.no, board: served, lastDay: last });
+  /* THE WIRE SPEAKS ONE NUMBERING, AND IT IS THE FAMILY'S.
+   *
+   * This returned `served.no` — Codeword's internal 1..365 — while ?no= read a
+   * FAMILY number. The page stores what it is given and sends it back when it
+   * opens a round, so it round-tripped a 1 into an endpoint that read 1 as
+   * 26 August: kick-off answered 400, `round` stayed null, and every later call
+   * began `if (!round) return;`. The game loaded, the clock ran, and completing
+   * a word did nothing at all — no error, because a silent return is not one.
+   *
+   * Reported live by the owner within minutes of the deploy. I had fixed the
+   * READING side of the two numberings and left the WRITING side alone, which
+   * is the same fault one direction later: it is not enough for each end to be
+   * right, they have to be right about the same thing.
+   */
+  const familyNo = dailyNoForDay(board.day);
+  return json({ day, no: familyNo, board: { ...served, no: familyNo }, lastDay: last });
 }
 
 /* HEAD answers like the rest of the family: 200, no body. */
