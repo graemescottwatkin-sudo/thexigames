@@ -207,6 +207,17 @@ const CLUB_FAMILIES = [
   ["Arsenal managers", "managers"],
   ["Brighton & Hove Albion head coaches", "head coaches"],
   ["Everton managers by longest spell", "managers by longest spell"],
+  /* BOTH WORDINGS OF THIS ONE, and the pair is not decoration. The content
+     side inserted "completed" into that category on 12 September 2026 and the
+     rule stopped matching board 641: off the club pages, because clubOf()
+     returned null, and counted as a daily that no day names, which released()
+     refuses. Invisible in both places with no error raised anywhere. It
+     surfaced as a one-board disagreement between two counts of the same bank,
+     which is the only reason it was found before it shipped.
+     The OLD form stays here because D1 holds that string today and every
+     capture taken before the relabel contains it — a rule that knew only the
+     new wording would bury the live board instead of the incoming one. */
+  ["Everton managers by longest completed spell", "managers by longest completed spell"],
   ["Arsenal Premier League appearances", "Premier League appearances"],
   ["Chelsea Premier League goals", "Premier League goals"],
   ["Aston Villa Premier League assists", "Premier League assists"],
@@ -225,6 +236,21 @@ t("the club name comes out with no family word left on it",
 t("a category with nothing before the family word is never a club board",
   ["managers", "head coaches", "Premier League goals", ""]
     .every((c) => clubOf({ category: c }) === null));
+/* THE FAMILY LIST IS A LIST, NOT A PATTERN, and this is the assertion that
+   says so. Accepting a second wording of longest-spell on 14 September 2026
+   could have been done by loosening the branch to `longest.* spell`, which
+   passes every other check in this file — including both halves of the pair
+   above — while quietly admitting any wording anybody ever invents. A rule
+   that accepts what nobody agreed is how a typo becomes a family: the board
+   imports green under a category the club page has never heard of, and the
+   next relabel is absorbed in silence instead of failing here where it is
+   cheap. Found by sabotage: this was the one widening the suite did not
+   notice. */
+t("a wording nobody agreed is NOT absorbed",
+  ["Everton managers by longest unbroken spell",
+   "Everton managers by longest ever spell",
+   "Everton managers by spell"].every((c) => clubOf({ category: c }) === null),
+  "the branch is a list of agreed wordings, not a wildcard");
 /* The importer must not keep a second opinion. It kept its own copy of this
    regex, identical when both were written and stale in both when the content
    side added three families. */
@@ -240,6 +266,10 @@ t("each club category reports its family, and head coaches are managers",
   familyOf({ category: "Arsenal managers" }) === "managers" &&
   familyOf({ category: "Real Madrid head coaches" }) === "managers" &&
   familyOf({ category: "Everton managers by longest spell" }) === "longest-spell" &&
+  /* Both wordings must land on the SAME family. Widening clubOf() alone would
+     have left this board with its club and no grouping — the same
+     disappearance, quieter, and the reason one expression serves both. */
+  familyOf({ category: "Everton managers by longest completed spell" }) === "longest-spell" &&
   familyOf({ category: "Arsenal Premier League appearances" }) === "appearances" &&
   familyOf({ category: "Chelsea Premier League goals" }) === "goals" &&
   familyOf({ category: "Aston Villa Premier League assists" }) === "assists" &&

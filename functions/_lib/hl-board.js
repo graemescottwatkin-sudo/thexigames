@@ -57,8 +57,27 @@ export function todayKey(now = Date.now()) { return utcDay(now); }
    all, so the order changes nothing. That was worth checking rather than
    asserting — a comment claiming this file depends on branch order was
    written here first, and reversing the two branches proved it false. */
+/* BOTH WORDINGS OF THE LONGEST-SPELL FAMILY, and both are required at once
+   rather than one replacing the other.
+
+   The content side relabelled that family on 12 September 2026 — "longest
+   spell" became "longest COMPLETED spell", because a manager still in post has
+   not finished the spell being measured. One word, inserted mid-category, and
+   this expression stopped matching board 641. clubOf() then returned null, so
+   the board was not a Manchester United board any more: off the club page
+   entirely, and simultaneously counted as a daily that no day names, which
+   released() refuses. Invisible in both places, with no error anywhere — the
+   exact fate the comment above describes for the 220 boards, arriving by a
+   different route. It was caught by a one-board disagreement between two counts
+   of the same bank, not by anything that failed.
+
+   `(?: completed)?` rather than a swap because D1 HOLDS THE OLD STRING TODAY
+   and the bank holds the new one: for the whole of the import this file has to
+   be right about both, and afterwards the old form is still what every capture
+   taken before today contains. A regex that only knew the new wording would
+   bury the live board instead of the incoming one. */
 const CLUB_CATEGORY =
-  /^(.+\S)\s+(managers by longest spell|managers|head coaches|Premier League (?:appearances|goals|assists))$/i;
+  /^(.+\S)\s+(managers by longest(?: completed)? spell|managers|head coaches|Premier League (?:appearances|goals|assists))$/i;
 export function clubOf(board) {
   const m = CLUB_CATEGORY.exec(String((board && board.category) || ""));
   return m ? m[1] : null;
@@ -77,7 +96,12 @@ export function familyOf(board) {
   const m = CLUB_CATEGORY.exec(String((board && board.category) || ""));
   if (!m) return null;
   const tail = String(m[2]).toLowerCase();
-  if (tail === "managers by longest spell") return "longest-spell";
+  /* Both wordings land on ONE family. If this only knew the old string the
+     board would keep its club and lose its grouping — a subtler version of the
+     same disappearance, and the reason the tail is read from this match rather
+     than by a second regex over the same text. */
+  if (tail === "managers by longest spell" ||
+      tail === "managers by longest completed spell") return "longest-spell";
   if (tail === "managers" || tail === "head coaches") return "managers";
   return tail.replace("premier league ", "");   // appearances | goals | assists
 }

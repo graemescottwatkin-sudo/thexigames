@@ -125,7 +125,21 @@ and diagnose before anything ships. Never push past a red gate.
   THE TABLES ARE EMPTY: there is no `bank.json` for QuickFire — the source is
   an xlsx — so `/api/quickfire/daily` answers 404 "no board published for
   today" rather than the 500 it answered before, and the game is still not
-  playable). Verified 5 Sep
+  playable.
+  AND THE FOUR OPTION COLUMNS ARE INERT, which is not the same as missing:
+  `grep -c option tools/import_quickfire.js` returns 0 and `QUESTION_COLUMNS`
+  in `functions/_lib/qfdata.js` does not select them, so nothing writes them
+  and nothing reads them. They were left NULLABLE on 14 Sep 2026 by a decision
+  that recreating a live table to add a constraint enforced one layer up is
+  risk without return — CORRECT ONLY WHILE THAT LAYER EXISTS, and today it
+  does not. "Exactly one option equals `answer`" is a sentence in 022's own
+  comment and nowhere in code. The order, and it is not interchangeable:
+  (1) the importer learns the columns and REFUSES a row unless exactly one
+  option equals `answer`, compared against the source the answer came from;
+  (2) `QUESTION_COLUMNS` selects them; (3) the 4-character floor and the
+  alias-length rule go. TWO BEFORE ONE SERVES UNVALIDATED OPTIONS — a player
+  picks the right one and is told they are wrong, which is the 116-row
+  Crossword answer drift in a new place). Verified 5 Sep
   2026 against the live database: every table each migration creates exists,
   and `results.game` and `plays.game` are present for the two that only ALTER.
   031 (`ws_round`, `ws_find`, `ws_foul`) and 032 (`season_play`) confirmed
