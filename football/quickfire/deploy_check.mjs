@@ -327,11 +327,34 @@ t("the eleven rule is stated once", (() => {
 t("the scoring maximum is derived, not written down twice",
   /SCORE_BANDS\.reduce/.test(js) && !/\b1100\b/.test(js),
   "the maximum comes from the bands, so changing a band cannot leave it stale");
-t("the test hooks are defined off the live host only",
-  /IS_LIVE\s*=\s*location\.hostname\s*===\s*'www\.thexigames\.com'/.test(js) &&
-  /QFX_TEST_REVEAL\s*=\s*IS_LIVE\s*\?\s*undefined/.test(js) &&
-  /QFX_TEST_ANSWER\s*=\s*IS_LIVE\s*\?\s*undefined/.test(js),
-  "on the live host they would be a cheat button");
+/* THE ANSWER IS NOT IN THIS FILE'S REACH AT ALL, which is a stronger claim than
+   the one that stood here until 15 September 2026.
+ *
+ * That check demanded two test hooks — QFX_TEST_REVEAL and QFX_TEST_ANSWER —
+ * be guarded by an IS_LIVE host comparison, because off the live host they
+ * handed back the answer to the current question and on it they would have been
+ * a cheat button. The guard was right and the hooks are now GONE, along with
+ * the reason for them: the page is sent four options and no answer, so there is
+ * no answer for a hook to hand back and no cheat to guard against.
+ *
+ * A check whose subject has been deleted must not be deleted with it — that is
+ * how a rule quietly stops applying. It is replaced by the property that made
+ * the hooks dangerous in the first place: this file must not name the answer
+ * field at all. If anybody ever puts it back in the payload, the page will have
+ * to read it, and this is where that shows up. */
+t("the page never reads an answer, because it is never sent one", (() => {
+  /* STRIPPED. Half this file's header is about the answer no longer arriving,
+     and a check that read the comments would fail on the sentences explaining
+     why it passes — this project's own rule, in the file that quotes it. */
+  const code = js
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/(^|[^:])\/\/.*$/gm, "$1 ");
+  /* `.answer` as a property read, or "answer" as a key pulled off a payload.
+     `answered` is a count of questions and is not the answer to any of them. */
+  return !/\.answer\b/.test(code) &&
+         !/\banswer\s*:/.test(code) &&
+         !/QFX_TEST_(REVEAL|ANSWER)/.test(code);
+})(), "the hooks that handed it back are gone, and so is what they handed back");
 t("the board is fetched with the family CSRF header, relatively",
   /X-XI-Games/.test(js) && /\/api\/quickfire\/daily/.test(js) &&
   !/fetch\("https?:\/\//.test(js));

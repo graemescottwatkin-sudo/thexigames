@@ -144,24 +144,33 @@ and diagnose before anything ships. Never push past a red gate.
   confirmed live, `qf_question` carrying the four option columns and the
   `status` filter that decides whether a row is ever served. It is eight
   `CREATE ... IF NOT EXISTS` and nothing else, so it is safe to re-run.
-  THE TABLES ARE EMPTY: there is no `bank.json` for QuickFire — the source is
-  an xlsx — so `/api/quickfire/daily` answers 404 "no board published for
-  today" rather than the 500 it answered before, and the game is still not
-  playable.
-  AND THE FOUR OPTION COLUMNS ARE INERT, which is not the same as missing:
-  `grep -c option tools/import_quickfire.js` returns 0 and `QUESTION_COLUMNS`
-  in `functions/_lib/qfdata.js` does not select them, so nothing writes them
-  and nothing reads them. They were left NULLABLE on 14 Sep 2026 by a decision
-  that recreating a live table to add a constraint enforced one layer up is
-  risk without return — CORRECT ONLY WHILE THAT LAYER EXISTS, and today it
-  does not. "Exactly one option equals `answer`" is a sentence in 022's own
-  comment and nowhere in code. The order, and it is not interchangeable:
-  (1) the importer learns the columns and REFUSES a row unless exactly one
-  option equals `answer`, compared against the source the answer came from;
-  (2) `QUESTION_COLUMNS` selects them; (3) the 4-character floor and the
-  alias-length rule go. TWO BEFORE ONE SERVES UNVALIDATED OPTIONS — a player
-  picks the right one and is told they are wrong, which is the 116-row
-  Crossword answer drift in a new place). Verified 5 Sep
+  THE TABLES ARE FULL, since 14 Sep 2026, and the three paragraphs that used to
+  stand here said the opposite for a day after it stopped being true. They said
+  there was no `bank.json`, that the tables were empty, and that the option
+  columns were inert — all correct when written on the 13th, all false by the
+  evening of the 14th, and a session on the 15th planned a day's work around
+  them before checking. A stale law is worse than no law: nobody re-checks what
+  the project's own file states as fact. VERIFIED from the bank on 15 Sep 2026:
+  1,921 questions, 0 rows without four options, 0 rows failing the
+  exactly-one-option-equals-answer rule, 89 dailies running 2026-09-14 to
+  2026-12-11 with no gaps. The chain, which is four steps and only the last
+  touches this repo:
+  `..\..\Other\QuickfireXI\data\DAILY-BANK.xlsx` -> `scripts/build-bank-json.py`
+  -> `..\..\Other\QuickfireXI\export\quickfirexi-source\bank.json` ->
+  `tools/import_quickfire.js --source <that folder>` -> `data/qf-production.sql`
+  -> `wrangler d1 execute --remote --file=`.
+  THE OPTION COLUMNS ARE LIVE ON BOTH SIDES and the ordering that governed them
+  was followed: (1) the importer refuses a row unless exactly one option equals
+  `answer` — `tools/import_quickfire.js`, faulting on count, on duplicates and
+  on no match; (2) `QUESTION_COLUMNS` in `functions/_lib/qfdata.js` selects
+  them. Two before one would have served unvalidated options, which is a player
+  pressing the right button and being told they are wrong. That risk is not
+  fully retired and cannot be by code: the importer proves exactly one option
+  equals the RECORDED answer, and nothing can prove a distractor is not also
+  true in the world. The defence is clue specificity — "Portugal may have won
+  the Nations League in 2019, but who were runners-up?" names the winner inside
+  the question — and that is a property of how a clue is WRITTEN, checkable by
+  nobody downstream of it.). Verified 5 Sep
   2026 against the live database: every table each migration creates exists,
   and `results.game` and `plays.game` are present for the two that only ALTER.
   031 (`ws_round`, `ws_find`, `ws_foul`) and 032 (`season_play`) confirmed

@@ -55,6 +55,28 @@
     // Off by default, as specified. Set either to a positive number to test
     // whether a cost on wrong guesses restores the guess/wait tension.
     WRONG_GUESS_POINT_PENALTY: 0,   // points deducted per wrong guess
+    /* FIVE MATCH MINUTES PER WRONG PICK, the owner's number, set on 15 Sep 2026
+       when the game became four options. It was 0 for the typing game, which
+       had no concept of a wrong pick — a wrong guess cleared the cells and you
+       typed again. With four options a blind pick is a free 25% unless being
+       wrong costs more than thinking does.
+
+       MINUTES AND NOT POINTS because the clock already punishes hesitation, so
+       a points penalty punishes twice; a time penalty moves you down the same
+       curve as everything else and costs more the earlier you were.
+
+       AND IT LIVES HERE SO IT CAN BE MOVED. The same five minutes is worth
+       between 0 and 36 points depending where the clock sits, because the bands
+       are unequal — fifteen points between the first two and three between the
+       last two. There is no timing-independent right value, so the only way
+       anyone finds one is by playing it and changing this line. The SERVER
+       reads this file rather than keeping its own copy.
+
+       IT IS STILL 0, AND GOES TO 5 WITH THE CLIENT REWRITE. This value is read
+       by the game that is live TODAY, which is the typing game — where a wrong
+       guess clears the cells and you type again, repeatedly and by design.
+       Setting it now would charge five minutes for each of those. The number is
+       decided; it lands when there is a wrong PICK to charge for. */
     WRONG_GUESS_MINUTE_PENALTY: 0,  // match minutes added per wrong guess
 
     // What survives on the board after a wrong guess:

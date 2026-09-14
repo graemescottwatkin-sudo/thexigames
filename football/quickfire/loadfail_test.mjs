@@ -91,11 +91,19 @@ console.log("\nEach cause is told apart");
   const a = await render({ status: 404 });
   const b = await render({ status: 503 });
   const c = await render({ network: true });
-  const d = await render({ status: 404, hash: "#x=abc123" });
+  /* A LINK TO A NAMED BOARD, which since 15 September 2026 is #b=<number>.
+     It was #x=<encoded clue ids> — a challenge link the page decoded and built
+     a board from, using a bank it was sent. There is no bank on the page any
+     more, so a shared board is a NUMBER the server resolves and bounds. An old
+     #x= link is handled elsewhere (it opens today's Daily and says why); what
+     is under test here is the cause this branch exists for, which is a link
+     naming a board that is not available. */
+  const d = await render({ status: 404, hash: "#b=999" });
   t("503 names it as ours, not the player's",
     /our side|not yours/i.test(b.lede), b.lede);
-  t("a bad CHALLENGE link is not reported as 'no board today'",
-    /challenge link/i.test(d.lede) && !/no QuickFire board/i.test(d.lede), d.lede);
+  t("a link to a board that is not available is not reported as 'no board today'",
+    /that board has not been|never was/i.test(d.lede) && !/no QuickFire board/i.test(d.lede),
+    d.lede);
   const said = [a.lede, b.lede, c.lede, d.lede];
   t("all four causes produce four different messages",
     new Set(said).size === 4, `${new Set(said).size} distinct`);

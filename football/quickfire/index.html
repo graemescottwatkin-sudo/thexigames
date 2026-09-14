@@ -5,17 +5,17 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="theme-color" content="#F4F5F2">
 <title>QuickFire XI — the daily football quiz | The XI Games</title>
-<meta name="description" content="Eleven football questions on a 0-90 match clock. The answer fills in letter by letter as the minutes pass, so the longer you take the less it is worth. A new eleven every day from The XI Games.">
+<meta name="description" content="Eleven football questions on a 0-90 match clock. Four answers to choose from, and the longer you take the less the right one is worth. A new eleven every day from The XI Games.">
 <link rel="canonical" href="https://www.thexigames.com/football/quickfire/">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://www.thexigames.com/football/quickfire/">
 <meta property="og:title" content="QuickFire XI — the daily football quiz">
-<meta property="og:description" content="Eleven questions, a 0-90 match clock, and an answer that fills in while you think. Answer early, score more.">
+<meta property="og:description" content="Eleven questions, four answers each, and a 0-90 match clock. Answer early, score more.">
 <meta property="og:site_name" content="The XI Games">
 <meta property="og:image" content="https://www.thexigames.com/football/quickfire/og-image.png">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="QuickFire XI — the daily football quiz">
-<meta name="twitter:description" content="Eleven questions, a 0-90 match clock, and an answer that fills in while you think.">
+<meta name="twitter:description" content="Eleven questions, four answers each, and a 0-90 match clock.">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"WebApplication",
  "name":"QuickFire XI","applicationCategory":"Game",
@@ -29,7 +29,7 @@
 <link rel="stylesheet" href="/shared/xi-tokens.css?v=v37">
 <link rel="stylesheet" href="/shared/xi-chrome.css?v=v37">
 <script src="/shared/xi-theme.js?v=v37"></script>
-<link rel="stylesheet" href="css/style.css?v=v001d">
+<link rel="stylesheet" href="css/style.css?v=v001e">
 </head>
 <body>
 
@@ -64,15 +64,34 @@
       <h1>QuickFire XI</h1>
       <h2 class="pmDate" id="startDate">—</h2>
       <p class="challengeNote" id="challengeNote" hidden></p>
-      <p class="pmLede" id="startBlurb">Eleven questions, each on a 0' to 90' clock.
-        The answer fills in letter by letter while you think, so the longer you
-        take the less it is worth.</p>
+      <p class="pmLede" id="startBlurb">Eleven questions, each with four
+        answers, each on a 0' to 90' clock. The longer you take, the less the
+        right one is worth.</p>
       <button class="kick" id="kickOff">Kick off</button>
       <button class="mode" id="playWeekly" hidden>
         <strong id="weeklyLabel">The Last 7 Days</strong>
         <span id="weeklyState">New</span>
       </button>
+
+      <!-- BOARDS THAT HAVE GONE. The list is days and numbers only; opening one
+           fetches it like any other board and plays it under the same rules. -->
+      <button class="mode" id="showArchive" hidden>
+        <strong>Boards that have been</strong>
+        <span id="archiveCount"></span>
+      </button>
+
       <p class="tiny">One question lasts 30 seconds of real time.</p>
+    </div>
+  </section>
+
+  <section class="screen prematch" id="screenArchive" hidden>
+    <div class="pmCard">
+      <div class="eyebrow">QuickFire XI</div>
+      <h2 class="pmDate">Boards that have been</h2>
+      <p class="pmLede">Every board that has already been a Daily. They are
+        scored exactly as today's is.</p>
+      <div class="archiveList" id="archiveList"></div>
+      <button class="btn quiet" id="archiveBack">Back</button>
     </div>
   </section>
 
@@ -93,20 +112,12 @@
     </div>
 
     <p class="clue" id="clue">—</p>
-    <p class="enumeration" id="enumeration"></p>
 
-    <div class="board">
-      <div class="answer" id="answer" role="img" aria-label="Answer so far"></div>
-      <input id="keyInput" type="text" inputmode="text" autocomplete="off"
-             autocorrect="off" autocapitalize="characters" spellcheck="false"
-             aria-label="Type your answer into the gaps">
-    </div>
+    <!-- The four. Built by the script from what the server sent, which is the
+         options and no answer among them. -->
+    <div class="options" id="options" role="group" aria-label="Choose an answer"></div>
 
     <p class="feedback" id="feedback" role="status" aria-live="polite"></p>
-
-    <div class="entry">
-      <button class="kick" id="submit">Submit</button>
-    </div>
 
     <button class="subBtn" id="passQuestion">
       <span>Sub it off</span>
@@ -144,15 +155,9 @@
 <footer class="xic-foot"></footer>
 
 <script src="/shared/xi-chrome.js?v=v37"></script>
-<script src="js/config.js?v=v001d"></script>
-<script src="js/enumeration.js?v=v001d"></script>
-<script src="js/matching.js?v=v001d"></script>
-<script src="js/reveal.js?v=v001d"></script>
-<script src="js/adapters.js?v=v001d"></script>
-<script src="js/challenge.js?v=v001d"></script>
-<script src="js/board_file.js?v=v001d"></script>
+<script src="js/config.js?v=v001e"></script>
 <script src="/shared/xi-season.js?v=v37"></script>
 <script src="/shared/xi-plays.js?v=v37"></script>
-<script src="js/game.js?v=v001d"></script>
+<script src="js/game.js?v=v001e"></script>
 </body>
 </html>

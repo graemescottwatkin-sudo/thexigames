@@ -220,6 +220,23 @@ jobs:
           # checked "an error appears" would have passed the version that was
           # wrong. Needs jsdom.
           node football/quickfire/loadfail_test.mjs
+          # And what a round COSTS, which moved to this side on 15 September
+          # 2026. QuickFire went live serving the answer with every question —
+          # eleven a day in plain text — because the page was a typing game that
+          # revealed letters out of the string and could not draw a board
+          # without it. With four options it needs neither, so the marking, the
+          # clock and the score are the server's. The first assertions here are
+          # that the answer, the aliases and the normalised form are not in the
+          # payload; the rest read the scoring from the game's OWN config rather
+          # than restating it, so a suite cannot pass by agreeing with a copy
+          # of itself.
+          node football/quickfire/round_test.mjs
+          # And the PAGE, driven rather than read. The client was rewritten from
+          # a typing game to a four-option picker on 15 September 2026 — some
+          # six hundred lines — and until this suite nothing had executed one of
+          # them. It runs offline against jsdom in about a second; it is not one
+          # of the browser-job suites. Needs jsdom.
+          node football/quickfire/journey_test.mjs
           # And the IMPORTER's two rules about repetition, which had no suite at
           # all until 14 September 2026. It is spawned rather than imported —
           # the file is a program that reads a bank and exits, so there is

@@ -5,19 +5,16 @@
  * so the game follows the family into dark mode without a second palette.
  *
  * THE ONE THING THIS GAME NEEDS THAT THE OTHERS DO NOT.
- * The answer row is the input, and it holds two kinds of character: letters the
- * clock has given away, and letters the player has typed. Telling them apart is
- * the whole mechanic, so the difference cannot be a shade of the same colour.
- * A clock letter is a gold chip — the same gold-on-gold-ink pairing the word
- * search already uses for its VAR banner. A typed letter is plain ink on paper.
- * Chip versus no chip reads at a glance, in either theme, and does not rest on
- * hue alone.
+ * A question is four buttons and one of them is right, so the verdict has to
+ * read instantly and cannot rest on hue alone — a third of the men who will
+ * play this cannot be relied on to tell the green from the red. Right FILLS;
+ * wrong keeps the paper and goes to a dashed edge. Different weight, different
+ * edge, different fill: three carriers before colour is counted.
  *
  * ON THE GREEN. --pitch means "you got something right" and is spent on the
  * kick-off button and the goal state, nowhere else. The gold is the clock's:
- * the match minute, what the question is currently worth, and the letters the
- * clock has handed over. That pairing is already the family's — the word
- * search's .clock is --xi-ink too.
+ * the match minute and what the question is currently worth. That pairing is
+ * already the family's — the word search's .clock is --xi-ink too.
  */
 
 *{box-sizing:border-box}
@@ -90,60 +87,54 @@ h1,h2{font-family:var(--disp);letter-spacing:.01em;margin:0}
 
 .clue{font-family:var(--disp);font-weight:600;font-size:24px;line-height:1.2;
   margin:14px 0 4px}
-.enumeration{font-size:13px;color:var(--ink-soft);margin:0}
+/* ---- the four, which are the board now --------------------------------- */
 
-/* ---- the board, which is also the input -------------------------------- */
+/* THE TYPING BOARD IS GONE. Everything between the clue and the feedback used
+   to be a row of letter cells, a transparent input to raise the phone keyboard,
+   and the gold chips the clock filled in. None of it survives four options —
+   there is nothing to type and nothing to reveal — so it is deleted rather than
+   left unreferenced. A stylesheet that still describes a board the markup has
+   not got is a map of a building that has been pulled down.
 
-.board{position:relative;margin:20px 0 8px}
+   ONE COLUMN, NOT A GRID OF TWO. Answers here are club and player names of very
+   uneven length; a two-up grid sets the button width by the longest and wraps
+   the rest, so the four stop being scannable at exactly the moment the clock is
+   running. Full width reads top to bottom in one movement. */
+.options{display:flex;flex-direction:column;gap:9px;margin:18px 0 12px}
 
-/* A transparent field over the row, there only to raise the keyboard. */
-#keyInput{position:absolute;inset:0;width:100%;height:100%;padding:0;border:0;
-  background:transparent;color:transparent;caret-color:transparent;
-  font-size:16px;
-  opacity:0;cursor:text}
-#keyInput:focus{outline:none}
+.option{width:100%;min-height:var(--tap);padding:13px 15px;text-align:left;
+  background:var(--paper);border:1.5px solid var(--line);border-radius:11px;
+  color:var(--ink);font-family:var(--disp);font-weight:600;
+  font-size:clamp(16px,4.4vw,19px);line-height:1.25;
+  transition:border-color .12s ease,background .12s ease}
+.option:hover:not(:disabled){border-color:var(--ink-faint)}
+.option:active:not(:disabled){transform:translateY(1px)}
+.option:disabled{cursor:default}
 
-.answer{display:flex;flex-wrap:wrap;align-items:flex-end;gap:4px;min-height:3em;
-  font-family:var(--disp);font-weight:600;font-size:clamp(20px,7vw,30px);line-height:1.1}
-.answer .cell{display:inline-block;min-width:.72em;text-align:center;padding:2px 1px}
-.answer .gap{width:.55em}
+/* What was pressed, before the server has said. The clock is running while
+   this request is in flight, so the press has to acknowledge itself. */
+.option.chosen{border-color:var(--ink-soft)}
 
-/* Empty: a rule to write on. */
-.answer .cell.hidden{color:transparent;border-bottom:2px solid var(--ink-faint)}
-.board:focus-within .cell.caret{border-bottom-color:var(--pitch)}
-.answer .cell.caret{animation:qfBlink 1.1s steps(1,end) infinite}
-@keyframes qfBlink{
-  0%,55%{border-bottom-color:var(--pitch)}
-  56%,100%{border-bottom-color:var(--ink-faint)}
-}
+/* THE VERDICT, which arrives from the server rather than from this page.
+   Colour is not the only carrier: right fills, wrong keeps the paper and goes
+   to a dashed edge, so the two differ in weight as well as in hue. */
+.option.right{background:var(--ok);border-color:var(--ok);color:var(--paper)}
+.option.wrong{border-style:dashed;border-color:var(--danger);color:var(--danger)}
+.option:disabled:not(.right):not(.wrong){opacity:.45}
 
-/* Typed by the player: plain ink, still sitting on its rule. */
-.answer .cell.typed{color:var(--ink);border-bottom:2px solid var(--ink-faint)}
+/* ---- boards that have been --------------------------------------------- */
 
-/* Given by the clock: a gold chip. The one thing in this game that has to be
-   unmistakable at a glance, so it differs in fill as well as in colour. */
-.answer .cell.shown{background:var(--gold);color:var(--gold-ink);border-radius:4px;
-  padding:2px 3px}
-.answer .cell.punct{color:var(--ink-soft)}
+.archiveList{display:flex;flex-direction:column;gap:7px;margin:14px 0 18px;
+  max-height:52vh;overflow-y:auto}
 
-.answer .cell.fresh{animation:qfDrop .5s ease}
-@keyframes qfDrop{
-  0%{transform:translateY(-4px) scale(1.14)}
-  100%{transform:none}
-}
-
-.answer.solved .cell.shown,.answer.solved .cell.typed{
-  background:none;color:var(--ok);border-bottom-color:transparent}
-.answer.missed .cell.shown,.answer.missed .cell.typed{
-  background:none;color:var(--danger);border-bottom-color:transparent}
-.answer.solved .cell.punct,.answer.missed .cell.punct{color:inherit}
-
-.answer.shake{animation:qfShake .24s ease}
-@keyframes qfShake{
-  0%,100%{transform:translateX(0)}
-  25%{transform:translateX(-4px)}
-  75%{transform:translateX(4px)}
-}
+.archiveItem{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+  min-height:var(--tap);padding:10px 13px;
+  border:1px solid var(--line);border-radius:10px;
+  color:var(--ink);text-decoration:none;
+  font-family:var(--disp);font-size:15px}
+.archiveItem span{color:var(--ink-soft);font-size:13px;letter-spacing:.06em}
+.archiveItem:hover{border-color:var(--ink-faint)}
+.archiveItem.current{border-color:var(--pitch);border-width:1.5px}
 
 /* ---- feedback ---------------------------------------------------------- */
 
@@ -155,9 +146,6 @@ h1,h2{font-family:var(--disp);letter-spacing:.01em;margin:0}
 .feedback.sub{color:var(--ink)}
 
 /* ---- controls ---------------------------------------------------------- */
-
-.entry{display:flex;gap:10px}
-.entry .kick{flex:1}
 
 .subBtn{width:100%;display:flex;align-items:center;justify-content:space-between;gap:12px;
   margin-top:10px;min-height:var(--tap);padding:10px 13px;
@@ -213,20 +201,6 @@ h1,h2{font-family:var(--disp);letter-spacing:.01em;margin:0}
   background:var(--card);color:var(--ink);font-weight:600;font-size:14px}
 .btn:hover{border-color:var(--ink-faint)}
 .btn.quiet{border-color:transparent;background:none;color:var(--ink-soft);margin-top:16px}
-
-/* ---- the on-screen keyboard is up -------------------------------------- */
-
-/* iOS does not resize the layout viewport for the keyboard, so a media query
-   cannot see it. game.js watches visualViewport and sets this class; the page
-   then gives up everything that is not the question. */
-body.kbd .legal{display:none}
-body.kbd .app{padding-top:6px}
-body.kbd .clue{margin:10px 0 2px;font-size:20px}
-body.kbd .clock{font-size:28px}
-body.kbd .answer{min-height:2.4em;margin:14px 0 4px;font-size:clamp(18px,6vw,26px)}
-body.kbd .feedback{margin-bottom:8px}
-body.kbd .scoreCluster{margin-top:8px}
-body.kbd .subBtn{margin-top:8px;min-height:38px;padding:7px 12px}
 
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important}

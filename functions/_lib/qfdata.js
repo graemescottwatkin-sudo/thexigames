@@ -34,16 +34,61 @@ const QUESTION_COLUMNS = `
   q.option_1, q.option_2, q.option_3, q.option_4
 `;
 
+/* WHAT A BROWSER IS HANDED, AND WHAT IT IS NOT.
+ *
+ * THE ANSWER LEFT THIS RESPONSE ON 15 SEPTEMBER 2026. Until then every question
+ * went out as {id, clue, answer, aliases, ...} — eleven answers a day, in plain
+ * text, to anyone who typed curl. It was not a regression and it was nobody's
+ * mistake: the game was a TYPING game, the page revealed letters out of
+ * `answer` character by character, and it could not draw a board without it. So
+ * the field was load-bearing for as long as the game worked that way.
+ *
+ * It stopped being load-bearing when the game became four options. There is
+ * nothing to reveal and nothing to match per character; the page needs the
+ * options and an id, and the marking happens on this side. Removing the field
+ * before the client changed would have taken the game down — the two halves are
+ * one change, which is why they are one commit.
+ *
+ * ALIASES GO TOO, and they were the quieter half. They exist only for matching
+ * a typed answer, so they are useless to a four-option page and a list of ways
+ * to spell the answer is a list of the answer.
+ *
+ * THE OPTIONS GO OUT IN THE BANK'S ORDER, which is deliberate and was checked
+ * rather than assumed. The importer's comment says that order IS the
+ * presentation and the only record of where the right answer sits — so if the
+ * bank put the answer first every time, serving them in order would hand it
+ * over by position. Counted against all 1,921 live rows: 492 at position one,
+ * 485 at two, 479 at three, 465 at four, and ZERO with no matching option. Near
+ * uniform, and the invariant holds on every row.
+ */
+/* EXPORTED FOR A TEST, which is a thing worth justifying rather than doing
+   quietly. The partial-row rule — four options or none, never two buttons —
+   cannot be proved by reading the source: a regex can see the guard and not
+   whether it fires. A sabotage that removed it went unnoticed by a suite that
+   only read the file, which is how the gap was found. So the function is
+   exported and the rule is executed. */
+export function shapeQuestion(row) { return shape(row); }
+
 function shape(row) {
+  const options = [row.option_1, row.option_2, row.option_3, row.option_4]
+    .filter((o) => o !== null && o !== undefined && String(o).trim() !== "");
   return {
     id: row.id,
     clue: row.clue,
-    answer: row.answer,
-    aliases: String(row.aliases || "").split("|").filter(Boolean),
+    /* Four, or none. A row mid-pivot renders as a question with no options
+       rather than as four blank buttons, which is the importer's own rule about
+       what a partial row means. */
+    options: options.length === 4 ? options : [],
     answerType: row.answer_type,
     difficulty: row.difficulty || "medium",
   };
 }
+
+/* The three fields that must never reach a browser, named so a suite can
+   assert against the list rather than restating it. `answer` is the answer,
+   `aliases` is the answer spelled other ways, and `answer_norm` is what the
+   server matches on. */
+export const SECRET_FIELDS = ["answer", "aliases", "answer_norm"];
 
 function split(rows) {
   const questions = [];

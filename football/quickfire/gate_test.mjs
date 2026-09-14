@@ -51,8 +51,8 @@ console.log("\nEvery check, watched failing");
 
 /* v001t on the word search: assets changed, one ?v= left behind, and the same
    URL then named different bytes for every browser holding it cached. */
-prove("a stale tag on one of eight assets", "index.html",
-  swap("js/reveal.js?v=v001", "js/reveal.js?v=v000"), "same tag as the code");
+prove("a stale tag on one of this game's assets", "index.html",
+  swap("js/config.js?v=v001", "js/config.js?v=v000"), "same tag as the code");
 
 /* The family's oldest fault: one fact, two places. */
 prove("a second copy of the eleven rule", "js/game.js",
@@ -63,9 +63,20 @@ prove("the scoring maximum written down twice", "js/game.js",
   swap("var CONFIG = window.QFX_CONFIG;", "var CONFIG = window.QFX_CONFIG;\n  var MAX = 1100;"),
   "maximum is derived");
 
-prove("a test hook left ungated", "js/game.js",
-  swap("window.QFX_TEST_ANSWER = IS_LIVE ? undefined :", "window.QFX_TEST_ANSWER ="),
-  "test hooks are defined off the live host");
+/* THE SABOTAGE THIS REPLACED no longer had anything to sabotage. It ungated a
+   test hook — QFX_TEST_ANSWER, which handed back the current question's answer
+   off the live host — and both the hook and the answer it returned went with
+   the four-option rewrite on 15 September 2026. A sabotage whose `from` string
+   is absent applies nothing, the gate then passes because nothing was broken,
+   and the prover reports a green it did not earn. That is this project's own
+   "prove the sabotage applied" rule failing inside the prover itself.
+
+   What guards the same ground now is a stronger claim: the page must not name
+   the answer at all, because it is never sent one. */
+prove("the page reading an answer it should never have", "js/game.js",
+  swap("function renderClock(minute) {",
+       "function renderClock(minute) {\n  var leak = current.question.answer;"),
+  "never reads an answer");
 
 /* The fault the word search rebuild retired: the bank in the browser. */
 prove("a bank pasted into a public file", "js/config.js",
@@ -91,15 +102,18 @@ prove("an absolute API url", "js/game.js",
 /* Written, dropped into js/, never given a <script> tag. The reference check
    asks the opposite question and passed. */
 {
-  const orphan = path.join(DIR, "js/board_file.js");
-  const kept = fs.readFileSync(orphan, "utf8");
+  /* THE DONOR FILE USED TO BE js/board_file.js — the very file whose orphaning
+     this check was written for — and it went with the typing game, so this
+     block crashed on ENOENT before it sabotaged anything. In a sweep that only
+     read exit codes it looked like a suite that ran. Nothing needs reading at
+     all: the orphan is the file WRITTEN just below, and that read was only ever
+     a belt-and-braces restore of a file this block never modified. */
   fs.writeFileSync(path.join(DIR, "js/unreferenced.js"), "/* nobody loads me */\n");
   const out = gate();
   fs.unlinkSync(path.join(DIR, "js/unreferenced.js"));
   const caught = out.split("\n").some((l) => l.startsWith("FAIL") && l.includes("loaded by the page"));
   console.log((caught ? "  ok  " : "MISS  ") + "a file in js/ that the page never loads");
   if (!caught) missed++;
-  fs.writeFileSync(orphan, kept);
 }
 
 /* The masthead moved into the shared bar, #dailyDate went with it, and the
