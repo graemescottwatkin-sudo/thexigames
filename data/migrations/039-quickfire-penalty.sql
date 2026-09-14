@@ -4,8 +4,8 @@
 -- WHY THIS IS NOT PART OF 037. 037 created qf_round hours earlier, before the
 -- owner had decided what a wrong pick costs — the typing game had no such
 -- concept, because a wrong guess just cleared the cells and you typed again.
--- With four options a wrong pick is a discrete event, it costs five match
--- minutes, and the server has to remember how many have been spent.
+-- With four options a wrong pick is a discrete event, it costs match minutes,
+-- and the server has to remember how many have been spent.
 --
 -- AND 037 GOT THE CLOCK WRONG, which is the larger half of this file and was
 -- found before it ever ran. It gave the SITTING one `started_ms` and measured
@@ -59,11 +59,20 @@ CREATE TABLE IF NOT EXISTS qf_round (
   -- mid-round.
   question_idx    INTEGER NOT NULL DEFAULT 0,
   question_ms     INTEGER NOT NULL DEFAULT 0,
-  -- MATCH MINUTES BOUGHT BY WRONG PICKS ON THE CURRENT QUESTION, five at a
-  -- time, and reset when the next question is served. Added to the elapsed
-  -- clock rather than deducted from the score: the clock already punishes
-  -- hesitation, so a points penalty would punish twice, and a time penalty
-  -- costs more the earlier you were because the curve is steepest there.
+  -- MATCH MINUTES BOUGHT BY WRONG PICKS ON THE CURRENT QUESTION, reset when
+  -- the next question is served. Added to the elapsed clock rather than
+  -- deducted from the score: the clock already punishes hesitation, so a points
+  -- penalty would punish twice, and a time penalty costs more the earlier you
+  -- were because the curve is steepest there.
+  --
+  -- HOW MANY MINUTES IS NOT WRITTEN HERE, deliberately. This comment said "five
+  -- at a time" for the few hours between the draft and the owner settling on
+  -- ten, and it was applied to production in that state — so the one place a
+  -- person reading the DATABASE can see the number was the one place saying the
+  -- wrong one. A schema comment cannot be kept in step with a tunable: it is
+  -- frozen at apply time and the tunable is meant to move. The number lives in
+  -- WRONG_GUESS_MINUTE_PENALTY in football/quickfire/js/config.js, which the
+  -- server reads rather than copying, and that is the only place to look.
   penalty_minutes INTEGER NOT NULL DEFAULT 0
 );
 

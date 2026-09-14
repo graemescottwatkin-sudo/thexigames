@@ -132,8 +132,12 @@ export async function answerRound(env, round, question, idx, pick) {
 
   const verdict = judge(question, pick);
   if (!verdict.offered) return { error: "that was not one of the options" };
-  /* A WRONG PICK COSTS TIME, NOT POINTS — five match minutes, the owner's
-     number, configured in qf-round.js. It is charged AFTER this question is
+  /* A WRONG PICK COSTS TIME, NOT POINTS. How much is WRONG_PICK_MINUTES, which
+     qf-round.js reads from the game's own config — not restated here, because
+     this comment said "five match minutes" for the hours between the draft and
+     the owner settling on ten, and a number written in prose beside the code
+     that uses it is a second copy that cannot be kept in step.
+     It is charged AFTER this question is
      scored, so the cost lands on what comes next rather than on the question
      that was just answered: paying for a mistake with the points you had
      already earned would take the same minute twice. */
