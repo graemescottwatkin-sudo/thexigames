@@ -130,14 +130,16 @@ console.log("\n=== The clock is the server's ===");
 
 console.log("\n=== A wrong pick costs time, not points ===");
 {
-  /* NOT "it is five". It is 0 today and becomes 5 with the client rewrite,
-     because the value is read by the game that is LIVE — the typing game,
-     where a wrong guess clears the cells and you type again by design.
-     Setting it now would charge five minutes for each of those. What this
-     asserts is the WIRING, which is what can silently come apart. */
+  /* NOT "it is ten". What this asserts is the WIRING — that the server reads
+     the game's own config rather than keeping a second copy — because that is
+     what can silently come apart, and a test pinned to the literal would just
+     enforce today's value against tomorrow's tuning. It sat at 0 until the
+     four-option client landed, because the value was read by the LIVE typing
+     game where a wrong guess clears the cells and you type again by design;
+     nothing on the page reads it now, so it could move. */
   t("the penalty is whatever the config says, and nothing else",
     WRONG_PICK_MINUTES === CONFIG.WRONG_GUESS_MINUTE_PENALTY,
-    "0 until the four-option client lands, then 5");
+    `${WRONG_PICK_MINUTES} minutes, from the game's own config`);
   /* AND IT IS THE CONFIG'S, not a second copy beside it. config.js already had
      WRONG_GUESS_MINUTE_PENALTY, at 0 for the typing game, and this was very
      nearly declared as a new constant next to it — a second home for a setting

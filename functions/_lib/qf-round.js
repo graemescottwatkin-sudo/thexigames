@@ -38,13 +38,18 @@ export const QUESTION_MS = CONFIG.QUESTION_DURATION_MS;
  * and nowhere else. Found by reading the client to rewrite it and seeing the
  * constant already in use.
  *
- * Five is the owner's number. It is CONFIGURATION because the same five minutes
- * is worth between 0 and 36 points depending where the clock sits — the bands
- * are unequal, fifteen points between the first two and three between the last
- * two — so there is no timing-independent right value and the only way anyone
- * finds one is by playing it and changing the line. Eleven questions in ninety
- * minutes is 8.2 each, so five is 61% of one question's budget: recoverable,
- * and several times the cost of thinking for another minute.
+ * Ten is the owner's number, and it replaced a five that was reasoned from a
+ * false premise: that eleven questions share one 90-minute clock, making 8.2
+ * minutes a question's budget. They do not — each question has its own 0' to
+ * 90' — so the budget is 90 and five minutes was 5.6% of a question, 1.67
+ * seconds of real time, about a sixth of a band. Ten is exactly ONE BAND, which
+ * is the only landmark on this curve that means anything: a wrong pick costs a
+ * band, worth 3 to 15 points depending where the clock sits.
+ *
+ * It is CONFIGURATION because the bands are unequal — fifteen points between
+ * the first two and three between the last two — so there is no
+ * timing-independent right value and the only way anyone finds one is by
+ * playing it and changing the line.
  *
  * THE NUMBER THAT WOULD SHOW THIS IS WRONG is not the penalty, it is whether
  * players finish at all. If rounds routinely run out of clock the fix is the
