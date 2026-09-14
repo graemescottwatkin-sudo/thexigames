@@ -192,9 +192,26 @@ t("a solved tile names the clubs underneath",
     ? SOLVED_TILE.querySelector(".clubs").textContent : "(no clubs element)");
 t("two at most, most-appeared first", EXPECT.length <= 2 && EXPECT.length > 0,
   EXPECT.map((c) => c.club + " " + c.apps).join(" | "));
-t("and it is those clubs, with their appearances",
-  SOLVED_TILE.querySelector(".clubs").textContent ===
-    EXPECT.map((c) => (c.apps ? c.club + " " + c.apps : c.club)).join(" · "));
+/* ASSERTED AS PROPERTIES, NOT AS A FORMAT STRING. This used to rebuild the
+   rendered text — club + " " + apps, joined — and compare it to what the page
+   produced. That is two copies of one expression agreeing, and it goes red on
+   any cosmetic change while proving nothing about correctness: it failed on
+   14 September when the label gained "PL", which was a FIX rather than a fault.
+   What matters is that the tile names those clubs, in that order, with those
+   numbers, and that the number says what it counts. */
+{
+  const shown = SOLVED_TILE.querySelector(".clubs").textContent;
+  t("and it is those clubs, in that order",
+    EXPECT.map((c) => shown.indexOf(c.club)).every((i, n, all) =>
+      i >= 0 && (n === 0 || i > all[n - 1])), shown);
+  t("with their appearance counts",
+    EXPECT.filter((c) => c.apps).every((c) => shown.includes(String(c.apps))), shown);
+  /* THE NUMBER MUST SAY WHAT IT COUNTS. It is Premier League appearances, and
+     printed bare it reads as a career total — Salah is 314 in the league and
+     442 in all competitions. A true number making a false claim. */
+  t("and the number is qualified rather than bare",
+    !EXPECT.some((c) => c.apps) || /\bPL\b/.test(shown), shown);
+}
 t("an unsolved tile names none of them",
   [...doc.querySelectorAll(".slot:not(.solved)")].every((el) => !el.querySelector(".clubs")));
 t("the counter moved", $("solvedCount").textContent === "1");

@@ -212,9 +212,18 @@ and diagnose before anything ships. Never push past a red gate.
 - `tools/aligned_test.mjs` is the cross-game contract. **A new game is a row in
   its GAMES table** (dir, team-sheet name, storage prefix); its failures are
   the integration checklist. Run it first when integrating a game.
-- Browser suites (`render_test`, `journey_test`, `signin_test`) run in the CI
-  render job, not offline. `render_test` needs
+- Browser suites (`render_test`, `signin_test`) run in the CI render job, not
+  offline. `render_test` needs
   `BASE=http://127.0.0.1:8788/football/crossword/` against `wrangler pages dev`.
+  **`journey_test` IS NOT ONE OF THEM, except the crossword's.** Grid's, HiLo's
+  and Scrambled's all run offline against jsdom and pass in seconds; only
+  `football/crossword/journey_test.mjs` needs the browser job. This line used to
+  name all three families and that cost a red CI on 14 Sep 2026: a local sweep
+  skipped `*journey_test*` on the strength of it, went green over 77 suites, and
+  the push failed on an assertion in Scrambled's — which had been runnable here
+  all along. A skip list copied from a sentence is a sweep that is CI-shaped in
+  name only. When in doubt, run it: a suite that cannot run offline says so in
+  about a second.
 
 ## One fact, one place (the project's core principle)
 
