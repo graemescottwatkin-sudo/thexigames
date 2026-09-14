@@ -35,8 +35,15 @@
  * in three games; six is the same failure wearing a different hat, because two
  * players sharing a key means one of them can never be typed.
  */
-const fs = require("fs");
-const path = require("path");
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+/* THE FOLD IS IMPORTED, NOT COPIED. The importer stores a key and the server
+   matches a guess against it; two copies of that rule is a name that imports
+   under one spelling and can never be typed. It WAS written twice, and the two
+   copies disagreed about O-slash within the hour. This file is .mjs rather than
+   .js for exactly this reason — a CommonJS tool could not import it. */
+import { fold } from "../functions/_lib/wadata.js";
 
 const args = process.argv.slice(2);
 const CHECK = args.includes("--check");
@@ -45,52 +52,11 @@ const SOURCE = srcAt > -1 ? args[srcAt + 1] : null;
 const fromArg = args.find((a) => a.startsWith("--from="));
 const FROM = fromArg ? fromArg.slice("--from=".length) : null;
 
-const ROOT = path.join(__dirname, "..");
+const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const OUT = path.join(ROOT, "data", "wa-production.sql");
 
 const faults = [];
 const fault = (m) => faults.push(m);
-
-/* THE SAME FOLD ON BOTH SIDES. A guess is compared to a stored key, so the
-   importer and the server must agree about what a name reduces to — two copies
-   of this rule is a name that imports under one spelling and can never be
-   typed. functions/_lib/wadata.js states it once and this is the build-time
-   half; they are asserted identical by the suite rather than kept in step by
-   hand. */
-const FOLD_LETTERS = {
-  "Ø": "O", "ø": "o",   // O-slash
-  "Æ": "AE", "æ": "ae", // ash
-  "Œ": "OE", "œ": "oe",
-  "Ð": "D", "ð": "d",   // eth
-  "Þ": "TH", "þ": "th", // thorn
-  "ß": "ss",
-  "Ł": "L", "ł": "l",   // L-stroke
-  "Đ": "D", "đ": "d",
-};
-
-/* STRIPPING ACCENTS IS NOT ENOUGH, and the difference is a player nobody can
-   guess. NFD splits a letter into a base plus a combining mark, so E-acute
-   becomes E. But O-slash, ash, thorn, eth and L-stroke are not accented
-   letters — they are letters in their own right and NFD leaves them whole, so
-   the [^A-Z0-9] sweep DELETES them. MARTIN ODEGAARD folded to MARTINDEGAARD
-   with the O missing, and a player typing his name correctly folds to
-   MARTINODEGAARD and is told they are wrong.
-   Nine names in this bank carry one. Caught because the bank's own searchKey
-   disagreed with this function on all nine, which is the check below and the
-   reason it recomputes rather than trusts. The bank was right. */
-/* The ranges are written as escapes rather than as the characters themselves.
-   The combining-mark class in particular is invisible when typed literally —
-   a regex whose contents cannot be seen is one the next person deletes by
-   accident and cannot diff. */
-const NON_DECOMPOSING = /[ØøÆæŒœÐðÞþßŁłĐđ]/g;
-const COMBINING = /[̀-ͯ]/g;
-
-function fold(name) {
-  return String(name == null ? "" : name)
-    .replace(NON_DECOMPOSING, (c) => FOLD_LETTERS[c] || c)
-    .normalize("NFD").replace(COMBINING, "")
-    .toUpperCase().replace(/[^A-Z0-9]/g, "");
-}
 
 function addDays(iso, n) {
   const d = new Date(iso + "T00:00:00Z");

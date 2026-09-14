@@ -65,22 +65,9 @@ function fixture() {
               { club: "Arsenal", from: 2021, to: 2024, apps: 150, goals: 30, loan: false }],
       caps: "60", doors: [{ club: "Real Madrid", leave: 2021 }] },
   ];
-  /* Eleven doors a board, and the same player twice on purpose: Cech holds
-     Chelsea and Arsenal, which the importer must ACCEPT. */
+  /* Eleven doors a board, and the same player behind two of them on purpose:
+     Cech holds Chelsea and Arsenal, which the importer must ACCEPT. */
   const door = (club, leave, answer) => ({ club, leave, answer });
-  const eleven = [
-    door("Newcastle United", 2006, "ALAN SHEARER"),
-    door("Chelsea", 2015, "PETR CECH"),
-    door("Arsenal", 2019, "PETR CECH"),
-    door("Real Madrid", 2021, "MARTIN ØDEGAARD"),
-    door("Blackburn Rovers", 1996, "ALAN SHEARER"),
-    door("Newcastle United", 2006, "ALAN SHEARER"),
-    door("Chelsea", 2015, "PETR CECH"),
-    door("Arsenal", 2019, "PETR CECH"),
-    door("Real Madrid", 2021, "MARTIN ØDEGAARD"),
-    door("Blackburn Rovers", 1996, "ALAN SHEARER"),
-    door("Newcastle United", 2006, "ALAN SHEARER"),
-  ];
   /* The clubs must be distinct within a board, so give each slot its own. */
   const clubs = ["Newcastle United", "Chelsea", "Arsenal", "Real Madrid", "Blackburn Rovers"];
   const doors = [];
@@ -114,7 +101,7 @@ function run(mutate, label, expect, shouldPass = false) {
   let out = "", code = 0;
   try {
     out = execFileSync(process.execPath,
-      [path.join(ROOT, "tools", "import_whoami.js"), "--source", dir, "--from=2026-10-01", "--check"],
+      [path.join(ROOT, "tools", "import_whoami.mjs"), "--source", dir, "--from=2026-10-01", "--check"],
       { encoding: "utf8", stdio: "pipe", cwd: ROOT });
   } catch (e) {
     out = (e.stdout || "") + (e.stderr || "");

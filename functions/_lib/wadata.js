@@ -1,0 +1,190 @@
+/* functions/_lib/wadata.js — Who Am I XI's board, and what may leave the server.
+ *
+ * THE RULE THIS FILE EXISTS FOR. A board is eleven doors, each a club and the
+ * year a player last left it. Behind each is one player, and only ONE door is
+ * played per person per day — the other ten stay live for everybody else. So a
+ * leak here does not spoil one answer, it spoils ten answers for every other
+ * player that day. QuickFire leaked eleven answers to one person; this would
+ * leak ten to all of them.
+ *
+ * AND THE CAREER IS THE ANSWER, not a hint that happens to be strong.
+ * "Cobreloa, Udinese, Barcelona, Arsenal, Man United, Inter" is Sanchez to
+ * anyone who can read. So the club history, the birthplace and the age are all
+ * held back until a substitution has been charged for them, and the charging
+ * happens on this side.
+ *
+ * WHAT MAY BE SENT FREELY, and it is worth being explicit because two of the
+ * three look like leaks and are not:
+ *
+ *   - the eleven doors as club + leave year. That IS the board; it has to be
+ *     visible to choose from.
+ *   - the full name list, all 3,146 of them. It is the answer SPACE rather
+ *     than an answer: the same list backs all 365 days, so holding it tells
+ *     you nothing about today. Filtering it server-side per keystroke would
+ *     be wrong on a type-ahead budget anyway.
+ *   - the day's club COUNTS, unattributed. How many clubs each of today's
+ *     players had, as a bare sorted list with nothing saying which door.
+ *     Pooling the club NAMES instead was measured and rejected: it solves 23%
+ *     of doors outright for anyone holding the name list.
+ */
+
+/* ---- the fold ---------------------------------------------------------- */
+
+const FOLD_LETTERS = {
+  "Ø": "O", "ø": "o",     // O-slash
+  "Æ": "AE", "æ": "ae",   // ash
+  "Œ": "OE", "œ": "oe",
+  "Ð": "D", "ð": "d",     // eth
+  "Þ": "TH", "þ": "th",   // thorn
+  "ß": "ss",
+  "Ł": "L", "ł": "l",     // L-stroke
+  "Đ": "D", "đ": "d",
+};
+
+/* Written as escapes rather than as the characters themselves: the combining
+   class in particular is invisible when typed literally, and a regex whose
+   contents cannot be seen is one the next person breaks without noticing. */
+const NON_DECOMPOSING = /[ØøÆæŒœÐðÞþßŁłĐđ]/g;
+const COMBINING = /[̀-ͯ]/g;
+
+/* WHAT A TYPED NAME REDUCES TO, AND IT IS STATED ONCE.
+ *
+ * The importer stores a key and the server matches a guess against it, so the
+ * two halves must agree exactly — a name that imports under one spelling and is
+ * guessed under another is a player nobody can ever name. That is why
+ * tools/import_whoami.mjs IMPORTS this function rather than carrying its own
+ * copy; it was written twice first, and the copies disagreed within the hour.
+ *
+ * STRIPPING ACCENTS IS NOT THE SAME AS FOLDING LETTERS, which is the bug that
+ * made this worth a comment. NFD splits an accented letter into a base plus a
+ * combining mark, so E-acute becomes E. But O-slash, ash, thorn, eth and
+ * L-stroke are letters in their own right — NFD leaves them whole and the
+ * [^A-Z0-9] sweep then DELETES them. MARTIN ODEGAARD folded to MARTINDEGAARD
+ * with the O missing, and somebody typing his name correctly would have been
+ * told they were wrong. Nine names in this bank carry one.
+ */
+export function fold(name) {
+  return String(name == null ? "" : name)
+    .replace(NON_DECOMPOSING, (c) => FOLD_LETTERS[c] || c)
+    .normalize("NFD").replace(COMBINING, "")
+    .toUpperCase().replace(/[^A-Z0-9]/g, "");
+}
+
+/* ---- the basics -------------------------------------------------------- */
+
+export function hasDB(env) {
+  return !!(env && env.DB);
+}
+
+/* TODAY IS THE FAMILY'S UTC DAY, imported rather than restated. QuickFire kept
+   its own Europe/London clock and disagreed with every address on the site for
+   an hour a night all summer: the API served board 21 and the URL for board 21
+   answered 404. One clock. */
+export { utcDay as today } from "./daily.js";
+
+/* THE COLUMNS THAT ARE THE ANSWER. Named once so a check can assert against the
+   list rather than restating it, the way qfdata's SECRET_FIELDS does.
+   `clubs` and `club_history` are the career — the answer written out.
+   `birth_place`, `birth_year` and `nationality` are the third clue.
+   `name` and `id` are the answer itself. */
+export const SECRET_FIELDS = [
+  "name", "id", "full_name", "clubs", "club_history",
+  "birth_year", "birth_place", "nationality", "position", "caps", "article",
+];
+
+export function noStore(body, status = 200) {
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: {
+      "Content-Type": "application/json; charset=utf-8",
+      "Cache-Control": "no-store",
+      "X-Robots-Tag": "noindex",
+    },
+  });
+}
+
+/* ---- the board --------------------------------------------------------- */
+
+/* ONE DOOR, AS A BROWSER MAY SEE IT. Slot, club, year. That is all there is,
+   and the absence of anything else is the point rather than an omission —
+   `player_id` is selected by the query that feeds this and dropped here, in one
+   place, so a new caller cannot forget. */
+export function publicDoor(row) {
+  return {
+    slot: Number(row.slot),
+    club: row.club,
+    leave: Number(row.leave_year),
+  };
+}
+
+/* THE DAY'S BOARD. Doors, plus the unattributed club counts.
+ *
+ * THE COUNTS ARE SORTED, WHICH IS WHAT MAKES THEM SAFE. Returned in slot order
+ * they would be attributed — count[3] would be door 3's player's career length,
+ * which narrows eleven doors to the handful of players with that many clubs.
+ * Sorted, they are a shape of the day and nothing more.
+ */
+export async function getBoard(env, date) {
+  const play = date || today();
+  const { results } = await env.DB.prepare(`
+    SELECT d.slot, d.club, d.leave_year, p.club_count
+    FROM wa_board b
+    JOIN wa_door d  ON d.play_date = b.play_date
+    JOIN wa_player p ON p.id = d.player_id
+    WHERE b.play_date = ?1
+      AND b.status = 'published'
+      AND p.status = 'verified'
+    ORDER BY d.slot
+  `).bind(play).all();
+
+  const rows = results || [];
+  /* FAIL CLOSED ON A SHORT BOARD. Ten doors is not a board with one missing,
+     it is a board whose eleventh answer failed to resolve — and serving it
+     would quietly retire a door for everybody who picked that club. */
+  if (rows.length !== 11) return null;
+
+  return {
+    id: "XIWA-" + play.replace(/-/g, ""),
+    date: play,
+    doors: rows.map(publicDoor),
+    careers: rows.map((r) => Number(r.club_count) || 0).sort((a, b) => a - b),
+  };
+}
+
+/* THE ANSWER BEHIND ONE DOOR, for this side only. Never called by anything that
+   renders. */
+export async function doorAnswer(env, date, slot) {
+  const row = await env.DB.prepare(`
+    SELECT d.slot, d.club, d.leave_year, p.*
+    FROM wa_door d
+    JOIN wa_player p ON p.id = d.player_id
+    WHERE d.play_date = ? AND d.slot = ? AND p.status = 'verified'
+  `).bind(String(date), Number(slot)).first();
+  return row || null;
+}
+
+/* ---- the name list ------------------------------------------------------ */
+
+/* THE ANSWER SPACE. Every verified player, name and folded key, which is what
+   the page types against. It is the same list every day — that is precisely why
+   it is safe to ship, and why it is cacheable when nothing else here is. */
+export async function allNames(env) {
+  const { results } = await env.DB
+    .prepare("SELECT name, search_key FROM wa_player WHERE status = 'verified' ORDER BY name")
+    .all();
+  return (results || []).map((r) => [r.name, r.search_key]);
+}
+
+/* DID THIS PLAYER EVER PLAY FOR THAT CLUB. The "right club, wrong player"
+   answer, and it MUST be decided here: the alternative is sending the page the
+   club's full roster, which is a candidate list for the door. */
+export async function playedFor(env, playerKey, club) {
+  const row = await env.DB
+    .prepare("SELECT clubs FROM wa_player WHERE id = ? AND status = 'verified'")
+    .bind(String(playerKey)).first();
+  if (!row || !row.clubs) return false;
+  let clubs = [];
+  try { clubs = JSON.parse(row.clubs) || []; } catch (e) { return false; }
+  const want = fold(club);
+  return clubs.some((c) => fold(c.club) === want);
+}

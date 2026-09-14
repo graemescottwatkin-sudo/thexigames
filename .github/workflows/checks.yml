@@ -252,6 +252,14 @@ jobs:
           # repeated PLAYER on a board is legitimate and a repeated CLUB is not,
           # and a fold that strips accents deletes O-slash rather than folding it.
           node tools/import_whoami_test.mjs
+          # And what leaves the server when a door is opened. Who Am I is the
+          # hardest secrecy problem in this family so far, and the reason is
+          # arithmetic: only ONE door is played per person per day and the other
+          # ten stay live for everyone else, so a leak spoils ten answers for
+          # every other player that day rather than one for this one. The career
+          # is treated as the answer here, because it is one — a club history is
+          # the answer written out. Eight leak guards, each proved by sabotage.
+          node football/whoami/round_test.mjs
           # Scrambled XI, shirt 3, released. It has its own gate, its own
           # live_check and a row in aligned_test now, so it is held to the
           # same law as the other two.
