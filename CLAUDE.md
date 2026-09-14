@@ -82,11 +82,26 @@ hub. A 301 there would have to be un-cached from every browser that ever saw it.
    generators fall back to the four-board sample in CI and a suite can pass
    here and fail there on nothing but board COUNT — the scrambled tester wraps
    the ring modulo its own set, resolving #12 with the bank and #4 without.
-   To reproduce a runner: `git archive HEAD | tar -x -C <tmp>` and run there,
+   To reproduce a runner, AND MIND THE LINE ENDINGS:
+   `git -c core.autocrlf=false archive HEAD | tar -x -C <tmp>` and run there,
    where no bank is beside the checkout. Two red CI runs on 6 Sep 2026 were the
-   same fix attempted twice without doing this once.
-   The browser suites (`render_test`, `journey_test`, `signin_test`) do not
-   run offline; CI is where they are proved.
+   same fix attempted twice without doing this once. The `-c` is not decoration
+   on Windows: `git archive` applies autocrlf exactly as a checkout does, so the
+   copy comes out CRLF while the runner it is imitating is LF, and the two
+   generators that COMPARE TEXT rather than behaviour — `build_scrambled.js
+   --check` and `build_vowels.js --check` — refuse a tree that is otherwise
+   perfect. Measured 14 Sep 2026: 4,582 carriage returns in an archived
+   `sc-boards.js` against none in the worktree's, reproduced on an unmodified
+   HEAD that CI was green on. With the flag: "4 boards gated, and the stored
+   module matches", which is what the generator's own comment always said would
+   happen. A recipe that prints two reds on a good tree is as dangerous as a
+   green one that proves nothing — it teaches you which reds to ignore, and the
+   next real one looks the same.
+   WHICH SUITES CANNOT RUN OFFLINE IS STATED ONCE, in the rules of evidence
+   below. It was stated here as well until 14 Sep 2026; the two copies
+   disagreed about `journey_test`, a sweep read this one, went green over 77
+   suites without running the suite that would fail, and CI caught it. Two
+   copies of a skip list are two answers about what was actually run.
 4. Stage BY NAME, then commit and push. Not `git add -A`: other sessions edit
    this tree, and `-A` pushes their work past gates you never ran on it.
    Watch the Actions run (30+ jobs).
