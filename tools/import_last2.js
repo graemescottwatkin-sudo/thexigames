@@ -18,7 +18,10 @@
  *
  * WHAT IT REFUSES. A single board the gate refuses refuses the set: a set of
  * thirty-nine is not "each club's last two". Then the set's own claims: one
- * type, one id per board, exactly two boards per club, exactly two rounds.
+ * type, one id per board, exactly two boards per club. NOT a round count: the
+ * union of twenty clubs' last two spans two rounds only when all twenty have
+ * played the same number of games, and a postponement makes that false without
+ * making the set wrong. See the note at the rounds line.
  * And it says how old the newest board is, because a stale set is detectable
  * only if somebody looks — --max-age-days turns that look into a refusal.
  *
@@ -86,8 +89,32 @@ const LEAGUE_CLUBS = 20;
 if (perClub.size !== LEAGUE_CLUBS) {
   fail(`${perClub.size} clubs in the set — the league has ${LEAGUE_CLUBS}, and each must have its last two`);
 }
+/* THE SET MAY SPAN MORE THAN TWO ROUNDS, and this used to refuse when it did.
+ *
+ * "Each club's last two league games" is defined PER CLUB. The union of twenty
+ * clubs' last two spans exactly two rounds only when all twenty have played the
+ * same number of games — which is the normal case and not the rule. Any
+ * postponement breaks it, and one is live as this is written: eighteen clubs
+ * are on gameweeks 3 and 4, Leeds United and Newcastle United on 2 and 3,
+ * missing gameweek 4 and only those two, because their fixture against each
+ * other has not been played.
+ *
+ * Enforcing two rounds through that means either dropping two clubs from the
+ * set or boarding a game nobody has played. Both are worse than a set spanning
+ * three, so the rule goes rather than the set. It would also have fired in any
+ * winter with a postponed round, and on a final day where kick-offs are
+ * staggered — not a rare edge.
+ *
+ * THE INVARIANT THAT CARRIES THE MEANING IS THE ONE ABOVE: every club has
+ * exactly two boards. Two rounds was a consequence of that holding in a normal
+ * week, and it was written down as though it were a second property. A check
+ * that is true most weeks and false whenever the fixture list slips is a check
+ * that fires on the league rather than on the data.
+ *
+ * The gameweeks are still read, and still reported, because a set spanning FIVE
+ * rounds would mean something else entirely — that is a judgement for whoever
+ * reads the line, not a refusal. */
 const rounds = [...new Set(boards.map((b) => b.gameweek))].sort((a, b) => a - b);
-if (rounds.length !== 2) fail(`the set spans ${rounds.length} round(s) (${rounds.join(", ")}) — "the last two games" is two`);
 for (const b of boards) {
   if (!b.source) fail(`board ${b.id} has no source URL`);
   if (!b.title) fail(`board ${b.id} has no title`);

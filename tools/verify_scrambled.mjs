@@ -176,7 +176,18 @@ export const country = (flag) => COUNTRY[flag] || (/[a-z]/.test(String(flag)) ? 
    strips to BASZCZYKOWSKI and never matches the board. Same class as Ø and Đ. */
 const strip = (s) => String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "")
   .replace(/[Øø]/g, "O").replace(/[Ææ]/g, "AE")
-  .replace(/[ß]/g, "SS").replace(/[Đđ]/g, "D")
+  /* TWO CHARACTERS THAT LOOK THE SAME AND ARE NOT. Đđ is LATIN D WITH STROKE
+     (U+0110/U+0111); Ðð is ETH (U+00D0/U+00F0). They render almost identically
+     and only the first was mapped, so Guðjohnsen stripped to GUJOHNSEN and
+     never matched GUDJOHNSEN — four boards, Arnór and Eiður, failing silently
+     since this function was written rather than because of any recent change.
+     Found by the Scrambled content side, whose own normaliser carries both
+     side by side, which is the only reason the absence was visible at all.
+     strip() is local to this file and nothing imports it, so this changes
+     normalisation for this checker and for nothing else — measured before
+     making the change, because a shared normaliser would have been a different
+     and much larger decision. */
+  .replace(/[ß]/g, "SS").replace(/[ĐđÐð]/g, "D")
   .replace(/[Łł]/g, "L").replace(/[ıİ]/g, "I")
   .toUpperCase().replace(/[^A-Z]/g, "");
 
@@ -228,8 +239,26 @@ function checkBoard(fileName, dir = XI_DIR) {
   /* Every authored name must appear in the source XI. */
   const taken = new Set();
   for (const p of board.xi) {
-    const w = strip(p.name);
-    const row = matchRow(best, w, taken);
+    /* THE TILE OR ITS ALIASES, NOT THE TILE ALONE.
+       The tile is what a player TYPES; the aliases are what the article CALLS
+       him, and they were the same string only by convenience. On 14 September
+       2026 the content side widened 19 tiles to initialled forms — CHARLIE
+       GEORGE became C GEORGE, JACK CHARLTON became J CHARLTON — to satisfy the
+       builder's rule that no tile may be a letter-subset of another on the same
+       board. This check then refused 47 boards, 73 occurrences, because
+       "C GEORGE" is not a string the 1971 FA Cup final article prints.
+       Two correct rules pulling opposite ways on one field, and the fix is that
+       they should read DIFFERENT fields. It is not a relaxation: an alias is a
+       sourced full name the board already carries, so every one of these must
+       still match a real player in the source XI. What stops being refused is a
+       board using a shorter LABEL than the article, which this was never meant
+       to test. */
+    const candidates = [p.name, ...(p.aliases || [])].map(strip).filter(Boolean);
+    let row = null;
+    for (const w of candidates) {
+      row = matchRow(best, w, taken);
+      if (row) break;
+    }
     if (!row) { problems.push(`${p.name}: not in the source XI`); continue; }
     taken.add(row);
     if (board.hintField === "nationality") {

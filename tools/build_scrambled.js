@@ -73,9 +73,44 @@ const SRC = fs.existsSync(BANK) ? BANK : SAMPLE_SRC;
    never a daily. A package's boards must fit under the next base, and the
    importer refuses a bank that does not. The last-two set is not here: it is
    its own table, replaced whole, and tools/import_last2.js owns it. */
+/* THE ID BANDS, AND THE CEILING EACH ONE CAN REACH — which is not the top id
+   it currently holds.
+   A package is authored from 1 and lifted by its idBase, so only the base
+   separates two packages that both start at 1. Choosing a new base against the
+   HIGHEST ID PRESENT is the trap: on 13 Sep 2026 iconic visibly topped out at
+   1546, and any base above 2000 looked safe. It is not. ScrambledXI renumbered
+   68 withheld boards into a reserved 9001-9068 authored band, which under
+   idBase 1000 lands at 10001-10068 the moment one of them is released. Nothing
+   in this tree recorded that and it nearly cost a colliding base for a third
+   package.
+   So the reserve field is the ceiling the package may reach, stated by the side that
+   creates the ids, and a new base is chosen against IT. ScrambledXI keeps the
+   same fact in research/BOARD-SPECS.md; this is the copy where the choice is
+   actually made.
+   Note also that 365 is not a property of the daily package — it is the
+   --boards argument to their generator, so the daily band's own ceiling is a
+   decision rather than an observation. */
 export const PACKAGES = [
-  { dir: "xi",     idBase: 0,    daily: true,  what: "the Daily bank" },
-  { dir: "iconic", idBase: 1000, daily: false, what: "the iconic lineups" },
+  { dir: "xi",     idBase: 0,    reserve: 1000,  daily: true,  what: "the Daily bank" },
+  { dir: "iconic", idBase: 1000, reserve: 10068, daily: false, what: "the iconic lineups" },
+  /* CHAMPIONS: one board per title-winning season, the eleven players that
+     champion used most. Authored 1..44, so it lands at 30001..30044.
+     THE BASE IS CHOSEN AGAINST ICONIC'S RESERVE, NOT ITS HIGHEST ID — which is
+     the whole reason the reserve field exists. Iconic visibly tops out at 1546,
+     so any base above 2000 looks safe and is not: 68 withheld boards sit in a
+     reserved 9001-9068 authored band and land at 10001-10068 the moment one is
+     released. 30000 clears that with room.
+     Its own reserve of 31000 leaves the Championship set space to fill out. It
+     is incomplete by necessity rather than by choice — the appearance record
+     only covers 10 of 19 listed seasons, and nothing below that tier before
+     2018 — so this package grows if the league ever backfills, and otherwise by
+     about one board a year.
+     A PACKAGE MISSING FROM THIS ARRAY IS NOT REFUSED, IT IS NOT SEEN:
+     packageDirs() maps over these entries and filters to directories that
+     exist, so an unregistered package is skipped in silence and the import
+     reports success over the ones it knows about. That is why this lands in the
+     same change as the import rather than ahead of it. */
+  { dir: "champions", idBase: 30000, reserve: 31000, daily: false, what: "the title-winning XIs" },
 ];
 export function packageDirs(root) {
   return PACKAGES.map((p) => ({ ...p, path: path.join(root, p.dir) }))
