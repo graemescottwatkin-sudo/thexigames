@@ -45,7 +45,7 @@ const has = (p) => fs.existsSync(path.join(ROOT, p));
  * does not stop you writing it. Computed from the two files the page names with
  * a ?v=, CRLF normalised to LF because what ships is what is in git. */
 const LAST_SHIPPED = "v001";
-const LAST_SHIPPED_ASSETS = "a858dde9d266ca18";
+const LAST_SHIPPED_ASSETS = "318abfac233eeeb0";
 
 let pass = 0, fail = 0;
 function t(name, ok, note) {

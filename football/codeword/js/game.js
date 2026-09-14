@@ -669,6 +669,18 @@ function boot(BOARD){
   // scores what it is worth rather than nothing -- eight of eleven at 36 a
   // board is 26, not a blank -- because walking away from a board you nearly
   // had should not read the same as never starting.
+  function recordResult(d){
+    if (!d || d.scored === false) return;          // a replay is not recorded
+    try {
+      var KEY = "xicw.results";
+      var list = JSON.parse(localStorage.getItem(KEY) || "[]") || [];
+      for (var i = 0; i < list.length; i++) if (list[i] && list[i].no === d.no) return;
+      list.push({ no: d.no, day: d.day || null, score: d.score, solved: d.solved,
+        minute: d.minute, result: d.result });
+      localStorage.setItem(KEY, JSON.stringify(list));
+    } catch (e) { /* private browsing: play on without a record */ }
+  }
+
   function fullTime(){
     if (window.XIPlays && XIPlays.active()) XIPlays.end(true);
     over = true; clearInterval(timer); paint();
@@ -676,7 +688,7 @@ function boot(BOARD){
     // forged score and then letting the page post its own would be the front
     // door locked and the back door open, so the page displays what comes back
     // and computes only when there is nobody to ask.
-    oracle.finish(function(d){ showFullTime(d); });
+    oracle.finish(function(d){ recordResult(d); showFullTime(d); });
   }
 
   function showFullTime(fromServer){
