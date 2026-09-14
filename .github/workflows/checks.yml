@@ -220,6 +220,13 @@ jobs:
           # checked "an error appears" would have passed the version that was
           # wrong. Needs jsdom.
           node football/quickfire/loadfail_test.mjs
+          # And the IMPORTER's two rules about repetition, which had no suite at
+          # all until 14 September 2026. It is spawned rather than imported —
+          # the file is a program that reads a bank and exits, so there is
+          # nothing to call — against fixture banks in a temp directory, because
+          # it writes data/qf-production.sql relative to its CWD and a passing
+          # case run from the repo root would overwrite the real one.
+          node tools/import_quickfire_test.mjs
           # Scrambled XI, shirt 3, released. It has its own gate, its own
           # live_check and a row in aligned_test now, so it is held to the
           # same law as the other two.

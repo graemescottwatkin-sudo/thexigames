@@ -38,7 +38,33 @@ const argIdx = process.argv.indexOf("--source");
 const SRC = argIdx > -1 ? process.argv[argIdx + 1] : "../quickfirexi-source";
 const OUT = path.join(process.cwd(), "data", "qf-production.sql");
 
-const LOOKBACK_DAYS = 90;   // an answer must not reappear inside this window
+/* THE TWO RULES ABOUT REPETITION, AND THEY ARE NOT THE SAME RULE.
+ *
+ * A QUESTION may never be asked twice. That is absolute, has no window, and is
+ * new on 14 September 2026 — nothing enforced it before. The history check
+ * below is keyed on the ANSWER, so until today the only thing stopping the
+ * same question appearing on two boards was that its answer would trip the
+ * 90-day window: prevention by accident, and a feed that reused a question
+ * outside 90 days imported clean.
+ *
+ * AN ANSWER may recur after a week, because an answer repeating is only
+ * something a player notices if the QUESTION repeats. "Liverpool" answering a
+ * transfer question in September and a stadium question in October is two
+ * different questions and one familiar word. The old window treated the answer
+ * string as the unit of novelty when the question is the unit a player
+ * actually experiences, and it cost 21 boards — 47 to 31 October against 68 to
+ * 21 November at the shorter window, measured on the live pool rather than
+ * argued. It also created a shortage it was then blamed on: running
+ * indefinitely needs 990 distinct answers at 90 days and 154 at 14, against
+ * 524 held.
+ *
+ * 7 AND 14 MEASURE IDENTICALLY, so the number is an editorial call about how
+ * soon a word may come round again, not a capacity one. Seven, by the owner's
+ * decision: "7 days as long as it's a different question" — which is the pair
+ * of rules below in his words, and is why the question rule arrives in the same
+ * change rather than after it. Dropping the 90 without it would have left the
+ * importer weaker than it was. */
+const LOOKBACK_DAYS = 7;    // an ANSWER must not reappear inside this window
 const MAX_CHARS = 16;       // past this the answer row wraps on a phone
 const PER_BOARD = 11;
 const BENCH = 3;
@@ -167,7 +193,7 @@ for (const x of questions) {
 
 /* --------------------------------------------------------------- boards -- */
 
-function checkBoard(label, ids, benchIds, history) {
+function checkBoard(label, ids, benchIds, history, asked) {
   const all = [...ids, ...benchIds].map((id) => byId.get(id));
   if (ids.length !== PER_BOARD) fault(`${label}: ${ids.length} questions, expected ${PER_BOARD}`);
   if (benchIds.length !== BENCH) fault(`${label}: ${benchIds.length} subs, expected ${BENCH}`);
@@ -193,6 +219,22 @@ function checkBoard(label, ids, benchIds, history) {
     }
   }
 
+  /* THE QUESTION RULE. No window: a question asked on any earlier board may
+     not be asked again, whatever the gap and whatever its answer. Scoped to
+     the main eleven of the DAILIES, which is exactly the scope the answer
+     history has always had — a bench question is only seen if a player spends
+     a substitution on it, and the weekly boards are checked with no history at
+     all. Whether a weekly board may re-ask a daily's question is a real
+     question and NOT ANSWERED HERE: there is no bank on this machine to
+     measure the overlap against, and a rule written without the data to test
+     it is how a legitimate board gets refused at eight in the morning. */
+  if (asked) {
+    for (const x of present.slice(0, PER_BOARD)) {
+      const before = asked.get(x.id);
+      if (before) fault(`${label}: question ${x.id} was already asked on ${before}`);
+    }
+  }
+
   if (history) {
     for (const x of present.slice(0, PER_BOARD)) {
       const last = history.get(norm(x.answer));
@@ -206,15 +248,20 @@ function checkBoard(label, ids, benchIds, history) {
 }
 
 const history = new Map();
+const asked = new Map();
 for (const d of [...dailies].sort((a, b) => (a.date < b.date ? -1 : 1))) {
-  checkBoard(d.date, d.questionIds || [], d.benchIds || [], history);
+  checkBoard(d.date, d.questionIds || [], d.benchIds || [], history, asked);
   for (const id of d.questionIds || []) {
     const x = byId.get(id);
     if (x) history.set(norm(x.answer), d.date);
+    /* Recorded whether or not the question resolved: an id that names nothing
+       is already a fault above, and leaving it out here would let the same
+       unknown id be repeated without a second complaint. */
+    if (!asked.has(id)) asked.set(id, d.date);
   }
 }
 for (const w of weeks) {
-  checkBoard(w.weekEnding, w.questionIds || [], w.benchIds || [], null);
+  checkBoard(w.weekEnding, w.questionIds || [], w.benchIds || [], null, null);
 }
 
 if (problems.length) {
