@@ -15,7 +15,7 @@
  *   - no practice. There is now an archive picker and a finals catalogue; what
  *     is still missing is a practice mode, which this game may never want.
  */
-var BUILD = "v001m";
+var BUILD = "v001n";
 
 (function () {
   "use strict";
@@ -923,7 +923,21 @@ var BUILD = "v001m";
              same club printed twice — a mistake rather than a career. Same
              wording as the career hint uses, so one player reads the same way
              whether he was bought or solved. */
-          return (c.apps ? c.club + " " + c.apps : c.club) + (c.loan ? " (loan)" : "");
+          /* AND THE NUMBER SAYS WHAT IT COUNTS. It is PREMIER LEAGUE
+             appearances — the reveal reads premClubs, which is the league only
+             — and it was printed as a bare figure beside a club name, which
+             reads as a career total. Salah's Liverpool career is 442 in all
+             competitions against 314 in the league; a bare "314" beside
+             "Liverpool" is a true number making a false claim, and nothing in
+             the pipeline was wrong at any point. Flagged by the Connection
+             session, whose own data had the same shape from the same cause: an
+             infobox appearance field is league-only by Wikipedia convention,
+             and a league total looks exactly like an all-competition total when
+             you only ever see one of them.
+             Safe to say "PL" unconditionally here: only daily boards carry
+             apps at all — 822 of 1,187 boards have no counts — so every number
+             this line prints comes from premClubs. */
+          return (c.apps ? c.club + " " + c.apps + " PL" : c.club) + (c.loan ? " (loan)" : "");
         }).join(" · ");
         el.appendChild(cl);
       }
@@ -932,7 +946,11 @@ var BUILD = "v001m";
         slot.pos + ", " + (got
           ? got.name + (got.clubs && got.clubs.length
               ? ", " + got.clubs.map(function (c) {
-                  return (c.apps ? c.club + ", " + c.apps + " appearances" : c.club) +
+                  /* Spoken in full where there is room for it: the tile says
+                     "PL" because a tile is two inches wide, and a screen reader
+                     has no such constraint and should not be given an
+                     abbreviation to guess at. */
+                  return (c.apps ? c.club + ", " + c.apps + " Premier League appearances" : c.club) +
                     (c.loan ? ", on loan" : "");
                 }).join("; ")
               : "")
