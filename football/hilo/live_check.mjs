@@ -6,8 +6,10 @@
  *
  * THE FLOOR. MIN_ASSERTIONS is the second net under the completion marker,
  * set BELOW the run's real count by the assertions that can legitimately
- * skip (the tag is reported and not judged without --expect; a club page
- * only when the index links one). Review it when assertions are added.
+ * skip (the tag is reported and not judged without --expect; the four club
+ * checks only when the index links a club). Review it when assertions are
+ * added — REVIEW, not raise: a floor set to the exact count refuses nothing
+ * and flaps on every honest skip.
  */
 const BASE = "https://www.thexigames.com";
 const expectArg = process.argv.indexOf("--expect");
@@ -17,8 +19,12 @@ let pass = 0, fail = 0, warn = 0;
 const t = (n, ok, d) => { ok ? pass++ : fail++; console.log(`${ok ? "  ok  " : "FAIL  "}${n}${d ? "  — " + d : ""}`); };
 const w = (n, d) => { warn++; console.log(`  ??  ${n}${d ? "  — " + d : ""}`); };
 
-/* Twenty-three assertions run with --expect and a club page; twenty is the
-   honest floor with one block able to skip. */
+/* Twenty-five assertions run with --expect, a club page and a board chip on
+   it; twenty is the honest floor. THE FLOOR DID NOT MOVE WHEN TWO WERE ADDED,
+   and that is arithmetic rather than inertia: both new ones are inside the
+   club block, so the worst legitimate run — no --expect, no club linked —
+   skips four there and one tag, and 25 - 5 is the number below. Raising it to
+   22 by reflex would flap on any day the clubs index came back empty. */
 const MIN_ASSERTIONS = 20;
 let finished = false;
 process.on("exit", () => {
@@ -86,8 +92,30 @@ t("it links a club page", !!firstClub, firstClub);
 if (firstClub) {
   const cp = await get("/football/hilo/club/" + firstClub + "/");
   t("a club page is served", cp.status === 200, String(cp.status));
-  const door = await get("/football/hilo/club/" + firstClub + "/1");
-  t("a board address is a door into the game", door.status === 302 && /\/football\/hilo\/\?b=/.test(door.headers.get("location") || ""));
+  const cpHtml = cp.status === 200 ? await cp.text() : "";
+  /* DERIVED FROM THE PAGE, NOT PINNED. A board's address is its club, its
+     family and its ordinal WITHIN that family, and which families a club has
+     is a fact about the import rather than about this file. So take the first
+     chip the page actually printed and follow that. A literal here would pass
+     for as long as the club it named kept the family it had. */
+  const chip = (cpHtml.match(/href="(\/football\/hilo\/club\/[a-z0-9-]+\/[a-z-]+\/\d+)"/) || [])[1];
+  t("the club page prints a family-scoped board address", !!chip, chip);
+  if (chip) {
+    const door = await get(chip);
+    t("a board address is a door into the game",
+      door.status === 302 && /\/football\/hilo\/\?b=/.test(door.headers.get("location") || ""),
+      String(door.status) + " " + (door.headers.get("location") || ""));
+  }
+  /* THE ADDRESS THAT WAS LIVE UNTIL TODAY, proved against production because
+     that is the only place the old links are. It cannot name a board any more
+     — the number counted across a list that no longer exists — but a 404 on a
+     link that worked yesterday is worse than the club page with every board
+     on it, so that is where it goes. */
+  const stale = await get("/football/hilo/club/" + firstClub + "/1");
+  t("the old whole-club number lands on the club page, not a 404",
+    stale.status === 302 &&
+      (stale.headers.get("location") || "").endsWith("/football/hilo/club/" + firstClub + "/"),
+    String(stale.status) + " " + (stale.headers.get("location") || ""));
 }
 
 console.log("\nIt is part of the family");

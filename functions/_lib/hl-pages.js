@@ -68,12 +68,15 @@ export async function treeRoute({ params, env }) {
   const list = Array.isArray(parts) ? parts.filter(Boolean) : [parts].filter(Boolean);
   if (!list.length) return Response.redirect(SITE + INDEX, 301);
   const slug = String(list[0]).toLowerCase();
-  if (!SLUG.test(slug) || list.length > 2) return notFound("club");
+  if (!SLUG.test(slug) || list.length > 3) return notFound("club");
   let clubs = [];
   try { clubs = clubCatalog(await loadBank(env)); } catch (e) { return notFound("club"); }
   const club = clubs.find((c) => c.slug === slug);
   if (!club) return notFound("club");
-  if (list.length === 2) return boardDoor(club, list[1]);
+  /* /club/<slug>/<family>/<n> is the address. /club/<slug>/<n> is the form it
+     replaced and cannot be resolved — see staleBoardDoor. */
+  if (list.length === 3) return boardDoor(club, list[1], list[2]);
+  if (list.length === 2) return staleBoardDoor(club);
   return clubPage(club);
 }
 
@@ -95,17 +98,51 @@ export async function treeRoute({ params, env }) {
 export function boardRows(club) {
   const rows = [];
   const byLabel = new Map();
-  (club.boards || []).forEach((b, i) => {
+  /* THE ADDRESS IS FAMILY PLUS ORDINAL WITHIN THAT FAMILY, not position in the
+   * club's whole list. The comment above is right about regrouping and was
+   * silent about the thing that actually moves these doors.
+   *
+   * It used to number across the club — the third board when this club's boards
+   * are sorted by id. Both of those inputs move at every international break:
+   * HiLo re-snapshots the club stat boards and REASSIGNS THEIR IDS, and the
+   * rebuild yields a different count (14 September took appearances 95 to 88
+   * and assists 18 to 16). So /club/arsenal/3 did not break at a refresh. It
+   * silently began opening a DIFFERENT BOARD, the page still rendered, and
+   * nothing reported anything. A dead link tells you it is dead; that does not.
+   *
+   * Scoped to the family, an address moves only when that family's own
+   * membership changes, which is honest and rare. familyOf() already computes
+   * it and clubCatalog() already carries it on every board, so the data was
+   * there before the bug was. */
+  const seen = new Map();
+  (club.boards || []).forEach((b) => {
+    const family = b.family || "other";
+    const n = (seen.get(family) || 0) + 1;
+    seen.set(family, n);
     const label = b.subtitle;
     if (!byLabel.has(label)) { byLabel.set(label, { label, chips: [] }); rows.push(byLabel.get(label)); }
-    byLabel.get(label).chips.push(i + 1);
+    byLabel.get(label).chips.push({ family, n });
   });
   return rows;
 }
 
+/* The same numbering, for a caller that wants to resolve one rather than draw
+   them all. Derived from the identical walk so the page and the route cannot
+   disagree about which board is which — the fault this file already carries a
+   comment about, where a chip reading "#2" opens ".../3". */
+export function boardAt(club, family, n) {
+  let seen = 0;
+  for (const b of club.boards || []) {
+    if ((b.family || "other") !== family) continue;
+    if (++seen === n) return b;
+  }
+  return null;
+}
+
 function boardRow(club, row) {
-  const chips = row.chips.map((n) =>
-    `<a class="no" href="${esc(clubPath(club.slug))}${n}" aria-label="${esc(club.name)}, board ${n}">#${n}</a>`)
+  const chips = row.chips.map(({ family, n }) =>
+    `<a class="no" href="${esc(clubPath(club.slug))}${esc(family)}/${n}" ` +
+    `aria-label="${esc(club.name)}, ${esc(family)} board ${n}">#${n}</a>`)
     .join("");
   return `<li class="set"><span class="name">${esc(row.label)}</span><span class="chips">${chips}</span></li>`;
 }
@@ -212,8 +249,28 @@ ${asAtLine(club.boards)}
 
 /* The board itself: a redirect into the game with the board named, and the
    game shows its card and waits for Kick off. */
-function boardDoor(club, raw) {
+function boardDoor(club, family, raw) {
   const n = parseInt(String(raw), 10);
-  if (!Number.isInteger(n) || n <= 0 || n > club.boards.length) return notFound("board");
-  return Response.redirect(`${SITE}/football/hilo/?b=${encodeURIComponent(club.boards[n - 1].id)}`, 302);
+  if (!Number.isInteger(n) || n <= 0) return notFound("board");
+  const board = boardAt(club, String(family), n);
+  if (!board) return notFound("board");
+  return Response.redirect(`${SITE}/football/hilo/?b=${encodeURIComponent(board.id)}`, 302);
+}
+
+/* THE OLD TWO-SEGMENT FORM — /club/<slug>/<n> — CANNOT BE HONOURED, and this is
+ * the part that is a judgement rather than a fix.
+ *
+ * Those URLs meant "the nth board when this club's boards are sorted by id",
+ * and the ids were reassigned on 14 September. There is no mapping back: the
+ * board that address used to open may not exist, and the board it would open
+ * now is a different one. Resolving it would silently hand somebody the wrong
+ * board, which is exactly the fault being removed.
+ *
+ * So it goes to the club page. A reader who followed a stale link lands on the
+ * club they wanted, sees every board it has, and picks — which is worse than
+ * the right board and much better than a confident wrong one. 302 rather than
+ * 301 on purpose: this is not a permanent statement about where that address
+ * belongs, it is an admission that we cannot know. */
+function staleBoardDoor(club) {
+  return Response.redirect(`${SITE}${clubPath(club.slug)}`, 302);
 }
