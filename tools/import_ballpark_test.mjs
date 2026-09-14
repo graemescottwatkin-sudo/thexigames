@@ -22,7 +22,7 @@
  */
 import {
   carryForward, historyClash, contentClash, buildSchedule, scheduleFromSql,
-  boardsFromSql,
+  boardsFromSql, staleBoards,
 } from "./import_ballpark.js";
 import { readFileSync } from "node:fs";
 
@@ -169,6 +169,62 @@ console.log("\nAgainst what the tool ITSELF wrote");
     const parses = Object.values(boards).every((p) => { try { JSON.parse(p); return true; } catch { return false; } });
     t("payload quotes are unescaped and every payload parses as JSON",
       doubled === 0 && parses, `${doubled} still doubled`);
+  }
+}
+
+console.log("\nA generated script has a shelf life");
+{
+  /* WHAT THIS IS FOR. Every other check in the importer runs at GENERATION
+     time, and all of them passed on a script that was exactly right when it was
+     written. The freeze boundary then moves on its own at the next UTC midnight
+     whether or not anybody regenerates, so the window between generating and
+     applying is where a correct script rots — and nothing in the file says how
+     old it is except a timestamp nobody compares to the calendar.
+
+     On the night this was written two sessions asserted the day had rolled when
+     it had not, twice in ten minutes, each reasoning from how long the exchange
+     had FELT rather than reading date -u. It cost nothing because it erred
+     toward caution; the same misread the other way applies a stale script and
+     rewrites a board that is being served. Which is why this is code. */
+  const sql = [
+    "INSERT OR REPLACE INTO bp_board (id, ordinal, payload, updated_at) VALUES ('bp-0020', 20, '{\"q\":[]}', '2026-09-13T23:50:19.729Z');",
+    "INSERT OR REPLACE INTO bp_board (id, ordinal, payload, updated_at) VALUES ('bp-0021', 21, '{\"q\":[]}', '2026-09-13T23:50:19.729Z');",
+    "-- bp-0019 FROZEN: served and played, left exactly as D1 holds it.",
+    "INSERT INTO bp_schedule (day, board_id) VALUES ('2026-09-13', 'bp-0019');",
+    "INSERT INTO bp_schedule (day, board_id) VALUES ('2026-09-14', 'bp-0020');",
+    "INSERT INTO bp_schedule (day, board_id) VALUES ('2026-09-15', 'bp-0021');",
+  ].join("\n");
+
+  t("on its generation day the script is fresh",
+    staleBoards(sql, "2026-09-13").length === 0);
+  /* THE CASE THAT ACTUALLY HAPPENED, one midnight later. */
+  const day1 = staleBoards(sql, "2026-09-14");
+  t("one day later it would rewrite the board now being served",
+    day1.length === 1 && day1[0].id === "bp-0020" && day1[0].day === "2026-09-14",
+    JSON.stringify(day1));
+  t("two days later, two of them",
+    staleBoards(sql, "2026-09-15").length === 2);
+  /* A FROZEN BOARD IS NOT A STALENESS COMPLAINT. bp-0019 sits on a day long
+     past, but the script only NAMES it in a comment and never writes it, so it
+     must not be reported — otherwise every script is stale the moment it has a
+     history to carry, the check fires always, and a check that always fires is
+     switched off within a week. */
+  t("a frozen board on a past day is not stale — it is not written at all",
+    !staleBoards(sql, "2026-09-20").some((s) => s.id === "bp-0019"),
+    "the marker is a comment, not an INSERT");
+  t("and the check is not vacuous on that same script",
+    staleBoards(sql, "2026-09-20").length === 2, "bp-0020 and bp-0021 still caught");
+  /* The rule is derived from the script and the clock alone, so it holds on a
+     file it has never seen. Run against the real applied dump when present. */
+  try {
+    const real = readFileSync(new URL("../data/bp-production.sql", import.meta.url), "utf8");
+    const fresh = staleBoards(real, "2026-09-13");
+    const rotted = staleBoards(real, "2026-09-30");
+    t("on the real applied dump: fresh on its own day, stale a fortnight on",
+      fresh.length === 0 && rotted.length > 0, `${rotted.length} board(s) would be trampled`);
+  } catch {
+    skip++;
+    console.log("  skip  no data/bp-production.sql beside the checkout (expected in CI)");
   }
 }
 

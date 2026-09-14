@@ -26,7 +26,18 @@
  *   1. ask the content side to FREEZE and wait for its confirmation
  *   2. CAPTURE the current dump into their dated archive (tools/db_archive.mjs
  *      on their side, or send them data/bp-production.sql)
- *   3. run this tool, then apply the SQL
+ *   3. run this tool, then IMMEDIATELY BEFORE APPLYING:
+ *        node tools/import_ballpark.js --verify-staged
+ *      and apply only if it passes. A GENERATED SCRIPT HAS A SHELF LIFE: it
+ *      encodes a freeze boundary that moves on its own at the next UTC
+ *      midnight, so a file that was exactly right when it was written rewrites
+ *      a board that is being served if it is applied after the day rolls, and
+ *      every other check in this tool ran before the boundary moved. The check
+ *      reads date -u at the moment you run it and consults no register, so it
+ *      cannot inherit anybody's belief about what day it is — including yours.
+ *      Run it however recently the file was generated; on 13 September the gap
+ *      between generating and applying was seven minutes and two sessions had
+ *      already asserted, wrongly, that midnight had passed.
  *   4. CAPTURE AGAIN
  *
  * Step 4 exists because an archive only answers for days AFTER it is taken. If
@@ -63,6 +74,11 @@ const arg = (name) => {
   return i > -1 ? process.argv[i + 1] : null;
 };
 const CHECK_ONLY = process.argv.includes("--check");
+/* Whether a source was NAMED, which is a different fact from what SOURCE holds:
+   the default and an explicit path that happen to be equal are the same string
+   and not the same claim. Only the second is a promise that a bank is there. */
+const SOURCE_GIVEN = process.argv.some(
+  (a) => a === "--source" || a.startsWith("--source="));
 const SOURCE = arg("source") || path.join(ROOT, "..", "Other", "BallparkXI", "boards");
 const OUT = path.join(ROOT, "data", "bp-production.sql");
 const SAMPLE = path.join(ROOT, "functions", "_lib", "bp-sample.js");
@@ -273,6 +289,27 @@ function buildSchedule(boards, fromDay, keep = {}) {
 }
 
 function main() {
+  /* RUN THIS IMMEDIATELY BEFORE APPLYING, every time, however recently the file
+     was generated. It costs nothing and it is the only check in this tool that
+     can refuse a script which was correct when it was written. */
+  if (process.argv.includes("--verify-staged")) {
+    if (!fs.existsSync(OUT)) {
+      console.error(`REFUSED: nothing staged at ${OUT}.`);
+      process.exit(1);
+    }
+    const today = new Date().toISOString().slice(0, 10);   // UTC, read NOW
+    const stale = staleBoards(fs.readFileSync(OUT, "utf8"), today);
+    if (stale.length) {
+      console.error(`REFUSED: staged script is STALE as of ${today} (UTC).`);
+      console.error(`  it would rewrite ${stale.length} board(s) on days that have already begun:`);
+      for (const s of stale.slice(0, 5)) console.error(`    ${s.day}  ${s.id}`);
+      console.error("  regenerate with --from=<tomorrow> and the served list extended to today.");
+      process.exit(1);
+    }
+    console.log(`staged script is fresh as of ${today} (UTC): ` +
+      "no board it writes sits on a day that has begun.");
+    process.exit(0);
+  }
   const loaded = loadBoards();
   if (!loaded) {
     /* NO BANK ON THIS MACHINE — CI, a fresh clone. Gate the COMMITTED SAMPLE
@@ -282,7 +319,19 @@ function main() {
        game's life. The same arrangement tools/import_grid.js keeps, and the
        sample is the one already in functions/_lib rather than a second copy of
        two boards written out to be checked. */
-    if (CHECK_ONLY && fs.existsSync(SAMPLE)) {
+    /* BUT NOT WHEN A SOURCE WAS NAMED. The fallback answers "there is no bank
+       beside this checkout", which is true on a runner and is why it exists. It
+       cannot answer "the place you pointed me at is not a bank", and until
+       13 September 2026 it did not try: `--source <somewhere wrong>` gated the
+       two sample boards and exited 0, reporting "no bank on this machine" about
+       a machine that has one. Found by dry-running the master bank's new feed,
+       which is a bank.json of 2,218 questions rather than a directory of board
+       files — the switch it was proposed for would have been validated by a
+       green check over 2 boards instead of 194.
+
+       Asking for a specific source is a claim that it is there. If it is not,
+       that is a fault to report, not a condition to absorb. */
+    if (CHECK_ONLY && !SOURCE_GIVEN && fs.existsSync(SAMPLE)) {
       import(`file://${SAMPLE.split(path.sep).join("/")}`).then((m) => {
         let refused = 0;
         const seen = new Set(), warned = [];
@@ -536,11 +585,36 @@ REFUSED: ${clashes.length} day(s) that have already run would name a different b
   if (fs.existsSync(OUT)) {
     const stamp = new Date().toISOString().slice(0, 10);
     const archive = path.join(path.dirname(OUT), 'bp-' + stamp + '-production.sql');
-    if (fs.existsSync(archive)) {
-      console.log('archive for ' + stamp + ' already exists, left untouched -> ' + path.basename(archive));
-    } else {
+    if (!fs.existsSync(archive)) {
       fs.copyFileSync(OUT, archive);
       console.log('captured the previous bank -> ' + path.basename(archive));
+    } else {
+      /* A SECOND IMPORT ON THE SAME DAY STILL GETS CAPTURED, under a name
+         carrying the time. The rule above — never overwrite the first archive
+         of a day — is right and stays; what was wrong was treating "a capture
+         for today exists" as "today is covered". On 13 September two imports
+         ran four hours apart, and the second one announced "archive for
+         2026-09-13 already exists, left untouched" and captured NOTHING. The
+         state it was about to overwrite was the state that had been APPLIED to
+         production, and it survived only because I had copied it by hand.
+
+         The shape is one this project keeps meeting: a tool that is correct on
+         its first run and silently does nothing on every run after. The
+         Ballpark content side hit the identical fault the same night in a
+         builder that deduped against a bank already containing its own output.
+         Both look perfectly healthy in a single run.
+
+         A day is not an instant — the same confusion, one more time. */
+      const hhmm = new Date().toISOString().slice(11, 16).replace(':', '');
+      const second = path.join(path.dirname(OUT),
+        'bp-' + stamp + '-' + hhmm + '-production.sql');
+      if (fs.existsSync(second)) {
+        console.log('already captured at ' + hhmm + ' UTC -> ' + path.basename(second));
+      } else {
+        fs.copyFileSync(OUT, second);
+        console.log('first archive of ' + stamp + ' kept; captured this one too -> ' +
+          path.basename(second));
+      }
     }
   }
 
@@ -591,5 +665,37 @@ if (isMain) main();
    side pinned its equivalent boundary with a failing test and was right that a
    rule three sessions read three ways will eventually be "fixed" in the wrong
    direction, and that the fix will look like a tidy-up. */
+/* A GENERATED SCRIPT HAS A SHELF LIFE, and this is the check for it.
+ *
+ * We established on 13 September that generation does not imply application —
+ * hence WOULD_STAMP_IF_APPLIED. This is the step past that, and the Ballpark
+ * content side named it: the script encodes a freeze boundary THAT MOVES ON ITS
+ * OWN, once a day, whether or not anybody regenerates. A file that was exactly
+ * right when it was written rewrites a live board if it is applied after the
+ * next UTC midnight, and it sails through every other check in this tool,
+ * because every one of them ran before the boundary moved.
+ *
+ * The rule is derived from the script itself and the clock, and needs no
+ * register to consult: a board the script WRITES must not sit on a day that has
+ * already begun. Frozen boards are absent from the writes by construction, so
+ * a fresh script has nothing at or below today and a stale one names exactly
+ * which days it would trample.
+ *
+ * `today` is passed in rather than read here so a suite can pin it, but every
+ * CALLER must read it from the clock at the moment of the check — not from the
+ * file, and not from how long the exchange has felt. Twice in ten minutes on
+ * the night this was written, a session asserted the day had rolled when it had
+ * not, reasoning from elapsed conversation. That is the same fault as computing
+ * a date from a device clock, which this family forbids everywhere else. */
+function staleBoards(sql, today) {
+  const written = boardsFromSql(sql);
+  const schedule = scheduleFromSql(sql);
+  const bad = [];
+  for (const [day, id] of Object.entries(schedule)) {
+    if (day <= today && written[id] !== undefined) bad.push({ day, id });
+  }
+  return bad.sort((a, b) => (a.day < b.day ? -1 : 1));
+}
+
 export { gate, buildSchedule, carryForward, historyClash, contentClash,
-         scheduleFromSql, boardsFromSql };
+         scheduleFromSql, boardsFromSql, staleBoards };
