@@ -99,11 +99,23 @@ function split(rows) {
   return { questions, bench };
 }
 
-/* Today, in Europe/London, from the server rather than the device. The device
-   clock is the player's to change; the board is not. */
-export function today() {
-  return new Date().toLocaleDateString("en-CA", { timeZone: "Europe/London" });
-}
+/* TODAY, IN UTC, FROM THE FAMILY'S OWN FUNCTION.
+ *
+ * It read Europe/London, and that was one game answering a question the whole
+ * site already had an answer to. CLAUDE.md is explicit — "the SERVER decides
+ * what day it is, in UTC" — and every other game, the permalink layer, the
+ * sitemap and the archive all count from utcDay().
+ *
+ * THE COST WAS AN HOUR A NIGHT, ALL SUMMER, AND IT WAS LIVE. British Summer
+ * Time is UTC+1, so between midnight and 1am London the two disagree: this
+ * function said 15 September while the permalink layer said the 14th. The API
+ * served board 21 and /football/quickfire/daily/21 answered 404 — the address
+ * of the board the game was itself serving, refused as "not yet". Found by
+ * curling both at 23:35 UTC, an hour that only exists to be missed.
+ *
+ * The visible change is that a new board now arrives at midnight UTC — 1am
+ * London during BST — which is when every other game's does. One clock. */
+export { utcDay as today } from "./daily.js";
 
 export async function getDaily(env, date) {
   const play = date || today();

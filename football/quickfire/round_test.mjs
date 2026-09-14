@@ -11,7 +11,8 @@
  * penalty and the question count are read from the same config the page reads,
  * so a test that "passes" because it agrees with its own copy is not possible.
  */
-import { SECRET_FIELDS, shapeQuestion } from "../../functions/_lib/qfdata.js";
+import { SECRET_FIELDS, shapeQuestion, today } from "../../functions/_lib/qfdata.js";
+import { utcDay, dailyNoForDay, dailyNumber } from "../../functions/_lib/daily.js";
 import { serveQuestion, answerRound } from "../../functions/_lib/qf-play.js";
 import {
   BANDS, PER_DAILY, SUBS, SUB_PENALTY, WRONG_PICK_MINUTES,
@@ -316,6 +317,35 @@ console.log("\n=== Answering a question nobody served ===");
     started_ms: 1000, penalty_minutes: 0 }, q, 7, "A");
   t("and the same answer is taken once the question has been served",
     !ok.error && ok.correct === true, ok.error || `${ok.points} points`);
+}
+
+console.log("\n=== One clock for what day it is ===");
+{
+  /* THIS WENT LIVE AND COST AN HOUR A NIGHT, ALL SUMMER. qfdata.today() read
+     Europe/London while the permalink layer, the sitemap, the archive and every
+     other game count from utcDay(). British Summer Time is UTC+1, so between
+     midnight and 1am London they disagreed by a day: /api/quickfire/daily
+     served board 21 and /football/quickfire/daily/21 — the address of the board
+     it was serving — answered 404, because the layer that resolves addresses
+     still thought it was the 20th.
+
+     Found by curling both at 23:35 UTC. Nothing in the tree could have shown
+     it: both sides were self-consistent and the suites ran at other hours.
+
+     SO THE ASSERTION IS IDENTITY, NOT EQUALITY OF TODAY'S VALUES. Two functions
+     that happen to agree this afternoon is what the bug looked like for
+     twenty-three hours out of every twenty-four; what must hold is that
+     QuickFire does not have a second answer at all. */
+  t("QuickFire does not keep its own idea of what day it is",
+    today === utcDay, "the family's function, not a copy that agrees most hours");
+  t("and the day it reports is the family's day",
+    today() === utcDay(), today());
+  /* AND THE NUMBER IT PUTS ON THE BOARD is the one an address resolves to. That
+     is the pair that actually broke: a board served under a number whose URL
+     refused it. */
+  t("the board number it serves is the number the address uses",
+    dailyNoForDay(today()) === dailyNumber(),
+    `board ${dailyNoForDay(today())}`);
 }
 
 console.log("\n=== Running out of time, which must not be free ===");

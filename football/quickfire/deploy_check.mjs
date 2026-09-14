@@ -397,7 +397,24 @@ t("every quickfire import resolves to something the target exports", (() => {
       if (!fs.existsSync(target)) return false;
       const tsrc = fs.readFileSync(target, "utf8");
       for (const name of m[1].split(",").map((s) => s.trim().split(" as ")[0])) {
-        if (!new RegExp(`export\\s+(?:async\\s+)?(?:function|const|let|var|class)\\s+${name}\\b`).test(tsrc)) return false;
+        const declared =
+          new RegExp(`export\\s+(?:async\\s+)?(?:function|const|let|var|class)\\s+${name}\\b`).test(tsrc);
+        /* AND A RE-EXPORT COUNTS, which this could not see until 15 September
+           2026. `export { utcDay as today } from "./daily.js"` is how qfdata
+           says "today is the family's function and not a second copy of it" —
+           the fix for a live bug where QuickFire kept its own Europe/London
+           clock and disagreed with every address on the site for an hour a
+           night. The checker read only declaration forms, found no
+           `export function today`, and went red on correct code.
+           It failed CLOSED, so nothing unsafe got through — but a checker that
+           refuses a valid spelling does not stay neutral: it teaches the next
+           person to write the copy instead of the re-export, which is the thing
+           the re-export exists to prevent. Both spellings of the form are
+           matched, named and bare. */
+        const reExported =
+          new RegExp(`export\\s*{[^}]*\\b${name}\\b[^}]*}\\s*from\\s*["']`).test(tsrc) ||
+          new RegExp(`export\\s*{[^}]*\\bas\\s+${name}\\b[^}]*}\\s*from\\s*["']`).test(tsrc);
+        if (!declared && !reExported) return false;
       }
     }
   }
