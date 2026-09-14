@@ -56,12 +56,19 @@ hub. A 301 there would have to be un-cached from every browser that ever saw it.
 
 1. `rmdir /s /q node_modules` if present — **gates must run with no
    node_modules, no package.json, no .wrangler in the tree** (the gate checks).
-2. Every game's gate, and there are SEVEN — five live plus QuickFire and
-   Grid XI: `node football\crossword\deploy_check.mjs` and the same for
-   `wordsearch`, `scrambled`, `hilo`, `vowels`, `quickfire`, `grid`. Expect
-   **0 failed** on each. Grid XI's also refuses the things a LAUNCH would have
-   to change — its absence from GAMES, from the squad and from the sitemap —
-   so the game cannot go live by drift.
+2. Every game's gate, and there are EIGHT — five live plus QuickFire, Grid XI
+   and Codeword XI: `node football\crossword\deploy_check.mjs` and the same for
+   `wordsearch`, `scrambled`, `hilo`, `vowels`, `quickfire`, `grid`,
+   `codeword`. Expect **0 failed** on each. Grid XI's and Codeword XI's also
+   refuse the things a LAUNCH would have to change — absence from GAMES, from
+   the squad, from the sitemap — so a game cannot go live by drift. Codeword's
+   adds the two refusals its own integration exists for: no board files
+   committed into the tree, and a board served through `publicBoard()` carrying
+   none of the filled grid, the answers or the cipher, proved by execution.
+   **Until 14 September 2026 the CI block ran only SIX of these** — Grid's was
+   never in it. This file said seven, the local sweep ran seven and reported
+   green, and the gap was invisible from both ends. A gate nobody runs cannot
+   refuse anything; when a gate is added it goes in BOTH places.
 3. **Run the suites, CI-shaped.** There was no step 3 here for months and the
    gap was exactly this — on 5 Sep 2026 a push went out on green gates alone,
    and CI caught a suite the gates never run. Gates check the SHAPE of the

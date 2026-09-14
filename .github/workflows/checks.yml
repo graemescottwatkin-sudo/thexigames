@@ -352,6 +352,19 @@ jobs:
           # the judgement against a schedule truncated to yesterday and watches it
           # refuse; the tool itself needs D1 and runs from post_deploy.
           node tools/runway_test.mjs
+          # Codeword XI, in build. Its importer gate, proved against fixtures
+          # built from a declared epoch rather than from date literals. That is
+          # deliberate and it is the suite's main structural idea: Codeword's own
+          # loader test held dates as strings, its epoch moved one day on
+          # 14 September 2026, and seven checks went red for a calendar change
+          # the loader handled correctly. A test that must be edited whenever
+          # the epoch moves is a test that will eventually be edited into
+          # agreeing with a broken importer — and the owner has said he may
+          # reset every game to day one, which would walk the whole family into
+          # it at once. It also SPAWNS node in four timezones to prove the
+          # ordinal is computed in UTC, because a local-time one is invisible
+          # for most of the year and is the bug the crossword already shipped.
+          node tools/import_codeword_test.mjs
           # The importer's gate, on the committed sample — because there is no
           # bank on a runner and a check that passes when it finds no problems
           # also passes when it finds nothing at all.
@@ -391,6 +404,22 @@ jobs:
           node football/vowels/deploy_check.mjs
           node football/quickfire/deploy_check.mjs
           node football/hilo/deploy_check.mjs
+          # GRID XI'S GATE WAS MISSING FROM THIS LIST UNTIL 14 SEPTEMBER 2026.
+          # CLAUDE.md has said SEVEN gates since Grid was built and this block
+          # ran six, so the one check that refuses Grid going live by drift —
+          # its absence from GAMES, from the squad, from the sitemap — was run
+          # only by whoever remembered to run it by hand. A gate nobody runs is
+          # a gate that cannot refuse, which is the same fault as a check that
+          # cannot fail, and it went unnoticed because the local sweep did run
+          # it and reported seven green.
+          node football/grid/deploy_check.mjs
+          # Codeword XI, in build. Its gate is almost entirely REFUSALS: not in
+          # GAMES, no shirt, named in no served page, not in the sitemap, no
+          # board files committed — so the game cannot launch by drift, and
+          # launching is the deliberate edit that turns them round. It also
+          # proves by EXECUTION that a served board carries none of the filled
+          # grid, the answers or the cipher.
+          node football/codeword/deploy_check.mjs
 
   render:
     name: Sixteen viewports, real browser
