@@ -14,33 +14,25 @@
  */
 
 /* The decay, in match minutes. Verified against the demo's source. */
-export const CURVE = [[0, 114], [10, 97], [20, 86], [30, 78], [45, 68], [60, 58], [75, 47], [90, 36]];
-export const MAX_SCORE = 114;
+/* THE CURVE AND THE CEILING ARE THE FAMILY'S, and they moved to
+   functions/_lib/xi-score.js when Who Am I became the second game to need
+   them. Re-exported rather than relocated out of sight: every caller here is
+   unchanged, and there is now one table instead of the two there would have
+   been. 114 was never Codeword's number — Ballpark's rules file calls it "the
+   same frame as HiLo XI and every other game in the family". */
+/* IMPORTED AS WELL AS RE-EXPORTED, and the difference is not cosmetic: a bare
+   `export { x } from` forwards the name to importers WITHOUT binding it in this
+   module's own scope, so outcome() below threw "scoreAt is not defined" the
+   first time a round finished. The gate passed 60 of 60 on that tree — it reads
+   the shape of the file — and two of this game's suites went red, which is the
+   division of labour working exactly as CLAUDE.md describes it. */
+import { CURVE, MAX_SCORE, scoreAt } from "./xi-score.js";
+export { CURVE, MAX_SCORE, scoreAt };
 export const SUBS = 3;
 export const COST = { check: 5, reveal: 7 };
 export const SLOTS = 11;
 /* Two clocks, and only these two: 3 real seconds to the match minute, or 20. */
 export const RATES = [3, 20];
-
-export function scoreAt(minute) {
-  if (minute <= 0) return MAX_SCORE;
-  if (minute >= 90) return 36;
-  for (let i = CURVE.length - 1; i >= 0; i--) {
-    if (minute >= CURVE[i][0]) {
-      const [m0, s0] = CURVE[i], [m1, s1] = CURVE[i + 1] || [90, 36];
-      if (m1 === m0) return s0;
-      /* Linear between the published points, and DELIBERATELY UNROUNDED.
-         The producing side rounds once, at the end of outcome(), and an
-         intermediate round here would make this server and that page compute
-         different scores for the same match on some minutes — two authorities
-         disagreeing about what happened, which is the fault (a) was chosen to
-         remove rather than relocate. Proved equal across every minute 0..120
-         and every solved count 0..11. */
-      return s0 + (s1 - s0) * ((minute - m0) / (m1 - m0));
-    }
-  }
-  return MAX_SCORE;
-}
 
 /* THE MATCH MINUTE. Elapsed real time divided by the rate, plus whatever the
    helpers have charged. Both halves are the server's: elapsed from its own

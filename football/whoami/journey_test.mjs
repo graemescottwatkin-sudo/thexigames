@@ -34,6 +34,19 @@ const html = fs.readFileSync(path.join(DIR, "index.html"), "utf8");
 const game = fs.readFileSync(path.join(DIR, "js", "game.js"), "utf8");
 const config = fs.readFileSync(path.join(DIR, "js", "config.js"), "utf8");
 
+/* The scoring rule exactly as the server sends it, read from the game's own
+   config and the family's curve rather than invented here. */
+const RULE = {
+  curve: [[0, 114], [10, 97], [20, 86], [30, 78], [45, 68], [60, 58], [75, 47], [90, 36]],
+  max: 114, fullTime: 90, matchMinutes: 90, rateSeconds: 20,
+  ladder: [
+    { stage: 1, sub: 0, points: 0, label: "The spell" },
+    { stage: 2, sub: 1, points: 20, label: "Full career" },
+    { stage: 3, sub: 2, points: 10, label: "Nationality and age" },
+  ],
+  giveUp: { label: "Give up" },
+};
+
 const ANSWER = "PETR CECH";
 const CLUB = "Chelsea";
 const CAREER = "2004-2015 Chelsea (333) - 2015-2019 Arsenal (110)";
@@ -53,15 +66,21 @@ function board() {
 
 function server() {
   const calls = [];
-  const round = { playId: null, slot: 0, subsUsed: 0, finished: false, solved: false, guesses: [] };
+  const round = { playId: null, slot: 0, pointsSpent: 0, minute: 0, score: 0,
+    finished: false, solved: false, guesses: [] };
 
   async function handle(pathname, body) {
     calls.push({ pathname, body });
 
     if (pathname.startsWith("/api/whoami/daily")) {
       const b = board();
+      /* SHAPED AS daily.js SHAPES IT, scoring rule included. The first version
+         of this stub sent the board alone, so the page had no ladder to draw
+         and no curve to tick — and the suite failed on "no rungs offered",
+         which was the stub's fault and not the page's. A stub that
+         approximates the contract tests the approximation. */
       return [200, { source: "d1", no: b.no, day: b.date, lastDay: b.date,
-                     isToday: true, board: b }];
+                     isToday: true, board: b, scoring: RULE }];
     }
     if (pathname === "/api/whoami/names") {
       return [200, { count: 4, names: [
@@ -74,52 +93,69 @@ function server() {
     if (pathname === "/api/whoami/play") {
       round.playId = "r1";
       round.slot = Number(body.slot);
-      return [200, { playId: "r1", slot: round.slot, subsLeft: 3, stage: 1, day: body.date }];
+      round.startedMs = Date.now();
+      return [200, { playId: "r1", slot: round.slot, stage: 1, pointsSpent: 0,
+                     worthNow: RULE.max, minute: 0, day: body.date }];
     }
+    /* THE MINUTE IS THE STUB'S, as it is the server's — the page never decides
+       it. Held at nought so the score assertions measure the ceiling rather
+       than whatever the clock happened to reach mid-test. */
+    const minute = round.minute || 0;
+    const worth = (spent) => Math.max(0, RULE.max - spent);
+
     if (pathname === "/api/whoami/clue") {
       if (body.playId !== round.playId) return [400, { error: "no round" }];
       const stage = Number(body.stage);
-      if (stage === 1) {
-        return [200, { stage: 1, label: "The spell", subsUsed: round.subsUsed,
-                       spell: { club: CLUB, from: 2004, to: 2015, apps: 333, goals: 0 } }];
-      }
-      if (stage === 2) {
-        round.subsUsed = 1;
-        return [200, { stage: 2, label: "Full career", subsUsed: 1, career: CAREER, clubCount: 5 }];
-      }
-      if (stage === 3) {
-        round.subsUsed = 2;
-        return [200, { stage: 3, label: "Age and country", subsUsed: 2,
-                       age: 44, nationality: "Czech Republic", position: "Goalkeeper" }];
-      }
-      if (stage === 4) {
-        round.subsUsed = 3; round.finished = true;
-        return [200, { stage: 4, label: "Give up", subsUsed: 3, finished: true,
-                       solved: false, answer: ANSWER, career: CAREER }];
-      }
-      return [400, { error: "no such stage" }];
+      const rung = RULE.ladder.find((r) => r.stage === stage);
+      if (!rung) return [400, { error: "no such stage" }];
+      /* CUMULATIVE, as costToReach is: the price of every rung up to this one. */
+      const need = RULE.ladder.filter((r) => r.stage > 1 && r.stage <= stage)
+        .reduce((x, r) => x + r.points, 0);
+      const replayed = need <= round.pointsSpent;
+      if (!replayed) round.pointsSpent = need;
+      const body2 = { stage, label: rung.label, pointsSpent: round.pointsSpent,
+                      minute, worthNow: worth(round.pointsSpent), replayed };
+      if (stage === 1) body2.spell = { club: CLUB, from: 2004, to: 2015, apps: 333, goals: 0 };
+      if (stage === 2) { body2.career = CAREER; body2.clubCount = 5; }
+      if (stage === 3) { body2.age = 44; body2.nationality = "Czech Republic";
+                         body2.position = "Goalkeeper"; }
+      return [200, body2];
+    }
+    if (pathname === "/api/whoami/giveup") {
+      if (round.finished) return [400, { error: "that door is closed" }];
+      round.finished = true; round.solved = false; round.score = 0;
+      return [200, { label: "Give up", minute, score: 0, worthNow: 0,
+                     pointsSpent: round.pointsSpent, finished: true, solved: false,
+                     answer: ANSWER, career: CAREER }];
     }
     if (pathname === "/api/whoami/guess") {
       if (body.playId !== round.playId) return [400, { error: "no round" }];
       if (round.finished) return [400, { error: "that door is closed" }];
-      const fold = (s) => String(s).toUpperCase().replace(/[^A-Z0-9]/g, "");
+      const fold = (x) => String(x).toUpperCase().replace(/[^A-Z0-9]/g, "");
       const typed = fold(body.guess);
       round.guesses.push(typed);
       if (typed === fold(ANSWER)) {
         round.finished = true; round.solved = true;
+        round.score = worth(round.pointsSpent);
         return [200, { verdict: "right", answer: ANSWER, career: CAREER,
-                       subsUsed: round.subsUsed, finished: true, solved: true }];
+                       pointsSpent: round.pointsSpent, minute, score: round.score,
+                       finished: true, solved: true }];
       }
       /* Drogba played for Chelsea; Shearer did not. The stub knows, and the
          page is never told — which is the property under test. */
       const verdict = typed === "DIDIERDROGBA" ? "right-club" : "wrong";
-      return [200, { verdict, subsUsed: round.subsUsed, subsLeft: 3 - round.subsUsed,
+      return [200, { verdict, pointsSpent: round.pointsSpent, minute,
+                     worthNow: worth(round.pointsSpent),
                      finished: false, solved: false }];
     }
     if (pathname === "/api/whoami/finish") {
+      const subs = RULE.ladder.filter((r) => r.points > 0 &&
+        RULE.ladder.filter((x) => x.stage > 1 && x.stage <= r.stage)
+          .reduce((x, y) => x + y.points, 0) <= round.pointsSpent).length;
       return [200, { day: "2026-09-15", slot: round.slot, solved: round.solved,
-                     finished: round.finished, subsUsed: round.subsUsed,
-                     guesses: round.guesses.length,
+                     finished: round.finished, pointsSpent: round.pointsSpent,
+                     subsUsed: subs, guesses: round.guesses.length,
+                     minute, score: round.finished ? round.score : undefined,
                      nearMisses: round.guesses.filter((g) => g === "DIDIERDROGBA").length,
                      ...(round.finished ? { answer: ANSWER, career: CAREER, club: CLUB } : {}) }];
     }
@@ -221,8 +257,14 @@ console.log("=== Opening a door gives one spell and nothing else ===");
   t("nobody is named", !clues.toUpperCase().includes("CECH"));
 
   const rungs = [...doc.querySelectorAll("#ladder .rung")];
-  t("the rungs still to buy are offered", rungs.length === 3, String(rungs.length));
-  t("and each says what it costs", /one sub/i.test(rungs[0].textContent));
+  /* TWO SUBSTITUTIONS, NOT THREE. Giving up was the third and is not one — it
+     is not priced and it is not on the ladder. */
+  t("both substitutions are offered", rungs.length === 2, String(rungs.length));
+  t("and each says what it costs, in points, before it is spent",
+    /Sub 1/.test(rungs[0].textContent) && /20/.test(rungs[0].textContent),
+    rungs.map((r) => r.textContent).join(" | "));
+  t("giving up sits apart from the things you buy",
+    !!doc.getElementById("giveUp") && !doc.getElementById("giveUp").hidden);
 }
 
 console.log("=== The near miss, which the page could not decide for itself ===");
@@ -287,7 +329,9 @@ console.log("=== Naming him ===");
   const share = doc.getElementById("shareText").value;
   t("the share text names no player", !share.toUpperCase().includes("CECH"),
     share.split("\n").slice(0, 4).join(" / "));
-  t("but does say which door and how many clues", /Chelsea/.test(share) && /Clues:/.test(share));
+  t("but does say which door, the score and the substitutions",
+    /Chelsea/.test(share) && /114/.test(share) && /Subs:/.test(share),
+    share.replace(/\n/g, " / "));
 }
 
 console.log("=== Buying the ladder, and giving up ===");
@@ -306,14 +350,14 @@ console.log("=== Buying the ladder, and giving up ===");
   t("buying the career shows it", /Arsenal/.test(doc.getElementById("clues").textContent));
   t("and the rung is no longer offered", !rung("Full career"));
 
-  click(rung("Age and country"));
+  click(rung("Nationality and age"));
   await settle(w);
   const clues = doc.getElementById("clues").textContent;
-  t("age and country arrive together", /44 years old/.test(clues) && /Czech/.test(clues));
+  t("nationality and age arrive together", /44 years old/.test(clues) && /Czech/.test(clues));
   t("and the birth year never appears", !/1982/.test(clues),
     "the year is a sharper clue than the age, and the ladder says age");
 
-  click(rung("Give up"));
+  click(doc.getElementById("giveUp"));
   await settle(w);
   await settle(w);
   t("giving up closes the door and names him", visible(doc, "screenDone") &&

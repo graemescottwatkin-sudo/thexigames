@@ -19,10 +19,31 @@
  */
 import CONFIG from "../../football/whoami/js/config.js";
 import { fold, doorAnswer, playedFor } from "./wadata.js";
+import { scoreAt, MAX_SCORE } from "./xi-score.js";
 
 export const LADDER = CONFIG.LADDER;
 export const DOORS = CONFIG.DOORS_PER_BOARD;
-export const SUBS = CONFIG.SUBS_PER_BOARD;
+export const MATCH_MINUTES = CONFIG.MATCH_MINUTES;
+export const RATE_SECONDS = CONFIG.RATE_SECONDS;
+export { MAX_SCORE };
+
+/* THE MATCH MINUTE, FROM THIS SERVER'S OWN CLOCK. A minute the client reports
+   is a score the client chooses — the rule every game in this family arrived at
+   the hard way. Elapsed real time divided by the rate, capped at full time:
+   past 90 the score is 36 either way, but a STORED minute reading 4,000 is a
+   number nobody can read as "they left the tab open overnight". */
+export function minuteOf(round, now) {
+  const elapsed = Math.max(0, Number(now) - Number(round.started_ms));
+  const mins = Math.floor(elapsed / (RATE_SECONDS * 1000));
+  return Math.min(MATCH_MINUTES, mins);
+}
+
+/* WHAT A BOARD IS WORTH RIGHT NOW: the curve at this minute, less what the
+   clues cost. Never below nothing — spending every clue on a board you were
+   slow at should leave you with nothing, not a debt. */
+export function scoreFor(minute, pointsSpent) {
+  return Math.max(0, Math.round(scoreAt(minute) - (Number(pointsSpent) || 0)));
+}
 
 const now = () => Date.now();
 const id = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
@@ -33,13 +54,21 @@ export function stageAt(n) {
   return LADDER.find((s) => s.stage === Number(n)) || null;
 }
 
-/* The substitutions spent to REACH a stage — stage 1 is free, and each one
-   after it costs what the ladder says. Derived rather than stored: a stored
-   copy would be a second answer to "how many have they spent". */
+/* THE POINTS SPENT TO REACH A STAGE. Stage one is free and each rung after it
+   costs what the ladder says. Derived rather than stored, and it can be:
+   rungs are bought in order, so the stage reached IS the set bought.
+   THE REVEAL IS NOT A PRICE. Its `points` is -1, a marker rather than a cost,
+   because giving up does not deduct from a score — it ends the board at
+   nothing. Summing it as a number would make the reveal cost less than the
+   career, which is the wrong way round. */
 export function costToReach(stage) {
-  return LADDER.filter((s) => s.stage > 1 && s.stage <= Number(stage))
-    .reduce((a, s) => a + s.cost, 0);
+  return LADDER
+    .filter((s) => s.stage > 1 && s.stage <= Number(stage) && s.points > 0)
+    .reduce((a, s) => a + s.points, 0);
 }
+
+export const GIVE_UP = CONFIG.GIVE_UP;
+export const SUBS = CONFIG.SUBS_PER_BOARD;
 
 export async function getRound(env, playId) {
   if (!env || !env.DB || !playId) return null;
@@ -52,11 +81,15 @@ export async function openRound(env, playDate, slot) {
   const n = Number(slot);
   if (!Number.isInteger(n) || n < 1 || n > DOORS) return { error: "no such door" };
   const playId = id();
+  const started = now();
   await env.DB.prepare(
     "INSERT INTO wa_round (play_id, play_date, slot, started_ms, subs_used, finished, solved) " +
     "VALUES (?, ?, ?, ?, 0, 0, 0)"
-  ).bind(playId, String(playDate), n, now()).run();
-  return { playId, slot: n, startedMs: now(), subsLeft: SUBS, stage: 1 };
+  ).bind(playId, String(playDate), n, started).run();
+  /* THE CLOCK STARTS HERE, not when the page says so. It is the same started_ms
+     the score is struck against, and it never goes up. */
+  return { playId, slot: n, startedMs: started, stage: 1, pointsSpent: 0,
+           worthNow: MAX_SCORE, minute: 0 };
 }
 
 /* WHAT A STAGE IS ALLOWED TO SAY, and nothing else leaves on its account.
@@ -109,30 +142,63 @@ export async function buyClue(env, round, stage) {
   if (Number(round.finished)) return { error: "that door is closed" };
 
   const need = costToReach(want.stage);
-  const spent = Number(round.subs_used) || 0;
+  const spent = Number(round.subs_used) || 0;   // points spent so far
+  const at = now();
+  const minute = minuteOf(round, at);
 
-  /* ALREADY PAID FOR: serve it, charge nothing. */
+  /* ALREADY PAID FOR: serve it, charge nothing. A reload must not be a second
+     purchase, which is the shape of fault Codeword found in its own demo where
+     a clock could be rewound for free. */
   if (need <= spent) {
     const door = await doorAnswer(env, round.play_date, round.slot);
     if (!door) return { error: "no such door" };
-    return { stage: want.stage, label: want.label, subsUsed: spent,
-             subsLeft: SUBS - spent, replayed: true, ...clueBody(door, want.reveals, door) };
+    return {
+      stage: want.stage, label: want.label, pointsSpent: spent,
+      minute, worthNow: scoreFor(minute, spent), replayed: true,
+      ...clueBody(door, want.reveals, door),
+    };
   }
-
-  if (need > SUBS) return { error: "no substitutions left" };
 
   const door = await doorAnswer(env, round.play_date, round.slot);
   if (!door) return { error: "no such door" };
 
-  const givingUp = want.reveals.includes("answer");
-  await env.DB.prepare(
-    "UPDATE wa_round SET subs_used = ?, finished = ? WHERE play_id = ?"
-  ).bind(need, givingUp ? 1 : 0, round.play_id).run();
+  await env.DB.prepare("UPDATE wa_round SET subs_used = ? WHERE play_id = ?")
+    .bind(need, round.play_id).run();
 
   return {
-    stage: want.stage, label: want.label, subsUsed: need, subsLeft: SUBS - need,
-    finished: givingUp, solved: false, replayed: false,
+    stage: want.stage, label: want.label, pointsSpent: need, minute,
+    worthNow: scoreFor(minute, need), finished: false, solved: false,
+    replayed: false,
     ...clueBody(door, want.reveals, door),
+  };
+}
+
+/* LEAVING THE PITCH, which is not a substitution.
+ *
+ * There were three substitutions and the third was "give up" — borrowed from
+ * the family's bench-of-three without asking what a third would BUY. The
+ * honest answer was nothing: the spell, the career and the bio are everything
+ * this game knows about a player that is not his name. So there are two, and
+ * this is an exit.
+ *
+ * IT IS NOT PRICED. Giving up does not deduct from a score, it ends the board
+ * at nothing — which is an accounting rather than a penalty: a board you were
+ * told the answer to scored nothing. Pricing it instead would make the reveal
+ * a cheap route to a number, which is the one thing a clue ladder must not be.
+ */
+export async function giveUp(env, round) {
+  if (Number(round.finished)) return { error: "that door is closed" };
+  const door = await doorAnswer(env, round.play_date, round.slot);
+  if (!door) return { error: "no such door" };
+  const minute = minuteOf(round, now());
+  await env.DB.prepare(
+    "UPDATE wa_round SET finished = 1, solved = 0, score = 0, minute = ? WHERE play_id = ?"
+  ).bind(minute, round.play_id).run();
+  return {
+    label: GIVE_UP.label, minute, score: 0, worthNow: 0,
+    pointsSpent: Number(round.subs_used) || 0,
+    finished: true, solved: false,
+    ...clueBody(door, GIVE_UP.reveals, door),
   };
 }
 
@@ -159,12 +225,22 @@ export async function judgeGuess(env, round, guess) {
   const n = await nextGuessNumber(env, round.play_id);
   const at = now();
 
+  const at2 = now();
+  const minute = minuteOf(round, at2);
+  const spent = Number(round.subs_used) || 0;
+
   if (key === fold(door.name)) {
+    /* THE SCORE IS STRUCK HERE AND STORED, not recomputed at finish. A
+       re-derivation would use TODAY's curve, so the day anybody tunes one every
+       past board would silently become a different board. QuickFire's session
+       made the same call about its bands for the same reason. */
+    const score = scoreFor(minute, spent);
     await record(env, round.play_id, n, key, "right", at);
-    await env.DB.prepare("UPDATE wa_round SET finished = 1, solved = 1 WHERE play_id = ?")
-      .bind(round.play_id).run();
+    await env.DB.prepare(
+      "UPDATE wa_round SET finished = 1, solved = 1, score = ?, minute = ? WHERE play_id = ?"
+    ).bind(score, minute, round.play_id).run();
     return { verdict: "right", answer: door.name, career: door.club_history || null,
-             article: door.article || null, subsUsed: Number(round.subs_used) || 0,
+             article: door.article || null, pointsSpent: spent, minute, score,
              finished: true, solved: true };
   }
 
@@ -172,20 +248,14 @@ export async function judgeGuess(env, round, guess) {
   const verdict = alsoPlayedThere ? "right-club" : "wrong";
   await record(env, round.play_id, n, key, verdict, at);
 
-  const charge = verdict === "right-club"
-    ? CONFIG.WRONG_PLAYER_SAME_CLUB_COSTS_SUB
-    : CONFIG.WRONG_GUESS_COSTS_SUB;
-  let spent = Number(round.subs_used) || 0;
-  if (charge && spent < SUBS) {
-    spent += 1;
-    await env.DB.prepare("UPDATE wa_round SET subs_used = ? WHERE play_id = ?")
-      .bind(spent, round.play_id).run();
-  }
-
   /* NO ANSWER IN THIS RESPONSE, on either branch. A near miss says it was a
      near miss and stops there; saying who it actually was would end the game
-     for the price of a wrong guess. */
-  return { verdict, subsUsed: spent, subsLeft: SUBS - spent, finished: false, solved: false };
+     for the price of a wrong guess.
+     A WRONG NAME COSTS NOTHING BUT THE CLOCK, which is already running. The
+     points are spent on SUBSTITUTIONS; the tension is how many you need, not
+     how many names you waste. */
+  return { verdict, pointsSpent: spent, minute,
+           worthNow: scoreFor(minute, spent), finished: false, solved: false };
 }
 
 async function nextGuessNumber(env, playId) {
@@ -208,18 +278,27 @@ export async function finishRound(env, round) {
     .bind(round.play_id).all();
   const guesses = results || [];
   const closed = !!Number(round.finished);
+  const spent = Number(round.subs_used) || 0;
 
   const out = {
     day: round.play_date,
     slot: Number(round.slot),
     solved: !!Number(round.solved),
     finished: closed,
-    subsUsed: Number(round.subs_used) || 0,
+    pointsSpent: spent,
+    /* THE SUBSTITUTIONS TAKEN, derived from the points spent rather than
+       counted separately. Rungs are bought in order, so what was paid says
+       which were taken — and two records of one fact is how they drift. */
+    subsUsed: LADDER.filter((r) => r.points > 0 && costToReach(r.stage) <= spent).length,
     guesses: guesses.length,
     nearMisses: guesses.filter((g) => g.verdict === "right-club").length,
   };
 
   if (closed) {
+    /* THE STORED SCORE AND MINUTE, struck when the board closed. Not recomputed
+       — a re-derivation would use today's curve. */
+    out.score = Number(round.score) || 0;
+    out.minute = round.minute == null ? null : Number(round.minute);
     const door = await doorAnswer(env, round.play_date, round.slot);
     if (door) {
       out.answer = door.name;
@@ -227,6 +306,13 @@ export async function finishRound(env, round) {
       out.article = door.article || null;
       out.club = door.club;
     }
+  } else {
+    /* STILL IN PLAY: what it is worth at this moment, which is not a score and
+       is not stored. No answer, because asking to finish must not be a way to
+       read one. */
+    const minute = minuteOf(round, now());
+    out.minute = minute;
+    out.worthNow = scoreFor(minute, spent);
   }
   return out;
 }

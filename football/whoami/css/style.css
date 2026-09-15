@@ -64,6 +64,28 @@ body{margin:0}
   line-height:1.1;color:var(--ink)}
 .dh-left{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft)}
 
+/* ---- the match clock and what the board is worth ----------------------- */
+
+/* THE GOLD IS THE CLOCK'S, which is the family's pairing — the word search's
+   .clock is --xi-ink too. Green means "you got something right" and is spent on
+   the kick-off and the goal state, nowhere else. */
+.strip{position:relative;height:5px;border-radius:3px;background:var(--line);
+  overflow:hidden;margin:0 0 8px}
+.stripFill{height:100%;width:0;background:var(--xi-ink);transition:width .25s linear}
+.stripFill.late{background:var(--danger)}
+
+.matchHead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+  margin:0 0 14px}
+.clock{font-family:var(--disp);font-weight:700;font-size:clamp(26px,7vw,34px);
+  line-height:1;color:var(--xi-ink)}
+.clock .prime{font-size:.6em;margin-left:1px}
+.worthBox{display:flex;flex-direction:column;align-items:flex-end;gap:1px}
+.worthBox .label{font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink-faint)}
+.worthVal{font-family:var(--disp);font-weight:700;font-size:22px;line-height:1;
+  color:var(--ink)}
+.worthVal.low{color:var(--danger)}
+
 .clues{display:flex;flex-direction:column;gap:8px;margin:0 0 14px}
 .clue{padding:11px 13px;background:var(--paper);border:1px solid var(--line);
   border-radius:10px}
@@ -82,10 +104,16 @@ body{margin:0}
 .rung:hover:not(:disabled){border-color:var(--ink-faint);color:var(--ink)}
 .r-label{font-weight:600}
 .r-cost{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint)}
-/* Giving up is a rung like the others and must not be the easiest one to hit
-   by accident, so it reads as the exit rather than the next step. */
-.rung.giveup{border-style:solid;border-color:var(--line)}
-.rung.giveup .r-label{color:var(--danger)}
+.r-sub{font-family:var(--disp);font-size:10.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-faint)}
+
+/* LEAVING THE PITCH IS NOT A RUNG. It is not priced and it is not bought, so it
+   does not sit among the things you buy — it is quiet, apart, and below. A
+   button that ends the board must not be the easiest one to hit by accident. */
+.giveup{display:block;margin:6px 0 0;padding:6px 2px;background:none;border:0;
+  color:var(--ink-faint);font-size:13px;text-decoration:underline;
+  text-underline-offset:3px}
+.giveup:hover{color:var(--danger)}
 
 /* ---- guessing ----------------------------------------------------------- */
 

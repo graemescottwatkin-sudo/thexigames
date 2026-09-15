@@ -95,6 +95,17 @@
       <span class="dh-left" id="playLeft"></span>
     </div>
 
+    <!-- The match clock and what the board is worth at this minute. Both are
+         the SERVER's numbers; this displays them and never decides them. -->
+    <div class="strip" aria-hidden="true"><div class="stripFill" id="stripFill"></div></div>
+    <div class="matchHead">
+      <span class="clock"><span id="clockValue">0</span><span class="prime">&#39;</span></span>
+      <span class="worthBox">
+        <span class="label">Worth now</span>
+        <span class="worthVal" id="worthNow">114</span>
+      </span>
+    </div>
+
     <div class="clues" id="clues"></div>
 
     <div class="ladder" id="ladder"></div>
@@ -109,6 +120,10 @@
 
     <p class="feedback" id="feedback" role="status" aria-live="polite"></p>
     <p class="tries" id="tries"></p>
+
+    <!-- Leaving the pitch. Not a substitution and not on the ladder: it ends
+         the board at nothing, so it sits apart from the things you buy. -->
+    <button class="giveup" id="giveUp">Give up</button>
   </section>
 
   <!-- ---- what it came to ---- -->

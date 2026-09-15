@@ -22,9 +22,11 @@
  */
 import { fold, publicDoor, SECRET_FIELDS } from "../../functions/_lib/wadata.js";
 import {
-  LADDER, DOORS, SUBS, stageAt, costToReach, clueBody,
-  openRound, buyClue, judgeGuess, finishRound,
+  LADDER, DOORS, SUBS, MATCH_MINUTES, RATE_SECONDS, MAX_SCORE,
+  stageAt, costToReach, clueBody, minuteOf, scoreFor,
+  openRound, buyClue, giveUp, judgeGuess, finishRound,
 } from "../../functions/_lib/wa-play.js";
+import { scoreAt, CURVE } from "../../functions/_lib/xi-score.js";
 import CONFIG from "../../football/whoami/js/config.js";
 import fs from "node:fs";
 
@@ -91,10 +93,10 @@ function db(round, opts = {}) {
                 async run() {
                   if (/INSERT OR REPLACE INTO wa_guess/.test(sql)) {
                     guesses.push({ n: a[1], guess: a[2], verdict: a[3] });
-                  } else if (/UPDATE wa_round SET subs_used = \?, finished/.test(sql)) {
-                    row.subs_used = a[0]; row.finished = a[1];
-                  } else if (/UPDATE wa_round SET finished = 1, solved = 1/.test(sql)) {
-                    row.finished = 1; row.solved = 1;
+                  } else if (/SET finished = 1, solved = 1, score = \?, minute = \?/.test(sql)) {
+                    row.finished = 1; row.solved = 1; row.score = a[0]; row.minute = a[1];
+                  } else if (/SET finished = 1, solved = 0, score = 0, minute = \?/.test(sql)) {
+                    row.finished = 1; row.solved = 0; row.score = 0; row.minute = a[0];
                   } else if (/UPDATE wa_round SET subs_used = \? WHERE/.test(sql)) {
                     row.subs_used = a[0];
                   }
@@ -110,8 +112,14 @@ function db(round, opts = {}) {
   };
 }
 
+/* STARTED JUST NOW, because the score is struck against a real clock. The
+   fixture read started_ms: 1000 — the epoch — so every round in it was at full
+   time and every score assertion measured the 36 floor rather than the thing it
+   named. It passed while the ladder was counted in substitutions and had
+   nothing to do with the clock; the moment a score appeared, two assertions
+   went red and both were the fixture's fault rather than the code's. */
 const ROUND = { play_id: "p1", play_date: "2026-09-15", slot: 2,
-  started_ms: 1000, subs_used: 0, finished: 0, solved: 0 };
+  started_ms: Date.now(), subs_used: 0, finished: 0, solved: 0 };
 
 console.log("=== A door, as a browser may see it ===");
 {
@@ -151,14 +159,60 @@ console.log("\n=== The ladder is the config's, not a copy ===");
 {
   t("the rungs are the config's", LADDER === CONFIG.LADDER, "one table, read by both sides");
   t("and the door count", DOORS === CONFIG.DOORS_PER_BOARD, String(DOORS));
-  t("the substitutions are derived from the ladder, not stated",
-    SUBS === LADDER.reduce((a, s) => a + s.cost, 0), String(SUBS));
-  t("the first rung is free", stageAt(1).cost === 0);
+  /* TWO SUBSTITUTIONS, NOT THREE. The third was "give up", which is not a
+     substitution — it is leaving the pitch, and it is not priced. */
+  t("there are two substitutions", SUBS === 2, String(SUBS));
+  t("and giving up is not one of them",
+    !LADDER.some((r) => r.reveals.includes("answer")) &&
+    CONFIG.GIVE_UP.reveals.includes("answer"),
+    "a board you were told the answer to scored nothing");
+  t("the first rung is free", stageAt(1).points === 0);
   t("and reaching it costs nothing", costToReach(1) === 0);
-  t("each later rung costs one more than the last",
-    costToReach(2) === 1 && costToReach(3) === 2 && costToReach(4) === 3,
-    `${costToReach(2)}, ${costToReach(3)}, ${costToReach(4)}`);
+  t("the career is dearer than the bio, because it is most of the answer",
+    stageAt(2).points > stageAt(3).points,
+    `${stageAt(2).points} vs ${stageAt(3).points}`);
+  t("both together cost less than the score is worth at full time",
+    CONFIG.CLUES_TOTAL_COST < scoreAt(MATCH_MINUTES),
+    `${CONFIG.CLUES_TOTAL_COST} against ${scoreAt(MATCH_MINUTES)} at 90' — ` +
+    "or the second substitution buys nothing late");
   t("a rung the ladder does not define is not a rung", stageAt(9) === null);
+}
+
+console.log("\n=== The clock, and the score that falls with it ===");
+{
+  /* THE CURVE IS THE FAMILY'S, imported rather than restated. 114 is not this
+     game's number — Ballpark's rules call it "the same frame as HiLo XI and
+     every other game in the family" — and it lived inside cw-round.js until
+     this game became the second to need it. */
+  t("the ceiling is the family's", MAX_SCORE === 114 && scoreAt(0) === 114);
+  t("and full time is a result rather than nothing", scoreAt(90) === 36,
+    "a player who takes the whole match and gets it right has still done it");
+  t("the curve only ever falls",
+    CURVE.every(([, v], i) => i === 0 || v < CURVE[i - 1][1]));
+
+  t("a fresh round is at nought", minuteOf({ started_ms: 1000 }, 1000) === 0);
+  t("a minute of match time is the configured real seconds",
+    minuteOf({ started_ms: 0 }, RATE_SECONDS * 1000) === 1,
+    `${RATE_SECONDS}s to the minute`);
+  t("the whole match is its real duration",
+    minuteOf({ started_ms: 0 }, RATE_SECONDS * 1000 * MATCH_MINUTES) === MATCH_MINUTES,
+    `${(RATE_SECONDS * MATCH_MINUTES) / 60} minutes of real time`);
+  /* PAST THE WHISTLE THE MINUTE IS CAPPED. The score is 36 either way, but a
+     STORED minute reading 4,000 is a number nobody can read as "they left the
+     tab open overnight". */
+  t("a board left open reads full time, not four thousand minutes",
+    minuteOf({ started_ms: 0 }, RATE_SECONDS * 1000 * 4000) === MATCH_MINUTES);
+  t("a clock that has gone backwards reads nought, not negative",
+    minuteOf({ started_ms: 5000 }, 1000) === 0);
+
+  t("the score is the curve less what the substitutions cost",
+    scoreFor(0, 0) === 114 && scoreFor(0, 30) === 84);
+  /* NEVER BELOW NOTHING. Spending both on a board you were slow at should
+     leave you with nothing, not a debt. */
+  t("and never below nothing", scoreFor(90, 500) === 0, "36 earned, 500 spent");
+  t("every point on the curve stays positive with both substitutions taken",
+    CURVE.every(([m]) => scoreFor(m, CONFIG.CLUES_TOTAL_COST) > 0),
+    "a substitution that can only ever buy zero is not a choice");
 }
 
 console.log("\n=== What each rung may say, and nothing more ===");
@@ -188,23 +242,33 @@ console.log("\n=== What each rung may say, and nothing more ===");
   t("stage three does not give the birthplace either",
     !JSON.stringify(three).includes("Plzen"));
 
-  const four = clueBody(CECH, stageAt(4).reveals, door);
-  t("stage four is the reveal, which is what it costs a substitution for",
-    four.answer === "PETR CECH");
+  /* THERE IS NO STAGE FOUR. The reveal used to be one, priced as a third
+     substitution; it is an exit now and lives in CONFIG.GIVE_UP. */
+  t("there is no fourth rung to buy", stageAt(4) === null,
+    "giving up is leaving the pitch, not a substitution");
+  const out = clueBody(CECH, CONFIG.GIVE_UP.reveals, door);
+  t("and giving up is the only thing that names him", out.answer === "PETR CECH");
 }
 
 console.log("\n=== Buying a rung ===");
 {
   const { env, row } = db(ROUND);
+  const career = stageAt(2).points;
   const two = await buyClue(env, { ...ROUND }, 2);
-  t("stage two charges one substitution", two.subsUsed === 1 && row.subs_used === 1);
-  t("and leaves the rest", two.subsLeft === SUBS - 1, String(two.subsLeft));
+  t("the first substitution charges the career's price in points",
+    two.pointsSpent === career && row.subs_used === career, `${career} points`);
+  t("and says what the board is worth now",
+    two.worthNow === scoreFor(two.minute, career), String(two.worthNow));
+
+  const both = await buyClue(env, { ...ROUND, subs_used: career }, 3);
+  t("the second charges both, cumulatively",
+    both.pointsSpent === career + stageAt(3).points, String(both.pointsSpent));
 
   /* A RELOAD IS NOT A SECOND PURCHASE. Codeword found this shape in its own
      demo, where a clock could be rewound for free. */
-  const again = await buyClue(env, { ...ROUND, subs_used: 2 }, 2);
+  const again = await buyClue(env, { ...ROUND, subs_used: career }, 2);
   t("a rung already paid for is served again for nothing",
-    again.replayed === true && again.subsUsed === 2,
+    again.replayed === true && again.pointsSpent === career,
     "a reload must not be a second purchase");
 
   const closed = await buyClue(env, { ...ROUND, finished: 1 }, 2);
@@ -214,14 +278,21 @@ console.log("\n=== Buying a rung ===");
   t("and neither does a rung that does not exist", !!nope.error, nope.error || "no refusal");
 }
 
-console.log("\n=== Giving up closes the door ===");
+console.log("\n=== Giving up, which is not a substitution ===");
 {
   const { env, row } = db(ROUND);
-  const out = await buyClue(env, { ...ROUND }, 4);
-  t("the reveal names him", out.answer === "PETR CECH");
-  t("and the door is closed, so it cannot be bought twice",
+  const out = await giveUp(env, { ...ROUND });
+  t("it names him", out.answer === "PETR CECH");
+  t("and the door is closed, so it cannot be done twice",
     out.finished === true && row.finished === 1);
-  t("and it is not recorded as solved", out.solved === false && !row.solved);
+  t("it is not recorded as solved", out.solved === false && !row.solved);
+  /* NOT PRICED — it ends the board at nothing. Pricing it would make the
+     reveal a cheap route to a number. */
+  t("and the board scores nothing, whatever the clock said",
+    out.score === 0 && row.score === 0, "told the answer, scored nothing");
+  const twice = await giveUp(env, { ...ROUND, finished: 1 });
+  t("a door already given up cannot be given up again", !!twice.error,
+    twice.error || "no refusal");
 }
 
 console.log("\n=== Naming him ===");
@@ -232,6 +303,19 @@ console.log("\n=== Naming him ===");
   t("case and spacing do not decide it", fold("  petr  cech ") === "PETRCECH");
   t("and the door closes", row.finished === 1 && row.solved === 1);
   t("the answer comes back only now that it is over", right.answer === "PETR CECH");
+  /* THE SCORE IS STRUCK AND STORED, not recomputed later against a curve that
+     may have been tuned since. */
+  t("a score is struck from the clock and stored",
+    right.score === scoreFor(right.minute, 0) && row.score === right.score,
+    `${right.score} at ${right.minute}'`);
+  t("and answering at once is worth the ceiling",
+    right.minute === 0 && right.score === MAX_SCORE, String(right.score));
+
+  /* AND THE SUBSTITUTIONS COME OFF IT. */
+  const { env: e2, row: r2 } = db({ ...ROUND, subs_used: 30 });
+  const paid = await judgeGuess(e2, { ...ROUND, subs_used: 30 }, "Petr Cech");
+  t("a board with both substitutions taken scores the curve less their price",
+    paid.score === MAX_SCORE - 30, `${paid.score} of ${MAX_SCORE}`);
 }
 
 console.log("\n=== The near miss, which only this side can judge ===");
@@ -244,8 +328,9 @@ console.log("\n=== The near miss, which only this side can judge ===");
   const near = await judgeGuess(env, { ...ROUND }, "Didier Drogba");
   t("a Chelsea player who is not him is a near miss", near.verdict === "right-club",
     "the roster is never sent, so the page could not decide this");
-  t("and it costs nothing by default",
-    near.subsUsed === 0 && CONFIG.WRONG_PLAYER_SAME_CLUB_COSTS_SUB === false);
+  t("and it costs nothing but the clock, which is already running",
+    near.pointsSpent === 0,
+    "the points are spent on substitutions; a wasted name is not one");
   /* THE ASSERTION THAT MATTERS MOST HERE. */
   t("a near miss does not say who it actually was",
     !JSON.stringify(near).toUpperCase().includes("CECH") && !("answer" in near),
@@ -272,11 +357,18 @@ console.log("\n=== What the sitting came to ===");
   const open = await finishRound(env, { ...ROUND });
   t("a door still in play reports no answer", !("answer" in open),
     "asking to finish must not be a way to read it");
+  t("and no score either, only what it is worth at this moment",
+    !("score" in open) && typeof open.worthNow === "number",
+    `worth ${open.worthNow} right now`);
   t("and says so", open.finished === false && open.solved === false);
 
-  const done = await finishRound(env, { ...ROUND, finished: 1, solved: 1, subs_used: 2 });
-  t("a closed door reports the answer and what it cost",
-    done.answer === "PETR CECH" && done.subsUsed === 2 && done.solved === true);
+  const done = await finishRound(env, { ...ROUND, finished: 1, solved: 1,
+    subs_used: 20, score: 71, minute: 12 });
+  t("a closed door reports the answer, the score and what it cost",
+    done.answer === "PETR CECH" && done.score === 71 && done.solved === true,
+    `${done.score} points`);
+  t("and how many substitutions that price bought",
+    done.subsUsed === 1, `${done.pointsSpent} points = ${done.subsUsed} substitution`);
   t("and the day and door it was", done.day === "2026-09-15" && done.slot === 2);
 }
 
@@ -288,8 +380,10 @@ console.log("\n=== Opening a door ===");
   const past = await openRound(env, "2026-09-15", DOORS + 1);
   t("nor is one past the eleventh", !!past.error, past.error || "no refusal");
   const ok = await openRound(env, "2026-09-15", 2);
-  t("and a real door opens at stage one with every substitution intact",
-    !ok.error && ok.stage === 1 && ok.subsLeft === SUBS);
+  t("and a real door opens at stage one, at the ceiling, with the clock at nought",
+    !ok.error && ok.stage === 1 && ok.pointsSpent === 0 &&
+    ok.worthNow === MAX_SCORE && ok.minute === 0,
+    `${ok.worthNow} at ${ok.minute}'`);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

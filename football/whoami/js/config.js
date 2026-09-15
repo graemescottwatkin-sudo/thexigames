@@ -16,27 +16,67 @@
     /* --- The board ---------------------------------------------------- */
     DOORS_PER_BOARD: 11,           // core rule — an XI of clubs
 
-    /* --- The clue ladder ------------------------------------------------
-       Stage 1 is free and is what you get for opening a door. Each stage
-       after it costs one substitution. `reveals` names what the server is
-       allowed to send at that stage and nothing else may leave on its
-       account — functions/_lib/wa-play.js reads these names.
+    /* --- The match clock ------------------------------------------------
+       Ninety minutes, and the score falls from 114 along the family's curve —
+       the same frame as HiLo, Ballpark, the crossword and Codeword, so a 90
+       here means what a 90 means anywhere else and the season can add them up.
+       The curve itself is NOT here: it is functions/_lib/xi-score.js, read by
+       both sides, because a page curve and a server curve would agree the day
+       they were written and disagree the first time anybody tuned one. */
+    MATCH_MINUTES: 90,
+    /* Real seconds to the match minute. Twenty is a thirty-minute match, which
+       is the pace a game you think about wants; Codeword offers three as well
+       for anyone who would rather sprint. */
+    RATE_SECONDS: 20,
 
-       WHY THE CAREER IS STAGE 2 AND NOT STAGE 1. The career IS the answer:
+    /* --- The clue ladder ------------------------------------------------
+       Stage 1 is free and is what you get for opening a door. Each stage after
+       it COSTS POINTS, deducted from whatever the clock has left you.
+       `reveals` names what the server is allowed to send at that stage and
+       nothing else may leave on its account — functions/_lib/wa-play.js reads
+       these names.
+
+       POINTS RATHER THAN MINUTES, which is where this differs from Codeword.
+       Codeword charges its helpers in match minutes and lets the curve turn
+       them into points, which works because its helpers are small and
+       repeatable. Here there are three, they are large, and each one changes
+       what the puzzle IS — the career is most of the answer. A flat price says
+       so plainly: you can see what a clue costs before you buy it, rather than
+       working out what ten minutes is worth at the minute you happen to be at.
+
+       WHY THE CAREER IS STAGE 2 AND NOT STAGE 1. It IS the answer:
        "Cobreloa, Udinese, Barcelona, Arsenal, Man United, Inter" is Sanchez to
        anyone who can read it. Stage 1 is one spell — the door's own club, its
-       years and its appearances — which narrows without naming. */
+       years and its appearances — which narrows without naming. And it is the
+       dearest rung for the same reason.
+
+       GIVING UP COSTS EVERYTHING, which is not a penalty but an accounting:
+       a board you were told the answer to scored nothing, and pricing it at
+       anything less would make the reveal a cheap way to a number. */
     LADDER: [
-      { stage: 1, cost: 0, label: 'The spell',    reveals: ['spell'] },
-      { stage: 2, cost: 1, label: 'Full career',  reveals: ['career'] },
-      { stage: 3, cost: 1, label: 'Age and country', reveals: ['bio'] },
-      { stage: 4, cost: 1, label: 'Give up',      reveals: ['answer'] }
+      { stage: 1, points: 0,  sub: 0, label: 'The spell',           reveals: ['spell'] },
+      { stage: 2, points: 20, sub: 1, label: 'Full career',         reveals: ['career'] },
+      { stage: 3, points: 10, sub: 2, label: 'Nationality and age', reveals: ['bio'] }
     ],
 
-    /* Three substitutions buys stages 2, 3 and the reveal. Derived from the
-       ladder rather than stated twice — change the ladder and this follows. */
+    /* TWO SUBSTITUTIONS, NOT THREE. There was a third and it was "give up",
+       which is not a substitution — it is leaving the pitch. A bench of three
+       was the family's shape borrowed without asking what the third would BUY,
+       and the honest answer was nothing: the spell, the career and the bio are
+       everything this game knows about a player that is not his name.
+       Giving up is kept as an action because a board you cannot finish has to
+       end somehow, but it is not a rung and it is not priced. It ends the board
+       at nothing, which is not a penalty but an accounting: a board you were
+       told the answer to scored nothing. */
+    GIVE_UP: { label: 'Give up', reveals: ['answer'] },
+
+    /* Both substitutions bought, derived from the ladder rather than stated
+       twice — change a price and this follows. */
+    get CLUES_TOTAL_COST() {
+      return this.LADDER.reduce(function (a, s) { return a + s.points; }, 0);
+    },
     get SUBS_PER_BOARD() {
-      return this.LADDER.reduce(function (a, s) { return a + s.cost; }, 0);
+      return this.LADDER.filter(function (s) { return s.points > 0; }).length;
     },
 
     /* --- Guessing ------------------------------------------------------- */

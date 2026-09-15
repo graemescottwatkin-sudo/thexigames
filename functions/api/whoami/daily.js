@@ -10,6 +10,8 @@
  * day rather than one answer for this one.
  */
 import { hasDB, getBoard, noStore, today } from "../../_lib/wadata.js";
+import { CURVE, MAX_SCORE, FULL_TIME } from "../../_lib/xi-score.js";
+import { MATCH_MINUTES, RATE_SECONDS, LADDER, GIVE_UP } from "../../_lib/wa-play.js";
 import { boardNoOf, boardByFamilyNo, playableDay, lastPlayableDay } from "../../_lib/wa-board.js";
 
 export async function onRequestGet({ request, env }) {
@@ -51,6 +53,21 @@ export async function onRequestGet({ request, env }) {
   return noStore({
     source: "d1",
     generatedAt: new Date().toISOString(),
+    /* THE SCORING RULE TRAVELS WITH THE BOARD, and it is not a secret — it is
+       the thing a player is entitled to know before they spend anything. The
+       page needs the curve to tick a live "worth now" readout, and the only
+       alternative to sending it is a second copy in the client that agrees
+       today and disagrees the first time anybody tunes one. Codeword has that
+       second copy; this does not.
+       The LADDER goes with it for the same reason: the page draws the prices,
+       and a price it invented would be a price the server did not charge. */
+    scoring: {
+      curve: CURVE, max: MAX_SCORE, fullTime: FULL_TIME,
+      matchMinutes: MATCH_MINUTES, rateSeconds: RATE_SECONDS,
+      ladder: LADDER.map((r) => ({ stage: r.stage, sub: r.sub,
+                                   points: r.points, label: r.label })),
+      giveUp: { label: GIVE_UP.label },
+    },
     no, day,
     lastDay: await lastPlayableDay(env),
     isToday: day === today(),

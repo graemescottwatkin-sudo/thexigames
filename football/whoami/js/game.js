@@ -96,6 +96,25 @@ function start() {
   var DATA = window.XIWA_DATA;
   var BOARD = DATA.board;
 
+  /* THE SCORING RULE COMES FROM THE SERVER, with the board. The page needs the
+     curve to tick a live readout and the prices to draw the ladder — and a
+     copy of either here would agree today and disagree the first time anybody
+     tuned one. config.js is still where the numbers LIVE; this is the server
+     handing over what it reads from there, so there is one table and the page
+     is not one of the places it can drift. */
+  var RULE = DATA.scoring || {};
+  /* NO FALLBACK CURVE. The first draft defaulted to [[0,114],[90,36]] if the
+     server sent none — two points standing in for eight, which is a second copy
+     of the rule however small, and one that would quietly show every player a
+     wrong number rather than no number. If the rule does not arrive the readout
+     says nothing, which is honest; the score is the server's either way and is
+     unaffected. */
+  var CURVE = RULE.curve || null;
+  var MAX_SCORE = RULE.max || null;
+  var MATCH_MINUTES = RULE.matchMinutes || 90;
+  var RATE_SECONDS = RULE.rateSeconds || 20;
+  var LADDER = RULE.ladder || [];
+
   var storageKey = CONFIG.STORAGE_KEY + ':' + BOARD.day;
 
   var state = {
@@ -104,11 +123,80 @@ function start() {
     playId: null,
     slot: null,
     stage: 1,
-    subsUsed: 0,
+    pointsSpent: 0,
     guesses: [],
     finished: false,
     solved: false
   };
+
+  /* THE CLOCK IS A DISPLAY OF THE SERVER'S, not a second clock. Every call
+     comes back with the minute the server is at; the page anchors to that and
+     lets requestAnimationFrame draw between calls, so the hand moves smoothly
+     without the page ever deciding what time it is. A minute this page chose
+     would be a score this page chose. */
+  var clock = { anchorAt: 0, anchorMinute: 0, running: false, frame: null, shown: -1 };
+
+  function displayMinute() {
+    if (!clock.anchorAt) return 0;
+    var per = RATE_SECONDS * 1000;
+    var gone = Math.floor((Date.now() - clock.anchorAt) / per);
+    return Math.max(0, Math.min(MATCH_MINUTES, clock.anchorMinute + gone));
+  }
+
+  function anchorClock(minute) {
+    clock.anchorAt = Date.now();
+    clock.anchorMinute = Number(minute) || 0;
+    clock.shown = -1;
+  }
+
+  /* WHAT THE BOARD IS WORTH AT A MINUTE, for the readout only. The score that
+     counts is struck on the server; this reads the same curve so the two cannot
+     show different numbers. */
+  function worthAt(minute) {
+    var C = CURVE;
+    if (!C || !C.length) return null;
+    if (minute <= 0) return C[0][1];
+    if (minute >= C[C.length - 1][0]) return C[C.length - 1][1];
+    for (var i = C.length - 1; i >= 0; i--) {
+      if (minute >= C[i][0]) {
+        var a = C[i], b = C[i + 1] || [90, 36];
+        if (b[0] === a[0]) return a[1];
+        return a[1] + (b[1] - a[1]) * ((minute - a[0]) / (b[0] - a[0]));
+      }
+    }
+    return C[0][1];
+  }
+
+  function renderClock() {
+    var m = displayMinute();
+    if (m === clock.shown) return;
+    clock.shown = m;
+    el.clockValue.textContent = m;
+    el.stripFill.style.width = Math.min(100, (m / MATCH_MINUTES) * 100) + '%';
+    el.stripFill.classList.toggle('late', m >= 60);
+    var base = worthAt(m);
+    if (base === null) { el.worthNow.textContent = '—'; return; }
+    var worth = Math.max(0, Math.round(base - state.pointsSpent));
+    el.worthNow.textContent = worth;
+    el.worthNow.classList.toggle('low', worth <= 40);
+  }
+
+  function tick() {
+    if (!clock.running) return;
+    renderClock();
+    clock.frame = requestAnimationFrame(tick);
+  }
+
+  function startTicking() {
+    clock.running = true;
+    if (clock.frame) cancelAnimationFrame(clock.frame);
+    clock.frame = requestAnimationFrame(tick);
+  }
+
+  function stopTicking() {
+    clock.running = false;
+    if (clock.frame) cancelAnimationFrame(clock.frame);
+  }
 
   var NAMES = [];      // [[display, foldedKey], …] — the answer space
   var busy = false;
@@ -117,6 +205,7 @@ function start() {
   ['waHome', 'waGame', 'waToday', 'waTodayKicker', 'waTodayState',
    'boardNo', 'boardDate', 'screenDoors', 'screenPlay', 'screenDone',
    'doors', 'careers', 'playClub', 'playLeft', 'clues', 'ladder',
+   'stripFill', 'clockValue', 'worthNow', 'giveUp',
    'guessInput', 'guessGo', 'suggest', 'feedback', 'tries',
    'doneKicker', 'doneBody', 'shareText', 'copyShare', 'backToDoors']
     .forEach(function (id) { el[id] = document.getElementById(id); });
@@ -207,7 +296,7 @@ function start() {
         state.playId = r.playId;
         state.slot = door.slot;
         state.stage = 1;
-        state.subsUsed = 0;
+        state.pointsSpent = 0;
         state.guesses = [];
         state.finished = false;
         state.solved = false;
@@ -221,6 +310,9 @@ function start() {
         renderTries();
         show('screenPlay');
         playsStart();
+        anchorClock(r.minute || 0);
+        renderClock();
+        startTicking();
         buyStage(1);
       })
       .catch(function (e) { busy = false; trouble(e); });
@@ -230,18 +322,24 @@ function start() {
 
   function renderLadder() {
     el.ladder.innerHTML = '';
-    CONFIG.LADDER.forEach(function (rung) {
+    LADDER.forEach(function (rung) {
       if (rung.stage <= state.stage) return;        // already taken
+      if (!rung.points) return;                     // the free first clue
       var b = document.createElement('button');
-      b.className = 'rung' + (rung.reveals.indexOf('answer') > -1 ? ' giveup' : '');
+      b.className = 'rung';
       b.type = 'button';
-      var cost = rung.cost === 1 ? 'one sub' : rung.cost + ' subs';
-      b.innerHTML = '<span class="r-label">' + esc(rung.label) + '</span>' +
-        '<span class="r-cost">' + esc(cost) + '</span>';
+      /* THE PRICE IS ON THE BUTTON, in points, before it is spent. That is the
+         whole argument for pricing substitutions in points rather than in
+         minutes: you can see what a clue costs without working out what ten
+         minutes is worth at the minute you happen to be at. */
+      b.innerHTML = '<span class="r-sub">Sub ' + esc(rung.sub) + '</span>' +
+        '<span class="r-label">' + esc(rung.label) + '</span>' +
+        '<span class="r-cost">−' + esc(rung.points) + '</span>';
       b.disabled = state.finished;
       b.addEventListener('click', function () { buyStage(rung.stage); });
       el.ladder.appendChild(b);
     });
+    el.giveUp.hidden = !!state.finished;
   }
 
   function buyStage(stage) {
@@ -251,16 +349,12 @@ function start() {
       .then(function (r) {
         busy = false;
         state.stage = Math.max(state.stage, r.stage);
-        state.subsUsed = r.subsUsed;
+        state.pointsSpent = r.pointsSpent;
+        anchorClock(r.minute);
+        renderClock();
         renderClue(r);
         renderLadder();
         save();
-        if (r.finished) {
-          /* Given up: the door is closed and the answer is on the screen. */
-          state.finished = true;
-          state.solved = false;
-          finish();
-        }
       })
       .catch(function (e) { busy = false; trouble(e); });
   }
@@ -349,17 +443,24 @@ function start() {
       .then(function (r) {
         busy = false;
         state.guesses.push({ guess: typed, verdict: r.verdict });
-        state.subsUsed = r.subsUsed != null ? r.subsUsed : state.subsUsed;
+        state.pointsSpent = r.pointsSpent != null ? r.pointsSpent : state.pointsSpent;
         renderTries();
         save();
 
         if (r.verdict === 'right') {
           state.finished = true;
           state.solved = true;
-          setFeedback('That is him.', 'goal');
+          stopTicking();
+          anchorClock(r.minute);
+          renderClock();
+          setFeedback('That is him — ' + r.score + ' points at ' + r.minute + "'.", 'goal');
           finish();
           return;
         }
+        /* A WRONG NAME COSTS NOTHING BUT THE CLOCK, which is already running.
+           The server sends the minute back with every verdict, so the readout
+           stays its number rather than this page's guess at it. */
+        if (r.minute != null) { anchorClock(r.minute); renderClock(); }
         if (r.verdict === 'right-club') {
           /* THE NEAR MISS. It says it was one and stops there — the server
              sends no answer with it, because saying who it actually was would
@@ -416,8 +517,17 @@ function start() {
         '" target="_blank" rel="noopener">Read about him</a>';
     }
     html += '<div class="rows">';
-    html += '<div class="row"><span class="rowLabel">Clues taken</span><span>' +
-      ((r ? r.subsUsed : state.subsUsed) + 1) + ' of ' + (CONFIG.LADDER.length) + '</span></div>';
+    if (r && typeof r.score === 'number') {
+      html += '<div class="row"><span class="rowLabel">Score</span><span>' +
+        r.score + ' of ' + MAX_SCORE + '</span></div>';
+    }
+    if (r && r.minute != null) {
+      html += '<div class="row"><span class="rowLabel">Answered at</span><span>' +
+        r.minute + "'" + '</span></div>';
+    }
+    html += '<div class="row"><span class="rowLabel">Substitutions</span><span>' +
+      (r ? r.subsUsed : 0) + ' of ' + LADDER.filter(function (x) { return x.points; }).length +
+      (state.pointsSpent ? '  (−' + state.pointsSpent + ')' : '') + '</span></div>';
     html += '<div class="row"><span class="rowLabel">Names tried</span><span>' +
       (r ? r.guesses : state.guesses.length) + '</span></div>';
     if (r && r.nearMisses) {
@@ -439,7 +549,9 @@ function start() {
       'No. ' + BOARD.no + ' — ' + formatDate(BOARD.day),
       '',
       (r && r.club ? r.club : '') + (solved ? ' — got him' : ' — no luck'),
-      'Clues: ' + ((r ? r.subsUsed : state.subsUsed) + 1) + ' of ' + CONFIG.LADDER.length,
+      (r && typeof r.score === 'number' ? r.score + '/' + MAX_SCORE : ''),
+      'Subs: ' + (r ? r.subsUsed : 0) +
+        (state.pointsSpent ? ' (−' + state.pointsSpent + ')' : ''),
       'Names tried: ' + (r ? r.guesses : state.guesses.length)
     ].join('\n');
   }
@@ -509,7 +621,10 @@ function start() {
       boardId: BOARD.id,
       slot: state.slot,
       solved: !!(r ? r.solved : state.solved),
-      subs: r ? r.subsUsed : state.subsUsed,
+      score: r ? r.score : null,
+      minute: r ? r.minute : null,
+      subs: r ? r.subsUsed : 0,
+      pointsSpent: state.pointsSpent,
       guesses: r ? r.guesses : state.guesses.length
     });
     try {
@@ -541,7 +656,7 @@ function start() {
     return {
       solved: state.solved ? 1 : 0,
       elapsed: runStart ? Math.round((Date.now() - runStart) / 1000) : 0,
-      detail: { slot: state.slot, subs: state.subsUsed, guesses: state.guesses.length }
+      detail: { slot: state.slot, spent: state.pointsSpent, guesses: state.guesses.length }
     };
   }
   function playsStart() {
@@ -590,6 +705,24 @@ function start() {
     if (e.key === 'Enter') { e.preventDefault(); submitGuess(); }
   });
   el.guessGo.addEventListener('click', submitGuess);
+
+  el.giveUp.addEventListener('click', function () {
+    if (busy || state.finished) return;
+    busy = true;
+    el.giveUp.disabled = true;
+    post('/api/whoami/giveup', { playId: state.playId })
+      .then(function (r) {
+        busy = false;
+        state.finished = true;
+        state.solved = false;
+        stopTicking();
+        renderClue(r);
+        renderLadder();
+        save();
+        finish();
+      })
+      .catch(function (e) { busy = false; el.giveUp.disabled = false; trouble(e); });
+  });
 
   el.copyShare.addEventListener('click', function () {
     var ok = false;

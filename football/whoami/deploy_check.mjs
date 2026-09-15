@@ -143,13 +143,34 @@ console.log("\nOne fact, one place");
     return !/(?:length|count|doors?)\s*(?:===|!==|<|>)\s*11\b/.test(code);
   })(), "DOORS_PER_BOARD in js/config.js, and nowhere else");
 
-  t("the ladder is the config's, not a second copy in the script",
-    /CONFIG\.LADDER/.test(code) && !/stage:\s*[234],\s*cost:/.test(code),
-    "the owner is play-testing what a substitution buys");
+  /* THE PAGE HOLDS NEITHER THE LADDER NOR THE CURVE. Both arrive with the
+     board, from functions/api/whoami/daily.js, which reads them from the game's
+     own config and from the family's xi-score.js. The page needs them — to draw
+     the prices and to tick a live "worth now" — and a copy here would agree
+     today and disagree the first time anybody tuned one.
+     A FALLBACK IS A COPY TOO. The first draft defaulted to a two-point curve if
+     the server sent none, which would have shown every player a wrong number
+     rather than no number. */
+  t("the page takes the scoring rule from the server rather than holding one",
+    /DATA\.scoring/.test(code) && !/114/.test(code) &&
+    !/maxMinute|SCORE_BANDS/.test(code),
+    "the curve and the prices arrive with the board");
+
+  t("and draws the ladder from what arrived, not from its own config",
+    /RULE\.ladder/.test(code) && !/points:\s*\d+\s*,/.test(code));
 
   t("the substitution count is derived from the ladder",
-    /SUBS_PER_BOARD\(\)\s*\{[\s\S]*reduce/.test(config),
+    /SUBS_PER_BOARD\(\)\s*\{[\s\S]*filter/.test(config),
     "change a rung and it follows");
+
+  /* TWO SUBSTITUTIONS, AND GIVING UP IS NOT ONE. The third rung was "give up",
+     borrowed from the family's bench-of-three without asking what a third would
+     buy — and the answer was nothing: the spell, the career and the bio are
+     everything this game knows about a player that is not his name. */
+  t("there are two substitutions and giving up is not one of them",
+    /GIVE_UP:/.test(config) &&
+    (config.match(/points:\s*[1-9]/g) || []).length === 2,
+    "leaving the pitch is not a clue you buy");
 
   /* THE SERVER READS THE GAME'S OWN CONFIG rather than keeping its own, the way
      qf-round.js reads QuickFire's bands. Two tables would agree the day they
