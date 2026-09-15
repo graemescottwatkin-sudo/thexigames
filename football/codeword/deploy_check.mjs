@@ -21,6 +21,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import crypto from "node:crypto";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..", "..");
 const read = (p) => fs.readFileSync(path.join(ROOT, p), "utf8");
@@ -44,6 +45,27 @@ const has = (p) => fs.existsSync(path.join(ROOT, p));
  * reproduced from scratch, which is worth recording: knowing a fault by name
  * does not stop you writing it. Computed from the two files the page names with
  * a ?v=, CRLF normalised to LF because what ships is what is in git. */
+/* THE BUILD TAG MOVED v001 -> v001a ON 15 SEPTEMBER 2026, and these two
+ * constants did NOT, which is the correct resting state rather than an
+ * oversight. LAST_SHIPPED is what is LIVE; v001a is in the tree and has not
+ * shipped. post_deploy bumps both after the deploy, from the live page.
+ *
+ * WHY THE TAG MOVED: js/game.js gained the account push it had been missing
+ * since launch — recordResult wrote to localStorage and nothing ever called
+ * /api/account/migrate, so a signed-in player's result reached their own device
+ * and stopped. Changed bytes under a burned tag is exactly what the hash below
+ * exists to refuse, so the tag had to move with them.
+ *
+ * AND THE HASH BELOW REFUSED NOTHING UNTIL TODAY, which is why this comment is
+ * long. Both constants were declared here and NEITHER WAS EVER READ. Forty
+ * lines above explain that the asset hash is "the half that carries the law"
+ * and that making it real took two attempts; nothing compared against it, and
+ * there was no tag check in this gate at all. The whole tag law was a comment.
+ * Found by changing game.js and watching the gate pass 56 of 56.
+ *
+ * That is the sentinel fault in its least visible form. A sentinel is a
+ * constant nothing moves; this was a constant nothing READ — which looks
+ * healthier and checks exactly as much. */
 const LAST_SHIPPED = "v001";
 const LAST_SHIPPED_ASSETS = "318abfac233eeeb0";
 
@@ -338,6 +360,54 @@ t("it has a page of its own", has("football/codeword/index.html"));
   t("and defines no .xic- rule of its own",
     !/^\s*\.xic-[a-z-]+[^{]*\{/m.test(stylecss),
     "the chrome's namespace belongs to the chrome");
+}
+
+/* ---- the tag law, which this gate declared and did not enforce ---------- */
+
+console.log("\nThe tag law");
+{
+  const html = read("football/codeword/index.html");
+  const js = read("football/codeword/js/game.js");
+  const tagJs = (html.match(/js\/game\.js\?v=(v[0-9a-z]+)"/) || [])[1] || "";
+
+  t("the page's script tag and the script's BUILD agree",
+    !!tagJs && new RegExp(`var BUILD\\s*=\\s*"${tagJs}"`).test(js), tagJs);
+
+  /* Every one of this game's own assets carries the same tag. The word search
+     shipped with one ?v= left behind and the same URL then named different
+     bytes for every browser holding it cached. */
+  const own = [...html.matchAll(/(?:href|src)="((?:css|js)\/[^"?]+)\?v=([^"]+)"/g)];
+  t("every asset the page names carries that same tag",
+    own.length > 0 && own.every((m) => m[2] === tagJs),
+    own.map((m) => m[1] + "=" + m[2]).join(" "));
+
+  t("the tag has not gone backwards",
+    tagJs >= LAST_SHIPPED, `now ${tagJs}, live ${LAST_SHIPPED}`);
+
+  /* THE HALF THAT CARRIES THE LAW: changed bytes under a tag that has not
+     moved, which a version number alone cannot see. Normalised to LF because
+     what ships is what is in git and a Windows checkout writes CRLF. */
+  const assetsNow = (() => {
+    const paths = own.map((m) => m[1]).sort();
+    if (!paths.length) return null;
+    const h = crypto.createHash("sha256");
+    for (const p of paths) {
+      const full = "football/codeword/" + p;
+      if (!has(full)) return null;
+      h.update(p); h.update("\0");
+      h.update(read(full).replace(/\r\n/g, "\n"));
+    }
+    return h.digest("hex").slice(0, 16);
+  })();
+
+  t("the game's own assets cannot change without its build tag moving",
+    !!assetsNow && (assetsNow === LAST_SHIPPED_ASSETS || tagJs !== LAST_SHIPPED),
+    assetsNow === LAST_SHIPPED_ASSETS
+      ? "unchanged since " + LAST_SHIPPED
+      : tagJs !== LAST_SHIPPED
+        ? "changed, and the tag moved " + LAST_SHIPPED + " -> " + tagJs
+        : "CHANGED with the tag still on " + tagJs +
+          " — bump the tag, then set LAST_SHIPPED_ASSETS to " + assetsNow);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

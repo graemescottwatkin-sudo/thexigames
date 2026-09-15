@@ -391,6 +391,93 @@ t("the server's game list and this table agree", (() => {
     keyless.length === 0,
     keyless.length ? keyless.join(", ") + " return null — results are dropped"
       : SERVER_GAMES.map((g) => entryKey(g, row)).join(" "));
+
+  /* AND THE OTHER HALF, WHICH IS THE ONE THAT CATCHES IT.
+   *
+   * The check above walks GAMES — so a game ABSENT from GAMES is absent from
+   * the loop as well, and reports green. That is exactly how Scrambled and
+   * QuickFire survived: a game can be SERVING and UNREGISTERED at the same
+   * time, and a roster somebody typed would be missing the broken one too.
+   *
+   * So the list is DERIVED from what serves. A daily route existing is the
+   * fact; GAMES is the claim; this is where they are made to agree.
+   *
+   * THE TWO EXCEPTIONS ARE NAMED AND ASSERTED rather than skipped, because a
+   * silent skip list is the same fault one level up. The crossword serves
+   * /api/daily rather than /api/crossword/daily — it was the first and the
+   * path predates the convention. Vowels serves through Scrambled's route with
+   * ?cy=1, because it is the same ring read half a turn round. Both are checked
+   * to still be true below, so an exception cannot outlive its reason. */
+  const served = fs.readdirSync("functions/api", { withFileTypes: true })
+    .filter((d) => d.isDirectory() && fs.existsSync(`functions/api/${d.name}/daily.js`))
+    .map((d) => d.name);
+
+  /* SERVING A BOARD IS NOT THE CONDITION. The first version of this asked
+     "does it serve a daily", and flagged Ballpark — which serves one, is
+     absent from GAMES, and is NOT an instance of this fault: its page has no
+     recordResult and no migrate call, so nothing is being dropped because
+     nothing is being sent. It is an unfinished game, not a broken one.
+     THE CONDITION IS THAT THE PAGE TRIES TO BANK. Scrambled, QuickFire,
+     Codeword and Grid all had a client writing a result into a list and a
+     server with no key to file it under; that gap is the fault, and a check
+     that fires on anything wider will be silenced by whoever meets it on a
+     game that is merely half-built. Derived by reading the pages, so a new
+     game joins the check by doing the thing rather than by being added to a
+     list. */
+  const banks = served.filter((g) => {
+    const dir = `football/${g}/js`;
+    if (!has(dir)) return false;
+    return fs.readdirSync(dir).some((f) => {
+      if (!f.endsWith(".js")) return false;
+      const src = read(`${dir}/${f}`);
+      return /recordResult|account\/migrate/.test(src);
+    });
+  });
+
+  t("the crossword's daily route is still the unprefixed one",
+    has("functions/api/daily.js"),
+    "the exception below rests on this, so it is asserted rather than assumed");
+  t("and Vowels is still served through Scrambled's route",
+    /cy/.test(read("functions/api/scrambled/daily.js")),
+    "the same ring read half a turn round");
+
+  const unregistered = banks.filter((g) => !SERVER_GAMES.includes(g));
+  t("every game whose page banks a result is registered in GAMES", (() => {
+    /* A WALK THAT FINDS NOTHING MUST NOT PASS. The whole point is that the
+       list is derived, and a derivation that silently returns empty reports
+       the same green as one that found no problems. */
+    if (banks.length < 5) return false;
+    return unregistered.length === 0;
+  })(), unregistered.length
+    ? unregistered.join(", ") + " bank a result the server has no key for"
+    : banks.join(", "));
+
+  /* THE REVERSE, which is less harmful and nearly free while both lists are
+     here: a game registered and serving nothing. It does not drop results —
+     there are none — but it is the same two facts disagreeing, and a game that
+     stops serving without leaving GAMES is a row in a results table nothing
+     can ever add to. */
+  const EXEMPT = new Set(["crossword", "vowels"]);   // asserted above
+  const silent = SERVER_GAMES.filter((g) => !served.includes(g) && !EXEMPT.has(g));
+  t("and every registered game serves a daily", silent.length === 0,
+    silent.length ? silent.join(", ") + " are in GAMES but serve no daily" : "");
+
+  /* AND A PAGE THAT KEEPS A RESULT MUST ALSO PUSH IT. Codeword had
+     recordResult writing to localStorage and no /api/account/migrate call
+     anywhere — so a signed-in player's result reached their own browser and
+     stopped there, which is the banking fault one layer further out: the key
+     exists, the row is written locally, and the account never hears. Found by
+     tabulating both halves rather than either. */
+  const recordsOnly = banks.filter((g) => {
+    const dir = `football/${g}/js`;
+    const all = fs.readdirSync(dir).filter((f) => f.endsWith(".js"))
+      .map((f) => read(`${dir}/${f}`)).join(" ");
+    return /recordResult/.test(all) && !/account\/migrate/.test(all);
+  });
+  t("and a page that records a result also pushes it to the account",
+    recordsOnly.length === 0,
+    recordsOnly.length ? recordsOnly.join(", ") + " record locally and never push"
+      : "every banking game pushes");
   /* AND NO TWO GAMES SHARE A PREFIX, because a key that collides files one
      game's result under another's and the merge rule then decides between rows
      that are not comparable. */

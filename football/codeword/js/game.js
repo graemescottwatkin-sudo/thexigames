@@ -3,7 +3,7 @@
   /* THE BUILD, PAIRED WITH THE ?v= ON THIS FILE'S OWN SCRIPT TAG. A stale
      cached script is otherwise invisible: the page loads, the game runs, and
      it is yesterday's code. aligned_test asserts the two agree. */
-  var BUILD = "v001";
+  var BUILD = "v001a";
   if (window.XIPlays && document.documentElement) {
     document.documentElement.setAttribute("data-build", BUILD);
   }
@@ -669,17 +669,94 @@ function boot(BOARD){
   // scores what it is worth rather than nothing -- eight of eleven at 36 a
   // board is 26, not a blank -- because walking away from a board you nearly
   // had should not read the same as never starting.
+  var CW_KEY = "xicw.results";
+
+  function readResults(){
+    try { var r = JSON.parse(localStorage.getItem(CW_KEY) || "[]"); return Array.isArray(r) ? r : []; }
+    catch (e) { return []; }
+  }
+
   function recordResult(d){
     if (!d || d.scored === false) return;          // a replay is not recorded
     try {
-      var KEY = "xicw.results";
-      var list = JSON.parse(localStorage.getItem(KEY) || "[]") || [];
+      var list = readResults();
       for (var i = 0; i < list.length; i++) if (list[i] && list[i].no === d.no) return;
       list.push({ no: d.no, day: d.day || null, score: d.score, solved: d.solved,
         minute: d.minute, result: d.result });
-      localStorage.setItem(KEY, JSON.stringify(list));
+      localStorage.setItem(CW_KEY, JSON.stringify(list));
     } catch (e) { /* private browsing: play on without a record */ }
+    pushResults();
   }
+
+  /* ---- and the account, which this game reached for a day without -------
+   *
+   * THE RESULT STOPPED IN THE BROWSER. recordResult wrote a row to
+   * localStorage and nothing ever called /api/account/migrate, so a signed-in
+   * player's Codeword result reached their own device and went no further. It
+   * is the banking fault one layer out from the one entryKey() had: the key
+   * now exists and the row is written, and the account still never heard.
+   *
+   * Found by tabulating both halves across every game rather than either on
+   * its own — Codeword was the only one that recorded without pushing.
+   *
+   * The merge rule is the family's and is not restated here: first result
+   * banked wins, the account's row wins outright on pull, unpushed local rows
+   * survive. Failures log and stay caught; a transient session failure is NOT
+   * signed-out, and none of it is ever shown to the player.
+   */
+  var account = null;
+
+  function accountNote(what, err){
+    try { console.warn("[account] " + what + " failed:", err && err.message ? err.message : err); }
+    catch (e) {}
+  }
+
+  function apiAuth(path, body){
+    var opts = { method: body ? "POST" : "GET", headers: { "X-XI-Games": "1" },
+                 credentials: "same-origin" };
+    if (body) { opts.headers["Content-Type"] = "application/json"; opts.body = JSON.stringify(body); }
+    return fetch(path, opts).then(function (r){
+      if (!r.ok) throw new Error(String(r.status));
+      return r.json();
+    });
+  }
+
+  function pushResults(){
+    if (!account) return Promise.resolve(null);
+    return apiAuth("/api/account/migrate", { game: "codeword", results: readResults() })
+      .catch(function (e){ accountNote("push", e); return null; });
+  }
+
+  function pullResults(){
+    if (!account) return Promise.resolve(null);
+    return apiAuth("/api/account/results?game=codeword").then(function (r){
+      var remote = (r && r.results) || [];
+      if (!remote.length) return null;
+      /* Keyed on the board NUMBER, because that is what this game's own list is
+         keyed on and what its dedupe above compares. */
+      var byNo = {};
+      readResults().forEach(function (x){ if (x && x.no != null) byNo[x.no] = x; });
+      remote.forEach(function (x){ if (x && x.no != null) byNo[x.no] = x; });
+      var merged = Object.keys(byNo).sort(function (a, b){ return Number(a) - Number(b); })
+        .map(function (k){ return byNo[k]; });
+      try { localStorage.setItem(CW_KEY, JSON.stringify(merged.slice(-800))); } catch (e) {}
+      return merged.length;
+    }).catch(function (e){ accountNote("pull", e); return null; });
+  }
+
+  /* The chrome owns the identity and announces it on document as xi:account;
+     this game answers by syncing its own results, which is the one part that
+     is still its own. */
+  document.addEventListener("xi:account", function (e){
+    account = (e && e.detail && e.detail.account) || null;
+    if (account) pullResults().then(pushResults);
+  });
+  try {
+    if (window.XIChrome && window.XIChrome.account) {
+      account = window.XIChrome.account();
+      if (account) pullResults();
+    }
+  } catch (e) { accountNote("boot", e); }
 
   function fullTime(){
     if (window.XIPlays && XIPlays.active()) XIPlays.end(true);
