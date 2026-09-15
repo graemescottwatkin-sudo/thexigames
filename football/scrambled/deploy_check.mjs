@@ -200,7 +200,34 @@ t("the CSRF header is the family's", /"X-XI-Games"/.test(js));
  * means nothing, and is then still there looking like a guard. It is not
  * measuring craft. It is refusing an empty string. */
 {
-  const cssBytes = fs.readFileSync(new URL("css/style.css", import.meta.url), "utf8");
+  /* ASK THE PAGE WHAT TO CHECK, rather than trusting a constant in here.
+     The first version of this block read css/style.css by name. That catches
+     an empty or truncated stylesheet and not the likelier accident: the
+     game's CSS is renamed or moved, a stale style.css is left behind with
+     real content in it, and the gate goes on examining a file nobody serves —
+     every prohibition green, every floor green, honestly answering about the
+     wrong input, forever. Predicted by the Connection session from the shape
+     alone rather than found by being bitten, and confirmed here: with the
+     page moved to css/main.css and style.css deleted, this block did not
+     refuse, it THREW ENOENT — which is red, but red by crashing, and a crash
+     mid-gate is not a verdict.
+     So the file under test is whatever index.html actually loads. Fonts and
+     the shared layer are somebody else's; what is left is this game's own. */
+  const pageHtml = fs.readFileSync(new URL("index.html", import.meta.url), "utf8");
+  const ownCss = [...pageHtml.matchAll(/<link[^>]+href="([^"]+\.css)(?:\?[^"]*)?"/g)]
+    .map((m) => m[1])
+    .filter((h) => !h.startsWith("http") && !h.startsWith("/shared/"));
+  t("the page loads a stylesheet of this game's own",
+    ownCss.length > 0,
+    ownCss.length ? ownCss.join(", ") : "none — every CSS rule below would check nothing");
+  /* A NAMED FILE THAT IS NOT THERE IS A REFUSAL, not an exception. */
+  const missingCss = ownCss.filter((h) => !fs.existsSync(new URL(h, import.meta.url)));
+  t("and every stylesheet it names is a file that exists",
+    missingCss.length === 0, missingCss.join(", ") || `${ownCss.length} checked`);
+  const cssBytes = ownCss
+    .filter((h) => fs.existsSync(new URL(h, import.meta.url)))
+    .map((h) => fs.readFileSync(new URL(h, import.meta.url), "utf8"))
+    .join("\n");
   const rules = (cssBytes.match(/\{/g) || []).length;
   const tokens = (cssBytes.match(/var\(--/g) || []).length;
   t("the stylesheet this gate has been checking is actually there",
