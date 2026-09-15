@@ -1,0 +1,141 @@
+/* Who Am I XI — style.css
+ *
+ * Palette, type and the mark come from ../shared/xi-tokens.css and are not
+ * restated here. Nothing in this file names a colour: every value is a token,
+ * so the game follows the family into dark mode without a second palette.
+ *
+ * THE ONE THING THIS GAME NEEDS THAT THE OTHERS DO NOT.
+ * There are three answers to a guess, not two, and the middle one is the whole
+ * character of the game: naming somebody who really did play for that club is a
+ * NEAR MISS rather than a mistake. So it cannot look like either of the others.
+ * Right is the pitch green and fills; wrong is quiet and does not; the near
+ * miss takes the gold — the family's "the clock has given you something"
+ * colour — because that is what it is. Three states that differ in fill and
+ * weight as well as hue, so none of it rests on colour alone.
+ */
+
+/* NO .sr-only HERE. shared/xi-landing.css already defines it, and a game that
+   restates a shared rule is one edit away from two answers to the same
+   question — the fault the shared layer exists to stop. This file defined it
+   verbatim and aligned_test refused the game for it.
+
+   The body reset IS this game's to make: the shared chrome styles its own bar
+   and footer and deliberately does not touch the document, so every game in
+   the family resets the margin itself or sits in a browser gutter. */
+body{margin:0}
+
+.app{max-width:760px;margin:0 auto;padding:16px 16px 40px}
+
+/* ---- which board ------------------------------------------------------- */
+
+.boardHead{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+  margin:0 0 14px}
+.bh-no{font-family:var(--disp);font-weight:700;font-size:20px;color:var(--ink)}
+.bh-date{font-family:var(--disp);font-size:13px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-soft)}
+
+.lede{margin:0 0 14px;color:var(--ink-soft);font-size:15px;line-height:1.45}
+
+/* ---- the eleven doors -------------------------------------------------- */
+
+/* A GRID RATHER THAN A LIST, because eleven doors is a team sheet and the
+   player is looking for their own club rather than reading them in order. */
+.doors{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));
+  gap:9px;margin:0 0 18px}
+
+.door{display:flex;flex-direction:column;align-items:flex-start;gap:3px;
+  min-height:var(--tap);padding:12px 13px;text-align:left;
+  background:var(--paper);border:1.5px solid var(--line);border-radius:11px;
+  color:var(--ink);transition:border-color .12s ease}
+.door:hover:not(:disabled){border-color:var(--ink-faint)}
+.door:active:not(:disabled){transform:translateY(1px)}
+.d-club{font-family:var(--disp);font-weight:600;font-size:16px;line-height:1.2}
+.d-left{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft)}
+
+/* THE DAY'S CAREER LENGTHS, sorted and unattributed. Deliberately quiet: it is
+   a shape of the day rather than a clue to any one door, and styling it as a
+   clue would invite somebody to line it up against the doors. */
+.careers{margin:0;font-size:12.5px;color:var(--ink-faint);line-height:1.5}
+
+/* ---- the door being played --------------------------------------------- */
+
+.doorHead{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap;margin:0 0 12px}
+.dh-club{font-family:var(--disp);font-weight:700;font-size:clamp(22px,6vw,30px);
+  line-height:1.1;color:var(--ink)}
+.dh-left{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft)}
+
+.clues{display:flex;flex-direction:column;gap:8px;margin:0 0 14px}
+.clue{padding:11px 13px;background:var(--paper);border:1px solid var(--line);
+  border-radius:10px}
+.c-label{display:block;font-family:var(--disp);font-size:11.5px;letter-spacing:.11em;
+  text-transform:uppercase;color:var(--ink-faint);margin-bottom:3px}
+.c-body{display:block;font-size:15px;line-height:1.5;color:var(--ink)}
+/* The reveal, which is the one thing on this page that IS an answer. */
+.c-body.answer{font-family:var(--disp);font-weight:700;font-size:22px;color:var(--danger)}
+
+/* ---- the ladder --------------------------------------------------------- */
+
+.ladder{display:flex;flex-wrap:wrap;gap:8px;margin:0 0 16px}
+.rung{display:inline-flex;align-items:center;gap:9px;min-height:var(--tap);
+  padding:9px 14px;background:none;border:1px dashed var(--line);border-radius:10px;
+  color:var(--ink-soft);font-family:var(--disp);font-size:14px}
+.rung:hover:not(:disabled){border-color:var(--ink-faint);color:var(--ink)}
+.r-label{font-weight:600}
+.r-cost{font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--ink-faint)}
+/* Giving up is a rung like the others and must not be the easiest one to hit
+   by accident, so it reads as the exit rather than the next step. */
+.rung.giveup{border-style:solid;border-color:var(--line)}
+.rung.giveup .r-label{color:var(--danger)}
+
+/* ---- guessing ----------------------------------------------------------- */
+
+.guessRow{display:flex;gap:8px;margin:0 0 6px}
+#guessInput{flex:1 1 auto;min-width:0;min-height:var(--tap);padding:11px 13px;
+  background:var(--paper);border:1.5px solid var(--line);border-radius:10px;
+  color:var(--ink);font-size:16px;font-family:inherit}
+#guessInput:focus{outline:none;border-color:var(--pitch)}
+.guessRow .kick{flex:0 0 auto}
+
+/* The type-ahead. It lists names from the ANSWER SPACE — the same 3,146 every
+   day — so it narrows typing rather than narrowing the puzzle. */
+.suggest{display:flex;flex-direction:column;gap:4px;margin:0 0 12px}
+.sg{text-align:left;min-height:38px;padding:8px 12px;background:var(--paper);
+  border:1px solid var(--line);border-radius:8px;color:var(--ink);font-size:15px}
+.sg:hover{border-color:var(--ink-faint)}
+
+.feedback{min-height:1.5em;margin:0 0 4px;font-family:var(--disp);font-weight:600;
+  font-size:15px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-soft)}
+.feedback.goal{color:var(--ok)}
+.feedback.miss{color:var(--ink-soft)}
+/* THE NEAR MISS takes the gold, which in this family means "you have been given
+   something" — and that is what it is: he played there, so the door is
+   understood even though the name is wrong. */
+.feedback.near{color:var(--xi-ink)}
+
+.tries{margin:0 0 14px;font-size:12.5px;color:var(--ink-faint)}
+
+/* ---- the end ------------------------------------------------------------ */
+
+.verdict{font-family:var(--disp);font-size:13px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--ink-soft);margin:0 0 6px}
+.bigname{font-family:var(--disp);font-weight:700;font-size:clamp(26px,8vw,40px);
+  line-height:1.05;color:var(--ink);margin:0 0 12px}
+.career{margin:10px 0;padding:11px 13px;background:var(--paper);
+  border:1px solid var(--line);border-radius:10px;font-size:14px;line-height:1.55;
+  color:var(--ink-soft)}
+.more{display:inline-block;margin:2px 0 12px;font-size:14px;color:var(--pitch)}
+
+.rows{display:flex;flex-direction:column;gap:2px;margin:12px 0 18px}
+.row{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+  padding:7px 0;border-bottom:1px solid var(--line);font-size:14px}
+.rowLabel{color:var(--ink-soft)}
+
+.share{display:flex;flex-direction:column;gap:8px;margin:0 0 14px}
+#shareText{width:100%;padding:11px 13px;background:var(--paper);
+  border:1px solid var(--line);border-radius:10px;color:var(--ink);
+  font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:13px;
+  line-height:1.5;resize:vertical}
+
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important}
+}

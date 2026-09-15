@@ -17,7 +17,7 @@
    already keep about naming unbuilt games. */
 import { dailyKey, dailyDayKey, dailyNoForDay } from "./daily.js";
 
-export const GAMES = ["crossword", "wordsearch", "scrambled", "hilo", "vowels", "grid", "quickfire", "codeword"];
+export const GAMES = ["crossword", "wordsearch", "scrambled", "hilo", "vowels", "grid", "quickfire", "codeword", "whoami"];
 
 export const DEFAULT_GAME = "crossword";
 
@@ -102,6 +102,7 @@ export const ENGINE_GAMES = {
   hilo: ["hilo"],
   grid: ["grid"],
   quickfire: ["quickfire"],
+  whoami: ["whoami"],
 };
 
 /* The launch as a board NUMBER, which is what every list is counted in.
@@ -147,7 +148,7 @@ export function validGame(v) {
    until it launches — and it needs to be here for the one thing that matters
    before a launch: a play_id, so a round has an owner the server can hang
    turns and misses off. See data/migrations/033-grid.sql. */
-export const BUILT = [...new Set([...GAMES, "quickfire", "grid"])];
+export const BUILT = [...new Set([...GAMES, "quickfire", "grid", "whoami"])];
 
 export function validReportGame(v) {
   const g = String(v || DEFAULT_GAME).toLowerCase();
@@ -218,6 +219,7 @@ export const LABELS = {
   scrambled: "Scrambled XI",
   vowels: "Vowels XI",
   quickfire: "QuickFire XI",
+  whoami: "Who Am I XI",
   codeword: "Codeword XI",
   hilo: "HiLo XI",
   /* Grid XI is in BUILT and not GAMES, like QuickFire — and it needs a label
@@ -285,6 +287,21 @@ export function entryKey(game, row) {
        results wrongly shaped. */
     const d = String((row && (row.day || row.date || row.play_date)) || "");
     return /^\d{4}-\d{2}-\d{2}$/.test(d) ? "qf:" + d : null;
+  }
+  if (game === "whoami") {
+    /* A Who Am I daily is addressed by its day: wa_board is keyed on play_date
+       and a board is served on that date and not before.
+       ONE RESULT A DAY, NOT ELEVEN, AND THE DOOR IS NOT IN THE KEY. A board is
+       eleven doors and a person plays exactly one of them — the other ten stay
+       live for everybody else — so the DAY is what makes a result unique for a
+       player. Keying on the door as well would let one person bank eleven rows
+       for a day that has one, and the first-banked-wins merge rule would then
+       be deciding between rows that are all theirs.
+       The owner's exception of 11 Sep 2026 is the sentence behind that: this
+       game's eleven are the CLUBS rather than the answers. It is written here
+       rather than left as a precedent, so the next game citing it cites a rule. */
+    const d = String((row && (row.day || row.date || row.play_date)) || "");
+    return /^\d{4}-\d{2}-\d{2}$/.test(d) ? "wa:" + d : null;
   }
   if (game === "hilo") {
     /* A HiLo daily is addressed by its day, like the word search's: the

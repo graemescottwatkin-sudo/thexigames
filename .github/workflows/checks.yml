@@ -260,6 +260,11 @@ jobs:
           # is treated as the answer here, because it is one — a club history is
           # the answer written out. Eight leak guards, each proved by sabotage.
           node football/whoami/round_test.mjs
+          # And the PAGE, driven rather than read. QuickFire's client was proved
+          # by reading and shipped a leak; Codeword shipped a live bug through
+          # the same gap. Runs offline against jsdom in about a second — it is
+          # not one of the browser-job suites. Needs jsdom.
+          node football/whoami/journey_test.mjs
           # Scrambled XI, shirt 3, released. It has its own gate, its own
           # live_check and a row in aligned_test now, so it is held to the
           # same law as the other two.
@@ -438,6 +443,7 @@ jobs:
           node football/scrambled/deploy_check.mjs
           node football/vowels/deploy_check.mjs
           node football/quickfire/deploy_check.mjs
+          node football/whoami/deploy_check.mjs
           node football/hilo/deploy_check.mjs
           # GRID XI'S GATE WAS MISSING FROM THIS LIST UNTIL 14 SEPTEMBER 2026.
           # CLAUDE.md has said SEVEN gates since Grid was built and this block

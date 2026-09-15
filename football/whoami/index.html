@@ -1,0 +1,136 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
+<meta name="theme-color" content="#F4F5F2">
+<title>Who Am I XI — the daily football identity puzzle | The XI Games</title>
+<meta name="description" content="Eleven club doors, one hidden player behind each. Pick your club, get one spell of his career, and name him. A new eleven every day from The XI Games.">
+<link rel="canonical" href="https://www.thexigames.com/football/whoami/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://www.thexigames.com/football/whoami/">
+<meta property="og:title" content="Who Am I XI — the daily football identity puzzle">
+<meta property="og:description" content="Eleven club doors, one hidden player behind each. Pick your club and name him.">
+<meta property="og:site_name" content="The XI Games">
+<!-- A PLACEHOLDER CARD, and it is the crossword's, which is what the hub's own
+     card does while a game waits for artwork of its own. Naming a file that does
+     not exist shows no picture at all, which is worse than the wrong one and
+     worse still because nothing about a share link tells you it is broken. -->
+<meta property="og:image" content="https://www.thexigames.com/football/crossword/og-image.png">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Who Am I XI — the daily football identity puzzle">
+<meta name="twitter:description" content="Eleven club doors, one hidden player behind each.">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication",
+ "name":"Who Am I XI","applicationCategory":"Game",
+ "url":"https://www.thexigames.com/football/whoami/",
+ "operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"GBP"},
+ "publisher":{"@type":"Organization","name":"The XI Games","url":"https://www.thexigames.com/"}}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/shared/xi-tokens.css?v=v38">
+<link rel="stylesheet" href="/shared/xi-landing.css?v=v38">
+<link rel="stylesheet" href="/shared/xi-chrome.css?v=v38">
+<script src="/shared/xi-theme.js?v=v38"></script>
+<link rel="stylesheet" href="css/style.css?v=v001">
+</head>
+<body>
+
+<header class="xic-bar"></header>
+<h1 class="sr-only">Who Am I XI &mdash; the daily football identity puzzle</h1>
+
+<!-- THE LANDING, which every game in the family opens on: today, and the ones
+     that have gone. No third card, because this game has a board a day and
+     nothing else — inventing one would be furniture pretending to be a feature. -->
+<main class="site-wrap" id="waHome">
+  <div class="site-grid">
+    <div class="site-main">
+      <button class="home-choice hero" id="waToday" type="button">
+        <span class="hc-kicker" id="waTodayKicker">TODAY</span>
+        <span class="hc-title">Today&rsquo;s eleven</span>
+        <span class="hc-note">Eleven club doors, one hidden player behind each.
+          Pick your club, take one spell of his career, and name him.</span>
+        <span class="hc-state" id="waTodayState"></span>
+      </button>
+    </div>
+  </div>
+
+  <div class="site-sec">More to play</div>
+  <div class="site-row">
+    <a class="home-choice col" href="/football/whoami/archive/">
+      <span class="hc-kicker">PAST BOARDS</span>
+      <span class="hc-title">Every board that has gone</span>
+      <span class="hc-note">One address each, and they stay playable.</span>
+    </a>
+  </div>
+</main>
+
+<!-- Hidden with the HTML hidden ATTRIBUTE rather than a class, so it is hidden
+     to a screen reader as well and not merely invisible. -->
+<div id="waGame" hidden>
+<main class="app">
+
+  <div class="boardHead">
+    <span class="bh-no" id="boardNo"></span>
+    <span class="bh-date" id="boardDate"></span>
+  </div>
+
+  <!-- ---- choosing a door ---- -->
+  <section class="screen" id="screenDoors">
+    <p class="lede">Pick a club. One player behind each door, and you get one
+      go at him.</p>
+    <div class="doors" id="doors" role="group" aria-label="Choose a club"></div>
+    <!-- THE DAY'S CAREER LENGTHS, SORTED AND UNATTRIBUTED. In slot order these
+         would say how many clubs each door's player had, which narrows eleven
+         doors to a handful. Sorted, they are a shape of the day. -->
+    <p class="careers" id="careers"></p>
+  </section>
+
+  <!-- ---- playing one ---- -->
+  <section class="screen" id="screenPlay" hidden>
+    <div class="doorHead">
+      <span class="dh-club" id="playClub"></span>
+      <span class="dh-left" id="playLeft"></span>
+    </div>
+
+    <div class="clues" id="clues"></div>
+
+    <div class="ladder" id="ladder"></div>
+
+    <div class="guessRow">
+      <input id="guessInput" type="text" autocomplete="off" autocorrect="off"
+             autocapitalize="words" spellcheck="false"
+             placeholder="Name him" aria-label="Name the player">
+      <button class="kick" id="guessGo" disabled>Name him</button>
+    </div>
+    <div class="suggest" id="suggest" role="listbox" aria-label="Matching players"></div>
+
+    <p class="feedback" id="feedback" role="status" aria-live="polite"></p>
+    <p class="tries" id="tries"></p>
+  </section>
+
+  <!-- ---- what it came to ---- -->
+  <section class="screen" id="screenDone" hidden>
+    <div class="eyebrow" id="doneKicker">Full time</div>
+    <div id="doneBody"></div>
+    <div class="share">
+      <textarea id="shareText" rows="7" readonly aria-label="Shareable result"></textarea>
+      <button class="btn" id="copyShare">Copy result</button>
+    </div>
+    <button class="btn quiet" id="backToDoors">Back to the board</button>
+  </section>
+
+</main>
+</div>
+
+<footer class="xic-foot"></footer>
+
+<script src="/shared/xi-chrome.js?v=v38"></script>
+<script src="js/config.js?v=v001"></script>
+<script src="/shared/xi-season.js?v=v38"></script>
+<script src="/shared/xi-plays.js?v=v38"></script>
+<script src="js/game.js?v=v001"></script>
+</body>
+</html>
