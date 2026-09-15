@@ -468,6 +468,44 @@ t("the server's game list and this table agree", (() => {
      stopped there, which is the banking fault one layer further out: the key
      exists, the row is written locally, and the account never hears. Found by
      tabulating both halves rather than either. */
+  /* AND THE THING THAT DECIDES WHETHER TO PUSH MUST BE SETTABLE.
+   *
+   * Three games shipped with an account push that could never fire, because
+   * both ways of learning who is signed in were wrong:
+   *   window.XIChrome.account()  — it is an OBJECT, and calling it threw
+   *   ev.detail.account          — the chrome emits { type, user, via }
+   * Both dead means `account` stayed null, pushResults() returned early, and
+   * not one result reached an account. The key existed, the row was written,
+   * the push was wired, and the switch could not be flipped.
+   *
+   * SO THE CHECK IS ABOUT THE SHAPE OF THE ANSWER, not the presence of a call.
+   * A game may read the session from the server or the user from the chrome —
+   * both are real patterns here — but calling `account` as a function, or
+   * reading `.account` off the event detail, are the two spellings that are
+   * simply wrong, and neither fails loudly. */
+  const wired = banks.filter((g) => {
+    const dir = `football/${g}/js`;
+    /* STRIPPED, and this check failed on its own first run without it: the fix
+       carries a comment naming both wrong spellings so the next person meets
+       them, and the grep matched the explanation. That is this project's oldest
+       rule arriving inside the check written to enforce a different one. */
+    const all = fs.readdirSync(dir).filter((f) => f.endsWith(".js"))
+      /* JOINED WITH NEWLINES, NOT SPACES. The line-comment stripper below is
+         anchored with /m, so with no line endings in the blob its `$` matches
+         only the very end — and one `//` comment eats the entire rest of the
+         file. The check then passed on a sabotage inserted below the first
+         comment, which is how this was found: two mutations, one caught. */
+      .map((f) => read(`${dir}/${f}`)).join("\n")
+      .replace(/\/\*[\s\S]*?\*\//g, " ")
+      .replace(/(^|[^:])\/\/.*$/gm, "$1 ");
+    return /XIChrome\.account\s*\(/.test(all) ||
+           /detail\s*(?:\|\||&&)?[^;]*\.account\b/.test(all);
+  });
+  t("and the thing that decides whether to push can actually be set",
+    wired.length === 0,
+    wired.length ? wired.join(", ") + " read the account a way that always fails"
+      : "session or chrome.user(), never account() or detail.account");
+
   const recordsOnly = banks.filter((g) => {
     const dir = `football/${g}/js`;
     const all = fs.readdirSync(dir).filter((f) => f.endsWith(".js"))

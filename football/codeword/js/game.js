@@ -3,7 +3,7 @@
   /* THE BUILD, PAIRED WITH THE ?v= ON THIS FILE'S OWN SCRIPT TAG. A stale
      cached script is otherwise invisible: the page loads, the game runs, and
      it is yesterday's code. aligned_test asserts the two agree. */
-  var BUILD = "v001a";
+  var BUILD = "v001b";
   if (window.XIPlays && document.documentElement) {
     document.documentElement.setAttribute("data-build", BUILD);
   }
@@ -747,16 +747,45 @@ function boot(BOARD){
   /* The chrome owns the identity and announces it on document as xi:account;
      this game answers by syncing its own results, which is the one part that
      is still its own. */
-  document.addEventListener("xi:account", function (e){
-    account = (e && e.detail && e.detail.account) || null;
-    if (account) pullResults().then(pushResults);
+  /* WHO IS SIGNED IN — ASKED OF THE SERVER, NOT OF THE CHROME.
+   *
+   * This was written twice wrong in one evening, in three games, and both
+   * spellings failed silently:
+   *
+   *   window.XIChrome.account()   — account is an OBJECT, not a function.
+   *                                 It threw on every page load. Caught and
+   *                                 logged, so the only trace was a console
+   *                                 warning nobody reads.
+   *   ev.detail.account           — the chrome emits { type, user, via }.
+   *                                 There is no `account` on the detail, so
+   *                                 signing in mid-session set it to undefined.
+   *
+   * Both paths dead means `account` was never anything but null, so
+   * pushResults() returned early every time and NOT ONE result reached an
+   * account. That is the banking fault for the third time today, at a third
+   * layer: the key existed, the row was written, the push was wired — and the
+   * thing that decides whether to push could not be set.
+   *
+   * HiLo's shape is the one that works, and it is better for a reason worth
+   * keeping: it asks /api/auth/session rather than the chrome. The server is
+   * the authority on who you are; the chrome is a menu that happens to know.
+   */
+  function syncAccount() {
+    return apiAuth("/api/auth/session").then(function (r) {
+      account = (r && r.user) || null;
+      if (!account) return null;
+      return pushResults().then(pullResults);
+    }).catch(function (e) { accountNote("session", e); return null; });
+  }
+
+  document.addEventListener("xi:account", function (ev) {
+    var d = ev.detail || {};
+    if (d.type === "signout") { account = null; return; }
+    syncAccount();
   });
-  try {
-    if (window.XIChrome && window.XIChrome.account) {
-      account = window.XIChrome.account();
-      if (account) pullResults();
-    }
-  } catch (e) { accountNote("boot", e); }
+
+  syncAccount();
+
 
   function fullTime(){
     if (window.XIPlays && XIPlays.active()) XIPlays.end(true);

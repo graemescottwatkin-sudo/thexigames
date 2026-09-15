@@ -31,7 +31,7 @@
  * link so a friend could replay the exact eleven, and that is now a board
  * number in the fragment, which is shorter and does not describe the board.
  */
-var BUILD = "v001e";
+var BUILD = "v001f";
 
 (function bootstrap() {
   'use strict';
@@ -577,16 +577,45 @@ function start() {
   /* THE CHROME OWNS THE IDENTITY. Its account sheet announces a sign-in, a
      sign-out or a rename on document as xi:account; this game answers by
      syncing its own results. */
-  document.addEventListener('xi:account', function (e) {
-    account = (e && e.detail && e.detail.account) || null;
-    if (account) { pullResults().then(pushResults); }
+  /* WHO IS SIGNED IN — ASKED OF THE SERVER, NOT OF THE CHROME.
+   *
+   * This was written twice wrong in one evening, in three games, and both
+   * spellings failed silently:
+   *
+   *   window.XIChrome.account()   — account is an OBJECT, not a function.
+   *                                 It threw on every page load. Caught and
+   *                                 logged, so the only trace was a console
+   *                                 warning nobody reads.
+   *   ev.detail.account           — the chrome emits { type, user, via }.
+   *                                 There is no `account` on the detail, so
+   *                                 signing in mid-session set it to undefined.
+   *
+   * Both paths dead means `account` was never anything but null, so
+   * pushResults() returned early every time and NOT ONE result reached an
+   * account. That is the banking fault for the third time today, at a third
+   * layer: the key existed, the row was written, the push was wired — and the
+   * thing that decides whether to push could not be set.
+   *
+   * HiLo's shape is the one that works, and it is better for a reason worth
+   * keeping: it asks /api/auth/session rather than the chrome. The server is
+   * the authority on who you are; the chrome is a menu that happens to know.
+   */
+  function syncAccount() {
+    return apiAuth("/api/auth/session").then(function (r) {
+      account = (r && r.user) || null;
+      if (!account) return null;
+      return pushResults().then(pullResults);
+    }).catch(function (e) { accountNote("session", e); return null; });
+  }
+
+  document.addEventListener("xi:account", function (ev) {
+    var d = ev.detail || {};
+    if (d.type === "signout") { account = null; return; }
+    syncAccount();
   });
-  try {
-    if (window.XIChrome && window.XIChrome.account) {
-      account = window.XIChrome.account();
-      if (account) pullResults();
-    }
-  } catch (e) { accountNote("boot", e); }
+
+  syncAccount();
+
 
   function bankResult(r) {
     var right = r ? r.correct : state.results.filter(function (x) { return x.correct; }).length;
