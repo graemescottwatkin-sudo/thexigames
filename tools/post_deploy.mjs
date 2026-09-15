@@ -146,12 +146,28 @@ for (const p of plan) {
      it: "nothing has shipped yet" beside a recorded hash is a lie. */
   gate = gate.replace(/const LAST_SHIPPED_ASSETS = (?:"[^"]*"|null);[^\n]*/,
     `const LAST_SHIPPED_ASSETS = "${p.newHash}";`);
-  const wanted = p.curTag !== p.newTag || p.curHash !== p.newHash;
-  if (wanted && gate === before) {
-    /* SAY SO RATHER THAN SAY "written". The whole point of this script is that
-       the bump cannot be skipped; a no-op reported as a write is the skip it
-       was built to stop, wearing a green tick. */
-    console.log(`FAIL  ${p.gateFile}: the constants are not in a shape this can rewrite`);
+  /* EACH CONSTANT ANSWERS FOR ITSELF, and it did not used to.
+   *
+   * The guard was `gate === before` — one comparison for two rewrites — so it
+   * could only see a file where NEITHER landed. Who Am I's gate had no
+   * LAST_SHIPPED_ASSETS line at all: the tag replacement landed, the file
+   * differed from before, the guard was satisfied, and the report said
+   * "LAST_SHIPPED_ASSETS undefined -> dea4aa99f808361d" over a hash that was
+   * never written. That is the same fault the guard was added for — a no-op
+   * reported as a write — surviving inside the guard itself because it asked
+   * one question about two things.
+   *
+   * So the check is now made on the RESULT rather than on whether anything
+   * moved: after the rewrite, the file must literally contain each value this
+   * script says it recorded. A constant that is missing, renamed or written in
+   * a shape the pattern cannot match fails here instead of passing quietly. */
+  const missing = [];
+  if (!gate.includes(`const LAST_SHIPPED = "${p.newTag}";`)) missing.push("LAST_SHIPPED");
+  if (!gate.includes(`const LAST_SHIPPED_ASSETS = "${p.newHash}";`)) missing.push("LAST_SHIPPED_ASSETS");
+  if (missing.length) {
+    console.log(`FAIL  ${p.gateFile}: ${missing.join(" and ")} ` +
+      `${missing.length > 1 ? "are" : "is"} absent or not in a shape this can ` +
+      `rewrite — nothing recorded for this game`);
     unwritten++;
     continue;
   }

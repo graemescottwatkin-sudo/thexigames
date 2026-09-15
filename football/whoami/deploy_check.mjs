@@ -20,6 +20,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import crypto from "node:crypto";
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(DIR, "..", "..");
@@ -35,7 +36,18 @@ const hasRoot = (p) => fs.existsSync(path.join(ROOT, p));
 /* WHAT IS LIVE. Not a sentinel — a constant nothing moves is a comparison
    against nothing, which is the fault LAST_PRESENTED was retired for. Set on
    the first deploy, and never backwards after that. */
-const LAST_SHIPPED = "v001";
+const LAST_SHIPPED = "v001d";
+/* THE HALF THAT CARRIES THE LAW, and this gate shipped without it. A version
+   number can only refuse a tag that goes BACKWARDS; it cannot see changed bytes
+   under a tag that has not moved, which is the common case and the dangerous
+   one. Codeword launched with both constants declared and READ NEITHER — a
+   sentinel in its least visible form, a constant nothing reads rather than a
+   constant nothing moves. This one was worse and quieter: the constant was not
+   here at all, and post_deploy reported "LAST_SHIPPED_ASSETS undefined ->
+   dea4aa99f808361d" and then wrote nothing, because there was no line to
+   replace. A tool that reports a write it did not make is a green line over a
+   gap. */
+const LAST_SHIPPED_ASSETS = "dea4aa99f808361d";
 
 console.log("Who Am I XI — gate\n");
 
@@ -56,6 +68,29 @@ console.log("The files exist and agree about their version");
     own.map((m) => m[1] + "=" + m[2]).join(" "));
   t("the tag has not gone backwards",
     build >= LAST_SHIPPED, `now ${build}, live ${LAST_SHIPPED}`);
+
+  /* CHANGED BYTES UNDER A TAG THAT HAS NOT MOVED. Normalised to LF because what
+     ships is what is in git and a Windows checkout writes CRLF — a hash of the
+     working tree otherwise answers a different question on each machine. */
+  const assetsNow = (() => {
+    const paths = own.map((m) => m[1]).sort();
+    if (!paths.length) return null;
+    const h = crypto.createHash("sha256");
+    for (const f of paths) {
+      if (!has(f)) return null;
+      h.update(f); h.update("\0");
+      h.update(read(f).replace(/\r\n/g, "\n"));
+    }
+    return h.digest("hex").slice(0, 16);
+  })();
+  t("the game's own assets cannot change without its build tag moving",
+    !!assetsNow && (assetsNow === LAST_SHIPPED_ASSETS || build !== LAST_SHIPPED),
+    assetsNow === LAST_SHIPPED_ASSETS
+      ? "unchanged since " + LAST_SHIPPED
+      : build !== LAST_SHIPPED
+        ? "changed, and the tag moved " + LAST_SHIPPED + " -> " + build
+        : "CHANGED with the tag still on " + build +
+          " — bump the tag, then set LAST_SHIPPED_ASSETS to " + assetsNow);
 
   /* AN ORPHAN IS DEAD WEIGHT SHIPPED FOREVER; a missing tag is a broken page.
      QuickFire had board_file.js sitting in js/ with no script tag, and the
