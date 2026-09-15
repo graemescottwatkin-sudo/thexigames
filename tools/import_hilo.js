@@ -86,14 +86,134 @@ export const isClub = isClubBoard;
 
 function readJSON(f) { return JSON.parse(fs.readFileSync(f, "utf8")); }
 
+/* THE INDEX AND THE FOLDER MUST AGREE BEFORE A SINGLE BOARD IS READ.
+ *
+ * This used to map straight over the index and let readJSON throw on the first
+ * file that was not there — which is red, but red by CRASHING, and a crash is
+ * not a verdict. Worse, it is a crash that can arrive AFTER a green --check:
+ * measured on 15 September 2026, --check passed against this bank at 22:14 and
+ * the write crashed with ENOENT at 22:2x, because the producing side was
+ * rebuilding the folder between the two runs. The index claimed 282 boards, 223
+ * files were present, 70 entries named files that did not exist, and id 1019
+ * was `1019-season-goals.json` in the index and `1019-standings.json` on disk.
+ *
+ * A source being rewritten while it is read is not a corrupt source and not a
+ * bug in the producing side — it is a folder mid-build, and the only correct
+ * response is to refuse and say so rather than to import whichever half was
+ * there. Read the whole list, name everything missing, refuse once. */
 function loadSource() {
   const idx = readJSON(path.join(SOURCE, "boards-index.json"));
   const list = idx.list || [];
+  const missing = list.filter((e) => !fs.existsSync(path.join(SOURCE, e.file)));
+  if (missing.length) {
+    console.error(`REFUSED: boards-index.json names ${list.length} board(s) and ` +
+      `${missing.length} of them are not in the folder.`);
+    for (const e of missing.slice(0, 6)) console.error(`  x ${e.file}`);
+    if (missing.length > 6) console.error(`  x ...and ${missing.length - 6} more`);
+    console.error("");
+    console.error("The bank is mid-build, or the index is ahead of the files. Nothing is");
+    console.error("read and nothing is written: importing whichever half is present would");
+    console.error("put a partial calendar into a live game. Ask for the build to finish.");
+    process.exit(1);
+  }
   const boards = list.map((e) => readJSON(path.join(SOURCE, e.file)));
   const sched = readJSON(path.join(SOURCE, "schedule.json"));
   const schedule = {};
   for (const e of sched.schedule || []) schedule[e.date] = String(e.id);
   return { boards, schedule };
+}
+
+/* ---- THE DAYS THAT HAVE ALREADY BEEN PLAYED ----------------------------
+ *
+ * THIS TOOL HAD NO SERVED-DAY PROTECTION OF ANY KIND. Not a weak one — none.
+ * It takes the calendar wholesale out of schedule.json, opens its SQL with
+ * DELETE FROM hl_board; DELETE FROM hl_schedule; and rewrites every board and
+ * every day. It gates BOARDS carefully and nothing at all guarded WHICH DAY
+ * GETS WHICH BOARD, over a game that has been live since 3 September 2026.
+ *
+ * Ballpark's and Grid's importers had a subtler version of this — a comparison
+ * that was empty rather than absent — and both were fixed on 15 September.
+ * This is the same fault in its complete form, found by checking the other
+ * importers for the shape rather than waiting for it to cost a day.
+ *
+ * TWO QUESTIONS, AND THE SECOND IS THE ONE PEOPLE SKIP.
+ *
+ *   Did the day change hands? Board 785 was Monday's; is it still Monday's.
+ *   Did the board itself change? An id keeping its place does NOT mean the
+ *   board is the same — Ballpark's bp-0014 and bp-0015 kept their ids while
+ *   six of eleven questions moved off each. Since every payload is rewritten
+ *   here, a served day can be quietly replaced under an unchanged id.
+ *
+ * The comparison is against the last SQL this tool emitted, which is the only
+ * record of the previous calendar outside the database. Its absence is
+ * REFUSED rather than assumed clean, for a calendar that covers days already
+ * played: no record is not the same as no clash.
+ */
+
+/* What was scheduled last time, read back out of the emitted SQL. */
+export function scheduleFromSql(sql) {
+  const out = {};
+  for (const m of String(sql || "").matchAll(
+      /INSERT INTO hl_schedule \(day, board_id\) VALUES \('([^']+)', ?'([^']+)'\);/g)) {
+    out[m[1]] = m[2];
+  }
+  return out;
+}
+
+/* And what each board WAS, compared as the whole emitted row minus its
+   updated_at — which moves on every run and would make every board look
+   changed. Comparing the row rather than parsing the payload out of it avoids
+   unquoting SQL, and the row is what actually reaches the database. */
+export function boardRowsFromSql(sql) {
+  const out = {};
+  for (const line of String(sql || "").split(/\r?\n/)) {
+    if (line.indexOf("INSERT INTO hl_board ") !== 0) continue;
+    const id = (line.match(/VALUES \('([^']+)'/) || [])[1];
+    if (id) out[id] = withoutStamp(line);
+  }
+  return out;
+}
+function withoutStamp(line) {
+  const at = line.lastIndexOf(", '");
+  return at === -1 ? line : line.slice(0, at);
+}
+
+/* ONE PLACE THAT KNOWS WHAT A BOARD ROW LOOKS LIKE. The writer built this
+   string inline, so the guard could only have compared against a second copy
+   of the same formatting — and two copies of a row format is two answers about
+   whether a board changed. */
+const sqlQ = (x) => "'" + String(x).replace(/'/g, "''") + "'";
+export function boardRow(b, stamp) {
+  const club = clubOf(b);
+  const slug = club ? club.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") : null;
+  return "INSERT INTO hl_board (id, kind, club, category, subtitle, payload, updated_at) VALUES (" +
+    [sqlQ(b.id), sqlQ(club ? "club" : "daily"), slug ? sqlQ(slug) : "NULL",
+     sqlQ(b.category), sqlQ(b.subtitle), sqlQ(JSON.stringify(b)), sqlQ(stamp)].join(", ") + ");";
+}
+/* Every day at or before `today` that this run would change. Both questions,
+   reported separately because they have different causes and different fixes. */
+export function servedClash(prevSchedule, prevRows, nextSchedule, nextRows, today) {
+  const clashes = [];
+  const days = new Set([
+    ...Object.keys(prevSchedule || {}),
+    ...Object.keys(nextSchedule || {}),
+  ]);
+  for (const day of [...days].sort()) {
+    if (day > today) continue;
+    const was = (prevSchedule || {})[day] || null;
+    const now = (nextSchedule || {})[day] || null;
+    if (!was) continue;                 // never served from here; nothing to keep
+    if (String(was) !== String(now)) {
+      clashes.push({ day, why: `board ${was} -> ${now || "no board at all"}` });
+      continue;
+    }
+    /* SAME ID, AND THAT IS NOT THE END OF IT. */
+    const before = (prevRows || {})[String(was)];
+    const after = (nextRows || {})[String(was)];
+    if (before === undefined || after === undefined) continue;
+    if (before !== after) clashes.push({ day, why: `board ${was} kept its place but its content changed` });
+  }
+  return clashes;
 }
 
 /* ---- the calendar's own rules ---- */
@@ -177,6 +297,41 @@ function main() {
   if (unscheduled.length) console.log(`note: ${unscheduled.length} daily board(s) are not on the calendar and will not be played until they are`);
   if (refused) { console.error(`\n${refused} refusal(s). Nothing written.`); process.exit(1); }
 
+  /* ---- AND NOTHING THAT HAS ALREADY BEEN PLAYED MAY MOVE ----------------
+     Asked in --check as well as on a write, because the whole point is to
+     find out BEFORE the command that touches production. */
+  {
+    const today = new Date().toISOString().slice(0, 10);   // UTC, read NOW
+    const prevSql = fs.existsSync(OUT) ? fs.readFileSync(OUT, "utf8") : null;
+    const prevSchedule = scheduleFromSql(prevSql);
+    const pastDays = Object.keys(schedule).filter((d) => d <= today);
+
+    if (prevSql === null && pastDays.length && !process.argv.includes("--first-import")) {
+      console.error(`REFUSED: this calendar covers ${pastDays.length} day(s) at or before ${today} ` +
+        "and there is no previous calendar to check them against.");
+      console.error(`  ${OUT} is missing, so what those days already served cannot be known,`);
+      console.error("  and this import DELETEs every board and every day before rewriting them.");
+      console.error("  If this really is the first import, pass --first-import.");
+      process.exit(1);
+    }
+
+    const nextRows = {};
+    for (const b of boards) nextRows[String(b.id)] = boardRow(b, "").slice(0, boardRow(b, "").lastIndexOf(", '"));
+    const prevRows = boardRowsFromSql(prevSql);
+    const clashes = servedClash(prevSchedule, prevRows, schedule, nextRows, today);
+    if (clashes.length && !process.argv.includes("--rewrite-history")) {
+      console.error(`REFUSED: this would change ${clashes.length} day(s) that have already been played.`);
+      for (const c of clashes.slice(0, 8)) console.error(`  x ${c.day}: ${c.why}`);
+      if (clashes.length > 8) console.error(`  x ...and ${clashes.length - 8} more`);
+      console.error("");
+      console.error("A day that has run is somebody's result. To change only the FUTURE,");
+      console.error("rebuild the source calendar from tomorrow and leave the served days alone.");
+      console.error("If you really mean to rewrite what people have played: --rewrite-history");
+      process.exit(1);
+    }
+    console.log(`served days checked: ${pastDays.length} at or before ${today}, none moved`);
+  }
+
   const sample = sampleOf(boards, schedule);
   const moduleText = sampleModule(sample);
   if (CHECK_ONLY) {
@@ -200,12 +355,7 @@ function main() {
     "DELETE FROM hl_schedule;",
     "",
   ];
-  for (const b of boards) {
-    const club = clubOf(b);
-    const slug = club ? club.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "") : null;
-    lines.push("INSERT INTO hl_board (id, kind, club, category, subtitle, payload, updated_at) VALUES (" +
-      [q(b.id), q(club ? "club" : "daily"), slug ? q(slug) : "NULL", q(b.category), q(b.subtitle), q(JSON.stringify(b)), q(now)].join(", ") + ");");
-  }
+  for (const b of boards) lines.push(boardRow(b, now));
   for (const day of Object.keys(schedule).sort()) {
     lines.push(`INSERT INTO hl_schedule (day, board_id) VALUES (${q(day)}, ${q(schedule[day])});`);
   }

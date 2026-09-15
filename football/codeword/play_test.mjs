@@ -118,15 +118,40 @@ console.log("=== Kick off ===");
 
 console.log("\n=== A replay plays and is not recorded ===");
 {
+  /* THIS BLOCK USED TO ASSERT THE OPPOSITE, and it was right to until the rule
+     was corrected on 15 September 2026. It read:
+
+       finish board 7, start it again, expect scored === false
+
+     which is true of the BOARD's history and says nothing about whose replay it
+     is. cw_round has no player column, so that rule made a board unscored for
+     everyone the moment ANYBODY finished it: the second player of every day was
+     told their first sitting did not count. The check was correct for the old
+     behaviour and would have gone red for the corrected one — and the cheap
+     move at that moment is to change the code back to match the check. It now
+     asserts what the rule actually means. */
   const env = makeEnv();
   const a = await startRound(env, { boardNo: 7, day: "2026-09-20", rate: 3 });
-  const abandoned = await startRound(env, { boardNo: 7, day: "2026-09-20", rate: 3 });
+  await finishRound(env, await getRound(env, a.playId));
+
+  const other = await startRound(env, { boardNo: 7, day: "2026-09-20", rate: 3 });
+  t("somebody else finishing this board does NOT make it a replay for me",
+    other.scored === true,
+    "the rule reads the player's history, not the board's");
+
+  const mine = await startRound(env, { boardNo: 7, day: "2026-09-20", rate: 3, replay: true });
+  t("but a device that says it has finished this board gets an unrecorded replay",
+    mine.scored === false, "replaying is good to allow and bad to record");
+
+  const abandoned = await startRound(env, { boardNo: 7, day: "2026-09-20", rate: 3, replay: false });
   t("an ABANDONED round does not make the next one unscored",
     abandoned.scored === true, "a closed tab must not cost a player their day");
-  await finishRound(env, await getRound(env, a.playId));
-  const b = await startRound(env, { boardNo: 7, day: "2026-09-20", rate: 3 });
-  t("but a FINISHED one does",
-    b.scored === false, "replaying is good to allow and bad to record");
+
+  /* ANYTHING BUT AN EXPLICIT CLAIM IS A FIRST SITTING, so a page that has not
+     been updated behaves exactly as it always did rather than losing records. */
+  const silent = await startRound(env, { boardNo: 7, day: "2026-09-20", rate: 3 });
+  t("and a caller that says nothing is a first sitting, not a replay",
+    silent.scored === true, "an older page must not start banking nothing");
 }
 
 console.log("\n=== Reveal is stored per number, not counted ===");

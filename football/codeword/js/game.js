@@ -3,7 +3,7 @@
   /* THE BUILD, PAIRED WITH THE ?v= ON THIS FILE'S OWN SCRIPT TAG. A stale
      cached script is otherwise invisible: the page loads, the game runs, and
      it is yesterday's code. aligned_test asserts the two agree. */
-  var BUILD = "v001c";
+  var BUILD = "v001d";
   if (window.XIPlays && document.documentElement) {
     document.documentElement.setAttribute("data-build", BUILD);
   }
@@ -31,7 +31,15 @@
      dayNumber/wantedBoard  static-path date arithmetic. LIVE DOES NOT USE
                       THESE -- the server decides the day.
 
-   What it does NOT do, on purpose: no localStorage, no sessionStorage, no
+   It keeps ONE thing in localStorage — xicw.results, the boards this device has
+   finished — and that line used to say it kept nothing at all. The claim was
+   true when it was written and stopped being true the day the results were
+   banked; a comment stating a fact about the file it sits in rots exactly like
+   a stale figure in a README. It is read for two purposes and no others:
+   pushing results to an account, and telling the server whether a kick-off is
+   this device's replay.
+
+   What it does NOT do, on purpose: no sessionStorage, no
    theme resolver of its own beyond the tokens in the <style> above, and no
    knowledge of the family's board numbering. An address's ?no= is passed
    through untouched.
@@ -576,7 +584,14 @@ function boot(BOARD){
       done.forEach(function(i){ solvedWords[i] = true; });
       if (fresh) paint();
       if (missed) { missed = false; refreshSolved(); }
-    }) === false) { asking = false; }
+    }) === false) {
+      asking = false;
+      /* THE ASK COULD NOT GO OUT BECAUSE THERE IS NO ROUND. Ask for one. If
+         /play is merely slow this returns at once and its own callback comes
+         back here; if /play FAILED earlier, this is the retry — and it is
+         driven by a player finishing an answer rather than by a timer. */
+      openRound();
+    }
   }
 
   function holderOf(l){
@@ -674,12 +689,33 @@ function boot(BOARD){
     if (startedAt) return;
     startedAt = Date.now();
     timer = setInterval(tick, 500);
+    openRound();
+  }
+
+  /* SPLIT OUT OF start(), so something other than the first keystroke can ask
+     for a round.
+     THE GAP THIS CLOSES. If /play FAILS rather than merely being slow, there is
+     no round, no round-opening callback, and serverOracle.confirm returns false
+     for ever. A board completed after that is filled, correct and silent — the
+     same symptom as the guard that forgot, by a different road. refreshSolved()
+     calls this when it finds it has nothing to ask with, so the retry is
+     triggered by a player finishing an answer rather than by a timer: bounded
+     by something somebody did, and no polling.
+     Cheap to call repeatedly — it returns at once if a round exists or one is
+     already on its way. */
+  function openRound(){
     if (SOLUTION || round || opening) return;
     opening = true;
     if (window.XIPlays) XIPlays.start({ game: "codeword", mode: "daily" });
     fetch(API + "play", {
       method: "POST", headers: {"Content-Type": "application/json", "X-XI-Games": "1"},
-      body: JSON.stringify({ rate: secondsPerMinute, no: BOARD_NO_N })
+      /* WHETHER THIS DEVICE HAS FINISHED THIS BOARD BEFORE. The server has no
+         session and cw_round has no player column, so the rule that decides
+         "replay" used to read the BOARD's history and made a board unscored for
+         everyone once ANYBODY finished it. This page keeps its own results and
+         is the only thing here that knows whose replay it would be. */
+      body: JSON.stringify({ rate: secondsPerMinute, no: BOARD_NO_N,
+                             replay: hasPlayedBoard(BOARD_NO_N) })
     }).then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); })
       .then(function(d){
         opening = false;
@@ -733,6 +769,22 @@ function boot(BOARD){
   function readResults(){
     try { var r = JSON.parse(localStorage.getItem(CW_KEY) || "[]"); return Array.isArray(r) ? r : []; }
     catch (e) { return []; }
+  }
+
+  /* HAS THIS DEVICE FINISHED THIS BOARD? The one question the server cannot
+     answer for itself, and the reason a replay used to be everybody's replay.
+     Only FINISHED boards are in the list — recordResult refuses a board already
+     there and is never called for an abandoned round — so a closed tab does not
+     read as a replay. Private browsing throws on read and comes back empty,
+     which makes every sitting a first sitting: the failure falls the way that
+     lets somebody play rather than the way that refuses to record them. */
+  function hasPlayedBoard(no){
+    if (no === null || no === undefined) return false;
+    var list = readResults();
+    for (var i = 0; i < list.length; i++){
+      if (list[i] && Number(list[i].no) === Number(no)) return true;
+    }
+    return false;
   }
 
   function recordResult(d){

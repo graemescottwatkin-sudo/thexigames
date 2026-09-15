@@ -338,6 +338,7 @@ jobs:
           # The sample must be what the sources produce; with no bank on the
           # runner the committed sample is gated on its own.
           node tools/import_hilo.js --check
+          node tools/import_hilo_test.mjs
           # Grid XI, in build. Its marking, its propagation and its score —
           # the three rules a guess game is, and two of them are rules about
           # what must NOT travel: only a green crosses to the entry that shares

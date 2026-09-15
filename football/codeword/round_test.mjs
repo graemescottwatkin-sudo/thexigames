@@ -98,8 +98,9 @@ function board() {
  * never be in flight when the next one is asked for, and the bug being pinned
  * lives entirely in that window.
  */
-function server() {
+function server(opts = {}) {
   const calls = [];
+  let playFails = !!opts.failPlay;
   let held = null;                       // a pending confirm, kept open
   let holdNext = false;
   let heldPlay = null, holdPlay = false; // and the round-opening call
@@ -146,11 +147,17 @@ function server() {
     releaseHeld() { const h = held; held = null; if (h) h(); return !!h; },
     heldIsWaiting() { return !!held; },
     holdNextPlay() { holdPlay = true; },
+    playWorksNow() { playFails = false; },
     releaseHeldPlay() { const h = heldPlay; heldPlay = null; if (h) h(); return !!h; },
     async fetch(url, opts) {
       const what = String(url).replace("/api/codeword/", "").split("?")[0];
       const body = opts && opts.body ? JSON.parse(opts.body) : {};
       const isConfirm = what === "mark" && !body.check;
+      if (what === "play" && playFails) {
+        calls.push({ what, body: JSON.parse(JSON.stringify(body)) });
+        return { ok: false, status: 500, json: async () => ({}),
+                 headers: { get: () => null } };
+      }
       const payload = await handle(what, body);
       if (what === "play" && holdPlay) {
         holdPlay = false;
@@ -167,8 +174,8 @@ function server() {
 }
 
 /* ---- the page ---------------------------------------------------------- */
-async function open() {
-  const srv = server();
+async function open(opts = {}) {
+  const srv = server(opts);
   const dom = new JSDOM(html, {
     url: "https://www.thexigames.com/football/codeword/",
     runScripts: "outside-only", pretendToBeVisual: true,
@@ -184,6 +191,14 @@ async function open() {
     }
     return srv.fetch(url, opts);
   };
+  /* THE DEVICE'S OWN RECORD, seeded before the page boots. This is the store
+     the page reads to decide whether a kick-off is its own replay. */
+  if (opts.played) {
+    try { w.localStorage.setItem("xicw.results", JSON.stringify(opts.played)); }
+    catch (e) { /* jsdom without storage: the test below will say so */ }
+  } else {
+    try { w.localStorage.removeItem("xicw.results"); } catch (e) {}
+  }
   w.eval(game);
   await settle(w);
   return { w, doc, srv, dom };
@@ -332,6 +347,58 @@ console.log("=== A confirm that arrives mid-flight is asked again, not dropped =
     /3\s*\/\s*3|3 of 3/.test(doc.getElementById("solved").textContent) ||
     doc.getElementById("solved").textContent.trim() !== "",
     doc.getElementById("solved").textContent.trim() || "the solved readout is empty");
+}
+
+console.log("");
+console.log("=== A board this device has finished kicks off as a replay ===");
+{
+  /* The server has no session and cw_round has no player column, so the page is
+     the only thing that knows whose replay it would be. It says so at kick-off
+     and the server takes its word — which is safe because a false claim of a
+     first sitting banks nothing: recordResult refuses a board already in the
+     list and migrate inserts with INSERT OR IGNORE. */
+  const fresh = await open();
+  click(cell(fresh.doc, 1, 0));
+  await tick(fresh.w, 8);
+  const first = fresh.srv.calls.find((c) => c.what === "play");
+  t("a board never finished here kicks off as a first sitting",
+    first && first.body.replay === false, JSON.stringify(first && first.body));
+
+  /* The same board, with this device's own record of having finished it. */
+  const again = await open({ played: [{ no: 2, day: "2026-09-15", score: 100,
+    solved: 11, minute: 1, result: "W" }] });
+  click(cell(again.doc, 1, 0));
+  await tick(again.w, 8);
+  const second = again.srv.calls.find((c) => c.what === "play");
+  t("and a board it HAS finished kicks off as a replay",
+    second && second.body.replay === true, JSON.stringify(second && second.body));
+}
+
+console.log("");
+console.log("=== A round that could not be opened is asked for again ===");
+{
+  /* THE FOURTH FAULT. If /play FAILS rather than being slow there is no round,
+     no round-opening callback, and confirm returns false for ever — so a board
+     completed afterwards is filled, correct and silent, which is the reported
+     symptom by a different road. refreshSolved asks for a round when it finds
+     it has none, driven by a player finishing an answer rather than a timer. */
+  const { w, doc, srv } = await open({ failPlay: true });
+  click(cell(doc, 1, 0));
+  await tick(w, 8);
+  const failed = srv.calls.filter((c) => c.what === "play").length;
+  t("the first kick-off was attempted and failed", failed === 1, `${failed} attempt(s)`);
+  t("and no round exists, so nothing can be confirmed",
+    srv.calls.filter((c) => c.what === "mark").length === 0);
+
+  srv.playWorksNow();
+  typeWord(w, doc, 0, "KANE");                  // finishing an answer retries
+  await tick(w, 14);
+  const retried = srv.calls.filter((c) => c.what === "play").length;
+  t("finishing an answer asks for a round again",
+    retried > 1, `${retried} kick-off attempt(s)`);
+  t("and the finished word is then confirmed",
+    srv.calls.filter((c) => c.what === "mark" && !c.body.check).length >= 1,
+    `${srv.calls.filter((c) => c.what === "mark" && !c.body.check).length} confirm(s)`);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

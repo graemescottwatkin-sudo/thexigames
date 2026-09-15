@@ -48,6 +48,14 @@ export async function onRequestPost({ request, env }) {
   } catch (e) { return NO(); }
   if (!board) return NO("no board");
 
-  const r = await startRound(env, { boardNo: board.no, day: board.day, rate });
+  /* THE DEVICE SAYS WHETHER IT HAS FINISHED THIS BOARD BEFORE, because nothing
+     here knows who is playing — this endpoint has no session and cw_round has
+     no player column. See startRound for why trusting it is safe: a false claim
+     of a first sitting banks nothing, since the duplicate is dropped by the
+     uniqueness rule on results. Anything other than an explicit true is a first
+     sitting, so a page that does not send the field behaves as it always did. */
+  const replay = body.replay === true;
+
+  const r = await startRound(env, { boardNo: board.no, day: board.day, rate, replay });
   return json(r);
 }

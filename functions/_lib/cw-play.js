@@ -26,16 +26,30 @@ export async function getRound(env, playId) {
    finished is a good thing to allow and a bad thing to record: refusing it
    would make showing somebody the grid indistinguishable from re-running the
    board with the answers you just learned. */
-export async function startRound(env, { boardNo, day, rate }) {
+export async function startRound(env, { boardNo, day, rate, replay }) {
   const playId = id();
   const started = now();
-  /* Has this board already been finished? Only a FINISHED round makes the next
-     one unscored; an abandoned one does not, or a closed tab would cost a
-     player their day. */
-  const done = await env.DB
-    .prepare("SELECT COUNT(*) AS n FROM cw_round WHERE board_no = ? AND finished_ms IS NOT NULL")
-    .bind(boardNo).first();
-  const scored = done && Number(done.n) > 0 ? 0 : 1;
+  /* WHOSE REPLAY IS IT? The rule used to read the BOARD's history:
+       SELECT COUNT(*) FROM cw_round WHERE board_no = ? AND finished_ms IS NOT NULL
+     with no player in it — and cw_round has no player column to put in it. So
+     the first person to finish a board made it unscored for everyone who
+     played it afterwards. The second player of every day was told their first
+     sitting did not count, which is the opposite of what the rule is for.
+     It is the DEVICE that says so now. The page keeps its own results under
+     xicw.results and knows perfectly well whether it has finished this board;
+     it says so when it kicks off.
+     AND A LIE COSTS NOTHING, which is what makes trusting the client safe here
+     rather than merely convenient. Claiming a replay is a first sitting gains
+     no record: the page's own recordResult() refuses a board already in its
+     list, and /api/account/migrate inserts with INSERT OR IGNORE against a
+     uniqueness rule that lives in the schema. The worst a liar achieves is a
+     duplicate row that is dropped on the way in. What `scored` actually decides
+     is whether the page says "Replay — this one is not recorded", and that is
+     not worth wiring a session into the kick-off path to protect.
+     A ROUND THAT WAS ABANDONED IS STILL A FIRST SITTING. The client's list
+     holds finished boards only, so a closed tab does not cost anybody a day —
+     which was true of the old rule too and is the half worth keeping. */
+  const scored = replay ? 0 : 1;
   await env.DB.prepare(
     "INSERT INTO cw_round (play_id, board_no, day, started_ms, rate_secs, scored) VALUES (?, ?, ?, ?, ?, ?)"
   ).bind(playId, boardNo, day, started, rate, scored).run();
