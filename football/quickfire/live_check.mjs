@@ -25,7 +25,7 @@ const w = (n, d) => { warn++; console.log(`  ??  ${n}${d ? "  — " + d : ""}`);
 /* A crash mid-file and a clean run differ only by an exit code nobody reads.
    Two nets: the marker catches a crash anywhere above the last line, the floor
    catches a block that goes quiet without crashing. */
-const MIN_ASSERTIONS = 22;
+const MIN_ASSERTIONS = 27;
 let reachedEnd = false, announced = false;
 function incomplete() {
   if (announced) return;
@@ -128,6 +128,9 @@ const d = daily.status === 200 ? await daily.json() : null;
 t("the daily endpoint answers", daily.status === 200, "HTTP " + daily.status);
 t("it is not cacheable", /no-store/.test(daily.headers.get("cache-control") || ""));
 t("it returns today's board", !!(d && d.daily), d && d.daily && d.daily.id);
+/* The RAW body, kept for the leak check below: a parsed object can only be
+   searched under the keys you already suspect. */
+const dailyText = d ? JSON.stringify(d) : "";
 
 /* THE BINDING PROBE. A 200 with a fallback source is what a missing D1 binding
    looks like on a sibling game: a working game running on samples. */
@@ -137,31 +140,64 @@ t("eleven questions, which is the whole premise",
   !!(d && d.daily && d.daily.questions && d.daily.questions.length === 11),
   d && d.daily && d.daily.questions && d.daily.questions.length);
 t("three on the bench", !!(d && d.daily && d.daily.bench && d.daily.bench.length === 3));
-t("every question carries a clue and an answer",
-  !!(d && d.daily && d.daily.questions.every((q) => q.clue && q.answer)));
-t("no answer is longer than the board can hold",
+/* THE SHAPE OF A QUESTION, AND IT CHANGED UNDER THIS FILE.
+ *
+ * Everything from here to the seal used to read q.answer. That was the contract
+ * before 15 September 2026, when the game was rewritten from typing a name to
+ * picking one of four and the marking moved to the server — and the whole point
+ * of that move is that the answer STOPS being published. So this block did not
+ * merely go stale: it demanded a leak, and it crashed on the first `q.answer`
+ * that was not there, seventeen assertions into a floor of twenty-two. Between
+ * the rewrite and now, QuickFire went live on the eighth shirt with a live_check
+ * that could not reach its own end, which is the same as not having one.
+ *
+ * What is provable from outside is now asserted; what is not is named below
+ * rather than deleted quietly.
+ */
+t("every question carries a clue and four options",
   !!(d && d.daily && [...d.daily.questions, ...d.daily.bench].every(
-    (q) => q.answer.replace(/[^\p{L}\p{N}]/gu, "").length <= 16)),
+    (q) => q.clue && Array.isArray(q.options) && q.options.length === 4)),
+  "four is the whole interface — three or five is a board nobody can play");
+
+/* THE ASSERTION THIS FILE NOW EXISTS FOR. The server marks the guess, so the
+   answer has no business in a payload any browser can open. A regex over the
+   raw text rather than a walk of the parsed object, because a leak that arrives
+   under a key nobody thought to look at is exactly the leak that gets shipped. */
+t("and no answer anywhere in the payload, under any key",
+  !/"answer"\s*:/.test(dailyText),
+  "the server marks the guess; publishing the answer would spoil the day");
+
+t("no option is longer than the board can hold",
+  !!(d && d.daily && [...d.daily.questions, ...d.daily.bench].every(
+    (q) => q.options.every((o) => o.replace(/[^\p{L}\p{N}]/gu, "").length <= 16))),
   "16 typeable characters is where the row wraps on a phone");
-t("no answer appears twice on the board", (() => {
+
+t("no question offers the same option twice", (() => {
   if (!d || !d.daily) return false;
-  const all = [...d.daily.questions, ...d.daily.bench]
-    .map((q) => q.answer.toLowerCase().replace(/[^a-z0-9]/g, ""));
-  return new Set(all).size === all.length;
-})());
-t("no clue names another answer on the same board", (() => {
+  return [...d.daily.questions, ...d.daily.bench].every((q) => {
+    const seen = q.options.map((o) => o.toLowerCase().replace(/[^a-z0-9]/g, ""));
+    return new Set(seen).size === 4;
+  });
+})(), "a repeated option is a question with three answers to choose from");
+
+t("no clue names one of its own options", (() => {
   if (!d || !d.daily) return false;
-  const all = [...d.daily.questions, ...d.daily.bench];
-  const norm = (s) => s.toLowerCase().replace(/[^a-z0-9 ]/g, "");
-  return all.every((q) => all.every((o) =>
-    o.id === q.id || !norm(q.clue).includes(norm(o.answer))));
-})());
-t("no alias can be entered that the board cannot hold", (() => {
-  if (!d || !d.daily) return false;
-  const chars = (s) => s.replace(/[^\p{L}\p{N}]/gu, "").length;
+  const norm = (x) => x.toLowerCase().replace(/[^a-z0-9 ]/g, "");
   return [...d.daily.questions, ...d.daily.bench].every(
-    (q) => (q.aliases || []).every((a) => chars(a) === chars(q.answer)));
-})(), "the board fixes the character count");
+    (q) => q.options.every((o) => !norm(q.clue).includes(norm(o))));
+})(), "a clue that contains an option has already been answered");
+
+/* WHAT THIS FILE CAN NO LONGER PROVE, said out loud rather than dropped.
+ * Three assertions died with q.answer and they were worth having:
+ *   - no answer appears twice on the board
+ *   - no clue names ANOTHER question's answer
+ *   - no alias is a different length from the answer it stands in for
+ * None is checkable without knowing the answer, and the answer is correctly
+ * absent from production. They belong to tools/import_quickfire.js, against the
+ * source the answer came from, at the point a row is written — which is also
+ * where "exactly one option equals the answer" belongs, and is still a sentence
+ * in migration 022's comment rather than a line of code. Recorded here so that
+ * the coverage is known to be missing rather than assumed to be present. */
 
 /* ---- tomorrow stays sealed ---------------------------------------------- */
 /* The endpoint takes no date parameter, by design. If one is ever added, this

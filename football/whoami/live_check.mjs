@@ -23,7 +23,7 @@
  * skip — the archive block skips every assertion on a day with no past boards.
  */
 const BASE = "https://www.thexigames.com";
-const MIN_ASSERTIONS = 18;
+const MIN_ASSERTIONS = 20;
 
 const expectAt = process.argv.indexOf("--expect");
 const EXPECT = expectAt > -1 ? process.argv[expectAt + 1] : null;
@@ -83,8 +83,20 @@ if (daily.json && daily.json.board) {
   /* SORTED, NOT IN SLOT ORDER. Attributed, count[3] is door three's career
      length, which narrows eleven doors to a handful for anyone with the list. */
   const c = b.careers || [];
+  /* TWO CLAIMS, AND THEY WERE ONE. This read `c.length === 11 && sorted`, under
+     a name that only ever mentioned sortedness — so when the board stopped
+     sending one length per DOOR and started sending one per PLAYER, a live
+     board of six players failed an assertion about ordering. A check whose name
+     is narrower than its behaviour reports the wrong fault, and this one
+     reported "not sorted" about 3,6,6,8,10,13. */
   t("the career lengths are sorted, so they attribute to nobody",
-    c.length === 11 && c.every((v, i) => i === 0 || v >= c[i - 1]), c.join(","));
+    c.length > 0 && c.every((v, i) => i === 0 || v >= c[i - 1]), c.join(","));
+  /* ONE PER PLAYER, WHICH IS AT MOST ONE PER DOOR. Eleven doors can be six
+     players; eleven lengths would be the grouping given away, which is the
+     leak this panel was rebuilt to close. */
+  t("and there is no more than one of them per door",
+    c.length > 0 && c.length <= (b.doors || []).length,
+    `${c.length} lengths for ${(b.doors || []).length} doors`);
 
   t("the scoring rule travels with the board",
     !!daily.json.scoring && daily.json.scoring.max === 114,
