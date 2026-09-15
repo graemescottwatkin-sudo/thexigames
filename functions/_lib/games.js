@@ -288,6 +288,41 @@ export function entryKey(game, row) {
     const d = String((row && (row.day || row.date || row.play_date)) || "");
     return /^\d{4}-\d{2}-\d{2}$/.test(d) ? "qf:" + d : null;
   }
+  if (game === "grid") {
+    /* A Grid daily is addressed by its NUMBER, not its day, and that is the one
+       thing about it that differs from the three date-keyed games around it:
+       gd_schedule names one board per day, the payload carries that board's
+       number, and both the page's own record and the hub's table judge it by
+       `no`. Keying on the day here would produce a key nothing else in the game
+       agrees with.
+       THIS BRANCH WAS MISSING TOO, and Grid has been live since 7 September —
+       eight days of results computed, returned and dropped. Found while adding
+       Codeword's, by executing entryKey for every game in GAMES rather than for
+       the one that was reported: the fourth occurrence of this fault was
+       sitting beside the third, and nothing would have reported it. */
+    const n = Number(row && row.no);
+    return Number.isFinite(n) && n > 0 ? "gd:" + Math.floor(n) : null;
+  }
+  if (game === "codeword") {
+    /* A Codeword daily is addressed by its day, like the word search's, HiLo's
+       and QuickFire's: cw_schedule hands one board to one day.
+       THERE WAS NO BRANCH HERE AT ALL and the game was live for a day without
+       one. It sits in GAMES, in BUILT, and LAUNCHED reads 2026-09-14 — every
+       sign of an integrated game except the one that writes a row — so
+       entryKey() fell through to the closing `return null` and every result was
+       computed, returned to the page, and dropped. Six rounds were played and
+       nothing was banked. THE THIRD TIME: the comments above record Scrambled
+       and QuickFire, and the shape is identical each time — no key, no row, and
+       nobody finds out, because the page has no way to know its result was
+       discarded and the endpoint's own response was correct.
+       THE DAY AND NOT THE NUMBER, deliberately. Codeword has two numberings —
+       its own 1..365 counted from its epoch, and the family board number every
+       address uses — and they differ by nineteen. A key built on "the number"
+       would be built on whichever one happened to arrive. A day means one
+       thing. */
+    const d = String((row && (row.day || row.date)) || "");
+    return /^\d{4}-\d{2}-\d{2}$/.test(d) ? "cw:" + d : null;
+  }
   if (game === "whoami") {
     /* A Who Am I daily is addressed by its day: wa_board is keyed on play_date
        and a board is served on that date and not before.

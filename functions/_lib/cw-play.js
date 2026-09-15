@@ -125,9 +125,25 @@ export async function revealRound(env, round, board, n) {
  * The figures are STORED rather than left derivable: a re-derivation would use
  * today's curve, so the day anybody tunes the decay every past round would
  * silently become a different round. */
+/* WHICH BOARD THIS WAS, on every response. It carried neither, and the cost was
+   that a finished round could not be BANKED: the page's recordResult reads
+   d.day and d.no, got undefined for both, and stored a row with no day and no
+   number. entryKey() then had nothing to key on — and the local record deduped
+   on `no`, so board one and board two both being undefined meant the second
+   finish was discarded as a duplicate of the first.
+   Two faults, one cause, and neither announces itself: the page believes it has
+   banked, and every check that asks the ENDPOINT what it returned is satisfied,
+   because what it returned was a correct score. `day` is the identity that
+   matters — it is unambiguous, where `no` has two meanings in this game — and
+   `no` is sent as well because the page dedupes its own list on it. */
+function identify(round) {
+  return { day: round.day, no: Number(round.board_no) };
+}
+
 export async function finishRound(env, round) {
   if (round.finished_ms) {
     return {
+      ...identify(round),
       score: round.score, solved: round.solved, minute: round.minute || null,
       result: round.result, scored: !!round.scored, replayed: true,
     };
@@ -141,5 +157,5 @@ export async function finishRound(env, round) {
   await env.DB.prepare(
     "UPDATE cw_round SET finished_ms = ?, score = ?, solved = ?, result = ? WHERE play_id = ?"
   ).bind(at, o.score, o.solved, o.result, round.play_id).run();
-  return { ...o, scored: !!round.scored, replayed: false };
+  return { ...identify(round), ...o, scored: !!round.scored, replayed: false };
 }

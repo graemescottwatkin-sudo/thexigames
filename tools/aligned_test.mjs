@@ -361,6 +361,44 @@ t("the server's game list and this table agree", (() => {
   const listed = (lib.match(/GAMES = \[([^\]]+)\]/) || [, ""])[1];
   return GAMES.every((g) => listed.indexOf(`"${g.id}"`) > -1);
 })(), "functions/_lib/games.js");
+/* EVERY GAME IN GAMES RESOLVES AN ENTRY KEY, AND THIS HAS NOW BEEN THE FAULT
+   FOUR TIMES.
+ *
+ * Scrambled, then QuickFire, then Codeword, then Grid. Each was live — in
+ * GAMES, in BUILT, with a launch date, a card on the hub and a route — and each
+ * had no branch in entryKey(), which falls through to a closing `return null`.
+ * A null key writes no row, so the result was computed, returned to the page,
+ * and dropped. The page believes it banked. Nothing errors.
+ *
+ * WHY NOTHING CAUGHT IT: every check around it asked the ENDPOINT what it
+ * returned, and what it returned was a correct score. The only place the fault
+ * is visible is the join between "which games exist" and "which games have a
+ * key", and nothing was standing there. Grid ran eight days like this and was
+ * found only because Codeword's fix ran the function over every game rather
+ * than the one that had been reported.
+ *
+ * EXECUTED, NOT GREPPED. A branch can exist and still return null — the point
+ * is the VALUE — so this calls the real function with a row carrying every
+ * field shape the family uses, and demands a string from each game. */
+{
+  const { entryKey, GAMES: SERVER_GAMES } = await import("../functions/_lib/games.js");
+  /* Every identity field any game reads, so a game is never failed for the
+     fixture's shape rather than its own. */
+  const row = { dailyNo: 20, no: 20, day: "2026-09-14", date: "2026-09-14",
+                play_date: "2026-09-14" };
+  const keyless = SERVER_GAMES.filter((g) => typeof entryKey(g, row) !== "string");
+  t("every game in GAMES banks under a key, rather than returning null",
+    keyless.length === 0,
+    keyless.length ? keyless.join(", ") + " return null — results are dropped"
+      : SERVER_GAMES.map((g) => entryKey(g, row)).join(" "));
+  /* AND NO TWO GAMES SHARE A PREFIX, because a key that collides files one
+     game's result under another's and the merge rule then decides between rows
+     that are not comparable. */
+  const prefixes = SERVER_GAMES.map((g) => String(entryKey(g, row)).split(":")[0]);
+  t("and no two games key under the same prefix",
+    new Set(prefixes).size === prefixes.length, prefixes.join(" "));
+}
+
 t("no game carries a private copy of a shared file",
   GAMES.every((g) => !has(`${g.dir}/xi-tokens.css`) && !has(`${g.dir}/xi-chrome.css`) &&
                      !has(`${g.dir}/xi-chrome.js`)));
