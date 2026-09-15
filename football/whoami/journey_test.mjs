@@ -375,7 +375,58 @@ console.log("=== Buying the ladder, and giving up ===");
   })());
 }
 
-console.log("=== The type-ahead searches the answer SPACE ===");
+console.log("\n=== One door a day, which is the whole basis of the game ===");
+{
+  /* IT WAS NOT ENFORCED ANYWHERE. Every door carried an unconditional click
+     handler, so after finishing a board you could open the next one — fresh
+     clock, fresh 114, full ladder — and work the whole eleven. Found by a
+     person playing the live site, not by any check here.
+     Worse, the "back to the board" button carried a comment saying "it does not
+     offer another go", which is a sentence asserting a guard that did not
+     exist. A comment that reads as the rule being handled is the most expensive
+     kind of wrong. */
+  const { doc, click, w, srv } = await open();
+  click(doc.getElementById("waToday"));
+  await settle(w);
+  click([...doc.querySelectorAll("#doors .door")][1]);   // Chelsea
+  await settle(w);
+
+  const input = doc.getElementById("guessInput");
+  input.value = "petr cech";
+  input.dispatchEvent(new w.Event("input", { bubbles: true }));
+  click(doc.getElementById("guessGo"));
+  await settle(w);
+  await settle(w);
+
+  click(doc.getElementById("backToDoors"));
+  await settle(w);
+
+  const doors = [...doc.querySelectorAll("#doors .door")];
+  t("back on the board, every door is closed", doors.every((d) => d.disabled),
+    doors.filter((d) => !d.disabled).length + " still open");
+  t("and the one that was played is marked as yours",
+    doors.filter((d) => /mine/.test(d.className)).length === 1 &&
+    /Yours today/.test(doors[1].textContent),
+    "the owner asked to see which player was yours at full time");
+  /* THE LINE ABOVE THEM STOPS BEING UNTRUE. It read "you get one go at him" to
+     somebody who had already had their go. */
+  t("and the instruction no longer says you get a go",
+    !/you get one go/.test(doc.getElementById("lede").textContent),
+    doc.getElementById("lede").textContent);
+  /* AND CLICKING ONE OPENS NOTHING — the assertion that actually matters, since
+     `disabled` is a claim and this is the behaviour. */
+  const plays = () => srv.calls.filter((c) => c.pathname === "/api/whoami/play").length;
+  const before = plays();
+  click(doors[4]);
+  await settle(w);
+  t("and clicking another opens no round", plays() === before,
+    "disabled is a claim; not opening a round is the behaviour");
+  t("every door names itself on the control",
+    doors.every((d) => (d.getAttribute("aria-label") || "").length > 3),
+    "the label lived inside a child, so the tree showed it detached");
+}
+
+console.log("\n=== The type-ahead searches the answer SPACE ===");
 {
   const { doc, click, w } = await open();
   click(doc.getElementById("waToday"));

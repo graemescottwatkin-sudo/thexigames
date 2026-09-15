@@ -19,7 +19,7 @@
  * one especially, because deciding it here would need the club's whole roster
  * and a roster is a candidate list for the door.
  */
-var BUILD = "v001a";
+var BUILD = "v001b";
 
 (function bootstrap() {
   'use strict';
@@ -204,7 +204,7 @@ function start() {
   var el = {};
   ['waHome', 'waGame', 'waToday', 'waTodayKicker', 'waTodayState',
    'boardNo', 'boardDate', 'screenDoors', 'screenPlay', 'screenDone',
-   'doors', 'careers', 'playClub', 'playLeft', 'clues', 'ladder',
+   'doors', 'careers', 'lede', 'playClub', 'playLeft', 'clues', 'ladder',
    'stripFill', 'clockValue', 'worthNow', 'giveUp',
    'guessInput', 'guessGo', 'suggest', 'feedback', 'tries',
    'doneKicker', 'doneBody', 'shareText', 'copyShare', 'backToDoors']
@@ -269,16 +269,56 @@ function start() {
   /* ------------------------------------------------------------ the board */
 
   function renderDoors() {
+    /* ONE DOOR A DAY, AND THIS IS WHERE IT IS ENFORCED.
+     *
+     * It was not enforced anywhere. Every door got an unconditional click
+     * handler, so after finishing a board you could open the next one and the
+     * next — fresh clock, fresh 114, full ladder — and work the whole eleven.
+     * The comment on the "back to the board" button said "it does not offer
+     * another go", which is a sentence asserting a guard that did not exist:
+     * the worst kind, because it reads as the rule being handled.
+     *
+     * WHAT CAN AND CANNOT BE ENFORCED. The RESULT is already one a day and
+     * always was — recordResult dedupes on the day and the family's rule is
+     * first-banked-wins, so a second door can never bank a second row. What was
+     * open was the PLAYING, and for an anonymous visitor there is no server-side
+     * identity to refuse it with: the door is closed here, on the device, which
+     * is where the state lives. Somebody with developer tools can still open
+     * another, and that is honest rather than solved — they would be spoiling
+     * their own board and could not record it.
+     */
+    var done = !!state.finished;
     el.doors.innerHTML = '';
     BOARD.doors.forEach(function (d) {
       var b = document.createElement('button');
-      b.className = 'door';
+      var mine = done && Number(state.slot) === Number(d.slot);
+      b.className = 'door' + (done ? ' spent' : '') + (mine ? ' mine' : '');
       b.type = 'button';
+      b.disabled = done;
+      /* THE LABEL IS ON THE CONTROL, not only inside a child of it. A screen
+         reader reads the accessible name of the button, and with the text in a
+         generic span the tree showed the label detached from the thing you
+         press. */
+      b.setAttribute('aria-label', done
+        ? (mine ? d.club + ' — the door you played' : d.club + ' — not yours today')
+        : 'Play the ' + d.club + ' door');
       b.innerHTML = '<span class="d-club">' + esc(d.club) + '</span>' +
-        '<span class="d-left">left ' + esc(d.leave) + '</span>';
-      b.addEventListener('click', function () { openDoor(d); });
+        '<span class="d-left">left ' + esc(d.leave) + '</span>' +
+        (mine ? '<span class="d-mine">Yours today</span>' : '');
+      if (!done) b.addEventListener('click', function () { openDoor(d); });
       el.doors.appendChild(b);
     });
+
+    /* AND THE LINE ABOVE THEM STOPS BEING UNTRUE. It read "Pick a club. One
+       player behind each door, and you get one go at him" to somebody who had
+       already had their go. */
+    if (el.lede) {
+      el.lede.textContent = done
+        ? (state.solved
+            ? 'You got yours today. The other ten are somebody else\u2019s.'
+            : 'That was your go today. The other ten are somebody else\u2019s.')
+        : 'Pick a club. One player behind each door, and you get one go at him.';
+    }
     /* SORTED AND UNATTRIBUTED, exactly as the server sent them. Rendering these
        beside their doors would undo the whole point of sorting them. */
     var c = BOARD.careers || [];
@@ -332,6 +372,12 @@ function start() {
          whole argument for pricing substitutions in points rather than in
          minutes: you can see what a clue costs without working out what ten
          minutes is worth at the minute you happen to be at. */
+      /* AN ACCESSIBLE NAME ON THE CONTROL. The label lived only inside child
+         spans, so the accessibility tree announced a bare button — the price is
+         one attribute and the alternative is a control a screen reader cannot
+         name. */
+      b.setAttribute('aria-label',
+        'Substitution ' + rung.sub + ': ' + rung.label + ', costs ' + rung.points + ' points');
       b.innerHTML = '<span class="r-sub">Sub ' + esc(rung.sub) + '</span>' +
         '<span class="r-label">' + esc(rung.label) + '</span>' +
         '<span class="r-cost">−' + esc(rung.points) + '</span>';
@@ -369,8 +415,8 @@ function start() {
       var years = (s.from ? s.from : '') + (s.to ? '–' + s.to : '');
       bits.push('<span class="c-body">' + esc(s.club) +
         (years ? ', ' + esc(years) : '') +
-        (s.apps != null ? ' · ' + esc(s.apps) + ' apps' : '') +
-        (s.goals ? ' · ' + esc(s.goals) + ' goals' : '') + '</span>');
+        (s.apps != null ? ' · ' + esc(s.apps) + (Number(s.apps) === 1 ? ' app' : ' apps') : '') +
+        (s.goals ? ' · ' + esc(s.goals) + (Number(s.goals) === 1 ? ' goal' : ' goals') : '') + '</span>');
     }
     if (r.career) {
       bits.push('<span class="c-body">' + esc(r.career) + '</span>');
@@ -719,6 +765,9 @@ function start() {
   });
 
   el.backToDoors.addEventListener('click', function () {
+    /* REDRAWN, because the doors were built once at boot and the rule above
+       only applies when they are rebuilt. Showing the screen was not enough. */
+    renderDoors();
     /* ONE DOOR PER DAY. Going back shows the board again so the player can see
        what the other ten were, but it does not offer another go: the round is
        finished on the server and opening a second would be a second result for

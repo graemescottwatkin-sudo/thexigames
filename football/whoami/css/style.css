@@ -50,6 +50,17 @@ body{margin:0}
 .door:hover:not(:disabled){border-color:var(--ink-faint)}
 .door:active:not(:disabled){transform:translateY(1px)}
 .d-club{font-family:var(--disp);font-weight:600;font-size:16px;line-height:1.2}
+
+/* ONE DOOR A DAY, SHOWN ON THE BOARD. A spent board is not a dead one — the
+   player should still see what the other ten clubs were — but it must not look
+   like a board you can still play, and the one that was theirs has to be
+   findable at a glance. The owner asked to see which player was yours at full
+   time; this is the board half of that. */
+.door.spent{opacity:.42;cursor:default}
+.door.spent:hover{border-color:var(--line)}
+.door.mine{opacity:1;border-color:var(--pitch);border-width:2px}
+.d-mine{margin-top:2px;font-family:var(--disp);font-size:10.5px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--pitch)}
 .d-left{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-soft)}
 
 /* THE DAY'S CAREER LENGTHS, sorted and unattributed. Deliberately quiet: it is
