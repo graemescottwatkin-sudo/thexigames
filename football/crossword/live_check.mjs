@@ -19,6 +19,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { gamePath } from "../../functions/_lib/permalink.js";
+import { LAUNCHED } from "../../functions/_lib/games.js";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 
@@ -174,11 +175,29 @@ console.log(`\n${SITE}\n`);
   const hubClean = html
     .replace(/<!--[\s\S]*?-->/g, "")
     .replace(/\b(?:href|src)\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, "");
-  const leaked = ["QuickFire","Missing XI","Transfer XI",
-                  "Player Chain","Link XI","Odd One Out"]
-    .filter((n) => new RegExp(n, "i").test(hubClean));
+  /* THE LIST IS NO LONGER A LIST OF WHAT IS UNRELEASED. It was, and on
+     15 September 2026 it called QuickFire a leak on a hub that was naming a
+     game which had launched the day before — the pinned-literal fault exactly:
+     a test asserting a hardcoded value enforces the drift instead of catching
+     it, and this one would have gone on demanding a launched game be hidden
+     until somebody edited it by hand.
+
+     What it holds now is every name that has ever been kept off the hub, and
+     LAUNCHED — the one place that records when a game went live — decides
+     which of them still must be. A name drops off this check the day its game
+     launches and not before, because that is the day LAUNCHED gains a date.
+
+     Names with no game id (Missing XI, Transfer XI, Player Chain, Link XI,
+     Odd One Out) are on the drawing board and have no entry to read, so they
+     stay refused until they get one. */
+  const NEVER_NAMED = ["QuickFire", "Missing XI", "Transfer XI",
+                       "Player Chain", "Link XI", "Odd One Out"];
+  const idOf = (n) => n.toLowerCase().replace(/[^a-z]/g, "");
+  const stillHidden = NEVER_NAMED.filter((n) => !LAUNCHED[idOf(n)]);
+  const leaked = stillHidden.filter((n) => new RegExp(n, "i").test(hubClean));
   t("and names no unreleased game", leaked.length === 0,
-    leaked.length ? "leaked: " + leaked.join(", ") : "squad numbers only");
+    leaked.length ? "leaked: " + leaked.join(", ")
+                  : `${stillHidden.length} still to come, none named`);
   /* Every link the hub's own markup carries must resolve. The first hub
      shipped with /account, /how-to-play and /privacy in its chrome — all
      404 — and nothing noticed, because this script checked those pages under
