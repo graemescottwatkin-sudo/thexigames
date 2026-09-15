@@ -207,5 +207,48 @@ t("it defines no .xic- rules of its own", (() => {
   "the chrome is shared; a game restyling it is two chromes");
 t("the CSRF header is the family's", /"X-XI-Games"/.test(js));
 
+
+/* ============ THE GATE MUST NOT PASS ON NOTHING ============
+ *
+ * EVERY RULE ABOUT THIS STYLESHEET IS A PROHIBITION — no .xic- rule, no
+ * restated shared class, no redefined token — and a prohibition is satisfied
+ * completely by an empty file. Measured on 15 September 2026: emptying
+ * css/style.css and moving the build tag so the asset hash could not be the
+ * thing that caught it, five of the nine gates passed with 0 failed. Codeword
+ * passed 60 of 60. The page would have shipped with no styling at all and
+ * every check would have agreed it was correct.
+ *
+ * The general form, which is what makes these one bug rather than several:
+ * A GATE BUILT ENTIRELY OUT OF PROHIBITIONS PASSES ON AN EMPTY INPUT. It is
+ * the same fault as a grep that skipped a binary file, a verifier that skipped
+ * an unparseable board, and a historyClash with no day to examine — a check
+ * whose input is absent must not report a pass. Reported in this form by the
+ * Connection session, which found it in its own design-law gate, and
+ * reproduced here against all nine before it was believed.
+ *
+ * TWO CHECKS, AND THE SECOND IS THE ONE WITHOUT A HOLE. The first is a
+ * liveness floor: the file must actually hold rules. The second asserts what
+ * the family law has only ever said in the negative — that a game CONSUMES
+ * shared tokens. A stylesheet can be long, clean, literal-free and have
+ * stopped taking a single value from the family, and nothing here noticed.
+ * A check shaped as presence has no empty-input hole by construction.
+ *
+ * THE FLOORS ARE DELIBERATELY FAR BELOW THE TRUTH. The smallest stylesheet in
+ * the family holds 90 rules and 94 token uses; the largest holds 766 and 617.
+ * Twenty is low enough that ordinary editing can never reach it, because a
+ * threshold near the truth fails during normal work, gets raised until it
+ * means nothing, and is then still there looking like a guard. It is not
+ * measuring craft. It is refusing an empty string. */
+{
+  const cssBytes = fs.readFileSync(new URL("css/style.css", import.meta.url), "utf8");
+  const rules = (cssBytes.match(/\{/g) || []).length;
+  const tokens = (cssBytes.match(/var\(--/g) || []).length;
+  t("the stylesheet this gate has been checking is actually there",
+    rules >= 20, `${rules} rule(s) — every other rule about this file is a`
+      + " prohibition, and an empty file breaks none of them");
+  t("and it still takes its values from the family, rather than merely not fighting it",
+    tokens >= 20, `${tokens} use(s) of var(--) — said in the positive, because`
+      + " a rule that forbids cannot notice an absence");
+}
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
