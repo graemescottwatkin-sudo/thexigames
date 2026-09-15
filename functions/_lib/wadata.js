@@ -80,7 +80,23 @@ export function hasDB(env) {
    its own Europe/London clock and disagreed with every address on the site for
    an hour a night all summer: the API served board 21 and the URL for board 21
    answered 404. One clock. */
-export { utcDay as today } from "./daily.js";
+/* IMPORTED AS WELL AS RE-EXPORTED, and the difference took a live game down.
+ * A bare `export { x } from "./y.js"` forwards the name to importers WITHOUT
+ * binding it in this module's own scope — so every call to today() inside this
+ * file threw "today is not defined", and the daily endpoint answered 500.
+ *
+ * QuickFire ran like that in production from the moment the clock fix shipped.
+ * The fix was right and the spelling was not, and I wrote the identical line in
+ * two files an hour apart, then wrote a COMMENT in a third file explaining the
+ * trap after Codeword's suites caught it there — and still did not come back
+ * and check these two. Knowing a fault by name does not stop you shipping it.
+ *
+ * WHY NOTHING CAUGHT IT: no suite executes getDaily/getBoard. The round suites
+ * read this file as TEXT, and the journey suites stub the endpoint out
+ * entirely, so the one function that calls today() was never run. A module that
+ * fails on import-time linkage passes every check that never imports it. */
+import { utcDay } from "./daily.js";
+export const today = utcDay;
 
 /* THE COLUMNS THAT ARE THE ANSWER. Named once so a check can assert against the
    list rather than restating it, the way qfdata's SECRET_FIELDS does.

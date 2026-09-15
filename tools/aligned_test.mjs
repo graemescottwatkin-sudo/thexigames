@@ -486,6 +486,61 @@ t("the server's game list and this table agree", (() => {
     new Set(prefixes).size === prefixes.length, prefixes.join(" "));
 }
 
+/* EVERY GAME'S BOARD LOOKUP IS EXECUTED, not read.
+ *
+ * ON 15 SEPTEMBER 2026 QUICKFIRE WENT DOWN IN PRODUCTION for hours and this is
+ * the check that was missing. `export { utcDay as today } from "./daily.js"`
+ * forwards a name to importers WITHOUT binding it in the module's own scope, so
+ * every today() call inside qfdata.js threw "today is not defined" and
+ * /api/quickfire/daily answered 500. The same line was in wadata.js.
+ *
+ * NOTHING CAUGHT IT because nothing ran the function. The round suites read
+ * these files as TEXT to assert what the SELECT does not select; the journey
+ * suites stub the endpoints out entirely. So the one function that calls
+ * today() was never executed, and a module that fails on linkage passes every
+ * check that never imports it.
+ *
+ * THE STUB RETURNS NO ROWS ON PURPOSE. This is not testing what a board looks
+ * like — the per-game suites do that. It is testing that the lookup RUNS: that
+ * every name it reaches for is bound, and that an empty database gives null
+ * rather than an exception. A ReferenceError and a missing board are the same
+ * 500 to a player and opposite problems to fix. */
+{
+  const EMPTY = { DB: { prepare: () => ({ bind: () => ({
+    async first() { return null; },
+    async all() { return { results: [] }; },
+    async run() { return { success: true }; },
+  }) }) } };
+
+  const LOOKUPS = [
+    ["quickfire", "functions/_lib/qfdata.js", "getDaily"],
+    ["whoami", "functions/_lib/wadata.js", "getBoard"],
+    ["codeword", "functions/_lib/cw-board.js", "boardForDay"],
+  ];
+  const broke = [];
+  for (const [game, file, fn] of LOOKUPS) {
+    if (!has(file)) continue;
+    try {
+      const mod = await import("../" + file);
+      if (typeof mod[fn] !== "function") { broke.push(`${game}: no ${fn}`); continue; }
+      /* CALLED WITH NO DATE, WHICH IS THE WHOLE POINT. These lookups read
+         `const play = date || today()`, so passing a date short-circuits the
+         today() call and the ReferenceError never fires. The first version of
+         this check passed "2026-09-15" and MISSED the exact bug it was written
+         for — proved by putting the live fault back and watching it stay green.
+         A check that exercises the argument path instead of the default one is
+         testing the branch nobody took. */
+      const out = await mod[fn](EMPTY);
+      if (out !== null && out !== undefined) broke.push(`${game}: ${fn} invented a board from nothing`);
+    } catch (e) {
+      broke.push(`${game}: ${fn} threw — ${e.message}`);
+    }
+  }
+  t("every game's board lookup runs, and answers nothing on an empty database",
+    broke.length === 0,
+    broke.length ? broke.join(" | ") : LOOKUPS.map((l) => l[0]).join(", "));
+}
+
 t("no game carries a private copy of a shared file",
   GAMES.every((g) => !has(`${g.dir}/xi-tokens.css`) && !has(`${g.dir}/xi-chrome.css`) &&
                      !has(`${g.dir}/xi-chrome.js`)));
