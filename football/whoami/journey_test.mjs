@@ -99,6 +99,18 @@ function server() {
       return [200, { playId: "r1", slot: round.slot, stage: 1, pointsSpent: 0,
                      worthNow: RULE.max, minute: 0, day: body.date }];
     }
+    /* A ROUND THE STUB DID NOT ISSUE IS STILL A ROUND. The real server reads
+       wa_round by play_id and finds the row whatever restarted; this stub only
+       knew a playId it had handed out itself, so a RESUMED round was refused
+       with "no round" — and the resume block failed on the stub rather than on
+       the page. A stub that only recognises state it created cannot test
+       anything that outlives a session. */
+    if (!round.playId && body && body.playId) {
+      round.playId = body.playId;
+      if (body.slot) round.slot = Number(body.slot);
+      if (!round.slot) round.slot = 2;
+    }
+
     /* THE MINUTE IS THE STUB'S, as it is the server's — the page never decides
        it. Held at nought so the score assertions measure the ceiling rather
        than whatever the clock happened to reach mid-test. */
@@ -190,7 +202,14 @@ async function open(opts = {}) {
   /* Each run starts empty: jsdom shares localStorage between windows on one
      origin, and a suite whose result depends on the order of its own blocks is
      one that will be "fixed" by reordering them. */
-  try { w.localStorage.clear(); } catch (e) {}
+  /* EACH RUN STARTS EMPTY — except when a block is deliberately testing what
+     happens on a SECOND visit, which is the one thing a clean slate can never
+     show. `keep` seeds the save the way a returning player's device would
+     have it. */
+  try {
+    w.localStorage.clear();
+    if (opts.keep) w.localStorage.setItem('xiwa.daily.v1:2026-09-15', opts.keep);
+  } catch (e) {}
 
   w.fetch = (url, init) => {
     const body = init && init.body ? JSON.parse(init.body) : {};
@@ -236,6 +255,81 @@ console.log("=== The landing, and then the board ===");
   t("eleven doors are drawn", doors.length === 11, String(doors.length));
   t("each is a club and a year",
     /Arsenal/.test(doors[0].textContent) && /left 2010/.test(doors[0].textContent));
+}
+
+console.log("=== The landing wears the family's shape ===");
+{
+  /* WHY THIS IS MEASURED AGAINST THE CROSSWORD AND NOT AGAINST A LIST.
+   *
+   * This game launched with a landing that was one green card and a row
+   * underneath, and the owner's words were "it looks nothing like other games,
+   * it doesn't open up to the same sort of screen like Crossword". Every class
+   * it used was a real shared class, so nothing was red: the page was not
+   * WRONG, it was a third of the shape, and no check in this repo could tell
+   * the difference between a third and all of it.
+   *
+   * A list of selectors written here would be my opinion of the family shape,
+   * frozen on the day I wrote it — the pinned-literal fault. So the list is
+   * asserted TWICE: this page must carry each selector, and so must the
+   * crossword, which is the page the owner recognises as the house style. A
+   * selector that stops being the family's shape goes red on the SECOND half
+   * and has to be removed from the list rather than quietly enforced here
+   * forever.
+   */
+  /* ONE ADDRESS, WRITTEN ONCE. Both halves below ask for the same route, and
+     two copies of a path is two answers about where past boards live. */
+  const ARCHIVE = "/football/whoami/archive/";
+  const { doc } = await open();
+  const houseHtml = fs.readFileSync(
+    path.join(DIR, "..", "crossword", "index.html"), "utf8");
+  const house = new JSDOM(houseHtml).window.document;
+
+  const SHAPE = [
+    [".site-ident .ident-mark svg", "a mark that is a shape, not a coloured square"],
+    [".site-ident .site-crumb", "the theme it lives under, said out loud"],
+    [".site-ident .site-mast", "the game's name at masthead size"],
+    [".site-ident .ident-sub", "one line saying what it is"],
+    ["header.site-head .site-bar nav.site-nav", "the section bar"],
+    [".site-wrap .site-grid .site-main", "the fixture column"],
+    [".site-wrap .site-grid .site-side", "and what sits beside it"],
+    ["button.home-choice.hero .hc-kicker", "which board this is"],
+    ["button.home-choice.hero .hc-title", "what it is called"],
+    ["button.home-choice.hero .hc-note", "what you are about to do"],
+    ["button.home-choice.hero .hc-cta", "and a way in that says so"],
+    [".home-choice.col", "a card for the boards that have gone"],
+  ];
+
+  let missingHere = [], notFamily = [];
+  for (const [sel, say] of SHAPE) {
+    if (!doc.querySelector(sel)) missingHere.push(say);
+    if (!house.querySelector(sel)) notFamily.push(sel);
+  }
+  t("it opens on the same shape the rest of the family opens on",
+    missingHere.length === 0, missingHere.join("; ") || String(SHAPE.length) + " parts");
+  t("and every part of that shape is the family's, not this game's invention",
+    notFamily.length === 0,
+    notFamily.join("; ") || "each one is on the crossword's landing too");
+
+  /* The two things the owner asked for by name: today, and the ones that have
+     gone, reachable without playing anything first. */
+  /* A STRING COMPARE RATHER THAN A REGEX, and not by taste. The first version
+     of this line carried a pattern full of escaped slashes, the backslashes
+     were lost on the way into the file, and what was left — a slash, the path,
+     a slash — was a LINE COMMENT. The assertion silently became "#waPast
+     exists", swallowed its own third argument, and passed while the href
+     pointed at the wrong page. It was found by sabotaging the href and
+     watching it stay green. The seventh vacuous check in this repo's history. */
+  const past = doc.querySelector("#waPast");
+  t("past boards are selectable from the landing",
+    !!past && past.getAttribute("href") === ARCHIVE,
+    past ? past.getAttribute("href") : "no card");
+  t("and the tab bar offers them too, before a board has loaded",
+    !!doc.querySelector('.site-nav a[href="' + ARCHIVE + '"]'));
+
+  /* The kicker said TODAY, which is true of every day there has ever been. */
+  t("the hero says WHICH board it is",
+    /#21/.test(doc.getElementById("waTodayKicker").textContent),
+    doc.getElementById("waTodayKicker").textContent);
 }
 
 console.log("=== Nothing on the board is an answer ===");
@@ -425,6 +519,51 @@ console.log("=== Buying the ladder, and giving up ===");
     const rows = JSON.parse(w.localStorage.getItem("xiwa.results.v1") || "[]");
     return rows.length === 1 && rows[0].solved === false;
   })());
+}
+
+console.log("\n=== Coming back to a door already open ===");
+{
+  /* THE WORST BUG THIS GAME HAD, and it had no test at all. Returning with a
+     saved round, the page showed the play screen and rendered NOTHING into it:
+     no club, no spell, no clock. A player who had never chosen anything landed
+     in a half-finished round against a door they had not picked, looking at a
+     blank panel and a name box — which reads exactly as "it won't let me
+     choose, it just picks a player for me", because that is what it did.
+     Every other block here starts from a clean slate, which is precisely why
+     none of them saw it. */
+  const first = await open();
+  first.click(first.doc.getElementById("waToday"));
+  await settle(first.w);
+  first.click([...first.doc.querySelectorAll("#doors .door")][1]);   // Chelsea
+  await settle(first.w);
+  const saved = first.w.localStorage.getItem("xiwa.daily.v1:2026-09-15");
+  t("a round in progress is saved", !!saved && JSON.parse(saved).slot === 2,
+    saved && JSON.parse(saved).slot);
+
+  /* A SECOND VISIT with that save already on the device. */
+  const back = await open({ keep: saved });
+  back.click(back.doc.getElementById("waToday"));
+  await settle(back.w);
+  await settle(back.w);
+
+  t("it comes back to the door that was open, not a blank screen",
+    back.doc.getElementById("playClub").textContent === "Chelsea",
+    back.doc.getElementById("playClub").textContent || "(empty)");
+  t("and the spell is there to read again",
+    /333 apps/.test(back.doc.getElementById("clues").textContent),
+    "the free rung is served again, charged nothing");
+  t("and it did NOT open a second round",
+    back.srv.calls.filter((c) => c.pathname === "/api/whoami/play").length === 0,
+    "a day that banks one result must not open two");
+
+  /* A SAVE POINTING AT A DOOR THAT IS NOT ON TODAY'S BOARD — the board was
+     re-imported under it, or the day rolled while the tab was shut. */
+  const stale = await open({ keep: JSON.stringify({ ...JSON.parse(saved), slot: 99 }) });
+  stale.click(stale.doc.getElementById("waToday"));
+  await settle(stale.w);
+  t("a stale save falls back to the board rather than a door that is not there",
+    visible(stale.doc, "screenDoors"),
+    "the slot was re-imported out from under the save");
 }
 
 console.log("\n=== One door a day, which is the whole basis of the game ===");

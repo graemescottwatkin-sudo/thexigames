@@ -34,36 +34,131 @@
 <link rel="stylesheet" href="/shared/xi-landing.css?v=v40">
 <link rel="stylesheet" href="/shared/xi-chrome.css?v=v40">
 <script src="/shared/xi-theme.js?v=v40"></script>
-<link rel="stylesheet" href="css/style.css?v=v001c">
+<link rel="stylesheet" href="css/style.css?v=v001d">
 </head>
 <body>
 
 <header class="xic-bar"></header>
 <h1 class="sr-only">Who Am I XI &mdash; the daily football identity puzzle</h1>
 
-<!-- THE LANDING, which every game in the family opens on: today, and the ones
-     that have gone. No third card, because this game has a board a day and
-     nothing else — inventing one would be furniture pretending to be a feature. -->
+<!-- THE LANDING, REBUILT ON THE FAMILY'S OWN SHAPE.
+
+     What was here was a bare green card and a "more to play" row. Every class
+     it used was correct and it still did not look like the family, because the
+     family's landing is not one card: it is the identity row that says whose
+     page this is, a section bar, and a grid with the fixture on the left and
+     what is around it on the right. The crossword has had that shape since the
+     landing was written and this game had three tenths of it.
+
+     EVERY CLASS BELOW IS shared/xi-landing.css, which this page already loads.
+     The only rules this game adds of its own are the ones that draw the art in
+     the hero and the four steps in the side card. -->
+<div class="site-ident">
+  <span class="ident-mark" aria-hidden="true">
+    <!-- Doors in a row, and one of them already open. -->
+    <svg viewBox="0 0 24 24" fill="none">
+      <rect x="1.5" y="1.5" width="21" height="21" rx="2.5" stroke="currentColor" stroke-width="1.6"/>
+      <rect x="5" y="5.5" width="6" height="13" rx="1" stroke="currentColor" stroke-width="1.3"/>
+      <rect x="13" y="5.5" width="6" height="13" rx="1" fill="currentColor" opacity=".6"/>
+      <circle cx="9.3" cy="12" r="0.85" fill="currentColor"/>
+    </svg>
+  </span>
+  <div class="ident-say">
+    <p class="site-crumb">Football <span aria-hidden="true">/</span> <b>Who Am I</b></p>
+    <!-- A paragraph and not a heading: the page already carries one h1, the
+         sr-only line that says what this page is, and a second here would be a
+         worse document outline than the one it replaced. -->
+    <p class="site-mast">Who Am I <span class="site-xi">XI</span></p>
+    <p class="ident-sub">Eleven club doors. One hidden player behind each.</p>
+  </div>
+</div>
+
+<header class="site-head">
+  <div class="site-bar">
+    <!-- ONLY THIS GAME'S REAL SECTIONS. No answers tab, because an answers page
+         here would publish the ten doors nobody has opened yet. No "my season"
+         tab, because that lives on the hub and this game does not draw one. -->
+    <nav class="site-nav" aria-label="Who Am I XI sections">
+      <button class="on" id="navToday" type="button">Today</button>
+      <a class="site-navlink" href="/football/whoami/archive/">Past boards</a>
+    </nav>
+  </div>
+</header>
+
 <main class="site-wrap" id="waHome">
   <div class="site-grid">
     <div class="site-main">
       <button class="home-choice hero" id="waToday" type="button">
+        <!-- WHAT THE GAME IS, BEFORE A WORD OF IT IS READ. Doors along a
+             corridor, one standing open with a shape behind it. Decorative and
+             nothing else: hidden from assistive tech, and no part of it is
+             meant to be made out. -->
+        <svg class="hc-art" viewBox="0 0 340 156" aria-hidden="true" focusable="false"
+             preserveAspectRatio="xMidYMid meet">
+          <g class="hc-art-doors">
+            <rect class="c" x="8" y="22" width="34" height="112" rx="3"/>
+            <rect class="c" x="50" y="22" width="34" height="112" rx="3"/>
+            <rect class="c" x="92" y="22" width="34" height="112" rx="3"/>
+            <rect class="b" x="134" y="22" width="34" height="112" rx="3"/>
+            <rect class="c" x="176" y="22" width="34" height="112" rx="3"/>
+            <rect class="c" x="218" y="22" width="34" height="112" rx="3"/>
+            <rect class="c" x="260" y="22" width="34" height="112" rx="3"/>
+            <rect class="c" x="302" y="22" width="34" height="112" rx="3"/>
+          </g>
+          <g class="hc-art-ink">
+            <circle class="d" cx="35" cy="80" r="2.4"/><circle class="d" cx="77" cy="80" r="2.4"/>
+            <circle class="d" cx="119" cy="80" r="2.4"/>
+            <circle class="d" cx="203" cy="80" r="2.4"/><circle class="d" cx="245" cy="80" r="2.4"/>
+            <circle class="d" cx="287" cy="80" r="2.4"/><circle class="d" cx="329" cy="80" r="2.4"/>
+            <!-- The one behind the open door: a head and shoulders, no face. -->
+            <circle class="r" cx="151" cy="62" r="11"/>
+            <path class="r" d="M136 102a15 15 0 0 1 30 0v22h-30Z"/>
+          </g>
+        </svg>
         <span class="hc-kicker" id="waTodayKicker">TODAY</span>
         <span class="hc-title">Today&rsquo;s eleven</span>
-        <span class="hc-note">Eleven club doors, one hidden player behind each.
-          Pick your club, take one spell of his career, and name him.</span>
+        <span class="hc-note">Pick a club. You get one spell of his career for
+          nothing, and two substitutions if you need them &mdash; but the clock
+          runs to ninety and the board is worth less every minute.</span>
         <span class="hc-state" id="waTodayState"></span>
+        <span class="hc-cta">Kick off</span>
       </button>
     </div>
-  </div>
 
-  <div class="site-sec">More to play</div>
-  <div class="site-row">
-    <a class="home-choice col" href="/football/whoami/archive/">
-      <span class="hc-kicker">PAST BOARDS</span>
-      <span class="hc-title">Every board that has gone</span>
-      <span class="hc-note">One address each, and they stay playable.</span>
-    </a>
+    <aside class="site-side">
+      <!-- HOW TO PLAY, ON THE PAGE RATHER THAN BEHIND A TAB. This game is days
+           old and none of its rules are the ones a player already knows from a
+           crossword; the one place they are certain to be read is beside the
+           thing they are about. -->
+      <div class="side-card">
+        <span class="sc-kicker">HOW TO PLAY</span>
+        <span class="sc-title">One door, one player</span>
+        <ol class="how-steps">
+          <li>Pick one of the eleven clubs. <b>One door a day</b> &mdash; choose
+            carefully, because the other ten stay shut.</li>
+          <li>You get one spell of that player&rsquo;s career free: the club, the
+            years, the games and the goals.</li>
+          <li>Stuck? Two substitutions. The first shows his <b>whole career</b>,
+            the second his <b>nationality and age</b>. Both cost points.</li>
+          <li>Name him. The clock runs to ninety and the board falls from 114,
+            so the sooner the better.</li>
+        </ol>
+      </div>
+
+      <!-- "PAST BOARDS" RATHER THAN "ARCHIVE": archive is a librarian's word,
+           it says stored rather than playable. A link and not a button, so it
+           works before the day's board has loaded and can be opened in a new
+           tab like any other address. -->
+      <a class="home-choice col" id="waPast" href="/football/whoami/archive/">
+        <span class="hc-kicker">PAST BOARDS</span>
+        <span class="hc-title" id="waPastCount">Every board so far</span>
+        <span class="hc-note">One more every day, and they stay playable. Each
+          one has an address of its own.</span>
+        <svg class="hc-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none"
+             stroke="currentColor" stroke-width="1.6" stroke-linecap="round"
+             stroke-linejoin="round"><path d="M3 5v4h4"/><path d="M3.5 9A9 9 0 1 1 4 15"/><path d="M12 8v4l3 2"/></svg>
+      </a>
+    </aside>
   </div>
 </main>
 
@@ -143,9 +238,9 @@
 <footer class="xic-foot"></footer>
 
 <script src="/shared/xi-chrome.js?v=v40"></script>
-<script src="js/config.js?v=v001c"></script>
+<script src="js/config.js?v=v001d"></script>
 <script src="/shared/xi-season.js?v=v40"></script>
 <script src="/shared/xi-plays.js?v=v40"></script>
-<script src="js/game.js?v=v001c"></script>
+<script src="js/game.js?v=v001d"></script>
 </body>
 </html>

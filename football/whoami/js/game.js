@@ -19,7 +19,7 @@
  * one especially, because deciding it here would need the club's whole roster
  * and a roster is a candidate list for the door.
  */
-var BUILD = "v001c";
+var BUILD = "v001d";
 
 (function bootstrap() {
   'use strict';
@@ -203,6 +203,7 @@ function start() {
 
   var el = {};
   ['waHome', 'waGame', 'waToday', 'waTodayKicker', 'waTodayState',
+   'navToday', 'waPastCount',
    'boardNo', 'boardDate', 'screenDoors', 'screenPlay', 'screenDone',
    'doors', 'careers', 'lede', 'playClub', 'playLeft', 'clues', 'ladder',
    'stripFill', 'clockValue', 'worthNow', 'giveUp',
@@ -340,6 +341,57 @@ function start() {
             n + (n === 1 ? ' club' : ' clubs') + '</span>';
         }).join('')
       : '';
+  }
+
+  /* PICKING UP A DOOR ALREADY OPEN, which is not the same as opening one.
+   *
+   * THE BUG THIS REPLACES was the worst in the game. Coming back with a saved
+   * round, the page did show('screenPlay') and nothing else — no club, no
+   * spell, no clock, no door header. A player who had never chosen anything was
+   * dropped into somebody's half-finished round against a door they had not
+   * picked, with a blank panel and a name box. It reads exactly as "it won't let
+   * me choose, it just picks a player for me", because that is what it did.
+   *
+   * Resuming must NOT call /play: that opens a second round for a day that
+   * banks one. It rebuilds from the saved slot and asks the server for the free
+   * first rung again, which is served for nothing and carries the current
+   * minute — so the clock comes back where it actually is rather than at zero.
+   */
+  function resumeDoor() {
+    var door = null;
+    for (var i = 0; i < BOARD.doors.length; i++) {
+      if (Number(BOARD.doors[i].slot) === Number(state.slot)) door = BOARD.doors[i];
+    }
+    /* A SAVED SLOT THAT IS NOT ON TODAY'S BOARD is a stale save — the board was
+       re-imported under it, or the day rolled. Start again rather than show a
+       door that is not there. */
+    if (!door) {
+      state.playId = null;
+      state.slot = null;
+      state.finished = false;
+      save();
+      show('screenDoors');
+      renderDoors();
+      return;
+    }
+    /* No `current` here: this game has no such variable — that line came from
+       QuickFire's client by hand and would have thrown on the resume path, in
+       strict mode, the moment anybody came back to a saved round. Caught by
+       grepping for the name rather than by running it, which is luck. */
+    el.playClub.textContent = door.club;
+    el.playLeft.textContent = 'left in ' + door.leave;
+    el.clues.innerHTML = '';
+    el.guessInput.value = '';
+    el.guessGo.disabled = true;
+    setFeedback('');
+    renderTries();
+    renderLadder();
+    show('screenPlay');
+    playsStart();
+    startTicking();
+    /* The free rung again — replayed, charged nothing, and it brings the
+       minute and what the board is worth back with it. */
+    buyStage(1);
   }
 
   function openDoor(door) {
@@ -795,13 +847,30 @@ function start() {
 
   el.boardNo.textContent = 'No. ' + BOARD.no;
   el.boardDate.textContent = formatDate(BOARD.day);
-  el.waTodayKicker.textContent = DATA.isToday ? 'TODAY' : 'A BOARD THAT HAS BEEN';
+  el.waTodayKicker.textContent =
+    (DATA.isToday ? 'TODAY' : 'A BOARD THAT HAS BEEN') + ' · #' + BOARD.no;
+
+  /* HOW MANY BOARDS THERE ARE, from the only number on the page that knows:
+     today's is the last one, so today's ordinal IS the count. On an archive
+     board it is not — that board is somewhere in the middle — so the card keeps
+     its written line rather than being told a number that would be wrong. */
+  if (DATA.isToday && Number(BOARD.no) > 0) {
+    el.waPastCount.textContent = 'All ' + BOARD.no + ' boards so far';
+  }
+
+  /* The tab is the section this page is on, and the section is today's board.
+     It opens the same thing the card does rather than being furniture. */
+  el.navToday.addEventListener('click', function () { el.waToday.click(); });
 
   el.waToday.addEventListener('click', function () {
     el.waHome.hidden = true;
     el.waGame.hidden = false;
-    show(state.finished ? 'screenDone' : (state.playId ? 'screenPlay' : 'screenDoors'));
-    if (state.finished) finish();
+    /* THREE STATES, AND EACH ONE REBUILDS WHAT IT SHOWS. This used to show a
+       screen and render nothing into it, so a resumed round arrived blank. */
+    if (state.finished) { show('screenDone'); finish(); return; }
+    if (state.playId && state.slot) { resumeDoor(); return; }
+    renderDoors();
+    show('screenDoors');
   });
 
   el.backToDoors.addEventListener('click', function () {
