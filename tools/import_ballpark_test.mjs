@@ -243,6 +243,30 @@ console.log("\nA generated script has a shelf life");
  *
  * Reported by the Connection session and reproduced against these exported
  * functions before it was believed, rather than taken on the report.
+ *
+ * PROVED IN BOTH DIRECTIONS, because there are two ways to get this wrong and
+ * a green suite cannot tell you which one it is defending against. The two
+ * wrong rules fail DISJOINT sets of these assertions:
+ *
+ *   the old rule — refuse only when the calendar is MISSING:
+ *     red on "no past day" and "a partial calendar". The permitted case and the
+ *     missing-calendar case stay green, because it never over-refuses.
+ *
+ *   the blanket rule — refuse on the start day alone, whatever the calendar
+ *   holds. This is the obvious fix and it is worse than the hole: it refuses
+ *   re-importing from a launch day that has passed, which is the operation
+ *   Grid owes and the thing this guard exists to protect:
+ *     red on "permitted" and "a partial calendar". The blind-day cases stay
+ *     green, because it over-refuses everything.
+ *
+ * So "a calendar covering every past day is permitted" is NOT decoration and is
+ * not vacuous — it is the only assertion here that can catch a guard which has
+ * closed the hole by refusing the legitimate run too, and it was verified to go
+ * red under the blanket rule rather than assumed to be load-bearing.
+ *
+ * The partial calendar is the sharpest single case: some past days recorded,
+ * some not. It fails under BOTH wrong rules — the old one cannot see it, the
+ * blanket one over-refuses it — and only the coverage question gets it right.
  */
 console.log("\nThe past must be accounted for, not merely unmentioned");
 {

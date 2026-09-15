@@ -153,6 +153,14 @@ console.log("\nA re-import keeps the past and does not serve a board twice");
  * the same shape confirmed here. Grid's was worse in one respect: its whole
  * clash block sat behind `if (fs.existsSync(OUT))`, so deleting the staged SQL
  * removed the guard rather than tripping it.
+ *
+ * PROVED IN BOTH DIRECTIONS — see the same block in import_ballpark_test.mjs
+ * for the reasoning in full. The two wrong rules fail disjoint sets of these
+ * assertions: the old missing-calendar rule cannot see a calendar that holds no
+ * past day, and the blanket rule (refuse on the start day alone) over-refuses
+ * the launch-day re-import this game still owes. "A calendar covering every
+ * past day is permitted" was verified to go red under the blanket rule, so it
+ * is load-bearing rather than decoration.
  */
 console.log("\nThe past must be accounted for, not merely unmentioned");
 {
