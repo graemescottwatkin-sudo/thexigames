@@ -81,6 +81,13 @@ export const PERMA_GAMES = {
   /* QuickFire XI launched 15 September 2026. SCHEDULED by day, and its table is
      the board table rather than a schedule beside one — see SCHEDULE_SHAPE. */
   quickfire: { name: "QuickFire XI", schedule: "day" },
+  /* Who Am I XI, launched 15 September 2026. SCHEDULED by day, and like
+     QuickFire its table is the BOARD table rather than a schedule beside one —
+     see SCHEDULE_SHAPE. Absent from this map the routes exist and 404: the
+     launch shipped with /football/whoami/archive/ dead while the hub linked to
+     it, because the gate checked the route FILE existed and not that it
+     resolved. */
+  whoami: { name: "Who Am I XI", schedule: "day" },
   /* Codeword XI. SCHEDULED AND FINITE, which is the distinction that matters
      here rather than the one between ring and day: cw_schedule names one board
      per day out of a queue that ENDS, so unlike the three ring games it can run
@@ -186,7 +193,7 @@ export function keyForOldDate(raw, now = Date.now()) {
    against PERMA_GAMES. */
 const SCHEDULE_TABLE = {
   wordsearch: "ws_schedule", hilo: "hl_schedule", grid: "gd_schedule",
-  codeword: "cw_schedule", quickfire: "qf_daily",
+  codeword: "cw_schedule", quickfire: "qf_daily", whoami: "wa_board",
 };
 
 /* WHICH COLUMN HOLDS THE DAY, and which rows count as real.
@@ -204,6 +211,7 @@ const SCHEDULE_TABLE = {
  * four games already use, so nothing moves for them. */
 const SCHEDULE_SHAPE = {
   quickfire: { day: "play_date", where: "status = 'published'" },
+  whoami: { day: "play_date", where: "status = 'published'" },
 };
 const shapeOf = (game) => SCHEDULE_SHAPE[game] || { day: "day", where: null };
 
@@ -316,7 +324,7 @@ export async function boardKeys(env, game, now = Date.now()) {
 export const THEME_OF = {
   crossword: "football", wordsearch: "football", scrambled: "football",
   hilo: "football", vowels: "football", quickfire: "football", grid: "football",
-  codeword: "football",
+  codeword: "football", whoami: "football",
 };
 export const themeOf = (game) => THEME_OF[game] || "football";
 export const gamePath = (game) => `/${themeOf(game)}/${game}/`;

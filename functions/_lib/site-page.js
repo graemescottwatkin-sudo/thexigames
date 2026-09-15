@@ -76,6 +76,16 @@ const MAST = {
     nav: [["Today", "/football/quickfire/"], ["Archive", "/football/quickfire/archive/"],
           ["How to play", "/football/quickfire/#how"]],
   },
+  /* NO ANSWERS TAB, and the reason is sharper here than anywhere else. A Who
+     Am I answers page would publish the players behind eleven doors — and only
+     ONE of those doors is spent per person per day, so the other ten stay live
+     for everybody else. An answers page a week later would be fine; an answers
+     page at all is a door somebody has not opened yet. */
+  whoami: {
+    name: "Who Am I", home: "/football/whoami/",
+    nav: [["Today", "/football/whoami/"], ["Archive", "/football/whoami/archive/"],
+          ["How to play", "/football/whoami/#how"]],
+  },
   vowels: {
     name: "Vowels", home: "/football/vowels/",
     nav: [["Today", "/football/vowels/"], ["Archive", "/football/vowels/archive/"],

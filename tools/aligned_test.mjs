@@ -623,6 +623,41 @@ t("the server's game list and this table agree", (() => {
     broke.length ? broke.join(" | ") : LOOKUPS.map((l) => l[0]).join(", "));
 }
 
+/* A LAUNCHED GAME MUST BE ADDRESSABLE, and this is the third time today that
+ * a check walked the very list the broken game was missing from.
+ *
+ * Who Am I launched with its archive and permalink routes returning 404. The
+ * route files existed — its gate checked that — but functions/_lib/permalink.js
+ * had no entry for the game, and permalinkRoute() looks the name up there. The
+ * hub linked to /football/whoami/archive/ and the link was dead.
+ *
+ * tools/archive_test.mjs would have caught it and did not, because it iterates
+ * Object.keys(PERMA_GAMES): a game absent from that map is absent from the test
+ * as well. That is the identical shape as entryKey's guard walking GAMES, fixed
+ * this morning, met again this evening in a different map. The lesson is not
+ * "check PERMA_GAMES" — it is that a roster-driven check cannot see an omission
+ * FROM the roster, so something outside it has to.
+ *
+ * LAUNCHED is that something. A game with a launch date is out, and a game that
+ * is out has addresses. The two facts live in different files and neither is
+ * derived from the other, which is exactly what makes the comparison worth
+ * making. */
+{
+  const { LAUNCHED } = await import("../functions/_lib/games.js");
+  const { PERMA_GAMES, THEME_OF } = await import("../functions/_lib/permalink.js");
+  const launched = Object.keys(LAUNCHED).filter((g) => LAUNCHED[g]);
+  const unaddressable = launched.filter((g) => !PERMA_GAMES[g]);
+  const themeless = launched.filter((g) => !THEME_OF[g]);
+  t("every launched game is addressable — permalink knows it",
+    launched.length > 0 && unaddressable.length === 0,
+    unaddressable.length
+      ? unaddressable.join(", ") + " have a launch date and no permalink entry, so their routes 404"
+      : launched.join(", "));
+  t("and every launched game has a theme, so its path can be built",
+    themeless.length === 0,
+    themeless.length ? themeless.join(", ") : "");
+}
+
 t("no game carries a private copy of a shared file",
   GAMES.every((g) => !has(`${g.dir}/xi-tokens.css`) && !has(`${g.dir}/xi-chrome.css`) &&
                      !has(`${g.dir}/xi-chrome.js`)));

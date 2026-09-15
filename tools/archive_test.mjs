@@ -56,12 +56,17 @@ const RAN = {
      the code does not ask for would answer nothing and read as "this game has
      no boards", which is what it did before this entry existed. */
   qf_daily: ["2026-09-15", "2026-09-14"],
+  /* Who Am I XI launched 15 September 2026 and its boards start the same day,
+     so on launch day exactly one has run. Its table is the BOARD table like
+     QuickFire's — keyed on play_date, carrying a status — not a schedule. */
+  wa_board: ["2026-09-15"],
 };
 const tableOf = (sql) => (/ws_schedule/.test(sql) ? "ws_schedule"
   : /hl_schedule/.test(sql) ? "hl_schedule"
   : /gd_schedule/.test(sql) ? "gd_schedule"
   : /cw_schedule/.test(sql) ? "cw_schedule"
-  : /qf_daily/.test(sql) ? "qf_daily" : null);
+  : /qf_daily/.test(sql) ? "qf_daily"
+  : /wa_board/.test(sql) ? "wa_board" : null);
 const env = {
   DB: {
     prepare: (sql) => ({
