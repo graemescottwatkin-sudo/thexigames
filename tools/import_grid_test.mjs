@@ -19,7 +19,7 @@
  *
  *   node tools/import_grid_test.mjs        (from the repo root)
  */
-import { scheduleFromSql, historyClash, carryForward, buildSchedule } from "./import_grid.js";
+import { scheduleFromSql, historyClash, carryForward, buildSchedule, uncoveredPast } from "./import_grid.js";
 
 let pass = 0, fail = 0;
 const t = (n, ok, d) => { ok ? pass++ : fail++; console.log(`${ok ? "  ok  " : "FAIL  "}${n}${d ? "  — " + d : ""}`); };
@@ -134,6 +134,57 @@ console.log("\nA re-import keeps the past and does not serve a board twice");
   t("so the history guard finds nothing to refuse",
     historyClash(prev, sched, FROM).length === 0,
     "the operation the guard was written to allow");
+}
+
+/* ---- the hole under the history check ----------------------------------
+ *
+ * THIS GAME IS THE REASON IT MATTERS. Grid's live calendar is a placeholder
+ * dated from the day it was imported, and CLAUDE.md records that it must be
+ * re-imported with --from=<launch day> when the game launches. That is exactly
+ * a run with a start day in the past.
+ *
+ * Grid is not currently exposed — its calendar starts 2026-09-06 and does record
+ * days that have run, so historyClash has something to compare — but the guard
+ * should not depend on that being true. Against a calendar holding no past day
+ * historyClash examines nothing, returns zero, and the run writes over served
+ * days while reporting a clean bill.
+ *
+ * Found in import_ballpark.js by the Connection session, reproduced there, and
+ * the same shape confirmed here. Grid's was worse in one respect: its whole
+ * clash block sat behind `if (fs.existsSync(OUT))`, so deleting the staged SQL
+ * removed the guard rather than tripping it.
+ */
+console.log("\nThe past must be accounted for, not merely unmentioned");
+{
+  const today = "2026-09-15";
+
+  const futureOnly = { "2026-09-22": "gd-1", "2026-09-23": "gd-2" };
+  t("a calendar that records no past day leaves every past day uncovered",
+    uncoveredPast(futureOnly, "2026-09-09", today).length === 6,
+    uncoveredPast(futureOnly, "2026-09-09", today).join(", "));
+  t("and historyClash finds nothing there, which is why it is not enough",
+    historyClash(futureOnly, {}, today).length === 0,
+    "zero clashes against a calendar with no past day");
+
+  const covered = {};
+  for (let d = 9; d <= 15; d++) covered[`2026-09-${String(d).padStart(2, "0")}`] = "gd-" + d;
+  t("a calendar covering every past day is permitted",
+    uncoveredPast(covered, "2026-09-09", today).length === 0,
+    "the launch-day re-import this game still owes is not blocked");
+
+  const partial = { "2026-09-09": "gd-9", "2026-09-10": "gd-10" };
+  t("a partial calendar names exactly the days it cannot speak for",
+    uncoveredPast(partial, "2026-09-09", today).join(",") ===
+      "2026-09-11,2026-09-12,2026-09-13,2026-09-14",
+    uncoveredPast(partial, "2026-09-09", today).join(", "));
+
+  t("a start day today or later is not this check's business",
+    uncoveredPast({}, today, today).length === 0 &&
+    uncoveredPast({}, "2026-09-20", today).length === 0);
+
+  t("and a missing calendar with a past start is still refused",
+    uncoveredPast({}, "2026-09-09", today).length === 6,
+    "deleting the staged SQL must not delete the guard");
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

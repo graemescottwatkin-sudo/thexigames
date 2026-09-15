@@ -259,6 +259,25 @@ function historyClash(prev, next, today) {
   return clashes;
 }
 
+/* THE DAYS THIS RUN WOULD WRITE OVER THAT THE PREVIOUS CALENDAR CANNOT SPEAK
+   FOR. historyClash() above answers "did any recorded past day change"; this
+   answers the question underneath it, "is there a recorded past day at all",
+   which is the one that was being skipped.
+   A fact the tool holds BEFORE it builds anything — the start day and the
+   calendar in hand — so it can refuse without generating 400 boards first. */
+function uncoveredPast(prev, fromDay, today) {
+  if (!fromDay || !(fromDay < today)) return [];
+  const start = Date.parse(String(fromDay) + "T00:00:00Z");
+  const end = Date.parse(String(today) + "T00:00:00Z");
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return [];
+  const out = [];
+  for (let t = start; t < end; t += 86400000) {
+    const day = new Date(t).toISOString().slice(0, 10);
+    if (!(prev || {})[day]) out.push(day);
+  }
+  return out;
+}
+
 /* One board a day from a start day, in the order they were ISSUED — which is
    the ordinal the content side froze, not the order they happen to be read.
    Days already written are carried in and never reassigned. */
@@ -436,12 +455,34 @@ ${warned.length} warning(s). Not refusals — nothing here stops a write:`);
        days between that start and today would be written blind over whatever
        was served on them. --first-import says "there is genuinely no history",
        which is a claim a person makes, not one this tool may assume. */
-    if (!Object.keys(previous).length && from < today &&
-        !process.argv.includes("--first-import")) {
+    /* AND AN EMPTY CALENDAR IS NOT THE ONLY WAY TO HAVE NOTHING TO COMPARE,
+       which is what this check used to assume. It asked
+       `!Object.keys(previous).length` — the calendar is missing entirely — and a
+       calendar that EXISTS but records no day before today satisfies none of
+       that while being just as blind. historyClash() walks the previous
+       calendar's own days and skips everything at or after today, so against a
+       calendar starting next week it has zero days to examine, finds zero
+       clashes, and "nothing to compare" comes back looking exactly like
+       "nothing wrong".
+       Reported by the Connection session and reproduced here against the real
+       exported functions before being believed: a previous calendar of
+       2026-09-22 and 2026-09-23, --from six days back, and buildSchedule wrote
+       2026-09-09 through 2026-09-14 while historyClash returned 0. The same
+       call with a previous calendar that does record past days returns the
+       clashes correctly — so the comparison was never broken, it was empty.
+       The question is therefore not "is there a calendar" but "does the
+       calendar account for every day this run would write over". */
+    const uncovered = uncoveredPast(previous, from, today);
+    if (uncovered.length && !process.argv.includes("--first-import")) {
       console.error(`
-REFUSED: no previous calendar to check against, and --from=${from} is before today.`);
-      console.error(`  ${OUT} is missing, so what those days already served cannot be known.`);
-      console.error("  Days between that start and today would be overwritten blind.");
+REFUSED: --from=${from} is before today and ${uncovered.length} of those days are unaccounted for.`);
+      console.error(`  ${Object.keys(previous).length
+        ? "The previous calendar records no board for them"
+        : OUT + " is missing entirely"}, so what they served cannot be known.`);
+      console.error(`  x ${uncovered.slice(0, 8).join(", ")}` +
+        (uncovered.length > 8 ? `, ...and ${uncovered.length - 8} more` : ""));
+      console.error("  Those days would be overwritten blind, and the history check would");
+      console.error("  pass while it happened, because it has nothing to compare them against.");
       console.error("  If this really is the first import, pass --first-import.");
       process.exit(1);
     }
@@ -698,4 +739,4 @@ function staleBoards(sql, today) {
 }
 
 export { gate, buildSchedule, carryForward, historyClash, contentClash,
-         scheduleFromSql, boardsFromSql, staleBoards };
+         uncoveredPast, scheduleFromSql, boardsFromSql, staleBoards };

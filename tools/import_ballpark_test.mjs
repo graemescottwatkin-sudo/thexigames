@@ -22,7 +22,7 @@
  */
 import {
   carryForward, historyClash, contentClash, buildSchedule, scheduleFromSql,
-  boardsFromSql, staleBoards,
+  boardsFromSql, staleBoards, uncoveredPast,
 } from "./import_ballpark.js";
 import { readFileSync } from "node:fs";
 
@@ -226,6 +226,63 @@ console.log("\nA generated script has a shelf life");
     skip++;
     console.log("  skip  no data/bp-production.sql beside the checkout (expected in CI)");
   }
+}
+
+/* ---- the hole under the history check ----------------------------------
+ *
+ * historyClash() walks the PREVIOUS calendar's own days and skips everything at
+ * or after today. Against a calendar that starts next week it therefore has
+ * nothing to examine, returns zero clashes, and a run that writes over six days
+ * that have already been served exits 0. "Nothing to compare" reading as
+ * "nothing wrong" is the same fault as a grep that skipped a binary file.
+ *
+ * The guard used to ask whether the calendar was MISSING ENTIRELY, which is one
+ * way to have nothing to compare and not the only one. It asks now whether the
+ * calendar accounts for every day the run would write over — a fact available
+ * from the start day alone, before a single board is built.
+ *
+ * Reported by the Connection session and reproduced against these exported
+ * functions before it was believed, rather than taken on the report.
+ */
+console.log("\nThe past must be accounted for, not merely unmentioned");
+{
+  const today = "2026-09-15";
+
+  const futureOnly = { "2026-09-22": "bp-0001", "2026-09-23": "bp-0002" };
+  t("a calendar that records no past day leaves every past day uncovered",
+    uncoveredPast(futureOnly, "2026-09-09", today).length === 6,
+    uncoveredPast(futureOnly, "2026-09-09", today).join(", "));
+  /* THE REASON THE CHECK ABOVE HAD TO BE WRITTEN, asserted rather than
+     described: the old guard genuinely cannot see this case. */
+  t("and historyClash finds nothing there, which is why it is not enough",
+    historyClash(futureOnly, buildSchedule(
+      [{ id: "bp-0001", ordinal: 1 }, { id: "bp-0002", ordinal: 2 }],
+      "2026-09-09", {}), today).length === 0,
+    "zero clashes while six served days are rewritten");
+
+  /* AND IT MUST NOT REFUSE THE LEGITIMATE RUN. Re-importing from a launch day
+     that has passed is the intended operation for a game whose calendar was
+     staged before it launched; it stays allowed when the days are covered. */
+  const covered = {};
+  for (let d = 9; d <= 15; d++) covered[`2026-09-${String(d).padStart(2, "0")}`] = "bp-" + d;
+  t("a calendar covering every past day is permitted",
+    uncoveredPast(covered, "2026-09-09", today).length === 0,
+    "a launch-day re-import with a full history still runs");
+
+  const partial = { "2026-09-09": "bp-9", "2026-09-10": "bp-10" };
+  t("a partial calendar names exactly the days it cannot speak for",
+    uncoveredPast(partial, "2026-09-09", today).join(",") ===
+      "2026-09-11,2026-09-12,2026-09-13,2026-09-14",
+    uncoveredPast(partial, "2026-09-09", today).join(", "));
+
+  t("a start day today or later is not this check's business",
+    uncoveredPast({}, today, today).length === 0 &&
+    uncoveredPast({}, "2026-09-20", today).length === 0);
+
+  /* The case that DID work before must keep working, or this is a swap
+     rather than a fix. */
+  t("and a missing calendar with a past start is still refused",
+    uncoveredPast({}, "2026-09-09", today).length === 6);
 }
 
 console.log(`\n${pass} passed, ${fail} failed${skip ? `, ${skip} skipped` : ""}`);

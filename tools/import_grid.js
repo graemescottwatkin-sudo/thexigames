@@ -238,6 +238,33 @@ export function historyClash(prev, next, today) {
   return clashes;
 }
 
+/* THE DAYS THIS RUN WOULD WRITE OVER THAT THE PREVIOUS CALENDAR CANNOT SPEAK
+   FOR — the question underneath historyClash() rather than the one it asks.
+   historyClash walks the PREVIOUS calendar's days and skips everything at or
+   after today, so a calendar holding no past day gives it nothing to examine
+   and it returns zero clashes. That is indistinguishable from a clean run, and
+   Grid's calendar is exactly that shape today: a placeholder dated from the day
+   it was imported, for a game whose launch-day re-import is still outstanding.
+   Grid is not currently exposed — its calendar starts 2026-09-06 and does record
+   past days — but it is one re-import away from being so, and the guard should
+   not depend on that.
+   Same function as import_ballpark.js's, where the hole was found. Deliberately
+   a copy and not a shared import: these two importers share no module today and
+   introducing one to carry eleven lines would couple two tools that are
+   otherwise independent. If a third needs it, that is the moment to lift it. */
+export function uncoveredPast(prev, fromDay, today) {
+  if (!fromDay || !(fromDay < today)) return [];
+  const start = Date.parse(String(fromDay) + "T00:00:00Z");
+  const end = Date.parse(String(today) + "T00:00:00Z");
+  if (!Number.isFinite(start) || !Number.isFinite(end)) return [];
+  const out = [];
+  for (let t = start; t < end; t += 86400000) {
+    const day = new Date(t).toISOString().slice(0, 10);
+    if (!(prev || {})[day]) out.push(day);
+  }
+  return out;
+}
+
 /* ---- the sample --------------------------------------------------------- */
 
 /* Two real boards, and the calendar as OFFSETS from today rather than as dates:
@@ -329,6 +356,26 @@ function main() {
      without this that would land silently on days already in the archive. The
      comparison is against the last SQL this importer emitted, which is the
      only record of the calendar that exists outside the database. */
+  /* AND THIS ONE IS NOT CONDITIONAL ON THE STAGED FILE EXISTING, because the
+     case it refuses is the one where that file tells us nothing. Delete
+     data/gd-production.sql, or run on a machine that never had it, and the
+     whole block below is skipped — a guard that disappears exactly when its
+     input does. This asks only about the start day and what the calendar in
+     hand covers, both known before a board is built. */
+  const uncovered = uncoveredPast(previous, from, todayKey());
+  if (uncovered.length && !process.argv.includes("--rewrite-history")) {
+    console.error(`REFUSED: --from=${from} is before today and ${uncovered.length} of those days are unaccounted for.`);
+    console.error(`  ${Object.keys(previous).length
+      ? "The previous calendar records no board for them"
+      : OUT + " is missing entirely"}, so what they served cannot be known.`);
+    console.error(`  x ${uncovered.slice(0, 8).join(", ")}` +
+      (uncovered.length > 8 ? `, ...and ${uncovered.length - 8} more` : ""));
+    console.error("  Those days would be written over blind, and the history check below would");
+    console.error("  report no clashes while it happened, because it has nothing to compare.");
+    console.error("  If you really mean to rewrite what people have played: --rewrite-history");
+    process.exit(1);
+  }
+
   if (fs.existsSync(OUT)) {
     const clashes = historyClash(previous, schedule, todayKey());
     if (clashes.length && !process.argv.includes("--rewrite-history")) {
