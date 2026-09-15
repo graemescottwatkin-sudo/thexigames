@@ -145,7 +145,6 @@ body{margin:0}
 .ftcard .row .btn.primary{background:var(--pitch);border-color:var(--pitch);color:var(--on-pitch,#fff)}
 
 /* ---- previous puzzles, by day (the same drawer the word search uses) ---- */
-a.home-choice{text-decoration:none;color:inherit}
 .archive{margin:0 0 12px;text-align:left}
 .arch-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
 .arch-head .site-sec{margin:0}

@@ -38,6 +38,18 @@
   transition:border-color var(--t-fast) var(--ease),background var(--t-fast) var(--ease),box-shadow var(--t-fast) var(--ease);
 }
 .home-choice:hover{border-color:var(--accent-ink);background:var(--sel-word)}
+/* A CARD THAT IS A LINK STILL HAS TO LOOK LIKE A CARD.
+   .home-choice was written for a <button>, which carries no underline and
+   inherits no link colour. Four games use it on an <a> instead — deliberately,
+   because a card that is an anchor works before the day's board has loaded, can
+   be opened in a new tab, and is a real address for a crawler — and on every one
+   of those the browser underlined the heading, the note and all. Wordsearch and
+   HiLo each carried this line privately, so they looked right; Codeword and Who
+   Am I did not, and Codeword's past-boards card has been underlined body text on
+   the live site since the day it launched.
+   Three copies of one fact is the drift this repository is organised against,
+   and the copy a new game forgets is the one that shows. It lives here now. */
+a.home-choice{text-decoration:none;color:inherit}
 /* KEYBOARD. The family ring on every control on the landing; there was none,
    so a keyboard player could tab through the page and see nothing move. */
 .home-choice:focus-visible,.site-nav button:focus-visible,.site-ghost:focus-visible,

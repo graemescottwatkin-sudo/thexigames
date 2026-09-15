@@ -256,15 +256,6 @@ body{margin:0}
   .home-choice.hero .hc-art{width:min(78%,320px);opacity:.55}
 }
 
-/* A CARD THAT IS A LINK STILL HAS TO LOOK LIKE A CARD. The past-boards card
-   is an <a> rather than a <button> on purpose — it works before the day's
-   board has loaded and it opens in a new tab like any other address — and the
-   browser's default underlines every word in it, heading and note alike.
-   Wordsearch and HiLo each carry this same line in their own stylesheet, which
-   is three copies of one fact: it belongs in xi-landing.css, and going there
-   means moving the whole family's shared tag, which is not this change. */
-a.home-choice{text-decoration:none;color:inherit}
-
 /* The four steps. A numbered list because the order is the point — the door
    comes before the free spell, and the free spell before the substitutions. */
 .how-steps{
