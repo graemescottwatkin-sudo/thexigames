@@ -66,8 +66,8 @@ const has = (p) => fs.existsSync(path.join(ROOT, p));
  * That is the sentinel fault in its least visible form. A sentinel is a
  * constant nothing moves; this was a constant nothing READ — which looks
  * healthier and checks exactly as much. */
-const LAST_SHIPPED = "v001c";
-const LAST_SHIPPED_ASSETS = "c1c0f754a0933557";
+const LAST_SHIPPED = "v001d";
+const LAST_SHIPPED_ASSETS = "c971b604f87cb8ad";
 
 let pass = 0, fail = 0;
 function t(name, ok, note) {
