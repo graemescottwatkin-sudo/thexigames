@@ -3,7 +3,7 @@
   /* THE BUILD, PAIRED WITH THE ?v= ON THIS FILE'S OWN SCRIPT TAG. A stale
      cached script is otherwise invisible: the page loads, the game runs, and
      it is yesterday's code. aligned_test asserts the two agree. */
-  var BUILD = "v001b";
+  var BUILD = "v001c";
   if (window.XIPlays && document.documentElement) {
     document.documentElement.setAttribute("data-build", BUILD);
   }
@@ -160,16 +160,28 @@ function boot(BOARD){
           if (ok) done.push(i);
         });
         then(done);
+        return true;                    // offline there is nothing to wait for
       },
+      /* THE COST IS THE ORACLE'S, AND IT IS CHARGED HERE BECAUSE OFFLINE THERE
+         IS NOBODY ELSE TO CHARGE IT. It used to be added by the click handlers
+         below, which are shared by both oracles — so the server charged it, the
+         handler charged it again, and one reveal spent two substitutions.
+         Moving it out of the handler is only correct if this half picks it up:
+         delete it from the handler alone and offline play gets free helpers, a
+         clock that never advances for them, and a substitution counter stuck on
+         zero. One fact, one place, and the place is whoever is answering. */
       wrongNumbers: function(then){
         var bad = [];
         Object.keys(guess).forEach(function(n){
           if (guess[n] !== LETTER[n]) bad.push(Number(n));
         });
+        extraMinutes += COST.check;
         then(bad);
       },
-      reveal: function(n, then){ then(LETTER[n], false); },
-      // Offline there is nobody to ask, so the page keeps its own arithmetic.
+      reveal: function(n, then){
+        subsUsed++; extraMinutes += COST.reveal;
+        then(LETTER[n], false);
+      },
       finish: function(then){ then(null); }
     };
   }
@@ -190,11 +202,21 @@ function boot(BOARD){
         .catch(function(){ toast("Could not reach the referee"); if (fail) fail(); });
     }
     return {
+      /* SAYS WHETHER IT ASKED, and that return value is load-bearing.
+         `if (!round) return;` dropped the callback on the floor — and
+         refreshSolved() had already set `asking = true` before calling, so the
+         flag latched TRUE FOR THE REST OF THE ROUND and no word was ever
+         confirmed again. A player quick enough to finish an answer before
+         /play comes back, on a connection slow enough for that to happen, lost
+         the whole board silently. Found by writing the suite for the other two
+         faults: the test completed a word before the round existed and no mark
+         request ever went out. */
       confirm: function(then){
-        if (!round) return;
+        if (!round) return false;
         post("mark", { playId: round.playId, guess: guess }, function(d){
           then(d.solved || []);
         });
+        return true;
       },
       wrongNumbers: function(then){
         if (!round) return;
@@ -517,22 +539,44 @@ function boot(BOARD){
      done, so offline it is a few comparisons and live it is at most eleven
      calls in a game rather than one per keystroke. A slot half full is not a
      question anybody can answer. */
-  var asking = false;
+  /* A RE-ENTRANCY GUARD THAT FORGETS IS A DROPPED QUESTION, and this one lost
+     the most important question in the game.
+
+     `if (asking) return;` with no memory. A confirm is in flight, the player
+     types the last letter of the last answer, this fires, and the ask is
+     discarded — not deferred, discarded. Nothing asks again, because nothing
+     else calls refreshSolved once the grid stops changing. Live on board 2 that
+     left all 169 squares filled and correct, ten of eleven words locked, the
+     eleventh silent: no error, no retry, nothing to click. A player who has
+     finished the board is simply told they have not.
+
+     It is the shape this estate has been finding all week from the other side —
+     a check whose input is absent must not report a pass — in its active form:
+     a call whose turn is taken must not be thrown away. `missed` remembers, and
+     the callback asks again rather than leaving the grid to trigger it, because
+     a finished grid never changes again. */
+  var asking = false, missed = false;
   function refreshSolved(){
-    if (asking || over) return;
+    if (over) return;
     var ripe = SLOTS.some(function(w, i){
       return !solvedWords[i] && wordCells(w).every(function(rc){
         return guess[CELLS[rc[0]][rc[1]]];
       });
     });
     if (!ripe) return;
+    if (asking) { missed = true; return; }
     asking = true;
-    oracle.confirm(function(done){
+    missed = false;
+    /* AND THE FLAG ONLY LATCHES IF THE ASK WENT OUT. Setting it before the call
+       and trusting the callback to clear it means any path that returns without
+       calling back locks this function for the rest of the round. */
+    if (oracle.confirm(function(done){
       asking = false;
       var fresh = done.some(function(i){ return !solvedWords[i]; });
       done.forEach(function(i){ solvedWords[i] = true; });
       if (fresh) paint();
-    });
+      if (missed) { missed = false; refreshSolved(); }
+    }) === false) { asking = false; }
   }
 
   function holderOf(l){
@@ -559,8 +603,13 @@ function boot(BOARD){
 
   document.getElementById("check").addEventListener("click", function(){
     if (over) return; start();
+    /* THE HANDLER PAINTS AND CHARGES NOTHING. Both oracles now apply the cost
+       — the server's from spentMinutes, the offline one from COST — and this
+       callback used to add COST.check on top of whichever had already done it.
+       The comment three inches up in serverOracle said "the page takes
+       spentMinutes rather than adding COST.check itself", which was the rule
+       and was not what the code did. */
     oracle.wrongNumbers(function(bad){
-      extraMinutes += COST.check;
       bad.forEach(function(n){ wrongMark[n] = true; });
       toast(bad.length
         ? bad.length + (bad.length === 1 ? " number wrong " : " numbers wrong ") + DOT + " +" + COST.check + "'"
@@ -571,8 +620,11 @@ function boot(BOARD){
   document.getElementById("reveal").addEventListener("click", function(){
     if (over || selected === null || locked[selected]) return; start();
     var n = selected;
+    /* CHARGES NOTHING EITHER, and this one was the visible fault: the server
+       applied subsLeft and spentMinutes, then this line spent a second
+       substitution and another COST.reveal minutes on top. One reveal cost two
+       of three substitutions and ran the clock ten minutes fast. */
     oracle.reveal(n, function(l){
-      subsUsed++; extraMinutes += COST.reveal;
       Object.keys(guess).forEach(function(k){ if (guess[k] === l && !locked[k]) delete guess[k]; });
       guess[n] = l; locked[n] = "revealed"; delete pencil[n]; delete wrongMark[n];
       toast(subsUsed > SUBS ? "Over your substitutions: a draw at best"
@@ -636,6 +688,13 @@ function boot(BOARD){
         if (typeof d.subsLeft === "number") subsUsed = SUBS - d.subsLeft;
         if (d.scored === false) toast("Replay " + DOT + " this one is not recorded");
         paint();
+        /* ANYTHING FINISHED WHILE THE ROUND WAS OPENING IS ASKED ABOUT NOW.
+           Without this, a word completed before /play returned would wait for
+           the next keystroke to be noticed — and on the last word of a board
+           there is no next keystroke. Same reasoning as the retry inside
+           refreshSolved: the grid is what normally triggers it, and a finished
+           grid never changes again. */
+        refreshSolved();
       })
       .catch(function(){ opening = false; toast("Could not reach the referee"); });
   }
