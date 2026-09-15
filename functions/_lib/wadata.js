@@ -140,10 +140,39 @@ export function publicDoor(row) {
  * which narrows eleven doors to the handful of players with that many clubs.
  * Sorted, they are a shape of the day and nothing more.
  */
+/* HOW MANY CLUBS EACH OF TODAY'S PLAYERS HAD — ONE NUMBER PER PLAYER, NOT PER
+ * DOOR, AND THIS IS THE SECOND VERSION.
+ *
+ * The first returned eleven numbers, one per door, sorted. Sorting them stopped
+ * a number being attributed to a door, which was the leak I was aiming at — but
+ * it left the GROUPING in plain sight, and the grouping is the more useful half.
+ * "3, 3, 3, 6, 6, 6, 8, 10, 10, 10, 13" says three doors share a three-club
+ * player, three share a six-club player, and so on: anybody holding the name
+ * list can pair doors off each other before guessing anything.
+ *
+ * A player can hold several of today's doors — Distin left Manchester City in
+ * 2007 and Everton in 2015 — so the doors are deduped to PLAYERS here. Eleven
+ * doors typically come from five to seven players, and the list is that many
+ * numbers. The multiplicities go with it, which is the point.
+ *
+ * WHAT IS STILL GIVEN AWAY, deliberately: how many distinct players are behind
+ * today's board, and the shape of their careers. That is the panel's whole
+ * purpose — "there is a one-club man and a journeyman in here today" — and it
+ * attributes to nobody.
+ *
+ * The player ids never leave; they are read here and dropped. */
+function careersOf(rows) {
+  const byPlayer = new Map();
+  for (const r of rows) {
+    if (!byPlayer.has(r.player_id)) byPlayer.set(r.player_id, Number(r.club_count) || 0);
+  }
+  return [...byPlayer.values()].sort((a, b) => a - b);
+}
+
 export async function getBoard(env, date) {
   const play = date || today();
   const { results } = await env.DB.prepare(`
-    SELECT d.slot, d.club, d.leave_year, p.club_count
+    SELECT d.slot, d.club, d.leave_year, p.club_count, d.player_id
     FROM wa_board b
     JOIN wa_door d  ON d.play_date = b.play_date
     JOIN wa_player p ON p.id = d.player_id
@@ -163,7 +192,7 @@ export async function getBoard(env, date) {
     id: "XIWA-" + play.replace(/-/g, ""),
     date: play,
     doors: rows.map(publicDoor),
-    careers: rows.map((r) => Number(r.club_count) || 0).sort((a, b) => a - b),
+    careers: careersOf(rows),
   };
 }
 

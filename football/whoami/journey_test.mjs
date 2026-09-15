@@ -59,8 +59,10 @@ function board() {
   return {
     id: "XIWA-20260915", date: "2026-09-15", no: 21, day: "2026-09-15",
     doors,
-    /* Sorted, as the server sends them. */
-    careers: [2, 2, 3, 3, 4, 4, 5, 5, 6, 7, 9],
+    /* ONE PER PLAYER, sorted, as the server sends them: eleven doors from six
+       players. The stub carried eleven — one per door — which is what the
+       server used to send and what leaked the grouping. */
+    careers: [2, 3, 4, 5, 7, 9],
   };
 }
 
@@ -116,7 +118,19 @@ function server() {
       const body2 = { stage, label: rung.label, pointsSpent: round.pointsSpent,
                       minute, worthNow: worth(round.pointsSpent), replayed };
       if (stage === 1) body2.spell = { club: CLUB, from: 2004, to: 2015, apps: 333, goals: 0 };
-      if (stage === 2) { body2.career = CAREER; body2.clubCount = 5; }
+      if (stage === 2) {
+        body2.career = CAREER;
+        body2.clubCount = 5;
+        /* AS SPELLS, with the door's own marked BY THE SERVER. The page folds
+           names for its type-ahead and must not be the thing that decides which
+           row is the door's — so `mine` arrives decided. */
+        body2.spells = [
+          { club: "Rennes", from: 2002, to: 2004, apps: 70, goals: 0, loan: false, mine: false },
+          { club: "Chelsea", from: 2004, to: 2015, apps: 333, goals: 0, loan: false, mine: true },
+          { club: "Sevilla", from: 2013, to: 2014, apps: 1, goals: 0, loan: true, mine: false },
+          { club: "Arsenal", from: 2015, to: 2019, apps: 110, goals: 0, loan: false, mine: false },
+        ];
+      }
       if (stage === 3) { body2.age = 44; body2.nationality = "Czech Republic";
                          body2.position = "Goalkeeper"; }
       return [200, body2];
@@ -236,9 +250,18 @@ console.log("=== Nothing on the board is an answer ===");
   /* THE COUNTS ARE THE SUBTLE ONE. Shown against their doors they would say how
      many clubs each door's player had, which narrows eleven doors to a handful
      of candidates for anyone holding the name list. */
-  const careers = doc.getElementById("careers").textContent;
-  t("the career lengths are shown as one sorted list, not per door",
-    /2, 2, 3, 3, 4, 4, 5, 5, 6, 7, 9/.test(careers), careers.slice(0, 60));
+  /* ONE CHIP PER PLAYER, NOT PER DOOR. Eleven numbers for eleven doors leaked
+     the GROUPING even when sorted — three doors sharing a three-club player is
+     visible at a glance and lets anyone with the name list pair doors off each
+     other. The server dedupes to players, so the count of chips is the count of
+     players and the multiplicities are gone. */
+  const chips = [...doc.querySelectorAll("#careers .cr-one")];
+  t("the careers panel shows one chip per player, not per door",
+    chips.length === board().careers.length && chips.length < 11,
+    chips.length + " chips for 11 doors");
+  t("and each says whose it is and how many clubs, rather than a bare number",
+    chips.every((c) => /Player \d+/.test(c.textContent) && /club/.test(c.textContent)),
+    chips[0] && chips[0].textContent);
   t("and no door carries a count of its own",
     ![...doc.querySelectorAll("#doors .door")].some((d) => /\b\d\s*clubs?\b/i.test(d.textContent)));
 }
@@ -356,6 +379,35 @@ console.log("=== Buying the ladder, and giving up ===");
   await settle(w);
   t("buying the career shows it", /Arsenal/.test(doc.getElementById("clues").textContent));
   t("and the rung is no longer offered", !rung("Full career"));
+
+  /* THE CAREER IS A LADDER, NOT A SENTENCE. It printed as one run-on line and
+     the shape of a career is the puzzle — finding the big club in a wall of
+     text takes effort and none at all in a column. */
+  const spells = [...doc.querySelectorAll("#clues .spell")];
+  t("the career draws one row per club", spells.length === 4, String(spells.length));
+  t("each row carries its years and its appearances",
+    /2004/.test(spells[1].textContent) && /333 apps/.test(spells[1].textContent),
+    spells[1] && spells[1].textContent.replace(/\s+/g, " ").trim());
+  /* THE ONE THE PLAYER IS LOOKING FOR. Without it they hunt the list for the
+     club they picked before they can read outward from it. */
+  const mine = spells.filter((x) => /\bmine\b/.test(x.className));
+  t("and the door's own club is marked, exactly once",
+    mine.length === 1 && /Chelsea/.test(mine[0].textContent),
+    mine[0] && mine[0].textContent.replace(/\s+/g, " ").trim());
+  t("the marking is the server's decision, not the page's",
+    !/\.mine\s*=/.test(game) && !/fold\([^)]*\)\s*===\s*fold\(\s*(?:door|BOARD)/.test(game),
+    "the page folds names for a type-ahead and must not judge with it");
+  /* A LOAN IS NEVER THE ANSWER and lengthens the hardest element to read. */
+  t("a loan spell is marked as one", spells.some((x) => /loan/.test(x.className)));
+  /* READ OFF THE CELL, not off the concatenated text. The first version tested
+     the whole clues panel for /\b1 app\b/ and failed on its own regex: the rows
+     run together as "Sevilla1 app", so there is no word boundary before the 1.
+     The assertion was wrong and the code was right, which is worth an extra
+     line to get straight. */
+  const loanApps = spells.find((x) => /loan/.test(x.className))
+    .querySelector(".sp-apps").textContent.trim();
+  t("a one-appearance spell reads 'app' rather than 'apps'",
+    loanApps === "1 app", loanApps);
 
   click(rung("Nationality and age"));
   await settle(w);

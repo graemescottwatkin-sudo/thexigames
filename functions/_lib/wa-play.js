@@ -113,6 +113,24 @@ export function clueBody(row, reveals, door) {
         ? { club: door.club, from: spell.from, to: spell.to, apps: spell.apps, goals: spell.goals }
         : { club: door.club };
     } else if (what === "career") {
+      /* THE CAREER AS SPELLS, NOT AS A SENTENCE. It went out as club_history —
+         one pre-rendered string — and the page printed it as a wall:
+         "2017 Paris Saint-Germain B (8) · 2017-2019 Lille II (8) · …". The
+         SHAPE of a career is the puzzle, and a run-on line hides it: finding
+         the one big club in there takes real effort and none at all in a list.
+         Sending the spells costs nothing in secrecy — it is the same
+         information, which is why it is the same rung — and it lets the page
+         mark the door's own club IN PLACE, which is the thing a player is
+         actually looking for.  is computed here rather than on the page
+         because the page folds names for a type-ahead and must not be the thing
+         that decides which spell is the door's. */
+      let spells = [];
+      try { spells = JSON.parse(row.clubs || "[]") || []; } catch (e) { spells = []; }
+      const want = fold(door.club);
+      out.spells = spells.map((c) => ({
+        club: c.club, from: c.from, to: c.to, apps: c.apps, goals: c.goals,
+        loan: !!c.loan, mine: fold(c.club) === want,
+      }));
       out.career = row.club_history || null;
       out.clubCount = Number(row.club_count) || 0;
     } else if (what === "bio") {

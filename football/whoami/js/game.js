@@ -19,7 +19,7 @@
  * one especially, because deciding it here would need the club's whole roster
  * and a roster is a candidate list for the door.
  */
-var BUILD = "v001b";
+var BUILD = "v001c";
 
 (function bootstrap() {
   'use strict';
@@ -321,9 +321,24 @@ function start() {
     }
     /* SORTED AND UNATTRIBUTED, exactly as the server sent them. Rendering these
        beside their doors would undo the whole point of sorting them. */
+    /* ONE NUMBER PER PLAYER, LABELLED, AND THIS IS THE SECOND VERSION.
+       It was eleven numbers, one per door, sorted — and sorting stopped a
+       number being attributed to a door but left the GROUPING in plain sight.
+       "3, 3, 3, 6, 6, 6, 8, 10, 10, 10, 13" says three doors share a three-club
+       player, which lets anyone holding the name list pair doors off each other
+       before guessing anything. The server dedupes to players now, so a board
+       of six players shows six numbers and the multiplicities are gone.
+       LABELLED because bare numbers read as noise. "Player 1 · 3 clubs" says
+       there is a one-club man and a journeyman in here today; "3, 6, 13" says
+       nothing. The numbering is this list's own order, which is sorted and
+       attributes to nobody. */
     var c = BOARD.careers || [];
-    el.careers.textContent = c.length
-      ? 'Clubs played for, across today’s eleven: ' + c.join(', ')
+    el.careers.innerHTML = c.length
+      ? '<span class="cr-head">Today’s ' + c.length + ' players</span>' +
+        c.map(function (n, i) {
+          return '<span class="cr-one"><b>Player ' + (i + 1) + '</b>' +
+            n + (n === 1 ? ' club' : ' clubs') + '</span>';
+        }).join('')
       : '';
   }
 
@@ -418,7 +433,32 @@ function start() {
         (s.apps != null ? ' · ' + esc(s.apps) + (Number(s.apps) === 1 ? ' app' : ' apps') : '') +
         (s.goals ? ' · ' + esc(s.goals) + (Number(s.goals) === 1 ? ' goal' : ' goals') : '') + '</span>');
     }
-    if (r.career) {
+    if (r.spells && r.spells.length) {
+      /* THE CAREER AS A LADDER, one club a row, in the order it happened.
+         It printed as a single run-on line, and that is the clue the game is
+         built on: the SHAPE of a career is the puzzle, and a wall of text hides
+         it. Years left, club in the middle, appearances right — so a column of
+         spells can be scanned for the big one rather than read through.
+         AND THE DOOR'S OWN CLUB IS MARKED IN PLACE. Without it a player has to
+         hunt the line for the club they picked before they can read outward
+         from it, which is the one thing they are certain to want to do. The
+         SERVER decides which row is theirs; this page only draws it. */
+      var rows = r.spells.map(function (c) {
+        var years = (c.from || '') + (c.to && c.to !== c.from ? '–' + c.to : '');
+        var apps = c.apps == null ? ''
+          : c.apps + (Number(c.apps) === 1 ? ' app' : ' apps');
+        return '<span class="spell' + (c.mine ? ' mine' : '') +
+          (c.loan ? ' loan' : '') + '">' +
+          '<span class="sp-years">' + esc(years) + '</span>' +
+          '<span class="sp-club">' + esc(c.club) +
+            (c.loan ? '<span class="sp-loan">loan</span>' : '') + '</span>' +
+          '<span class="sp-apps">' + esc(apps) + '</span></span>';
+      }).join('');
+      bits.push('<span class="spells">' + rows + '</span>');
+    } else if (r.career) {
+      /* The pre-rendered string is still sent and is still the fallback: a
+         player row with no parsable clubs would otherwise show nothing at all
+         for the rung that was just paid for. */
       bits.push('<span class="c-body">' + esc(r.career) + '</span>');
     }
     if (r.age != null || r.nationality) {

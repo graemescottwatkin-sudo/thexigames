@@ -147,9 +147,15 @@ console.log("\n=== getBoard sends doors and unattributed counts ===");
   t("the board's own SELECT does not read the career",
     !/club_history/.test(fn) && !/p\.clubs/.test(fn),
     "a column not selected cannot be sent by accident");
-  t("and the counts it returns are sorted, not in slot order",
-    /careers[\s\S]*sort\(/.test(fn),
-    "in slot order they would be attributed, which narrows eleven doors to a handful");
+  /* ONE NUMBER PER PLAYER, NOT PER DOOR. Sorting alone was the first version
+     and it stopped a number attaching to a door — but it left the GROUPING
+     visible, and three doors sharing a three-club player lets anyone with the
+     name list pair doors off each other. The doors are deduped to players. */
+  t("the counts are deduped to players before they are sent",
+    /careersOf/.test(fn), "eleven doors come from five to seven players");
+  t("and that helper dedupes on the player and sorts what is left",
+    /byPlayer[\s\S]*has\(r\.player_id\)[\s\S]*sort\(/.test(src),
+    "the ids are read here and dropped");
   t("a short board is refused rather than served",
     /!== 11\) return null/.test(fn),
     "ten doors is a board whose eleventh answer failed to resolve");
@@ -232,6 +238,25 @@ console.log("\n=== What each rung may say, and nothing more ===");
   const two = clueBody(CECH, stageAt(2).reveals, door);
   t("stage two is the career, once it is paid for", /Rennes/.test(two.career));
   t("and still names nobody", !JSON.stringify(two).toUpperCase().includes("PETR"));
+
+  /* THE CAREER AS SPELLS, AND THE DOOR'S OWN MARKED HERE RATHER THAN ON THE
+     PAGE. The page folds names for its type-ahead and must not be the thing
+     that decides which row is the door's — that is a second judge, and this
+     game has spent all day removing those. Sending the structure costs nothing
+     in secrecy: it is the same information as the string, which is why it is
+     the same rung. */
+  t("the career goes out as spells, one per club", (two.spells || []).length === 5,
+    String((two.spells || []).length));
+  t("and the door's own club is marked, exactly once",
+    two.spells.filter((s) => s.mine).length === 1 &&
+    two.spells.find((s) => s.mine).club === "Chelsea",
+    "the page hunts for it otherwise");
+  t("each spell carries its years and its appearances",
+    two.spells.every((s) => s.from != null && s.apps != null));
+  /* AND STILL NO NAME IN IT, which is the assertion the structure could have
+     quietly broken: a richer payload is a bigger surface. */
+  t("and no spell names the player",
+    !JSON.stringify(two.spells).toUpperCase().includes("CECH"));
 
   const three = clueBody(CECH, stageAt(3).reveals, door);
   t("stage three is age and country", three.nationality === "Czech Republic" && three.age > 0);

@@ -113,11 +113,56 @@
 
   /* The pages every game shares. Kept here for the same reason as the squad:
      a footer written into each page is a footer that drifts. */
-  var PAGES = [
-    { name: "How to play", href: "/football/crossword/how-to-play" },
-    { name: "Answers",     href: "/football/crossword/answers/" },
-    { name: "Privacy",     href: "/football/crossword/privacy" }
-  ];
+  /* THE FOOTER'S "MORE" LINKS, AND THEY BELONG TO THE GAME YOU ARE ON.
+   *
+   * This was one hardcoded list pointing at the crossword's pages, printed on
+   * every page of every game. So Who Am I's footer offered "How to play" and
+   * "Answers" for the crossword — a player on the ninth game sent to the first
+   * game's rules, and to an answers page for a puzzle they were not playing.
+   * Nine games shared one game's footer, which is the family's oldest fault in
+   * the one place every single page renders.
+   *
+   * PRIVACY IS THE EXCEPTION AND STAYS PUT. It is the site's privacy policy
+   * rather than the crossword's; it lives under that path for historical
+   * reasons and moving it would break a link somebody has bookmarked, which is
+   * a worse trade than an odd-looking URL.
+   *
+   * WHAT A GAME OFFERS IS ITS OWN. Not every game has an answers page — a
+   * codeword's solution IS its grid, QuickFire's answers are the three options
+   * you did not pick, and Who Am I's would publish ten doors other people have
+   * not opened — so the list is per game and an absent entry is a decision
+   * rather than an oversight. */
+  var PRIVACY_HREF = "/football/crossword/privacy";
+  var GAME_PAGES = {
+    crossword:  [["How to play", "/football/crossword/how-to-play"],
+                 ["Answers", "/football/crossword/answers/"]],
+    wordsearch: [["How to play", "/football/wordsearch/#how"],
+                 ["Answers", "/football/wordsearch/answers/"]],
+    scrambled:  [["How to play", "/football/scrambled/#how"],
+                 ["Answers", "/football/scrambled/answers/"]],
+    hilo:       [["How to play", "/football/hilo/#how"],
+                 ["Answers", "/football/hilo/answers/"]],
+    vowels:     [["How to play", "/football/vowels/#how"],
+                 ["Answers", "/football/vowels/answers/"]],
+    grid:       [["How to play", "/football/grid/#how"],
+                 ["Answers", "/football/grid/answers/"]],
+    /* No answers page: the solution is the grid itself. */
+    codeword:   [["How to play", "/football/codeword/#how"]],
+    /* No answers page: the answers are the three options you did not pick. */
+    quickfire:  [["How to play", "/football/quickfire/#how"]],
+    /* No answers page: it would publish ten doors nobody has opened yet. */
+    whoami:     [["How to play", "/football/whoami/#how"]]
+  };
+
+  /* WHICH GAME THIS PAGE BELONGS TO, read off the path. The hub and the
+     site-wide pages belong to none, and get the crossword's — they have to get
+     something, and it is the game the privacy page already lives under. */
+  function pagesHere() {
+    var m = /^\/football\/([a-z]+)\//.exec(location.pathname || "");
+    var own = (m && GAME_PAGES[m[1]]) || GAME_PAGES.crossword;
+    return own.map(function (p) { return { name: p[0], href: p[1] }; })
+      .concat([{ name: "Privacy", href: PRIVACY_HREF }]);
+  }
   var PRIVACY = "/football/crossword/privacy";
 
   /* xic-xi, not xi. The chrome owns its markup and every class in it lives in
@@ -664,7 +709,7 @@
     set.setAttribute("aria-expanded", "false");
     set.addEventListener("click", function () { openPop(set); });
     foot.appendChild(set);
-    PAGES.forEach(function (p) {
+    pagesHere().forEach(function (p) {
       var a = el("a", "xic-slot", "<span>" + p.name + "</span>");
       a.href = p.href;
       foot.appendChild(a);
@@ -754,7 +799,7 @@
 
     var more = el("div", null, "<h2>More</h2>");
     var ml = el("ul");
-    PAGES.forEach(function (p) {
+    pagesHere().forEach(function (p) {
       var li = document.createElement("li");
       var a = el("a", null, p.name);
       a.href = p.href;
@@ -1053,7 +1098,13 @@
     return !!(playedSnapshot && playedSnapshot.games.indexOf(game) !== -1);
   }
 
-  window.XIChrome = { init: init, squad: SQUAD, pages: PAGES, close: close,
+  /* "pages" is a FUNCTION now, not a constant. It read "pages: PAGES" and PAGES
+     no longer exists — which would have thrown a ReferenceError as this object
+     literal was built, at module init, on every page of the site. node --check
+     cannot see it: it proves a file parses, not that it runs. That is the third
+     time today a name has been removed from one place and left referenced in
+     another, and the second time it would have taken the whole site down. */
+  window.XIChrome = { init: init, squad: SQUAD, pages: pagesHere, close: close,
     formChips: formChips, formBand: band, FORM_LENGTH: FORM_LENGTH,
     playedToday: playedToday, playedTodaySync: playedTodaySync,
     playedTodayHas: playedTodayHas,
