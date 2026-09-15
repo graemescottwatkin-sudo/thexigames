@@ -153,5 +153,73 @@ console.log("\n=== The fold, which decides whether a name can be typed at all ==
   }, "ash folds to AE, so the stored key matches", null, true);
 }
 
+console.log("\n=== The SQL it emits is SQL D1 will accept ===");
+{
+  /* GENERATED FOR REAL AND READ BACK, not asserted about the source. The first
+     version of this importer wrapped its output in BEGIN TRANSACTION … COMMIT,
+     which D1 refuses outright — "please use the state.storage.transaction()
+     APIs instead of the SQL BEGIN TRANSACTION or SAVEPOINT statements" — and it
+     refuses the WHOLE FILE, so the import died at upload with nothing written
+     and a five-megabyte file that looked perfectly good on disk.
+     It was the only importer in this repo that emitted them; the other seven
+     had always been plain statement lists. The family had solved this before I
+     invented it, and nothing was checking, because every case above runs
+     --check and --check writes nothing. A generator whose OUTPUT is never
+     inspected is tested up to the point that matters. */
+  const { bank, sched } = fixture();
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), "wa-sql-"));
+  fs.writeFileSync(path.join(dir, "whoami-bank.json"), JSON.stringify(bank));
+  fs.writeFileSync(path.join(dir, "board-schedule.json"), JSON.stringify(sched));
+  const out = path.join(dir, "out.sql");
+  let ok = true;
+  try {
+    execFileSync(process.execPath,
+      [path.join(ROOT, "tools", "import_whoami.mjs"), "--source", dir,
+       "--from=2026-10-01", "--out=" + out],
+      { encoding: "utf8", stdio: "pipe", cwd: ROOT });
+  } catch (e) { ok = false; }
+  t("it writes a file when not in --check", ok && fs.existsSync(out));
+
+  const sql = ok && fs.existsSync(out) ? fs.readFileSync(out, "utf8") : "";
+  t("and D1 will take it: no BEGIN TRANSACTION, no COMMIT, no SAVEPOINT",
+    !/\bBEGIN\s+TRANSACTION\b/i.test(sql) && !/^\s*COMMIT\s*;/im.test(sql) &&
+    !/\bSAVEPOINT\b/i.test(sql),
+    "D1 refuses the whole file, so the import dies at upload");
+  t("the calendar is cleared before it is rewritten",
+    /DELETE FROM wa_door;/.test(sql) && /DELETE FROM wa_board;/.test(sql),
+    "re-running with a new --from must not leave yesterday's calendar behind");
+  t("the bank is upserted rather than deleted",
+    /INSERT OR REPLACE INTO wa_player/.test(sql) && !/DELETE FROM wa_player/.test(sql));
+  t("every board gets eleven doors in the SQL",
+    (sql.match(/INSERT OR REPLACE INTO wa_door/g) || []).length === 22,
+    "two boards of eleven");
+  /* AND THE APOSTROPHE, because a career string is full of them and one
+     unescaped quote ends the statement and starts a syntax error 3,000 lines
+     long. */
+  t("a name with an apostrophe is escaped rather than ending the statement", (() => {
+    const d2 = fs.mkdtempSync(path.join(os.tmpdir(), "wa-quote-"));
+    const b = JSON.parse(JSON.stringify(bank));
+    const s2 = JSON.parse(JSON.stringify(sched));
+    b.players[0].name = "SHAY O'SHEA";
+    b.players[0].searchKey = "SHAYOSHEA";
+    s2.boards.forEach((bd) => bd.doors.forEach((d) => {
+      if (d.answer === "ALAN SHEARER") d.answer = "SHAY O'SHEA";
+    }));
+    fs.writeFileSync(path.join(d2, "whoami-bank.json"), JSON.stringify(b));
+    fs.writeFileSync(path.join(d2, "board-schedule.json"), JSON.stringify(s2));
+    const o2 = path.join(d2, "out.sql");
+    try {
+      execFileSync(process.execPath,
+        [path.join(ROOT, "tools", "import_whoami.mjs"), "--source", d2,
+         "--from=2026-10-01", "--out=" + o2], { encoding: "utf8", stdio: "pipe", cwd: ROOT });
+    } catch (e) { return false; }
+    const got = fs.readFileSync(o2, "utf8");
+    fs.rmSync(d2, { recursive: true, force: true });
+    return got.includes("'SHAY O''SHEA'");
+  })(), "one unescaped quote is a syntax error three thousand lines long");
+
+  fs.rmSync(dir, { recursive: true, force: true });
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
