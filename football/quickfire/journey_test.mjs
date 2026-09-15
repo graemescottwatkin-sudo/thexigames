@@ -213,7 +213,14 @@ console.log("=== The page comes up on a board ===");
     /Today/i.test(doc.getElementById("startKicker").textContent));
   t("the past-boards button is offered", visible(doc, "showArchive"),
     "the owner's standard: boards that have gone can be selected");
-  t("the build tag is the one the page loads", /v001e/.test(w.BUILD || ""), w.BUILD);
+  /* DERIVED FROM THE PAGE, NOT PINNED. This read /v001e/ and went red the
+     moment the tag moved — a test asserting a hardcoded version enforces the
+     drift instead of catching it. What the assertion MEANS is that the script's
+     BUILD and the page's ?v= agree, so it reads the page for the expected
+     value. */
+  const pageTag = (html.match(/js\/game\.js\?v=(v[0-9a-z]+)"/) || [])[1];
+  t("the build tag is the one the page loads", !!pageTag && w.BUILD === pageTag,
+    );
 }
 
 console.log("\n=== A round, played end to end ===");

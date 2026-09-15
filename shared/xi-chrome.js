@@ -85,9 +85,17 @@
        what board numbering counts from, and it is not the same question as
        which day the game was released. */
     { n: 8,  name: "QuickFire XI",  href: "/football/quickfire/" },
-    { n: 9,  status: "In testing",   href: "/football/ballpark/" },
-    { n: 10, status: "In build" },
-    { n: 11, status: "On the drawing board" }
+    /* WHO AM I XI LAUNCHED ON 15 SEPTEMBER 2026 and takes the nine, the next
+       free number. Ballpark moves from nine to ten — its third move in three
+       days, having been on the seven until Codeword took it and the eight until
+       QuickFire did. That is the rule working rather than churn: a game that is
+       not out does not hold a shirt and moves when one ships past it, and the
+       kit goes with the GAME rather than the number.
+       Eleven shirts, so the tail loses its last unsigned slot rather than the
+       squad growing a twelfth. */
+    { n: 9,  name: "Who Am I XI",   href: "/football/whoami/" },
+    { n: 10, status: "In testing",   href: "/football/ballpark/" },
+    { n: 11, status: "In build" }
   ];
 
   /* WHERE A GAME LIVES, read off the squad rather than assembled from its id.

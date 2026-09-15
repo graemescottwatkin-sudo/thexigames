@@ -223,28 +223,57 @@ console.log("\nIt counts plays and banks results, like every built game");
     "the eleven are the clubs, and a person plays one of them");
 }
 
-console.log("\nAnd it is NOT launched, which a launch must change deliberately");
+console.log("\nAnd it IS launched, which every one of these makes true");
 {
+  /* THIS BLOCK USED TO ASSERT THE OPPOSITE, and that was its job: while the
+   * game was dark it refused the squad entry, the hub mention, the sitemap
+   * line and the archive route, so it could not go live by drift — by a stray
+   * edit, by a sweep that touched every game, or by somebody adding a row to a
+   * list because the other ten had one.
+   *
+   * Launching is the deliberate act that turns them round. It is written this
+   * way rather than deleted because the list of things a launch must include IS
+   * the list of things that were refused, and a game that half-launches — named
+   * on the hub, absent from the sitemap — is a game nobody can find twice.
+   */
   const chrome = readRoot("shared/xi-chrome.js");
   const hub = readRoot("index.html");
   const sitemap = readRoot("functions/sitemap.xml.js");
-
-  t("it holds no shirt on the squad", !/name: "Who Am I XI"/.test(chrome),
-    "a shirt is taken at LAUNCH, and only then");
-  t("it is named nowhere on the hub", !/Who Am I/i.test(hub),
-    "an unreleased game is named nowhere in served markup");
-  t("it is not offered to a crawler", !/football\/whoami/.test(sitemap));
-  t("and it has no archive route yet", !hasRoot("functions/football/whoami"),
-    "the archive advertises boards, and there is nothing to advertise yet");
-
-  /* THE OTHER HALF, so this block cannot pass by the game simply not existing:
-     the things that ARE true now must stay true. */
   const games = readRoot("functions/_lib/games.js");
-  t("but it IS in the server's game list, so a result has somewhere to go",
-    /"whoami"/.test(games) && /whoami: "Who Am I XI"/.test(games));
-  t("and its results key is the day, one a day",
-    /"wa:" \+ d/.test(games));
-  t("and _headers knows its paths",
+
+  t("it wears the ninth shirt", /n: 9,[^}]*name: "Who Am I XI"/.test(chrome),
+    "a launched game takes the next free number");
+  t("and every slot is a launched name or a status, never both", (() => {
+    const rows = [...chrome.matchAll(/\{\s*n:\s*(\d+),([^}]*)\}/g)];
+    if (rows.length !== 11) return false;      // eleven shirts, never a twelfth
+    return rows.every(([, , body]) => /name:/.test(body) !== /status:/.test(body));
+  })(), "an unreleased game is named nowhere until it launches");
+
+  t("the hub names it, now that it is out", /Who Am I XI/.test(hub));
+  t("and gives it a card that can be played and an archive to open",
+    /href="\/football\/whoami\/"[^>]*aria-label="Play Who Am I XI today"/.test(hub) &&
+    /href="\/football\/whoami\/archive\/"/.test(hub));
+  t("and a row in the hub's table, so the front door knows it was played today",
+    /id: "whoami"[\s\S]*key: "xiwa\.results\.v1"/.test(hub));
+
+  t("it is in the sitemap, offered to a crawler", /football\/whoami/.test(sitemap));
+
+  /* THE ROUTES THE CARD LINKS TO. A launch that names a game on the hub and
+     leaves its archive a 404 is worse than no launch: the link is the promise. */
+  t("the archive route exists, because the hub links to it",
+    hasRoot("functions/football/whoami/archive/index.js"));
+  t("and the permalink route, so a board has one address forever",
+    hasRoot("functions/football/whoami/daily/[[path]].js"));
+
+  t("LAUNCHED records the day, which is what board numbers count from",
+    /whoami: "2026-09-15"/.test(games));
+
+  /* AND THE THINGS THAT WERE ALREADY TRUE STAY TRUE, so this block cannot pass
+     by the game quietly ceasing to exist. */
+  t("it is still in the server's game list", /"whoami"/.test(games) &&
+    /whoami: "Who Am I XI"/.test(games));
+  t("its results key is still the day, one a day", /"wa:" \+ d/.test(games));
+  t("and _headers still knows its paths",
     /\/football\/whoami\/css\/\*/.test(readRoot("_headers")));
 }
 

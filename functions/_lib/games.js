@@ -68,6 +68,10 @@ export const LAUNCHED = {
      because LAUNCHED is what every list counts from and a later date would
      hide the boards it has already run. */
   quickfire: "2026-09-14",
+  /* Who Am I XI. Its first BOARD is 15 September, which is also the day it
+     launched — unlike Codeword and QuickFire, whose boards began a day before
+     they were released. The two questions are different and happen to agree. */
+  whoami: "2026-09-15",
   /* Codeword XI took the seventh shirt on 14 September 2026 — the next free
      number, which is what launching does. Its queue starts the same day, so
      the launch day and board one are the same day and nothing counts from
@@ -361,8 +365,22 @@ export function playedOn(game, row) {
   const d = String((row && (row.date || row.day)) || "");
   if (/^\d{4}-\d{2}-\d{2}/.test(d)) return d.slice(0, 10);
   /* A numbered board carries no date of its own; its day is its number's,
-     from the one epoch. Scrambled's ring counts by the same daily number. */
-  if (game === "scrambled" || game === "vowels") return dailyDayKey(row && row.no);
+     from the one epoch. Scrambled's ring counts by the same daily number.
+     GRID BELONGS HERE AND WAS NOT IN IT. Its page records { no, title, score,
+     solved, misses, hints, at } — no day and no date — so this returned null
+     for every Grid result, and results.js ORDERS BY played_on. An entire
+     game's history sorting as null is the word search's fault of 6 September,
+     which is written up eight lines above this one; Grid reproduced it and the
+     comment did not stop it.
+     SAFE BECAUSE GRID'S `no` IS THE FAMILY NUMBER, verified against the live
+     endpoint rather than assumed: /api/grid/daily answers { no: 21, day:
+     "2026-09-15" }, and 21 is the family number for that day. If it ever became
+     Grid's own ordinal this would silently date every row wrong — which is why
+     the check in aligned_test runs each game's REAL recorded row rather than a
+     fixture carrying every field. */
+  if (game === "scrambled" || game === "vowels" || game === "grid") {
+    return dailyDayKey(row && row.no);
+  }
   return null;
 }
 

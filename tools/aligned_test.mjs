@@ -95,6 +95,7 @@ const GAMES = [
   { id: "grid",       dir: "football/grid",       name: "Grid XI",       prefix: "xigd" },
   { id: "codeword",   dir: "football/codeword",   name: "Codeword XI",   prefix: "xicw" },
   { id: "quickfire",  dir: "football/quickfire", name: "QuickFire XI",  prefix: "qfx"  },
+  { id: "whoami",     dir: "football/whoami",    name: "Who Am I XI",   prefix: "xiwa" },
 ];
 
 const workflow = read(".github/workflows/checks.yml");
@@ -506,6 +507,49 @@ t("the server's game list and this table agree", (() => {
     wired.length ? wired.join(", ") + " read the account a way that always fails"
       : "session or chrome.user(), never account() or detail.account");
 
+  /* AND THE ROW EACH GAME ACTUALLY RECORDS MUST RESOLVE BOTH FACTS.
+   *
+   * The checks above call entryKey with a fixture carrying every identity field
+   * the family uses — dailyNo, no, day, date — which is generous enough to hide
+   * the fault it is looking for. Grid's page records { no, title, score,
+   * solved, misses, hints, at }: no day, no date. entryKey coped, because Grid
+   * keys on the number. playedOn did not, and results.js ORDERS BY played_on,
+   * so every Grid result would have banked with a null date and the game's
+   * whole history would sort as null.
+   *
+   * That is the word search's fault of 6 September 2026, written up in games.js
+   * itself — "migrate.js read only `date`, so every word search row landed with
+   * played_on NULL". The comment did not stop Grid reproducing it, because
+   * nothing executed a real row.
+   *
+   * SO THESE ARE THE REAL SHAPES, copied from each page's own recordResult
+   * call. A fixture that carries every field tests the fixture. */
+  const REAL_ROWS = {
+    crossword: { date: "2026-09-14", at: 1, dailyNo: 20, seed: 1 },
+    hilo: { game: "hilo", day: "2026-09-14", boardId: "b", score: 9, right: 9, wrong: 2 },
+    wordsearch: { day: "2026-09-14", found: 11 },
+    scrambled: { no: 20, score: 9 },
+    vowels: { no: 20, score: 9 },
+    grid: { no: 20, title: "x", score: 9, solved: 9, misses: 1, hints: 0, at: 1 },
+    codeword: { no: 20, day: "2026-09-14", score: 90, solved: 11, minute: 12, result: "W" },
+    quickfire: { game: "quickfire", day: "2026-09-14", no: 20, score: 600, right: 6 },
+    whoami: { game: "whoami", day: "2026-09-14", no: 20, slot: 2, solved: true, score: 94 },
+  };
+  {
+    const { playedOn } = await import("../functions/_lib/games.js");
+    const broken = [];
+    for (const g of SERVER_GAMES) {
+      const row = REAL_ROWS[g];
+      if (!row) { broken.push(g + " has no real row in this check"); continue; }
+      if (typeof entryKey(g, row) !== "string") broken.push(g + " banks no key");
+      if (!playedOn(g, row)) broken.push(g + " banks a null played_on");
+    }
+    t("every game's own recorded row resolves a key AND a played_on",
+      broken.length === 0,
+      broken.length ? broken.join(" | ")
+        : SERVER_GAMES.map((g) => g + "=" + playedOn(g, REAL_ROWS[g])).join(" "));
+  }
+
   const recordsOnly = banks.filter((g) => {
     const dir = `football/${g}/js`;
     const all = fs.readdirSync(dir).filter((f) => f.endsWith(".js"))
@@ -597,8 +641,8 @@ t("no game carries a private copy of a shared file",
 
    Move both constants together, in the post-deploy commit, exactly as a game's
    LAST_SHIPPED and LAST_SHIPPED_ASSETS move together. */
-const SHARED_TAG = "v38";
-const SHARED_HASH = "7e9fda3ee1815e43";
+const SHARED_TAG = "v39";
+const SHARED_HASH = "e46d743fc300df4c";
 /* EVERY PAGE THAT LINKS THE SHARED LAYER, not the games alone. The hub, the
    two static pages and the unlaunched game all carry the chrome now, and the
    server-rendered shell writes the tag from a constant of its own — so a tag

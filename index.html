@@ -22,7 +22,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>The XI Games — daily football puzzles</title>
-<meta name="description" content="Eleven daily football puzzles, one for every shirt. Crossword XI, Wordsearch XI, Scrambled XI, HiLo XI, Vowels XI, Grid XI, Codeword XI and QuickFire XI are out now — a new board every day.">
+<meta name="description" content="Eleven daily football puzzles, one for every shirt. Crossword XI, Wordsearch XI, Scrambled XI, HiLo XI, Vowels XI, Grid XI, Codeword XI, QuickFire XI and Who Am I XI are out now — a new board every day.">
 <link rel="canonical" href="https://www.thexigames.com/">
 <script type="application/ld+json">
 {
@@ -68,9 +68,9 @@
      own — the team sheet and the kit colours. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared/xi-tokens.css?v=v38">
-<link rel="stylesheet" href="shared/xi-chrome.css?v=v38">
-<script src="shared/xi-theme.js?v=v38"></script>
+<link rel="stylesheet" href="shared/xi-tokens.css?v=v39">
+<link rel="stylesheet" href="shared/xi-chrome.css?v=v39">
+<script src="shared/xi-theme.js?v=v39"></script>
 <style>
 :root{
 
@@ -424,9 +424,13 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
         <a class="shirt live" id="shirt8" href="/football/quickfire/" title="QuickFire XI" aria-label="QuickFire XI">
           <span class="dot" style="background:var(--kit-08)" aria-hidden="true">8</span>
           <span class="lbl">QuickFire<span class="xi"> XI</span></span></a>
+        <!-- Who Am I XI launched 15 September 2026 on the ninth, the next free
+             number, and keeps the teal it was already wearing. -->
+        <a class="shirt live" id="shirt9" href="/football/whoami/" title="Who Am I XI" aria-label="Who Am I XI">
+          <span class="dot" style="background:var(--kit-09)" aria-hidden="true">9</span>
+          <span class="lbl">Who Am I<span class="xi"> XI</span></span></a>
       </div>
       <div class="strip-row soon-row">
-        <span class="shirt soon" title="Not out yet">9</span>
         <span class="shirt soon" title="Not out yet">10</span>
         <span class="shirt soon" title="Not out yet">11</span>
       </div>
@@ -704,6 +708,37 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
         </div>
       </article>
 
+      <article class="game">
+        <div class="cap" style="background:var(--kit-09)">
+          <span class="num">9</span>
+          <!-- PLACEHOLDER ART, generic until the owner has the real thing, the
+               same standing as Codeword's and QuickFire's. Eleven doors with
+               one ajar: enough to read as "pick a club" at card size, and not a
+               drawing of the game. Swap the <g> for the artwork and nothing
+               else on the card needs to change. -->
+          <svg class="prev" viewBox="0 0 220 120" aria-hidden="true">
+            <g>
+              <rect x="40" y="22" width="30" height="34" rx="3" fill="#fff" fill-opacity=".28"/>
+              <rect x="78" y="22" width="30" height="34" rx="3" fill="#fff" fill-opacity=".28"/>
+              <rect x="116" y="22" width="30" height="34" rx="3" fill="#fff" fill-opacity=".9"/>
+              <rect x="154" y="22" width="30" height="34" rx="3" fill="#fff" fill-opacity=".28"/>
+              <rect x="40" y="64" width="30" height="34" rx="3" fill="#fff" fill-opacity=".28"/>
+              <rect x="78" y="64" width="30" height="34" rx="3" fill="#fff" fill-opacity=".28"/>
+              <rect x="116" y="64" width="30" height="34" rx="3" fill="#fff" fill-opacity=".28"/>
+              <rect x="154" y="64" width="30" height="34" rx="3" fill="#fff" fill-opacity=".28"/>
+            </g>
+          </svg>
+        </div>
+        <div class="body">
+          <h3>Who Am I XI</h3>
+          <p>Eleven club doors, one hidden player behind each.</p>
+          <div class="acts">
+            <a class="btn" href="/football/whoami/" aria-label="Play Who Am I XI today">Play today</a>
+            <a class="past" href="/football/whoami/archive/" aria-label="Who Am I XI past puzzles">Past puzzles</a>
+          </div>
+        </div>
+      </article>
+
     </div>
   </section>
 
@@ -780,8 +815,8 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
            named nowhere in served markup. -->
       <a class="soon-card open" href="/football/ballpark/" rel="nofollow"
          title="In testing — not finished, and not yet a daily game">
-        <span class="sq" style="background:var(--kit-07)">9</span>
-        <span class="nm">Number nine<span>In testing</span></span>
+        <span class="sq" style="background:var(--kit-07)">10</span>
+        <span class="nm">Number ten<span>In testing</span></span>
       </a>
     </div>
   </section>
@@ -825,8 +860,8 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
      and the one page list, so the front door's footer and every game's are
      the same footer. -->
 <footer class="xic-foot"></footer>
-<script src="shared/xi-season.js?v=v38"></script>
-<script src="shared/xi-chrome.js?v=v38"></script>
+<script src="shared/xi-season.js?v=v39"></script>
+<script src="shared/xi-chrome.js?v=v39"></script>
 
 <script>
 /* Progressive enhancement only: everything above renders complete without
@@ -997,6 +1032,15 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
       { n: 8, id: "quickfire", name: "QuickFire XI", key: "qfx.results.v1",
         api: "/api/quickfire/daily",
         today: function (d) { return d.day; },
+        done: function (r, t) { return r.day === t; } },
+      /* Who Am I XI launched 15 Sep 2026. Judged by DAY: its boards are keyed
+         on play_date and a result is banked under that day, so the day is the
+         thing both sides already hold. ONE RESULT A DAY, NOT ELEVEN — the
+         owner's exception of 11 September: this game's eleven are the CLUBS,
+         and a person plays one of them. */
+      { n: 9, id: "whoami", name: "Who Am I XI", key: "xiwa.results.v1",
+        api: "/api/whoami/daily",
+        today: function (d) { return d.day; },
         done: function (r, t) { return r.day === t; } }
     ];
 
@@ -1164,7 +1208,7 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
       if (ladderLibs) return ladderLibs;
       ladderLibs = new Promise(function (done) {
         var left = 2, ok = true;
-        ["shared/xi-seasons.js?v=v38", "shared/xi-table.js?v=v38"].forEach(function (src) {
+        ["shared/xi-seasons.js?v=v39", "shared/xi-table.js?v=v39"].forEach(function (src) {
           var el = document.createElement("script");
           el.src = src;
           el.onload = function () { if (!--left) done(ok); };

@@ -204,7 +204,14 @@ console.log("=== The landing, and then the board ===");
 {
   const { doc, w, click } = await open();
   t("it opens on the landing, not in a game", visible(doc, "waHome") && !visible(doc, "waGame"));
-  t("the build tag is the one the page loads", /v001/.test(w.BUILD || ""), w.BUILD);
+  /* DERIVED FROM THE PAGE, NOT PINNED. This read /v001e/ and went red the
+     moment the tag moved — a test asserting a hardcoded version enforces the
+     drift instead of catching it. What the assertion MEANS is that the script's
+     BUILD and the page's ?v= agree, so it reads the page for the expected
+     value. */
+  const pageTag = (html.match(/js\/game\.js\?v=(v[0-9a-z]+)"/) || [])[1];
+  t("the build tag is the one the page loads", !!pageTag && w.BUILD === pageTag,
+    );
   click(doc.getElementById("waToday"));
   await settle(w);
   t("choosing today shows the doors", visible(doc, "waGame") && visible(doc, "screenDoors"));
