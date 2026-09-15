@@ -36,7 +36,7 @@ const hasRoot = (p) => fs.existsSync(path.join(ROOT, p));
 /* WHAT IS LIVE. Not a sentinel — a constant nothing moves is a comparison
    against nothing, which is the fault LAST_PRESENTED was retired for. Set on
    the first deploy, and never backwards after that. */
-const LAST_SHIPPED = "v001d";
+const LAST_SHIPPED = "v001e";
 /* THE HALF THAT CARRIES THE LAW, and this gate shipped without it. A version
    number can only refuse a tag that goes BACKWARDS; it cannot see changed bytes
    under a tag that has not moved, which is the common case and the dangerous
@@ -47,7 +47,7 @@ const LAST_SHIPPED = "v001d";
    dea4aa99f808361d" and then wrote nothing, because there was no line to
    replace. A tool that reports a write it did not make is a green line over a
    gap. */
-const LAST_SHIPPED_ASSETS = "dea4aa99f808361d";
+const LAST_SHIPPED_ASSETS = "cf6b47f5428394a2";
 
 console.log("Who Am I XI — gate\n");
 
