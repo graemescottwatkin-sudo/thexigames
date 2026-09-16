@@ -734,6 +734,55 @@ t("no game carries a private copy of a shared file",
   GAMES.every((g) => !has(`${g.dir}/xi-tokens.css`) && !has(`${g.dir}/xi-chrome.css`) &&
                      !has(`${g.dir}/xi-chrome.js`)));
 
+/* A GAME THAT POSTS PLAYS MUST ALSO LOAD THE SEASON, or its plays are counted
+ * in one of the two places a season is counted and not the other.
+ *
+ * xi-plays.js posts start and end to /api/play, and the server writes
+ * season_play from that — so an ACCOUNT's season has always counted every game.
+ * The same two moments are meant to write the DEVICE's season, and that half
+ * runs inside xi-plays' noteSeason(), which begins:
+ *
+ *     if (window.XISeason && typeof window.XISeason[which] === "function")
+ *
+ * A page that does not load shared/xi-season.js has no window.XISeason, so
+ * that test is false, nothing is written, and nothing anywhere reports a
+ * problem. Grid, Codeword and Ballpark had been in that state since they
+ * launched — measured 16 Sep 2026 — so the hub, which computes a season for a
+ * player with no account by reading the device's store, was blind to three of
+ * the ten games while the server's copy had all ten. Two answers about what a
+ * Tuesday was, which is exactly what one-fact-one-place forbids, arrived at by
+ * a missing script tag rather than by a second implementation.
+ *
+ * Ballpark's own page comment already said "the completions the season already
+ * records", which is the tell: the page assumed the thing it had not loaded. */
+{
+  const posts = GAMES.filter((g) => /xi-plays\.js/.test(read(`${g.dir}/index.html`)));
+  const seasonless = posts.filter((g) => !/xi-season\.js/.test(read(`${g.dir}/index.html`)));
+  t("every game that posts plays loads the season beside it",
+    posts.length >= 8 && seasonless.length === 0,
+    seasonless.length
+      ? seasonless.map((g) => g.dir).join(", ") + " post plays with no window.XISeason, "
+        + "so the device's season silently misses them"
+      : `${posts.length} game(s) checked`);
+  /* THE FLOOR, because the two lines above are both filters and a filter over
+     an empty list finds nothing wrong. If read() ever stops resolving these
+     paths, `posts` goes to zero and `seasonless` goes to zero with it. */
+  t("and the walk found the games rather than finding nothing",
+    posts.length === GAMES.length,
+    `${posts.length} of ${GAMES.length} games load xi-plays.js`);
+  /* ORDER, because xi-plays reads window.XISeason at runtime and would survive
+     the other order today — but the family loads the rule before the thing
+     that uses it everywhere else, and a page that differs is a page somebody
+     has to reason about. */
+  const wrongOrder = posts.filter((g) => {
+    const html = read(`${g.dir}/index.html`);
+    return html.indexOf("xi-season.js") > html.indexOf("xi-plays.js");
+  });
+  t("and it loads the season BEFORE the plays, as every other page does",
+    wrongOrder.length === 0,
+    wrongOrder.length ? wrongOrder.map((g) => g.dir).join(", ") : "");
+}
+
 /* THE SHARED LAYER HAS THE SAME PROBLEM EVERY GAME HAD, AND HAD NO GATE FOR IT.
    Each game's gate refuses assets that change without their tag moving. The
    shared files are outside every one of those gates: _headers marks /shared/*
