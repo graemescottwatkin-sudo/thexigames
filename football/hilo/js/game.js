@@ -10,7 +10,7 @@
  * more, 114 the ceiling. This file is the page: the landing the family
  * shares, the ladder of two rows, the clock, the answers list, the share.
  */
-var BUILD = "v002c";
+var BUILD = "v002d";
 
 (function () {
   "use strict";
@@ -73,6 +73,14 @@ var BUILD = "v002c";
     if (v === undefined || v === null) return "?";
     if (unit === "pounds") return "£" + Number(v).toLocaleString("en-GB");
     if (unit === "count") return Number(v).toLocaleString("en-GB");
+    /* HEIGHT, AND THE UNIT IS PART OF THE VALUE. A bare 175 on a Taller/Shorter
+       board reads as a count of something; the board's own subtitle says what
+       the number is, but the ladder shows the numbers alone. */
+    if (unit === "cm") return Number(v).toLocaleString("en-GB") + " cm";
+    /* "year" lands here and is right: a year is its own rendering. "date" also
+       lands here and is NOT — its values are a whole count of days, so this
+       would print 8036 where a date belongs. No board has ever used it; see
+       units_test, which refuses the day one does. */
     return String(v);
   }
   /* A live age, on a board of people: the reveal reads "born 4 January

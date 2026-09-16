@@ -335,6 +335,11 @@ jobs:
           # are the ones that try to cheat it: a score sent up, a call replayed
           # faster, a round that never kicked off.
           node football/hilo/verified_test.mjs
+          # The importer's unit list against the page's formatter. They were two
+          # lists with nothing between them: a unit the importer accepts and
+          # fmt() does not name falls through to String(v) and ships as a bare
+          # number, on a game where the number is the whole question.
+          node football/hilo/units_test.mjs
           # The sample must be what the sources produce; with no bank on the
           # runner the committed sample is gated on its own.
           node tools/import_hilo.js --check

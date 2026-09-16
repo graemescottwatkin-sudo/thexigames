@@ -35,7 +35,15 @@ const SOURCE = SOURCE_ARG || path.join(ROOT, "..", "Other", "HiLoXI");
 const OUT = path.join(ROOT, "data", "hl-production.sql");
 const SAMPLE = path.join(ROOT, "functions", "_lib", "hl-sample.js");
 
-const UNITS = ["year", "count", "pounds", "date"];
+/* EXPORTED so the page's formatter can be held to it. The unit decides how a
+   value is RENDERED, and until 16 Sep 2026 this list and football/hilo/js/game.js
+   were two lists with nothing between them: the importer knew four units and
+   fmt() named two, agreeing only because String() happens to be right for
+   "year". A unit accepted here and unknown there does not error — fmt falls
+   through to String(v) — so it ships as a bare number on a game where the
+   number IS the puzzle. football/hilo/units_test.mjs now pins one against the
+   other; adding a unit here goes red until somebody decides how it reads. */
+export const UNITS = ["year", "count", "pounds", "date", "cm"];
 const VALUE_CLASSES = ["fixed-by-nature", "retired-only", "snapshot"];
 
 /* ---- the gate, exported so board_test can sabotage it ---- */
