@@ -96,6 +96,7 @@ const GAMES = [
   { id: "codeword",   dir: "football/codeword",   name: "Codeword XI",   prefix: "xicw" },
   { id: "quickfire",  dir: "football/quickfire", name: "QuickFire XI",  prefix: "qfx"  },
   { id: "whoami",     dir: "football/whoami",    name: "Who Am I XI",   prefix: "xiwa" },
+  { id: "ballpark",   dir: "football/ballpark",  name: "Ballpark XI",   prefix: "xibp" },
 ];
 
 const workflow = read(".github/workflows/checks.yml");
@@ -534,6 +535,7 @@ t("the server's game list and this table agree", (() => {
     codeword: { no: 20, day: "2026-09-14", score: 90, solved: 11, minute: 12, result: "W" },
     quickfire: { game: "quickfire", day: "2026-09-14", no: 20, score: 600, right: 6 },
     whoami: { game: "whoami", day: "2026-09-14", no: 20, slot: 2, solved: true, score: 94 },
+    ballpark: { no: 20, day: "2026-09-14", score: 90, result: "W", inBallpark: 9, bangOns: 2, subs: 1 },
   };
   {
     const { playedOn } = await import("../functions/_lib/games.js");
@@ -676,8 +678,8 @@ t("no game carries a private copy of a shared file",
 
    Move both constants together, in the post-deploy commit, exactly as a game's
    LAST_SHIPPED and LAST_SHIPPED_ASSETS move together. */
-const SHARED_TAG = "v41";
-const SHARED_HASH = "8c267500525df15f";
+const SHARED_TAG = "v42";
+const SHARED_HASH = "2eaf3fc770c25146";
 /* EVERY PAGE THAT LINKS THE SHARED LAYER, not the games alone. The hub, the
    two static pages and the unlaunched game all carry the chrome now, and the
    server-rendered shell writes the tag from a constant of its own — so a tag

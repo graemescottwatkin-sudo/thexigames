@@ -54,6 +54,7 @@ const STATIC = [
   ["/football/codeword/", "daily", "0.9"],
   ["/football/quickfire/", "daily", "0.9"],
   ["/football/whoami/", "daily", "0.9"],
+  ["/football/ballpark/", "daily", "0.9"],
   ["/football/crossword/how-to-play", "monthly", "0.5"],
   ["/football/crossword/privacy", "yearly", "0.3"],
 ];

@@ -446,6 +446,11 @@ jobs:
           node football/vowels/deploy_check.mjs
           node football/quickfire/deploy_check.mjs
           node football/whoami/deploy_check.mjs
+          # Ballpark XI took the tenth shirt on 16 September 2026. Its gate goes
+          # in HERE as well as in the local sweep: Grid XI's was in one and not
+          # the other for a day, this file said seven while the sweep ran seven,
+          # and the gap was invisible from both ends.
+          node football/ballpark/deploy_check.mjs
           node football/hilo/deploy_check.mjs
           # GRID XI'S GATE WAS MISSING FROM THIS LIST UNTIL 14 SEPTEMBER 2026.
           # CLAUDE.md has said SEVEN gates since Grid was built and this block

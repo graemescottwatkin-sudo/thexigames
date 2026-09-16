@@ -7,6 +7,14 @@
  * were without saying where the answer is until you have locked.
  */
 
+/* THE BROWSER'S DEFAULT 8px BODY MARGIN, RESET. Every other game in the family
+   does this in its own stylesheet, and this one did not — so the page sat in a
+   gutter and the shared chrome bar started eight pixels in, which is visible on
+   every screen and was never reported because it looks like a margin somebody
+   chose. HiLo had exactly this and the same reasoning about whose job it is:
+   the shell does not do it, so the game must. */
+body{margin:0}
+
 /* ---- the scoreboard ----------------------------------------------------- */
 
 .board{

@@ -68,9 +68,9 @@
      own — the team sheet and the kit colours. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared/xi-tokens.css?v=v41">
-<link rel="stylesheet" href="shared/xi-chrome.css?v=v41">
-<script src="shared/xi-theme.js?v=v41"></script>
+<link rel="stylesheet" href="shared/xi-tokens.css?v=v42">
+<link rel="stylesheet" href="shared/xi-chrome.css?v=v42">
+<script src="shared/xi-theme.js?v=v42"></script>
 <style>
 :root{
 
@@ -429,9 +429,16 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
         <a class="shirt live" id="shirt9" href="/football/whoami/" title="Who Am I XI" aria-label="Who Am I XI">
           <span class="dot" style="background:var(--kit-09)" aria-hidden="true">9</span>
           <span class="lbl">Who Am I<span class="xi"> XI</span></span></a>
+        <!-- Ballpark XI took the tenth on 16 September 2026, the next free
+             number, and keeps the slate it was already wearing. Its LAUNCHED
+             date is 26 August, not today: it had been serving at its own
+             address since the family epoch without holding a shirt, and dating
+             the launch later would have hidden twenty-one boards that ran. -->
+        <a class="shirt live" id="shirt10" href="/football/ballpark/" title="Ballpark XI" aria-label="Ballpark XI">
+          <span class="dot" style="background:var(--kit-10)" aria-hidden="true">10</span>
+          <span class="lbl">Ballpark<span class="xi"> XI</span></span></a>
       </div>
       <div class="strip-row soon-row">
-        <span class="shirt soon" title="Not out yet">10</span>
         <span class="shirt soon" title="Not out yet">11</span>
       </div>
     </div>
@@ -739,6 +746,31 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
         </div>
       </article>
 
+      <article class="game">
+        <div class="cap" style="background:var(--kit-10)">
+          <span class="num">10</span>
+          <!-- A slider with the true value somewhere on it and a band around a
+               guess: how close counts, which is the whole game. -->
+          <svg class="prev" viewBox="0 0 220 120" aria-hidden="true">
+            <g>
+              <rect x="24" y="56" width="172" height="8" rx="4" fill="#fff" fill-opacity=".22"/>
+              <rect x="96" y="48" width="52" height="24" rx="6" fill="#fff" fill-opacity=".30"/>
+              <rect x="118" y="40" width="4" height="40" rx="2" fill="#fff" fill-opacity=".85"/>
+              <circle cx="60" cy="60" r="5" fill="#fff" fill-opacity=".45"/>
+              <circle cx="168" cy="60" r="5" fill="#fff" fill-opacity=".45"/>
+            </g>
+          </svg>
+        </div>
+        <div class="body">
+          <h3>Ballpark XI</h3>
+          <p>Eleven questions with a number for an answer. Close enough counts.</p>
+          <div class="acts">
+            <a class="btn" href="/football/ballpark/" aria-label="Play Ballpark XI today">Play today</a>
+            <a class="past" href="/football/ballpark/archive/" aria-label="Ballpark XI past puzzles">Past puzzles</a>
+          </div>
+        </div>
+      </article>
+
     </div>
   </section>
 
@@ -794,30 +826,14 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
     <p class="rest-line">The squad keeps growing &mdash;
        <span id="toSignProse">five</span> more to come</p>
     <div class="soon-grid">
-      <!-- ONE IN TESTING, AND IT IS A NUMBER AND A STATUS, never a name —
-           for the reason set out above: this page is indexed, and naming an
-           unfinished game hands the roadmap away. The path in the href is not
-           markup a reader sees and is what makes the card openable at all; the
-           game's own page is where it is named.
-           IT HOLDS NO SHIRT. This is the first number no launched game wears,
-           and where it sits is the owner's ordering of what is next rather than
-           a number it owns. A shirt is taken at LAUNCH, and only then does the
-           kit-belongs-to-the-game rule above start to bind: until a game has
-           been played under a colour, there is no colour to keep. -->
-      <!-- BALLPARK MOVED TO NINE on 15 September 2026, because QuickFire XI
-           launched and took the eight. It was on the seven until Codeword took
-           that on the 14th, so this is the second move in two days — which is
-           the rule working rather than churn: a game that is not out does not
-           hold a shirt, and moves when one ships past it. The kit moves with
-           the GAME rather than with the number, which is why the swatch below
-           is still the tangerine it was wearing on the seven.
-           Still unnamed: a number and a status, because an unreleased game is
-           named nowhere in served markup. -->
-      <a class="soon-card open" href="/football/ballpark/" rel="nofollow"
-         title="In testing — not finished, and not yet a daily game">
-        <span class="sq" style="background:var(--kit-07)">10</span>
-        <span class="nm">Number ten<span>In testing</span></span>
-      </a>
+      <!-- NOTHING IS IN TESTING. Ballpark XI was the last one and it launched
+           on 16 September 2026, taking the tenth shirt — so the dashed card
+           that stood here has gone and the game has a real card above, under
+           Out now, with its name on it.
+           THE GRID IS LEFT IN PLACE RATHER THAN DELETED because the state it
+           renders is a real one that will come round again: the next game to
+           reach testing gets a card here, a number and a status and no name.
+           An empty grid renders nothing, so a reader sees no gap. -->
     </div>
   </section>
 
@@ -860,8 +876,8 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
      and the one page list, so the front door's footer and every game's are
      the same footer. -->
 <footer class="xic-foot"></footer>
-<script src="shared/xi-season.js?v=v41"></script>
-<script src="shared/xi-chrome.js?v=v41"></script>
+<script src="shared/xi-season.js?v=v42"></script>
+<script src="shared/xi-chrome.js?v=v42"></script>
 
 <script>
 /* Progressive enhancement only: everything above renders complete without
@@ -1041,6 +1057,12 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
       { n: 9, id: "whoami", name: "Who Am I XI", key: "xiwa.results.v1",
         api: "/api/whoami/daily",
         today: function (d) { return d.day; },
+        done: function (r, t) { return r.day === t; } },
+      /* Ballpark keyed on the DAY, like Who Am I and Codeword: bp_schedule
+         hands one board to one day and the page records the day it played. */
+      { n: 10, id: "ballpark", name: "Ballpark XI", key: "xibp.results",
+        api: "/api/ballpark/daily",
+        today: function (d) { return d.day; },
         done: function (r, t) { return r.day === t; } }
     ];
 
@@ -1208,7 +1230,7 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
       if (ladderLibs) return ladderLibs;
       ladderLibs = new Promise(function (done) {
         var left = 2, ok = true;
-        ["shared/xi-seasons.js?v=v41", "shared/xi-table.js?v=v41"].forEach(function (src) {
+        ["shared/xi-seasons.js?v=v42", "shared/xi-table.js?v=v42"].forEach(function (src) {
           var el = document.createElement("script");
           el.src = src;
           el.onload = function () { if (!--left) done(ok); };

@@ -94,7 +94,7 @@
        Eleven shirts, so the tail loses its last unsigned slot rather than the
        squad growing a twelfth. */
     { n: 9,  name: "Who Am I XI",   href: "/football/whoami/" },
-    { n: 10, status: "In testing",   href: "/football/ballpark/" },
+    { n: 10, name: "Ballpark XI",   href: "/football/ballpark/" },
     { n: 11, status: "In build" }
   ];
 
@@ -151,7 +151,11 @@
     /* No answers page: the answers are the three options you did not pick. */
     quickfire:  [["How to play", "/football/quickfire/#how"]],
     /* No answers page: it would publish ten doors nobody has opened yet. */
-    whoami:     [["How to play", "/football/whoami/#how"]]
+    whoami:     [["How to play", "/football/whoami/#how"]],
+    /* No answers page: a Ballpark answer is a number and the board shows the
+       true value at full time, so there is nothing an answers page would add
+       that finishing the board does not. */
+    ballpark:   [["How to play", "/football/ballpark/#how"]]
   };
 
   /* WHICH GAME THIS PAGE BELONGS TO, read off the path. The hub and the

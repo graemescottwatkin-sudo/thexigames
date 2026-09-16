@@ -20,7 +20,7 @@
 /* THE SHARED LAYER'S TAG, as every page carries it in its ?v=. One more
    place the tag is written; tools/aligned_test.mjs asserts it agrees with the
    pages, so it cannot fall behind them quietly. */
-export const SHARED_TAG = "v41";
+export const SHARED_TAG = "v42";
 
 /* What each game's masthead says and where its tabs go. The current tab is
    marked by path; a page with no game (a hub-level page) gets no masthead. */
@@ -81,6 +81,11 @@ const MAST = {
      ONE of those doors is spent per person per day, so the other ten stay live
      for everybody else. An answers page a week later would be fine; an answers
      page at all is a door somebody has not opened yet. */
+  ballpark: {
+    name: "Ballpark", home: "/football/ballpark/",
+    nav: [["Today", "/football/ballpark/"], ["Archive", "/football/ballpark/archive/"],
+          ["How to play", "/football/ballpark/#how"]],
+  },
   whoami: {
     name: "Who Am I", home: "/football/whoami/",
     nav: [["Today", "/football/whoami/"], ["Archive", "/football/whoami/archive/"],

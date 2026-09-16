@@ -37,10 +37,24 @@ const RAN = {
      a number the calendar does not hold is not a board. Two days, so the
      fixture can tell "lists what exists" from "lists one to today". */
   gd_schedule: ["2026-09-08", "2026-09-07"],
+  /* Ballpark XI launched on the family's DAY ONE — it had been serving from the
+     epoch without a shirt — so it is the first game whose launchNumber is 1 and
+     therefore the first for which nothing is filtered out by "no board from
+     before it launched". That is why it found this fixture's gap and the other
+     four scheduled games did not. */
+  bp_schedule: ["2026-08-27", "2026-08-26"],
+};
+/* Which fixture table each scheduled game's boards come from. Named per game so
+   a game added to PERMA_GAMES without a fixture asks for an undefined table and
+   reports zero rather than borrowing another game's days. */
+const SCHEDULE_FIXTURE = {
+  wordsearch: "ws_schedule", hilo: "hl_schedule", grid: "gd_schedule",
+  ballpark: "bp_schedule",
 };
 const tableOf = (sql) => (/ws_schedule/.test(sql) ? "ws_schedule"
   : /hl_schedule/.test(sql) ? "hl_schedule"
-  : /gd_schedule/.test(sql) ? "gd_schedule" : null);
+  : /gd_schedule/.test(sql) ? "gd_schedule"
+  : /bp_schedule/.test(sql) ? "bp_schedule" : null);
 const env = {
   DB: {
     prepare: (sql) => ({
@@ -93,7 +107,14 @@ for (const game of Object.keys(PERMA_GAMES)) {
   const from = launchNumber(game);
   const want = PERMA_GAMES[game].schedule === "ring"
     ? Array.from({ length: Number(todayKeyFor(game)) - from + 1 }, (_, i) => String(from + i))
-    : RAN[game === "wordsearch" ? "ws_schedule" : "hl_schedule"]
+    /* THE GAME'S OWN TABLE, not "wordsearch or else HiLo's". That default was
+       harmless only because every other scheduled game launched late enough for
+       `from` to filter HiLo's single fixture day away — so four games were being
+       asked about a table that is not theirs and passing with an empty list.
+       Ballpark launched on day one, nothing was filtered, and the wrong table
+       became visible. A default that is right by arithmetic rather than by
+       meaning is a check agreeing with itself. */
+    : (RAN[SCHEDULE_FIXTURE[game]] || [])
         .map((day) => String(dailyNoForDay(day)))
         .filter((no) => Number(no) >= from);
   const missing = want.filter((k) => !locs.includes(`https://www.thexigames.com${permalinkPath(game, k)}`));

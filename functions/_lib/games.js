@@ -17,7 +17,7 @@
    already keep about naming unbuilt games. */
 import { dailyKey, dailyDayKey, dailyNoForDay } from "./daily.js";
 
-export const GAMES = ["crossword", "wordsearch", "scrambled", "hilo", "vowels", "grid", "quickfire", "codeword", "whoami"];
+export const GAMES = ["crossword", "wordsearch", "scrambled", "hilo", "vowels", "grid", "quickfire", "codeword", "whoami", "ballpark"];
 
 export const DEFAULT_GAME = "crossword";
 
@@ -72,6 +72,21 @@ export const LAUNCHED = {
      launched — unlike Codeword and QuickFire, whose boards began a day before
      they were released. The two questions are different and happen to agree. */
   whoami: "2026-09-15",
+  /* THE DAY IT STARTED SERVING, AND IT IS THREE WEEKS BEFORE THE DAY THIS LINE
+     WAS WRITTEN. Ballpark XI was reachable at its own address, with a working
+     API and a calendar running from 26 August, from before 8 September — ten
+     rounds were played on it. It simply held no shirt and nothing linked to it.
+     The rule this file already states is that LAUNCHED is when a game began
+     serving and not when the line was added, "because a later date hides boards
+     already run". Dating this 16 September would have hidden twenty-one days
+     that genuinely served, and made board one a board that is the family's
+     twenty-second. The owner chose the honest date on 16 Sep 2026.
+     The consequence is deliberate and worth naming: the archive publishes those
+     twenty-one days from the moment this ships. They were reviewed against the
+     current gate before it did — 242 question rows over bp-0001..bp-0022, 231
+     still in the bank and all 231 passing, the other 11 carrying a known and
+     documented ambiguity about manager appointments rather than an error. */
+  ballpark: "2026-08-26",
   /* Codeword XI took the seventh shirt on 14 September 2026 — the next free
      number, which is what launching does. Its queue starts the same day, so
      the launch day and board one are the same day and nothing counts from
@@ -107,6 +122,7 @@ export const ENGINE_GAMES = {
   grid: ["grid"],
   quickfire: ["quickfire"],
   whoami: ["whoami"],
+  ballpark: ["ballpark"],
 };
 
 /* The launch as a board NUMBER, which is what every list is counted in.
@@ -243,6 +259,7 @@ export const LABELS = {
   vowels: "Vowels XI",
   quickfire: "QuickFire XI",
   whoami: "Who Am I XI",
+  ballpark: "Ballpark XI",
   codeword: "Codeword XI",
   hilo: "HiLo XI",
   /* Grid XI is in BUILT and not GAMES, like QuickFire — and it needs a label
@@ -360,6 +377,26 @@ export function entryKey(game, row) {
        rather than left as a precedent, so the next game citing it cites a rule. */
     const d = String((row && (row.day || row.date || row.play_date)) || "");
     return /^\d{4}-\d{2}-\d{2}$/.test(d) ? "wa:" + d : null;
+  }
+  if (game === "ballpark") {
+    /* A Ballpark daily is addressed by its DAY. bp_schedule hands one board to
+       one day, exactly as cw_schedule and wa_board do, and the board carries a
+       family number that is a second name for the same thing — so the day is
+       the one that means one thing, for the reason written against Codeword
+       above.
+       THIS IS THE FIFTH GAME TO NEED THIS BRANCH AND THE FIRST TO GET IT BEFORE
+       IT COST ANYTHING. Scrambled, QuickFire, Grid and Codeword each launched
+       without one: results were computed, returned to the page and dropped,
+       silently, because a null key and a successful round are indistinguishable
+       from outside. Grid lost eight days and Codeword six rounds.
+       Ballpark reached this point differently — it was never in GAMES, so
+       validGame() refused it upstream and nothing could have banked whatever
+       this returned. Its ten pre-launch rounds are not recoverable and were
+       never meant to be: the game was documented as not banking while in
+       testing, and it was. What makes today different is that it is in GAMES
+       now, so this branch is load-bearing from the moment it ships. */
+    const d = String((row && (row.day || row.date)) || "");
+    return /^\d{4}-\d{2}-\d{2}$/.test(d) ? "bp:" + d : null;
   }
   if (game === "hilo") {
     /* A HiLo daily is addressed by its day, like the word search's: the

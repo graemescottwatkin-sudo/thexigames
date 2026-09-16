@@ -42,6 +42,9 @@ const RAN = {
      a number the calendar does not hold is not a board. Two days, so the
      fixture can tell "lists what exists" from "lists one to today". */
   gd_schedule: ["2026-09-08", "2026-09-07"],
+  /* Ballpark XI, which launched on the family epoch — it had been serving from
+     26 August without a shirt, so its archive opens with every day since. */
+  bp_schedule: ["2026-08-27", "2026-08-26"],
   /* Codeword XI launched 14 September 2026 and its queue starts the same day,
      so on its launch day exactly one board has run. One is the honest number
      here and it is also the number that catches a reader treating "in the
@@ -66,7 +69,8 @@ const tableOf = (sql) => (/ws_schedule/.test(sql) ? "ws_schedule"
   : /gd_schedule/.test(sql) ? "gd_schedule"
   : /cw_schedule/.test(sql) ? "cw_schedule"
   : /qf_daily/.test(sql) ? "qf_daily"
-  : /wa_board/.test(sql) ? "wa_board" : null);
+  : /wa_board/.test(sql) ? "wa_board"
+  : /bp_schedule/.test(sql) ? "bp_schedule" : null);
 const env = {
   DB: {
     prepare: (sql) => ({

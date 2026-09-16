@@ -158,8 +158,21 @@ const testingSlots = [...cw.querySelectorAll(".xic-squad .xic-slot.soon[href]")]
    went into testing, for a change it was never about. The squad list is the one
    place that says which games are in testing, so it is asked. */
 const testingInSquad = cw.chrome.squad.filter((g) => g.href && !g.name);
+/* AND ZERO IS A LEGITIMATE ANSWER, which it was not until 16 September 2026.
+   These three assertions each required the population to be NON-EMPTY —
+   `testingSlots.length > 0`, and a `!cards.length` below — which was true for as
+   long as some game happened to be in testing. Ballpark XI was the last one, and
+   the day it launched all three went red for a change they were never about:
+   the second time this block has done that, and its own comment above records
+   the first.
+   The property they are actually for is the CORRESPONDENCE — the squad is the
+   one place that says which games are in testing, and every one of those must
+   have a way in that is unnamed and nofollow. With none in testing that is
+   vacuously satisfied and correctly so. Nothing is weakened: if the squad says
+   one and the page shows none, the correspondence fails on its own without a
+   minimum to help it. */
 t("every game the squad has in testing has a slot that opens",
-  testingSlots.length === testingInSquad.length && testingSlots.length > 0,
+  testingSlots.length === testingInSquad.length,
   `${testingSlots.length} slots, ${testingInSquad.length} in the squad`);
 t("and each says only its number and its status, never a name", testingSlots.every((e) => {
   const status = e.querySelector(".xic-status");
@@ -175,7 +188,6 @@ t("and each says only its number and its status, never a name", testingSlots.eve
       `${e.querySelector(".xic-shirt").textContent.trim()}${status.textContent}`;
 }));
 t("every route in is marked nofollow, so none is an announcement",
-  testingSlots.length > 0 &&
   testingSlots.every((e) => e.getAttribute("rel") === "nofollow"));
 /* The footer lists games by NAME. A slot with a href and no name put an
    empty link into the footer of every page on the site. */
@@ -200,7 +212,12 @@ t("the footer names released games only, with no empty link", (() => {
 t("the hub carries every one of those routes in, under the rest of the XI", (() => {
   const cards = [...hub.querySelectorAll(".soon-grid a.soon-card")];
   const strip = hub.querySelector(".xi-strip");
-  if (cards.length !== testingInSquad.length || !cards.length) return false;
+  /* NO EARLY RETURN ON AN EMPTY LIST. The first version of this said
+     `if (!cards.length) return true;` — which is the right verdict about the
+     cards and skipped the live-shirt count below it, a check that has nothing
+     to do with games in testing. cards.every() is already vacuously true on an
+     empty array, so the honest shape is to let it be and keep going. */
+  if (cards.length !== testingInSquad.length) return false;
   /* THE NUMBER ON THE CARD IS THE NUMBER IN THE SQUAD, whatever that is. It
      used to be "the first shirt no launched game wears", which was a fair
      derivation while one game was in testing and stopped being one the moment

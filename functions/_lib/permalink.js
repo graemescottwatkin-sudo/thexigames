@@ -88,6 +88,12 @@ export const PERMA_GAMES = {
      it, because the gate checked the route FILE existed and not that it
      resolved. */
   whoami: { name: "Who Am I XI", schedule: "day" },
+  /* Ballpark XI. Scheduled and finite like the four above: bp_schedule names one
+     board per day and the calendar ends, so /football/ballpark/daily/<n> is an
+     address a board keeps forever and the archive is the days that have run.
+     ABSENT FROM THIS MAP THE ROUTE FILES EXIST AND 404, which is how Who Am I
+     launched with a dead archive the hub was already linking to. */
+  ballpark: { name: "Ballpark XI", schedule: "day" },
   /* Codeword XI. SCHEDULED AND FINITE, which is the distinction that matters
      here rather than the one between ring and day: cw_schedule names one board
      per day out of a queue that ENDS, so unlike the three ring games it can run
@@ -194,6 +200,7 @@ export function keyForOldDate(raw, now = Date.now()) {
 const SCHEDULE_TABLE = {
   wordsearch: "ws_schedule", hilo: "hl_schedule", grid: "gd_schedule",
   codeword: "cw_schedule", quickfire: "qf_daily", whoami: "wa_board",
+  ballpark: "bp_schedule",
 };
 
 /* WHICH COLUMN HOLDS THE DAY, and which rows count as real.
@@ -324,7 +331,7 @@ export async function boardKeys(env, game, now = Date.now()) {
 export const THEME_OF = {
   crossword: "football", wordsearch: "football", scrambled: "football",
   hilo: "football", vowels: "football", quickfire: "football", grid: "football",
-  codeword: "football", whoami: "football",
+  codeword: "football", whoami: "football", ballpark: "football",
 };
 export const themeOf = (game) => THEME_OF[game] || "football";
 export const gamePath = (game) => `/${themeOf(game)}/${game}/`;

@@ -1,3 +1,16 @@
+(function () {
+  "use strict";
+  /* THE BUILD, PAIRED WITH THE ?v= ON THIS FILE'S OWN SCRIPT TAG. A stale
+     cached script is otherwise invisible: the page loads, the game runs, and
+     it is yesterday's code. aligned_test asserts the two agree, and until
+     this game launched it had no BUILD at all — three of its assets were on
+     three different tags, which is the same fault with nobody checking. */
+  var BUILD = "v001d";
+  if (window.XIPlays && document.documentElement) {
+    document.documentElement.setAttribute("data-build", BUILD);
+  }
+})();
+
 /* game.js — Ballpark XI in the browser.
  *
  * WHAT THIS FILE DOES NOT HAVE, and cannot get: the answers. It is handed the
@@ -25,7 +38,7 @@
   var $ = function (id) { return document.getElementById(id); };
   var DOT = "·", SQ_ON = "🟩", SQ_OFF = "🟥";
 
-  var board = null, token = null, playId = null, no = null;
+  var board = null, token = null, playId = null, no = null, day = null;
   var step = 0, locked = false, touched = false, over = false;
   var lo = 0, hi = 100, timer = null;
   /* The server's clock for THIS question: when it opened, and the offset
@@ -352,6 +365,105 @@
     ev.preventDefault();
   });
 
+
+  /* ---- the result, and the account ---------------------------------------
+   *
+   * THIS GAME BANKED NOTHING UNTIL 16 SEPTEMBER 2026, and that was correct
+   * while it was unreleased: GAMES is "whose rows the account system may
+   * write", an unreleased game must not be on it, and validGame() refused
+   * ballpark upstream of everything below. Ten rounds were played in that
+   * state and none were recorded. They are not recoverable and were never
+   * meant to be.
+   *
+   * IT IS IN GAMES NOW, so every link below is load-bearing from today. The
+   * chain is five links long and this estate has broken a DIFFERENT one in
+   * each of four launches, every time silently, because a dropped result and
+   * a successful round are indistinguishable from inside the page:
+   *
+   *   1. the game is in GAMES            (games.js — else migrate refuses)
+   *   2. entryKey returns a key          (Scrambled, QuickFire, Grid, Codeword)
+   *   3. the page records the result     (recordResult below)
+   *   4. the page PUSHES it              (Codeword recorded and never pushed)
+   *   5. `account` can actually be set   (three games read the wrong shape)
+   *
+   * Link 5 is the one with the trap. XIChrome.account() is an object and the
+   * chrome's event carries {type,user,via} — three games read one or the
+   * other and got undefined, so they were permanently signed out as far as
+   * their own push was concerned. The server is the authority on who you are;
+   * the chrome is a menu that happens to know. So this asks /api/auth/session.
+   */
+  var BP_KEY = "xibp.results";
+  var account = null;
+
+  /* A sync failure is never surfaced to the player: a transient session error
+     is not the same as being signed out, and telling somebody their game did
+     not count when it did is worse than saying nothing. */
+  function accountNote(what, err) {
+    if (window.console && console.debug) console.debug("[account] " + what + ":", err);
+  }
+
+  function readResults() {
+    try {
+      var r = JSON.parse(localStorage.getItem(BP_KEY) || "[]");
+      return Array.isArray(r) ? r : [];
+    } catch (e) { return []; }
+  }
+
+  /* THE DAY IS IN THE ROW, not only the number. entryKey('ballpark') keys on
+     the day and playedOn reads it for the shared played_on column — results.js
+     ORDERS BY that column, so a row without a day sorts as null and an entire
+     game's history goes with it. That is the word search's fault of 6
+     September, which Grid then reproduced. */
+  function recordResult() {
+    if (!day) return;                       // no day, no key, no row worth writing
+    try {
+      var list = readResults();
+      for (var i = 0; i < list.length; i++) {
+        if (list[i] && list[i].day === day) return;   // first banked wins
+      }
+      list.push({
+        no: no, day: day, score: scoreNow, result: resultLetter,
+        inBallpark: results.filter(function (x) { return x === true; }).length,
+        bangOns: bangOns, subs: subsUsed,
+      });
+      localStorage.setItem(BP_KEY, JSON.stringify(list.slice(-800)));
+    } catch (e) { /* private browsing: play on without a record */ }
+    pushResults();
+  }
+
+  function apiAuth(path, body) {
+    var opts = { method: body ? "POST" : "GET", headers: { "X-XI-Games": "1" },
+                 credentials: "same-origin" };
+    if (body) {
+      opts.headers["Content-Type"] = "application/json";
+      opts.body = JSON.stringify(body);
+    }
+    return fetch(path, opts).then(function (r) {
+      if (!r.ok) throw new Error(String(r.status));
+      return r.json();
+    });
+  }
+
+  function pushResults() {
+    if (!account) return Promise.resolve(null);
+    return apiAuth("/api/account/migrate", { game: "ballpark", results: readResults() })
+      .catch(function (e) { accountNote("push", e); return null; });
+  }
+
+  function syncAccount() {
+    return apiAuth("/api/auth/session").then(function (r) {
+      account = (r && r.user) || null;
+      if (!account) return null;
+      return pushResults();
+    }).catch(function (e) { accountNote("session", e); return null; });
+  }
+
+  document.addEventListener("xi:account", function (ev) {
+    var d = ev.detail || {};
+    if (d.type === "signout") { account = null; return; }
+    syncAccount();
+  });
+  syncAccount();
   /* ---- full time ---------------------------------------------------------- */
 
   function fullTime(r) {
@@ -373,6 +485,10 @@
     rr.className = "res " + resultLetter;
     $("ftShare").textContent = share;
     $("ft").hidden = false;
+    /* BANKED AT THE WHISTLE, after the score is settled and before anything
+       else can go wrong. */
+    recordResult();
+    if (window.XIPlays && XIPlays.active()) XIPlays.end(true);
     $("copy").onclick = function () {
       try { navigator.clipboard.writeText(share); } catch (e) {}
     };
@@ -485,7 +601,7 @@
   /* ---- kick off ----------------------------------------------------------- */
 
   function startRound(data) {
-    board = data.board; token = board.token; no = data.no;
+    board = data.board; token = board.token; no = data.no; day = data.day || null;
     step = 0; results = []; points = []; answersSeen = []; bangOns = 0;
     subsUsed = 0; scoreNow = 0; over = false;
 
@@ -523,11 +639,17 @@
        fallback stays for the request that fails. */
     playId = "bp-" + Date.now().toString(36) + "-" +
       Math.random().toString(36).slice(2, 10);
-    fetch("/api/play", {
-      method: "POST",
-      headers: { "content-type": "application/json", "X-XI-Games": "1" },
-      body: JSON.stringify({ game: "ballpark", mode: "daily" }),
-    }).then(function (r) { return r.json(); }).catch(function () { return {}; })
+    /* THROUGH XIPlays NOW, rather than posting to the endpoint by hand. The
+       helper is what tells the family a play started and ended, and this page
+       was already calling XIPlays.end() at full time — guarded — into a helper
+       that was never loaded. It had been ending plays nobody had started.
+       The locally minted id above stays as the fallback for a request that
+       fails: a board that cannot reach the referee is better played than
+       refused, and a round still needs an id to be scored. */
+    (window.XIPlays
+      ? XIPlays.start({ game: "ballpark", mode: "daily" })
+      : Promise.resolve({}))
+      .catch(function () { return {}; })
       .then(function (p) {
         if (p && p.playId) playId = p.playId;
         return fetch("/api/ballpark/daily" + (no ? "?no=" + no : ""))
