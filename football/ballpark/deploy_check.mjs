@@ -132,19 +132,67 @@ console.log("\nThe shared layer is used, not copied");
 
 console.log("\nIt counts plays and banks results, like every built game");
 {
-  const code = read("js/game.js").replace(/\/\*[\s\S]*?\*\//g, " ");
+  /* BOTH COMMENT FORMS. The strip used to remove block comments only, and this
+     file uses line comments as well — so a line comment mentioning
+     /api/account/migrate would have satisfied the check that demands it. That
+     is this repo's oldest recurring fault: a comment naming a thing standing in
+     for the thing.
+     (Writing this comment closed itself early on the first attempt, because it
+     quoted a block-comment terminator inside a block comment. Same family, one
+     level sillier.) */
+  const code = read("js/game.js")
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/(^|[^:])\/\/.*$/gm, "$1 ");
+
+  /* THE BODY OF A NAMED FUNCTION, by brace matching. A gate runs with no
+     node_modules — no acorn, no jsdom — so there is no parser here, and brace
+     counting is the honest tool: it cannot be fooled by a call that merely
+     appears somewhere in the file. Comments and strings are already stripped
+     above, which is what makes the count safe. */
+  const bodyOf = (name) => {
+    const at = code.search(new RegExp("function\\s+" + name + "\\s*\\("));
+    if (at < 0) return null;
+    const open = code.indexOf("{", at);
+    if (open < 0) return null;
+    let depth = 0;
+    for (let i = open; i < code.length; i++) {
+      if (code[i] === "{") depth++;
+      else if (code[i] === "}" && --depth === 0) return code.slice(open, i + 1);
+    }
+    return null;
+  };
+
   /* THE BANKING CHAIN, five links, and this estate has broken a different one
-     in each of four launches. Ballpark reached launch having never banked at
-     all — correctly, while it was outside GAMES — so every link here is new
-     and none of it has ever run in production. */
+     in each of four launches. */
   t("it starts and ends a play", /XIPlays\.start/.test(code) && /XIPlays\.end/.test(code));
-  t("it records a result of its own", /function recordResult/.test(code));
-  t("and the record carries the DAY, not only the board number", /day:\s*day/.test(code),
+
+  const recorder = bodyOf("recordResult");
+  const pusher = bodyOf("pushResults");
+  t("it records a result of its own", !!recorder);
+  t("and the record carries the DAY, not only the board number",
+    !!recorder && /day:\s*day/.test(recorder),
     "playedOn reads the day and results.js orders by it — a row without one sorts as null");
-  t("it banks that result to the account", /\/api\/account\/migrate/.test(code),
-    "QuickFire shipped playable and banked nothing for a day; Codeword recorded and never pushed");
+  t("it has a function that pushes to the account",
+    !!pusher && /\/api\/account\/migrate/.test(pusher));
+
+  /* THE CHECK THIS BLOCK WAS MISSING, and the Fable review of 16 September
+     proved the gap by sabotage: it deleted the `pushResults();` CALL from
+     inside recordResult and all five of the old assertions still passed —
+     because /\/api\/account\/migrate/ matches the DEFINITION of a function
+     nobody calls any more.
+     That is exactly how Codeword lost six rounds: it recorded locally and
+     never pushed. The old check could not tell a wired chain from an orphaned
+     one, which is the whole failure mode it existed to guard.
+     AND AN ORPHAN CHECK WOULD NOT BE ENOUGH EITHER. pushResults is legitimately
+     called from syncAccount as well, so "is it called anywhere" stays green
+     when the call is dropped from the recorder. The question is whether THE
+     RECORDER calls it — that is the link, and nothing weaker is the link. */
+  t("and the recorder actually CALLS it, rather than merely defining it nearby",
+    !!recorder && /\bpushResults\s*\(/.test(recorder),
+    "a recorded result that is never pushed is the Codeword fault, and it is silent");
+
   t("and it asks the SERVER who is signed in, not the chrome",
-    /\/api\/auth\/session/.test(code),
+    !!pusher && /\/api\/auth\/session/.test(code),
     "XIChrome.account() is an object and the event carries {type,user,via} — three games read the wrong one");
 }
 

@@ -552,16 +552,86 @@ t("the server's game list and this table agree", (() => {
         : SERVER_GAMES.map((g) => g + "=" + playedOn(g, REAL_ROWS[g])).join(" "));
   }
 
-  const recordsOnly = banks.filter((g) => {
+  /* THE RECORDER MUST CALL THE PUSHER, and until 16 September 2026 this only
+   * asked whether the STRING /api/account/migrate appeared anywhere in the
+   * game's scripts.
+   *
+   * A Fable review proved the gap by sabotage: delete the `pushResults();` CALL
+   * from inside recordResult and this check stays green, because the string
+   * still occurs — in the definition of a function nobody calls any more. That
+   * is precisely how Codeword lost six rounds. It recorded locally, never
+   * pushed, and every check agreed it was fine.
+   *
+   * AN "IS IT CALLED ANYWHERE" CHECK IS NOT ENOUGH EITHER. Most of these games
+   * also call the pusher from their sign-in handler, so dropping it from the
+   * recorder leaves it called and the orphan test green. The question is
+   * whether THE RECORDER calls it, because that is the link that banks a
+   * finished game.
+   *
+   * Brace matching rather than a parser: this runs in CI with acorn available,
+   * but the same rule is duplicated in each game's deploy_check.mjs, and a gate
+   * runs with NO node_modules by design. One technique that works in both
+   * places beats two that disagree. Comments and strings are stripped first —
+   * a comment naming the endpoint satisfying the check that demands it is this
+   * repo's oldest recurring fault. */
+  const bodyOf = (src, name) => {
+    const at = src.search(new RegExp("function\\s+" + name + "\\s*\\("));
+    if (at < 0) return null;
+    const open = src.indexOf("{", at);
+    if (open < 0) return null;
+    let depth = 0;
+    for (let i = open; i < src.length; i++) {
+      if (src[i] === "{") depth++;
+      else if (src[i] === "}" && --depth === 0) return src.slice(open, i + 1);
+    }
+    return null;
+  };
+  const stripped = (s) => s
+    .replace(/\/\*[\s\S]*?\*\//g, " ")
+    .replace(/(^|[^:])\/\/.*$/gm, "$1 ");
+
+  /* EVERY GAME WITH A RECORDER, NOT `banks`. banks is derived from
+     functions/api/<game>/daily.js, and two games legitimately have no such
+     directory: the crossword's daily is the unprefixed /api/daily.js and Vowels
+     is served through Scrambled's route — both asserted a few lines above. So
+     `banks` is eight, and the two it drops include THE CROSSWORD: the flagship,
+     the game whose fifteen finished signed-in days and zero banked results sent
+     me looking at this check in the first place.
+     A check that covers every case except the subject is the shape this estate
+     found twice tonight — three mechanisms all asking whether some OTHER page
+     names an unreleased game, and none able to see the page itself. This asks
+     the family table instead, so a game qualifies by having a recorder rather
+     than by how its route happens to be filed. */
+  const withRecorder = GAMES.map((g) => g.id).filter((g) => {
     const dir = `football/${g}/js`;
-    const all = fs.readdirSync(dir).filter((f) => f.endsWith(".js"))
-      .map((f) => read(`${dir}/${f}`)).join(" ");
-    return /recordResult/.test(all) && !/account\/migrate/.test(all);
+    if (!has(dir)) return false;
+    return fs.readdirSync(dir).some((f) => f.endsWith(".js") &&
+      /function\s+record(Result|Daily)\s*\(/.test(read(`${dir}/${f}`)));
   });
-  t("and a page that records a result also pushes it to the account",
-    recordsOnly.length === 0,
-    recordsOnly.length ? recordsOnly.join(", ") + " record locally and never push"
-      : "every banking game pushes");
+
+  const unwired = [];
+  for (const g of withRecorder) {
+    const dir = `football/${g}/js`;
+    const all = stripped(fs.readdirSync(dir).filter((f) => f.endsWith(".js"))
+      .map((f) => read(`${dir}/${f}`)).join("\n"));
+    if (!/account\/migrate/.test(all)) { unwired.push(g + " never pushes at all"); continue; }
+    /* The pusher is whichever function holds the endpoint; the recorder is the
+       crossword's recordDaily or everybody else's recordResult. Derived rather
+       than listed, so a game that renames one is asked about the other. */
+    const pusher = ["pushResults", "pushState", "push"]
+      .find((n) => { const b = bodyOf(all, n); return b && /account\/migrate/.test(b); });
+    if (!pusher) { unwired.push(g + ": no named function holds the endpoint"); continue; }
+    const recName = /function\s+recordDaily\s*\(/.test(all) ? "recordDaily" : "recordResult";
+    const rec = bodyOf(all, recName);
+    if (!rec) { unwired.push(g + ": no " + recName + " to check"); continue; }
+    if (!new RegExp("\\b" + pusher + "\\s*\\(").test(rec)) {
+      unwired.push(g + ": " + recName + " does not call " + pusher);
+    }
+  }
+  t("and the function that records a result CALLS the one that pushes it",
+    unwired.length === 0,
+    unwired.length ? unwired.join(" | ")
+      : `${withRecorder.length} games wired recorder -> pusher: ${withRecorder.join(", ")}`);
   /* AND NO TWO GAMES SHARE A PREFIX, because a key that collides files one
      game's result under another's and the merge rule then decides between rows
      that are not comparable. */
