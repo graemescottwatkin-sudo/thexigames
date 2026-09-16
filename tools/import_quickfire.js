@@ -332,6 +332,81 @@ for (const w of weeks) {
 }
 
 fs.mkdirSync(path.dirname(OUT), { recursive: true });
+/* ---- THE DAYS THAT HAVE BEEN SERVED ---------------------------------------
+ *
+ * This wipes five tables and rewrites them — qf_daily, qf_daily_slot, qf_week,
+ * qf_week_slot, qf_question — and until now nothing stopped it rewriting a day
+ * a player had already been shown. QuickFire has been live since 2026-09-14.
+ *
+ * QuickFire's exposure is NOT Who Am I's. There is no --from here and no
+ * re-dating: the dates come from the source bank, so a day cannot slide. What
+ * can happen is quieter — the bank is edited, a past daily's questions change
+ * or the date disappears from `dailies`, and the import rewrites history with
+ * no flag involved and nothing to notice it. A player who answered eleven
+ * questions on Tuesday finds Tuesday holding a different eleven.
+ *
+ * Both halves, as in import_grid.js and import_whoami.mjs: a served day that
+ * VANISHES and a served day that CHANGES are both "the archive now lies", and
+ * neither implies the other.
+ *
+ * The comparison is against the last SQL this importer emitted, which is the
+ * only record of the calendar outside the database. --rewrite-history overrides
+ * it, loudly, because a guard with no override meets the case where the
+ * override was right and then gets deleted in a hurry by whoever is blocked. */
+function servedCalendarFromSql(sql) {
+  const cal = {};
+  const re = /INSERT INTO qf_daily_slot \(play_date, slot, question_id, role\) VALUES \('([^']+)', (\d+), '((?:[^']|'')*)', '([a-z]+)'\)/g;
+  let m;
+  while ((m = re.exec(sql))) {
+    const [, day, slot, qid, role] = m;
+    (cal[day] = cal[day] || []).push({ slot: Number(slot), qid: qid.replace(/''/g, "'"), role });
+  }
+  for (const day of Object.keys(cal)) {
+    cal[day].sort((a, b) => (a.role === b.role ? a.slot - b.slot : a.role < b.role ? -1 : 1));
+  }
+  return cal;
+}
+
+{
+  const todayKey = new Date().toISOString().slice(0, 10);
+  const previous = fs.existsSync(OUT) ? servedCalendarFromSql(fs.readFileSync(OUT, "utf8")) : {};
+  const next = {};
+  for (const d of dailies) {
+    const rows = [];
+    (d.questionIds || []).forEach((id, i) => rows.push({ slot: i + 1, qid: String(id), role: "xi" }));
+    (d.benchIds || []).forEach((id, i) => rows.push({ slot: i + 1, qid: String(id), role: "bench" }));
+    rows.sort((a, b) => (a.role === b.role ? a.slot - b.slot : a.role < b.role ? -1 : 1));
+    next[d.date] = rows;
+  }
+
+  const clashes = [];
+  for (const day of Object.keys(previous).sort()) {
+    if (day > todayKey) continue;
+    const was = previous[day], now = next[day];
+    if (!now) { clashes.push(`${day}: served ${was.length} slots, and this import has no daily for it at all`); continue; }
+    if (now.length !== was.length) { clashes.push(`${day}: ${was.length} slots served, ${now.length} now`); continue; }
+    for (let i = 0; i < was.length; i++) {
+      if (was[i].qid !== now[i].qid || was[i].role !== now[i].role || was[i].slot !== now[i].slot) {
+        clashes.push(`${day}: ${was[i].role} slot ${was[i].slot} was question ${was[i].qid} -> ${now[i].qid}`);
+        break;
+      }
+    }
+  }
+
+  if (clashes.length && !process.argv.includes("--rewrite-history")) {
+    console.error(`REFUSED: ${clashes.length} day(s) at or before today would change.`);
+    console.error("  Those questions have been served. Changing one shows the right date over the");
+    console.error("  wrong board, and anybody's result for that day stops meaning what it meant.");
+    for (const c of clashes.slice(0, 8)) console.error("  x " + c);
+    if (clashes.length > 8) console.error(`  ...and ${clashes.length - 8} more`);
+    console.error("  If you really mean to rewrite what people have played: --rewrite-history");
+    process.exit(1);
+  }
+  if (clashes.length) {
+    console.warn(`REWRITING HISTORY because --rewrite-history was passed: ${clashes.length} served day(s) change.`);
+  }
+}
+
 fs.writeFileSync(OUT, out.join("\n") + "\n");
 
 const distinct = new Set(questions.map((x) => norm(x.answer))).size;

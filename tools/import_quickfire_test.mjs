@@ -165,5 +165,74 @@ console.log("\n=== The board rules it already had still hold ===");
     r.status !== 0 && /10 questions, expected 11/.test(r.out), "exit " + r.status);
 }
 
+
+console.log("=== The days that have been served ===");
+{
+  /* TRIGGERED, NOT READ. Line ordering proves the guard is called before the
+     write; it does not prove the guard is reached. Each case runs the importer
+     for real, and asserts the exit code AND that the emitted SQL has not been
+     touched — checking only that the file EXISTS passes a run that refused and
+     then overwrote it with identical bytes. */
+  const day = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
+  const PAST = [day(2), day(1)];          // both already served
+
+  /* This helper KEEPS its directory, unlike run() above, because the whole
+     point is what the second run makes of what the first one left. */
+  const staged = () => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "qfserved-"));
+    fs.mkdirSync(path.join(dir, "src"));
+    fs.mkdirSync(path.join(dir, "data"));
+    return dir;
+  };
+  const go = (dir, bank, extra = []) => {
+    fs.writeFileSync(path.join(dir, "src", "bank.json"), JSON.stringify(bank));
+    const r = spawnSync(process.execPath, [SCRIPT, "--source", path.join(dir, "src"), ...extra],
+      { cwd: dir, encoding: "utf8" });
+    return { status: r.status, out: String(r.stdout || "") + String(r.stderr || "") };
+  };
+
+  const dir = staged();
+  const sql = path.join(dir, "data", "qf-production.sql");
+  const first = go(dir, cleanBank(2, PAST));
+  t("a first import establishes the calendar", first.status === 0 && fs.existsSync(sql),
+    first.out.split("\n")[0]);
+
+  const before = fs.existsSync(sql) ? fs.statSync(sql).mtimeMs : 0;
+
+  /* The same days, one of them holding a different question. */
+  /* SWAP TWO SLOTS rather than introduce a question. Moving a bench id into the
+     XI puts the same question on the board twice, so the run refuses for a
+     contract reason and the test passes while proving nothing about the served
+     guard. A swap is a genuinely different board that is still entirely legal. */
+  const changed = cleanBank(2, PAST);
+  {
+    const ids = changed.dailies[0].questionIds;
+    [ids[0], ids[1]] = [ids[1], ids[0]];
+  }
+  const r2 = go(dir, changed);
+  t("REFUSES a served day whose questions would change",
+    r2.status === 1 && /at or before today would change/.test(r2.out) && r2.out.includes(PAST[0]),
+    (r2.out.split("\n").find((l) => l.trim().startsWith("x ")) || r2.out.split("\n")[0]).trim());
+  t("  and writes nothing — mtime unchanged", fs.statSync(sql).mtimeMs === before);
+
+  /* A served day dropped from the bank entirely. */
+  const dropped = cleanBank(2, PAST);
+  dropped.dailies = dropped.dailies.slice(1);
+  const r3 = go(dir, dropped);
+  t("REFUSES a served day that has vanished from the bank",
+    r3.status === 1 && /no daily for it at all/.test(r3.out), r3.out.split("\n")[0]);
+  t("  and writes nothing", fs.statSync(sql).mtimeMs === before);
+
+  /* Re-importing the same thing is fine, and so is adding a future day. */
+  const r4 = go(dir, cleanBank(2, PAST));
+  t("an unchanged re-import is allowed", r4.status === 0, r4.out.split("\n")[0]);
+
+  const r5 = go(dir, changed, ["--rewrite-history"]);
+  t("--rewrite-history lets it through and says so",
+    r5.status === 0 && /REWRITING HISTORY/.test(r5.out), r5.out.split("\n")[0]);
+
+  fs.rmSync(dir, { recursive: true, force: true });
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

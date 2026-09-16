@@ -32,7 +32,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -101,7 +101,14 @@ function run(mutate, label, expect, shouldPass = false) {
   let out = "", code = 0;
   try {
     out = execFileSync(process.execPath,
-      [path.join(ROOT, "tools", "import_whoami.mjs"), "--source", dir, "--from=2026-10-01", "--check"],
+      /* --out TO A DISPOSABLE PATH, even for --check. The importer reads the
+         previous calendar from --out to see whether this import would rewrite
+         a day that has been served; left at the default it reads the REAL
+         data/wa-production.sql, and these two-board fixtures would then be
+         asked why they do not cover the days the live game has served. A
+         contract test should not depend on what production happens to hold. */
+      [path.join(ROOT, "tools", "import_whoami.mjs"), "--source", dir, "--from=2026-10-01",
+       "--out=" + path.join(dir, "check.sql"), "--check"],
       { encoding: "utf8", stdio: "pipe", cwd: ROOT });
   } catch (e) {
     out = (e.stdout || "") + (e.stderr || "");
@@ -221,5 +228,108 @@ console.log("\n=== The SQL it emits is SQL D1 will accept ===");
   fs.rmSync(dir, { recursive: true, force: true });
 }
 
+
+
+/* ---- (9) AND (10): THE SERVED DAYS -----------------------------------------
+ *
+ * TRIGGERED, NOT READ. The guard's line ordering was checked by eye first and
+ * that proves the call comes before the write; it does not prove the call is
+ * REACHED. So each case below runs the importer for real and asserts three
+ * things: the exit code, the refusal naming the right day, and — the one that
+ * caught a weaker version of this test — that the output file has not been
+ * touched. Asserting the file merely EXISTS passes on a run that refused and
+ * then overwrote it with identical bytes.
+ */
+console.log("\nThe days that have been served");
+{
+  const yday = (n) => {
+    const d = new Date(Date.now() - n * 86400000);
+    return d.toISOString().slice(0, 10);
+  };
+  /* A calendar that starts BEFORE today, so the guard is in scope at all: two
+     days already served, then today, then tomorrow. CONSECUTIVE — the importer
+     refuses a gap, and a fixture that skips today fails contract 7 before ever
+     reaching the guard these cases are about. */
+  const served1 = yday(2), served2 = yday(1), todayD = yday(0), future = yday(-1);
+  const RUN = [served1, served2, todayD, future];
+
+  const makeSource = (dates) => {
+    const { bank, sched } = fixture();
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "wa-served-"));
+    sched.boards = dates.map((date, i) => ({
+      date, day: i + 1, doors: sched.boards[0].doors.map((d) => ({ ...d })),
+    }));
+    fs.writeFileSync(path.join(dir, "whoami-bank.json"), JSON.stringify(bank));
+    fs.writeFileSync(path.join(dir, "board-schedule.json"), JSON.stringify(sched));
+    return dir;
+  };
+  /* BOTH STREAMS, ON SUCCESS AS WELL AS ON FAILURE. execFileSync returns stdout
+     only, and the override announces itself on stderr — so a test reading the
+     return value alone cannot see "REWRITING HISTORY", and would pass a run
+     that rewrote history silently. spawnSync gives both whatever the exit. */
+  const runImport = (dir, from, out, extra = []) => {
+    const r = spawnSync(process.execPath,
+      [path.join(ROOT, "tools", "import_whoami.mjs"), "--source", dir,
+       "--from=" + from, "--out=" + out, ...extra],
+      { encoding: "utf8", cwd: ROOT });
+    return { code: r.status || 0, out: (r.stdout || "") + (r.stderr || "") };
+  };
+
+  /* Establish a calendar that has served two days. */
+  const base = makeSource(RUN);
+  const out = path.join(base, "prod.sql");
+  const first = runImport(base, served1, out, ["--rewrite-history"]);
+  t("a first import of a past-dated calendar goes through with --rewrite-history",
+    first.code === 0 && fs.existsSync(out), first.out.split("\n").slice(0, 2).join(" | "));
+
+  const before = fs.statSync(out).mtimeMs;
+  const bytesBefore = fs.readFileSync(out, "utf8").length;
+
+  /* (9) the served days are simply gone: a calendar starting tomorrow. */
+  const dropped = makeSource([future]);
+  const r9 = runImport(dropped, future, out);
+  t("REFUSES a calendar that does not reach back to the served days",
+    r9.code === 1 && /REFUSED/.test(r9.out) && r9.out.includes(served1),
+    r9.out.split("\n")[0]);
+  t("  and writes nothing — mtime unchanged, not merely 'the file exists'",
+    fs.statSync(out).mtimeMs === before && fs.readFileSync(out, "utf8").length === bytesBefore);
+
+  /* (10) the served days are present and DIFFERENT. */
+  const changed = makeSource(RUN);
+  {
+    const p = path.join(changed, "board-schedule.json");
+    const s = JSON.parse(fs.readFileSync(p, "utf8"));
+    /* SWAP TWO SLOTS rather than invent a club. Renaming a door's club also
+       breaks contract 4 — that player never played for "Somewhere Else" — so
+       the run refuses for the wrong reason and the test passes while proving
+       nothing about the guard. A swap is a genuinely different board that is
+       still entirely legal. */
+    const d = s.boards[0].doors;
+    [d[0], d[1]] = [d[1], d[0]];
+    fs.writeFileSync(p, JSON.stringify(s));
+  }
+  const r10 = runImport(changed, served1, out);
+  t("REFUSES a served day whose board would change",
+    r10.code === 1 && /at or before today would change/.test(r10.out) && r10.out.includes(served1),
+    r10.out.split("\n").find((l) => l.includes("slot")) || r10.out.split("\n")[0]);
+  t("  and writes nothing", fs.statSync(out).mtimeMs === before);
+
+  /* THE HONEST CASE IS CHECKED BEFORE THE OVERRIDE, and the order is the point:
+     --rewrite-history deliberately replaces the served board, so anything run
+     after it is comparing against history that has just been rewritten. Asked
+     the other way round, "an unchanged re-import is allowed" failed — correctly,
+     and for a reason that had nothing to do with the guard. */
+  const same = makeSource(RUN);
+  const r12 = runImport(same, served1, out);
+  t("an import that keeps the served days unchanged is allowed",
+    r12.code === 0, r12.out.split("\n").slice(0, 2).join(" | "));
+
+  /* The override exists, says what it is doing, and lets it through. */
+  const r11 = runImport(changed, served1, out, ["--rewrite-history"]);
+  t("--rewrite-history lets it through and says so",
+    r11.code === 0 && /REWRITING HISTORY/.test(r11.out), r11.out.split("\n")[0]);
+
+  [base, dropped, changed, same].forEach((d) => fs.rmSync(d, { recursive: true, force: true }));
+}
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
