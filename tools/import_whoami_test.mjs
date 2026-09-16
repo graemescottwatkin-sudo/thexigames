@@ -210,6 +210,15 @@ console.log("\n=== The SQL it emits is SQL D1 will accept ===");
   t("the bank is upserted, never wholesale deleted",
     /INSERT OR REPLACE INTO wa_player/.test(sql) && !/DELETE FROM wa_player;/.test(sql));
   const orphan = (sql.match(/DELETE FROM wa_player WHERE[^;]*;/) || [])[0] || "";
+  /* THE SPARE LIST IS EXACTLY WHAT THE FILE WROTE. The delete keeps every id in
+     its NOT IN list; if that list is short by one, that player is removed while
+     their INSERT sits above it in the same file. Counting both sides in the
+     EMITTED SQL catches a drift between them however it arises — a changed fold,
+     a list built from the wrong field — which reading the source cannot. */
+  const inserted = (sql.match(/INSERT OR REPLACE INTO wa_player /g) || []).length;
+  const spared = (orphan.match(/'/g) || []).length / 2;
+  t("the delete spares exactly the players this file inserted",
+    inserted > 0 && spared === inserted, `${spared} spared, ${inserted} inserted`);
   t("and a player the bank dropped is removed only if no door points at it",
     /NOT IN \(SELECT DISTINCT player_id FROM wa_door\)/.test(orphan) &&
     /AND id NOT IN \(/.test(orphan),
