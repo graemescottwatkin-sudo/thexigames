@@ -29,6 +29,30 @@ function str(v, len) {
   return v === null || v === undefined ? null : String(v).slice(0, len);
 }
 
+/* THE SUBSTITUTIONS COLUMN READ A SPELLING NO PAGE WRITES.
+ *
+ * It was intOr(r.substitutions). Of the games that spend substitutions, only
+ * Codeword writes that word: Ballpark and Who Am I write `subs`, HiLo writes
+ * `subsUsed`, QuickFire writes `subs` from a variable called subsUsed. So the
+ * column has been 0 on every row of every game but one, silently, since it
+ * existed — the value was on the wire and the reader was asking for another
+ * name.
+ *
+ * This is the word search's puzzleId fault exactly, and games_test already
+ * carries the lesson from it: "EVERY field, not most of them. Two were handled
+ * for both spellings and two were not." That was fixed for one function and
+ * the same mistake was sitting one file away in a column mapping.
+ *
+ * Found on 16 Sep 2026 while adding detail for Ballpark, by asking what the
+ * page actually sends rather than what the INSERT asks for. Nothing errors
+ * either way, which is why it lasted: a zero is a plausible number of
+ * substitutions and there is no row anywhere that looks wrong. */
+function subsOf(r) {
+  const first = [r.substitutions, r.subs, r.subsUsed].find(
+    (v) => v !== undefined && v !== null);
+  return intOr(first);
+}
+
 export async function onRequestPost({ request, env }) {
   if (!csrfOk(request)) return bad("Missing request header.", 403);
   if (!hasDB(env)) return bad("Accounts are not configured.", 503);
@@ -97,7 +121,7 @@ export async function onRequestPost({ request, env }) {
         key, mode, dailyNo,
         playedOn(game, r), r.score === undefined ? 0 : 1, intOr(r.score, null),
         intOr(r.elapsedSeconds, null), intOr(r.checks), intOr(r.checkAlls),
-        intOr(r.revealedLetters), intOr(r.revealedAnswers), intOr(r.substitutions),
+        intOr(r.revealedLetters), intOr(r.revealedAnswers), subsOf(r),
         intOr(r.pauses), intOr(r.pausedSeconds),
         str(r.club, 60), str(r.season, 20), str(r.completedAt, 40),
       ).run();

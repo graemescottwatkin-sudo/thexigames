@@ -133,6 +133,38 @@ t("absurd numbers are clamped rather than stored", (() => {
   return d.foundCount === 0 && d.minute === 1e6;
 })());
 
+/* THE TWO NEWEST GAMES BANKED A BARE SCORE. detailOf returned null for both,
+   so a signed-in round stored 48 and nothing else — proved on 16 Sep 2026 by
+   Graeme playing Ballpark signed in and the row coming back with detail NULL.
+   The fixtures below are the records the PAGES ACTUALLY WRITE, copied from
+   recordResult in each game.js, for the same reason the word search's is: a
+   fixture invented here proves this function consistent with itself. */
+t("a Ballpark row keeps the round, not just the score", (() => {
+  /* football/ballpark/js/game.js recordResult() */
+  const written = { no: 22, day: "2026-09-16", score: 48, result: "D",
+                    inBallpark: 7, bangOns: 2, subs: 1 };
+  const d = JSON.parse(detailOf("ballpark", written));
+  return d.boardNo === 22 && d.result === "D" && d.inBallpark === 7 &&
+         d.bangOns === 2 && entryKey("ballpark", written) === "bp:2026-09-16";
+})());
+t("and it does not restate a fact that has a column", (() => {
+  const d = JSON.parse(detailOf("ballpark", { subs: 3, score: 48 }));
+  return d.subs === undefined && d.score === undefined;
+})());
+t("a QuickFire row keeps its board and its right and wrong", (() => {
+  /* football/quickfire/js/game.js bankResult() */
+  const written = { game: "quickfire", day: "2026-09-16", no: 22,
+                    boardId: "qf-0003", score: 700, right: 8, wrong: 3, subs: 2 };
+  const d = JSON.parse(detailOf("quickfire", written));
+  return d.boardId === "qf-0003" && d.boardNo === 22 && d.right === 8 &&
+         d.wrong === 3 && d.subs === undefined &&
+         entryKey("quickfire", written) === "qf:2026-09-16";
+})());
+/* A game with nothing of its own still gets null rather than an empty object,
+   because "{}" in the column would read as a round that recorded nothing. */
+t("a game with no facts of its own still adds no detail",
+  detailOf("grid", { no: 1 }) === null && detailOf("codeword", { no: 1 }) === null);
+
 console.log("\nOne CSRF rule, two header names");
 const withHeader = (name) => new Request("https://www.thexigames.com/api/x",
   { method: "POST", headers: { [name]: "1" } });

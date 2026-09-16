@@ -471,6 +471,37 @@ export function detailOf(game, row) {
       title: row.title == null ? null : String(row.title).slice(0, 80),
     });
   }
+  if (game === "ballpark") {
+    /* WHAT A BALLPARK RESULT KEEPS, and the reason it must keep anything:
+       until 16 Sep 2026 this function returned null for it, so a signed-in
+       round banked a score of 48 and nothing else. A score is not recoverable
+       into a round — nobody can work out from 48 how many guesses landed in
+       the ballpark or how many were exact — so a fact not written on the day
+       is gone for everyone, for ever. That asymmetry is why this went in
+       ahead of the season, which IS recomputable from rows that exist.
+       The page already sends all of it. Nothing here asked the browser for a
+       single new field; these were arriving and being dropped on the floor at
+       the last step. */
+    return JSON.stringify({
+      boardNo: row.no == null ? null : n(row.no),
+      result: ["W", "D", "L"].includes(row.result) ? row.result : null,
+      inBallpark: n(row.inBallpark),
+      bangOns: n(row.bangOns),
+    });
+  }
+  if (game === "quickfire") {
+    /* The same, and it arrived the same way: the page has always sent right,
+       wrong and the board id, and all three were discarded here.
+       `subs` is NOT in this object. It has a column — substitutions — and a
+       fact with a column does not also go in detail; see migrate.js, where
+       the column was reading a spelling no page writes. */
+    return JSON.stringify({
+      boardId: row.boardId == null ? null : String(row.boardId).slice(0, 40),
+      boardNo: row.no == null ? null : n(row.no),
+      right: n(row.right),
+      wrong: n(row.wrong),
+    });
+  }
   if (game !== "wordsearch") return null;
   const pick = (a, b) => {
     const v = a === undefined || a === null ? b : a;

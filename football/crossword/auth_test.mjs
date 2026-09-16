@@ -75,9 +75,16 @@ function makeDB() {
             const clash = results.some((r) => r.user_id === b[1] &&
               r.game === b[2] && r.entry_key === b[3]);
             if (!clash) {
+              /* substitutions is b[16]. It was not captured here until 16 Sep
+                 2026, and that is exactly why the column could read a spelling
+                 no page writes for as long as it did: the stub recorded the
+                 columns somebody had happened to assert on, so a column nobody
+                 had asserted on could not be wrong. A stub that carries less
+                 than the statement is a stub that cannot fail on the rest. */
               results.push({ id: b[0], user_id: b[1], game: b[2], entry_key: b[3],
-                detail: b[4], mode: b[6], daily_no: b[7],
-                score: b[10], source: "migrated" });
+                detail: b[4], mode: b[6], daily_no: b[7], played_on: b[8],
+                score: b[10], substitutions: b[16], season: b[20],
+                source: "migrated" });
             }
           }
           return { success: true };
@@ -211,6 +218,28 @@ t("the account's own club is not overwritten by the guest's",
   env.DB._users.find((u) => u.id === a.user.id).club === "Bolton Wanderers");
 t("migrated rows are marked as such, so a leaderboard can distrust them",
   env.DB._results.every((r) => r.source === "migrated"));
+
+/* THE SUBSTITUTIONS COLUMN READ A SPELLING NO PAGE WRITES, so it was 0 on
+   every row of every game but Codeword. Ballpark and Who Am I send `subs`,
+   HiLo sends `subsUsed`, Codeword sends `substitutions`; the INSERT asked for
+   the last of those only. Nothing errored, because a zero is a plausible
+   number of substitutions and no row anywhere looked wrong.
+   Each spelling is asserted separately rather than in one pass: a loop over
+   three names that all landed would pass if the reader took only the first. */
+for (const [name, body] of [
+  ["subs", { game: "ballpark", day: "2026-10-01", score: 48, subs: 3 }],
+  ["subsUsed", { game: "hilo", day: "2026-10-02", score: 60, subsUsed: 2 }],
+  ["substitutions", { game: "codeword", day: "2026-10-03", score: 90, substitutions: 1 }],
+]) {
+  t(`a page writing ${name} reaches the substitutions column`, await (async () => {
+    await migrate({ request: req({ method: "POST", cookie, body:
+      { game: body.game, results: [body] } }), env });
+    const row = env.DB._results.find((r) => r.game === body.game &&
+      r.entry_key && r.entry_key.endsWith(body.day));
+    const want = body.subs ?? body.subsUsed ?? body.substitutions;
+    return !!row && row.substitutions === want;
+  })());
+}
 t("a huge payload is capped rather than accepted whole", await (async () => {
   const many = Array.from({ length: 900 }, (_, i) => ({ dailyNo: 500 + i, score: 10 }));
   const j = await (await migrate({ request: req({ method: "POST", cookie, body: { results: many } }), env })).json();
