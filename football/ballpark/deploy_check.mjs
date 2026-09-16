@@ -175,6 +175,28 @@ console.log("\nIt counts plays and banks results, like every built game");
   t("it has a function that pushes to the account",
     !!pusher && /\/api\/account\/migrate/.test(pusher));
 
+  /* THE ROUND, NOT ONLY THE SCORE. A score of 48 cannot be turned back into a
+     round by anybody, so a round not written on the day is gone for everyone
+     for ever — which is why this shipped ahead of the season, a thing that IS
+     recomputable from rows that exist.
+     Three assertions rather than one, because the record is assembled from
+     three places and any one of them going quiet leaves a list of nulls that
+     still looks like a record: the guess is captured at the lock, the grade is
+     kept from the server's reply, and recordResult puts both in the row. A
+     check on the row alone would pass on eleven entries of {id, null, null}. */
+  const locker = bodyOf("lock");
+  const settler = bodyOf("settle");
+  t("the guess is written down at the moment it is locked",
+    !!locker && /guesses\[step\]\s*=/.test(locker),
+    "the slider is not a record of anything once the round has moved on");
+  t("and the grade is kept as the server AWARDED it",
+    !!settler && /grades\[step\]\s*=/.test(settler),
+    "derivable from guess, answer and tolerance — and therefore not a fact about the round; "
+    + "change a tolerance and every recomputed grade changes with it");
+  t("and the recorded row carries the eleven as asked",
+    !!recorder && /asked:/.test(recorder) && /guesses\[/.test(recorder) && /grades\[/.test(recorder),
+    "id, guess, grade — the question and the answer are on the board the id names");
+
   /* THE CHECK THIS BLOCK WAS MISSING, and the Fable review of 16 September
      proved the gap by sabotage: it deleted the `pushResults();` CALL from
      inside recordResult and all five of the old assertions still passed —

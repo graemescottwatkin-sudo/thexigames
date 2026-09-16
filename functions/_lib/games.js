@@ -482,11 +482,32 @@ export function detailOf(game, row) {
        The page already sends all of it. Nothing here asked the browser for a
        single new field; these were arriving and being dropped on the floor at
        the last step. */
+    /* THE ELEVEN AS ASKED, and the reason the payload is small: Ballpark's
+       boards name their questions by id, so the question, the answer, the
+       slider and the tolerance are all reachable from the id and none of them
+       is repeated here. Id, guess, grade.
+       THE GRADE IS STORED AS AWARDED rather than recomputed from the guess and
+       the tolerance, which is the point of keeping it at all: it is what the
+       player WAS TOLD. A recomputation a year from now is a statement about
+       that day's tolerances, not about the round. This repo spent a week
+       proving that a value re-derived from current data is where things go
+       wrong — the freeze protects the board, and nothing protects a number
+       nobody wrote down.
+       Bounded on every axis, because this is the first field a page sends that
+       is a LIST: at most the eleven, ids clipped, guesses coerced, grades
+       clipped. An unbounded array from a browser is a column somebody can make
+       any size they like. */
+    const asked = Array.isArray(row.asked) ? row.asked.slice(0, 11) : null;
     return JSON.stringify({
       boardNo: row.no == null ? null : n(row.no),
       result: ["W", "D", "L"].includes(row.result) ? row.result : null,
       inBallpark: n(row.inBallpark),
       bangOns: n(row.bangOns),
+      asked: asked && asked.map((a) => ({
+        id: a && a.id != null ? String(a.id).slice(0, 40) : null,
+        guess: a && Number.isFinite(Number(a.guess)) ? Number(a.guess) : null,
+        grade: a && a.grade != null ? String(a.grade).slice(0, 24) : null,
+      })),
     });
   }
   if (game === "quickfire") {

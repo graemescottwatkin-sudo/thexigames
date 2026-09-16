@@ -151,6 +151,39 @@ t("and it does not restate a fact that has a column", (() => {
   const d = JSON.parse(detailOf("ballpark", { subs: 3, score: 48 }));
   return d.subs === undefined && d.score === undefined;
 })());
+/* THE ELEVEN AS ASKED. A score cannot be turned back into a round, so the round
+   is written on the day or not at all. The GRADE is stored as awarded rather
+   than recomputed: it is what the player was told, and a recomputation is a
+   statement about today's tolerances instead. */
+t("a Ballpark row keeps the eleven questions, the guesses and the grades", (() => {
+  const asked = Array.from({ length: 11 }, (_, i) => (
+    { id: "bpq-" + (i + 1), guess: 1000 + i, grade: i === 3 ? "Bang on" : "In the ballpark" }));
+  const d = JSON.parse(detailOf("ballpark", { no: 22, day: "2026-09-16", asked }));
+  /* GUARDED RATHER THAN INDEXED STRAIGHT. Dropping the field from detailOf made
+     this THROW on d.asked.length — red, but by dying before the tally printed,
+     so the run had no "N passed, M failed" line at all and every assertion after
+     it was lost. A crash is caught here only because the sweep reads exit
+     status; a suite should fail on its own terms. */
+  const a = Array.isArray(d.asked) ? d.asked : [];
+  return a.length === 11 && a[0].id === "bpq-1" && a[0].guess === 1000 &&
+         a[3].grade === "Bang on" && a[10].id === "bpq-11";
+})());
+/* A LIST FROM A BROWSER IS THE FIRST FIELD ANYBODY CAN MAKE ANY SIZE THEY LIKE.
+   Every other detail field is one value and clamps itself; this one has a
+   length, an id length and a grade length, and all three are somebody else's
+   input. */
+t("and it bounds the list a browser can send", (() => {
+  const many = Array.from({ length: 500 }, () => (
+    { id: "x".repeat(200), guess: "7", grade: "g".repeat(200) }));
+  const d = JSON.parse(detailOf("ballpark", { asked: many }));
+  const a = Array.isArray(d.asked) ? d.asked : [];
+  return a.length === 11 && a[0] && a[0].id.length === 40 &&
+         a[0].grade.length === 24 && a[0].guess === 7;
+})());
+t("a round with no per-question record still banks, rather than refusing", (() => {
+  const d = JSON.parse(detailOf("ballpark", { no: 22, result: "W" }));
+  return d.asked === null && d.boardNo === 22 && d.result === "W";
+})(), "an older page, or a row written before this shipped");
 t("a QuickFire row keeps its board and its right and wrong", (() => {
   /* football/quickfire/js/game.js bankResult() */
   const written = { game: "quickfire", day: "2026-09-16", no: 22,

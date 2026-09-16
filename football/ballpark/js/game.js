@@ -5,7 +5,7 @@
      it is yesterday's code. aligned_test asserts the two agree, and until
      this game launched it had no BUILD at all — three of its assets were on
      three different tags, which is the same fault with nobody checking. */
-  var BUILD = "v001e";
+  var BUILD = "v001f";
   if (window.XIPlays && document.documentElement) {
     document.documentElement.setAttribute("data-build", BUILD);
   }
@@ -46,6 +46,17 @@
      fast does not show five minutes of a twenty-second question gone. */
   var clockMs = 0, skew = 0, clockLen = R.CLOCK, narrowedSecs = 0;
   var results = [], points = [], bangOns = 0, subsUsed = 0, lockedSecs = 0;
+  /* WHAT THE PLAYER GUESSED AND WHAT THEY WERE TOLD, kept per question because
+     neither survives anywhere else. `results` is a boolean and `bangOns` is a
+     count; the guess was sent to the server and discarded here, and the grade
+     was rendered and discarded here. A score of 48 cannot be turned back into a
+     round by anybody, ever, so a round not written down on the day is gone.
+     The GRADE is stored as AWARDED rather than recomputed later. It is derivable
+     from the guess, the answer and the tolerance — and that is exactly why it
+     must be kept: it is what the player WAS TOLD, which is a fact about the
+     round, while a recomputation is a fact about today's tolerances. Change a
+     tolerance in a year and every recomputed grade quietly changes with it. */
+  var guesses = [], grades = [];
   var scoreNow = 0, resultLetter = null, answers = null;
 
   var slider = $("slider"), track = $("track"), big = $("big"), ghost = $("ghost");
@@ -225,8 +236,13 @@
     slider.disabled = true;
     $("lock").disabled = true; $("narrow").disabled = true;
 
+    /* CAPTURED HERE RATHER THAN READ BACK IN settle(), because settle() runs
+       after the round has moved on in the failure cases and the slider is not
+       a record of anything by then. */
+    guesses[step] = Number(slider.value);
+
     post("answer", {
-      token: token, playId: playId, idx: step + 1, guess: Number(slider.value),
+      token: token, playId: playId, idx: step + 1, guess: guesses[step],
     }).then(function (r) {
       settle(r);
     });
@@ -236,6 +252,10 @@
     var q = board.questions[step];
     results[step] = !!r.green;
     points[step] = Number(r.points) || 0;
+    /* The server's word, kept verbatim. bangOns counts one grade; this keeps
+       all of them, and it is the only place the player's verdict is written
+       down rather than rendered and forgotten. */
+    grades[step] = r.grade == null ? null : String(r.grade);
     if (r.grade === "Bang on") bangOns++;
     /* THE SERVER'S COUNT WINS WHEN THERE IS ONE. Without a database there is no
        round to count, so the page keeps its own tally from the verdicts it has
@@ -425,6 +445,14 @@
         no: no, day: day, score: scoreNow, result: resultLetter,
         inBallpark: results.filter(function (x) { return x === true; }).length,
         bangOns: bangOns, subs: subsUsed,
+        /* THE ELEVEN AS ASKED. Id, guess, grade — and NOT the question, the
+           answer, the slider or the tolerance, because all four are on the
+           board this id points at. Ballpark is one of only two games in the
+           family whose boards name their questions by id, and this is where
+           that pays: a whole round is a few hundred bytes. */
+        asked: board.questions.map(function (q, i) {
+          return { id: q.id, guess: guesses[i], grade: grades[i] };
+        }),
       });
       localStorage.setItem(BP_KEY, JSON.stringify(list.slice(-800)));
     } catch (e) { /* private browsing: play on without a record */ }
@@ -603,6 +631,7 @@
   function startRound(data) {
     board = data.board; token = board.token; no = data.no; day = data.day || null;
     step = 0; results = []; points = []; answersSeen = []; bangOns = 0;
+    guesses = []; grades = [];
     subsUsed = 0; scoreNow = 0; over = false;
 
     ladder.innerHTML = ""; sheet.innerHTML = "";
