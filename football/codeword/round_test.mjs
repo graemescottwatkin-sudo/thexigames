@@ -93,7 +93,12 @@ function board() {
     }
   }
   return {
-    no: 2, size, cells,
+    /* A FAMILY NUMBER AND A DAY, which is what the wire actually carries:
+       /api/codeword/daily returns `no` as the FAMILY number (daily.js converts
+       it) and `day` straight off the board. The two together are the whole
+       point of the replay fixture below — 21 is the family's, and a result
+       recorded by /finish would carry 2, this game's own. */
+    no: 21, day: "2026-09-15", size, cells,
     given: [{ n: CODE.K, letter: "K" }],
     slots: WORDS.map((w, i) => ({
       row: i, col: 0, dir: "a", len: w.length,   /* LOWERCASE: wordCells tests w.dir === "a" */
@@ -380,7 +385,22 @@ console.log("=== A board this device has finished kicks off as a replay ===");
   t("a board never finished here kicks off as a first sitting",
     first && first.body.replay === false, JSON.stringify(first && first.body));
 
-  /* The same board, with this device's own record of having finished it. */
+  /* THE SAME BOARD, WITH THIS DEVICE'S OWN RECORD OF HAVING FINISHED IT — and
+     THE RECORD AND THE BOARD DISAGREE ABOUT NUMBERS ON PURPOSE.
+     The seeded row carries `no: 2`, because that is what recordResult stores:
+     the /finish response's `no`, which is cw_round.board_no, which is CODEWORD'S
+     OWN ordinal counted from its own epoch. The board in hand carries 21, the
+     FAMILY number, because that is what daily.js puts on the wire. Nineteen
+     apart, and the page compared them — so hasPlayedBoard returned false for
+     every board that had ever been finished and the replay rule never fired
+     once in production.
+     This fixture seeded 2 against a board that was also 2 and had no day at
+     all, so it passed on a coincidence of its own making. It now seeds the two
+     schemes the live code holds. The matching field is `day`, and it is the
+     only field that means one thing on both sides. If the page ever goes back
+     to comparing numbers, this goes red.
+     Found by the Codeword session playing a live board to a finish and
+     reopening it — which is the only way it could be found. */
   const again = await open({ played: [{ no: 2, day: "2026-09-15", score: 100,
     solved: 11, minute: 1, result: "W" }] });
   click(cell(again.doc, 1, 0));

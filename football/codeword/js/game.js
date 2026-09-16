@@ -3,7 +3,7 @@
   /* THE BUILD, PAIRED WITH THE ?v= ON THIS FILE'S OWN SCRIPT TAG. A stale
      cached script is otherwise invisible: the page loads, the game runs, and
      it is yesterday's code. aligned_test asserts the two agree. */
-  var BUILD = "v001e";
+  var BUILD = "v001f";
   if (window.XIPlays && document.documentElement) {
     document.documentElement.setAttribute("data-build", BUILD);
   }
@@ -55,7 +55,12 @@ function boot(BOARD){
   var N = 13;
   var CODE = {};
   var GIVEN = [];
-  var BOARD_NO = "demo", BOARD_NO_N = null;
+  /* BOARD_DAY beside the numbers, because the numbers are two schemes and the
+     day is one. BOARD_NO_N is the FAMILY number and the /finish response
+     carries this game's OWN ordinal; anything comparing a stored result to the
+     board in hand must use the day or it is comparing apples to a different
+     orchard. See hasPlayedBoard. */
+  var BOARD_NO = "demo", BOARD_NO_N = null, BOARD_DAY = null;
   var HINTS = [];
   var BREAKS = [];
   var DOT = "·", SQ_ON = "🟩", SQ_OFF = "🟥";
@@ -68,6 +73,7 @@ function boot(BOARD){
     HINTS = BOARD.hints || []; BREAKS = BOARD.breaks || [];
     BOARD_NO = ("00" + BOARD.no).slice(-3);
     BOARD_NO_N = BOARD.no;
+    BOARD_DAY = BOARD.day || null;
     var tagEl = document.getElementById("tag");
     if (tagEl) tagEl.innerHTML = "Codeword XI " + DOT + " board " + BOARD_NO;
   }
@@ -715,7 +721,7 @@ function boot(BOARD){
          everyone once ANYBODY finished it. This page keeps its own results and
          is the only thing here that knows whose replay it would be. */
       body: JSON.stringify({ rate: secondsPerMinute, no: BOARD_NO_N,
-                             replay: hasPlayedBoard(BOARD_NO_N) })
+                             replay: hasPlayedBoard(BOARD_DAY) })
     }).then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); })
       .then(function(d){
         opening = false;
@@ -778,11 +784,33 @@ function boot(BOARD){
      read as a replay. Private browsing throws on read and comes back empty,
      which makes every sitting a first sitting: the failure falls the way that
      lets somebody play rather than the way that refuses to record them. */
-  function hasPlayedBoard(no){
-    if (no === null || no === undefined) return false;
+  /* THE DAY, NOT THE NUMBER, AND THE NUMBER IS WHY THIS NEVER WORKED.
+   *
+   * This compared list[i].no against BOARD_NO_N and the two are different
+   * numbering schemes. recordResult stores `d.no` from the /finish response,
+   * which is CODEWORD'S OWN ordinal counted from its epoch; BOARD_NO_N is the
+   * FAMILY board number counted from 26 August. They differ by nineteen. So 3
+   * never equalled 22, hasPlayedBoard returned false for every board that had
+   * ever been finished, replay went up false every time, and the rule Graeme
+   * chose has never once fired.
+   *
+   * Found by the Codeword session PLAYING today's board to a finish and
+   * reopening it. No test would have caught it: it needs a board finished AND
+   * revisited, and a device that has finished nothing behaves identically with
+   * the bug and without it — which is every run that starts from a clean
+   * profile. Two numbers nineteen apart both look plausible in a log and
+   * neither looks like the other's scheme.
+   *
+   * THIRD TIME TONIGHT for family-versus-internal numbering: /daily/1 resolving
+   * to a date three weeks before the game existed, the archive loader reading
+   * the wrong one, and now a comparison holding one of each. The day is the
+   * cure rather than a fix, because a day means one thing everywhere — which is
+   * the same reason entryKey keys on it. */
+  function hasPlayedBoard(day){
+    if (!day) return false;
     var list = readResults();
     for (var i = 0; i < list.length; i++){
-      if (list[i] && Number(list[i].no) === Number(no)) return true;
+      if (list[i] && list[i].day === day) return true;
     }
     return false;
   }
