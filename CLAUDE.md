@@ -6,9 +6,18 @@ every rule below exists because its absence cost a real release.
 ## What this is
 
 A family of football-themed daily puzzle games at **thexigames.com**, targeting
-eleven titles. FIVE are live, all under their theme: **Crossword XI**
-(`/football/crossword/`), **Wordsearch XI**, **Scrambled XI**, **HiLo XI** and
-**Vowels XI**. Cloudflare Pages + D1 (database `crosswordxi`) + Functions at the
+eleven titles. **Which games are live is not written here.** `LAUNCHED` in
+`functions/_lib/games.js` is the one place that records it, with a date per
+game — so read that rather than a count in this file. As of 16 Sep 2026 it holds
+ten, Ballpark XI being the tenth.
+
+This line said FIVE for eight days after it stopped being true, and named the
+five. Four games launched in the week it went stale, and a session on 16 Sep
+planned work around it before checking. A COUNT IN A DOCUMENT IS A MEASUREMENT
+WEARING A LAW'S CLOTHES: laws do not rot, measurements do, and this file is read
+first by everyone. Where a number matters below, it now says how to derive it.
+
+Cloudflare Pages + D1 (database `crosswordxi`) + Functions at the
 repo root, shared by all games. The hub is `/index.html`; shared assets in
 `shared/` (tokens, chrome). No package.json in the repo — Pages must not build.
 
@@ -56,10 +65,20 @@ hub. A 301 there would have to be un-cached from every browser that ever saw it.
 
 1. `rmdir /s /q node_modules` if present — **gates must run with no
    node_modules, no package.json, no .wrangler in the tree** (the gate checks).
-2. Every game's gate, and there are EIGHT — five live plus QuickFire, Grid XI
-   and Codeword XI: `node football\crossword\deploy_check.mjs` and the same for
-   `wordsearch`, `scrambled`, `hilo`, `vowels`, `quickfire`, `grid`,
-   `codeword`. Expect **0 failed** on each. Grid XI's and Codeword XI's also
+2. **EVERY GAME'S GATE — one per game, and the list is the directory, not this
+   sentence.** `for %g in (football\*) do node %g\deploy_check.mjs`, or read
+   `dir football\*\deploy_check.mjs` and run each. Expect **0 failed** on each.
+   As of 16 Sep 2026 that is ten.
+
+   THIS SAID "there are EIGHT" while there were nine, and said seven before
+   that. Every time a game launched, this number was wrong and the person
+   following it ran one gate fewer than exists — which is the same fault as
+   Grid XI's gate being absent from CI for a day, one level up: a gate nobody
+   runs cannot refuse anything, and here the instruction itself was what
+   stopped it being run. The count is derived now, so a new game is covered by
+   existing, not by somebody remembering to edit this line.
+
+   Grid XI's and Codeword XI's also
    refuse the things a LAUNCH would have to change — absence from GAMES, from
    the squad, from the sitemap — so a game cannot go live by drift. Codeword's
    adds the two refusals its own integration exists for: no board files
@@ -112,9 +131,13 @@ hub. A 301 there would have to be un-cached from every browser that ever saw it.
 4. Stage BY NAME, then commit and push. Not `git add -A`: other sessions edit
    this tree, and `-A` pushes their work past gates you never ran on it.
    Watch the Actions run (30+ jobs).
-5. Every live game's live_check with `--expect`, five of them:
-   `node football\crossword\live_check.mjs --expect vNNN` and the same for
-   `wordsearch`, `scrambled`, `hilo`, `vowels` — including the HEAD assertions
+5. **EVERY LAUNCHED GAME'S live_check with `--expect`, one per game**, and the
+   list is `dir football\*\live_check.mjs` rather than a number here — same
+   reasoning as step 2, and this line was wrong in the same way, saying five
+   while ten existed. Take each game's tag from its own live page rather than
+   assuming they share one; they do not.
+   `node football\crossword\live_check.mjs --expect vNNN` and the same for each
+   — including the HEAD assertions
    (production proof of `functions/_middleware.js`). The paths are under
    `football\` since the theme move; `node crossword\live_check.mjs` is a
    file that no longer exists.
@@ -134,11 +157,22 @@ and diagnose before anything ships. Never push past a red gate.
 - Live build tags match `origin/main`: footer `buildTag`, `js/game.js?v=` on
   every live game. Game assets must match the footer; `shared/` assets carry their
   own plain `vN` lifecycle and must NOT match the game tag.
-- Every live_check passes with `--expect` — one per game, five of them.
+- Every live_check passes with `--expect` — one per game, and the count is the
+  directory rather than a figure here.
 - `results`/`plays` sanity via wrangler if relevant:
   `npx wrangler d1 execute crosswordxi --remote --command="..."`.
   **Never run a migration that is already applied** — `ALTER TABLE` is not
-  idempotent. Migration state: **001–034 all applied** (002 was applied late,
+  idempotent. Migration state: **001–041 all applied** — 035 (QuickFire text
+  ids), 036 and 038 (Codeword and its rounds), 037 and 039 (QuickFire rounds
+  and the wrong-pick penalty), 040 and 041 (Who Am I and its score) all landed
+  between 13 and 15 Sep 2026 and this line still read "001–034" afterwards.
+  A STALE MIGRATION NUMBER IS THE MOST DANGEROUS FIGURE IN THIS FILE, because
+  the sentence immediately before it tells you never to re-run an applied one
+  and `ALTER TABLE` is not idempotent — so a reader trusting "034" could
+  re-run 035 and break a live table. `dir data\migrations` is the list that
+  cannot go stale; this line is a record of what has been APPLIED, which the
+  directory cannot tell you, so it must be updated by hand every time one is.
+  (002 was applied late,
   27 Aug; 022 was the slot 023 reserved for QuickFire XI and stayed empty for
   weeks — written and applied 13 Sep 2026, five tables and three indexes
   confirmed live, `qf_question` carrying the four option columns and the
@@ -303,11 +337,16 @@ Where facts live — extend these, never copy them:
   game holds a number; a game that is in build, on the drawing board or in
   testing does not, and moves down when a game ships past it. HiLo XI went
   out on 10 (its build brief said so), was renumbered to 9, and is 4 — the
-  fourth game to launch — from 3 Sep 2026. **Launched games are 1 to 5**:
-  Vowels XI took the fifth shirt when it launched on 4 Sep 2026, and QuickFire
-  moved from 5 to 6 that day because a game in testing does not hold a number.
+  fourth game to launch — from 3 Sep 2026. **Which numbers are taken is the
+  squad list in `shared/xi-chrome.js`, not a range written here**: a slot with a
+  `name` is launched and a slot with a `status` is not, and the two are never
+  both. This said "1 to 5" while ten were taken — it was rewritten for Vowels on
+  4 Sep and then went stale through five more launches, because a range is a
+  measurement and the rule underneath it is not.
   Eleven shirts, so a launch pushes the tail down one and the squad loses an
-  unsigned slot rather than growing a twelfth.
+  unsigned slot rather than growing a twelfth. As of 16 Sep 2026 ten are worn
+  and one slot is unsigned — the first time the squad has had a single one
+  left, which is worth knowing before an eleventh game is promised a number.
 - The reorder is cheap and stays cheap: the number lives in the squad list in
   `shared/xi-chrome.js`, and the hub carries the strip, the card, the kit
   colour and the played-today check. Nothing else may hold a shirt number.
@@ -350,4 +389,12 @@ Where facts live — extend these, never copy them:
 
 - Legal review: ON HOLD by owner decision.
 - In-progress board sync: SHIPPED and confirmed on two devices (v001u).
-- `preview_test` exits 0 with no preview (on record; fix or delete, not exempt).
+- ~~`preview_test` exits 0 with no preview~~ — FIXED, and this line outlived it.
+  Measured 16 Sep 2026: with no `crosswordxi-preview-*.html` beside the
+  checkout it prints "the preview was NOT checked … this is not a pass" and
+  exits **1**. The entry stayed here describing a fault that no longer existed,
+  which is the mirror of the stale figures above: a known-open item nobody
+  re-checks is a measurement too, and this one was telling readers a working
+  check was broken. It is not in `checks.yml` and does not run in CI, which is
+  separate and still true — it needs a preview file that only exists on the
+  owner's machines.

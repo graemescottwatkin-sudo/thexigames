@@ -561,9 +561,19 @@ t("every test suite is named in the workflow", (() => {
                      the Google popup. Automating the popup would test a stub
                      rather than the origin allow-list, the token verification
                      and the cookie. It is an operator tool and says so.
-       preview_test  needs a built preview, and exits 0 without one — which is
-                     the "test that cannot fail" fault; it should be fixed or
-                     deleted rather than left here permanently. */
+       preview_test  needs a built preview. It was exempted here as a "test
+                     that cannot fail" — the note said it exits 0 without one.
+                     MEASURED 16 Sep 2026: it exits 1, printing "the preview
+                     was NOT checked" and "0 passed, 0 failed, 1 unknown". It
+                     reports an absent input as an UNKNOWN rather than a pass,
+                     which is the right shape and the opposite of the fault it
+                     was accused of. The exemption stands on the real reason:
+                     it needs an artefact built outside this repo and no CI
+                     runner has one. The note is corrected rather than deleted
+                     because it was repeated verbatim in CLAUDE.md and both
+                     copies were wrong for months — a second copy of a figure
+                     is a second thing to be wrong, and this one excused
+                     leaving a suite unrun. */
   /* A FLOOR UNDER THE WALK, for the same reason live_check has one: this
      check passes when it finds nothing to complain about, and a walk that
      returned an empty list would find nothing to complain about. That is
