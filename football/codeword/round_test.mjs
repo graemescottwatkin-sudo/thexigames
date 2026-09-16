@@ -33,6 +33,17 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { JSDOM } from "jsdom";
+/* THE URL UNDER TEST IS BUILT BY THE THING THAT BUILDS THE REAL ONES.
+   The Codeword session's archive suite hand-wrote its fixtures as query strings
+   — the shape it had invented before this route existed — so it proved its own
+   imagination consistent with itself and passed while the live archive served
+   the wrong board. A fixture invented by the side that does not own the
+   interface proves nothing about the interface.
+   permalinkPath() is the ONE place a board address is assembled in this repo;
+   the sitemap, every archive index and the route all call it. Importing it here
+   means that if the theme moves or the URL form changes, this fixture moves
+   with it and the loader either keeps up or goes red. */
+import { permalinkPath } from "../../functions/_lib/permalink.js";
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 let pass = 0, fail = 0;
@@ -177,7 +188,7 @@ function server(opts = {}) {
 async function open(opts = {}) {
   const srv = server(opts);
   const dom = new JSDOM(html, {
-    url: "https://www.thexigames.com/football/codeword/",
+    url: "https://www.thexigames.com" + (opts.at || "/football/codeword/"),
     runScripts: "outside-only", pretendToBeVisual: true,
   });
   const w = dom.window, doc = w.document;
@@ -186,6 +197,11 @@ async function open(opts = {}) {
   const daily = { board: board() };
   w.fetch = (url, opts) => {
     if (String(url).includes("daily")) {
+      /* RECORDED WITH THE NUMBER IT ASKED FOR. The daily is answered here rather
+         than by the stub, so without this the one thing the archive checks need
+         to see — WHICH board the page requested — never reached srv.calls. */
+      const no = (/[?&]no=([^&]*)/.exec(String(url)) || [])[1];
+      srv.calls.push({ what: "daily", body: { no } });
       return Promise.resolve({ ok: true, status: 200, json: async () => daily,
                                headers: { get: () => null } });
     }
@@ -399,6 +415,42 @@ console.log("=== A round that could not be opened is asked for again ===");
   t("and the finished word is then confirmed",
     srv.calls.filter((c) => c.what === "mark" && !c.body.check).length >= 1,
     `${srv.calls.filter((c) => c.what === "mark" && !c.body.check).length} confirm(s)`);
+}
+
+console.log("");
+console.log("=== An archive permalink loads the board it names, not today ===");
+{
+  /* THE BUG THIS PINS was live on production tonight. The page set the archived
+     day's title, og:title and canonical correctly and served TODAY's puzzle
+     underneath, because the loader read only location.search and the family puts
+     the number in the PATH. Right heading, right canonical, wrong board — which
+     nobody reports, because it does not look broken. */
+  const at = permalinkPath("codeword", 21);
+  t("the family builds a board address as a path, not a query",
+    at === "/football/codeword/daily/21" && at.indexOf("?") === -1, at);
+
+  const { w, srv } = await open({ at });
+  await tick(w, 8);
+  const asked = srv.calls.find((c) => c.what === "daily");
+  t("opening that address asks for THAT board",
+    !!asked && String(asked.body.no) === "21",
+    asked ? `asked no=${asked.body.no}` : "no daily request went out");
+
+  /* The only route to today is no number in either place. */
+  const plain = await open();
+  await tick(plain.w, 8);
+  const p = plain.srv.calls.find((c) => c.what === "daily");
+  t("and the bare page still asks for today",
+    !!p && (p.body.no === undefined || p.body.no === null || p.body.no === ""),
+    p ? `asked no=${JSON.stringify(p.body.no)}` : "no daily request");
+
+  /* PRESENT AND UNREADABLE IS REFUSED, not quietly turned into today —
+     defaulting to today is precisely what kept the original invisible. */
+  const bad = await open({ at: "/football/codeword/daily/abc" });
+  await tick(bad.w, 8);
+  t("a present-but-unreadable number in the path is refused, not replaced by today",
+    !bad.srv.calls.some((c) => c.what === "daily"),
+    "no board is better than the wrong board under the right title");
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

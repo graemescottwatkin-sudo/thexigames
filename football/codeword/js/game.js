@@ -3,7 +3,7 @@
   /* THE BUILD, PAIRED WITH THE ?v= ON THIS FILE'S OWN SCRIPT TAG. A stale
      cached script is otherwise invisible: the page loads, the game runs, and
      it is yesterday's code. aligned_test asserts the two agree. */
-  var BUILD = "v001d";
+  var BUILD = "v001e";
   if (window.XIPlays && document.documentElement) {
     document.documentElement.setAttribute("data-build", BUILD);
   }
@@ -1046,9 +1046,26 @@ function loadDaily(){
      family's day one and not from this game's epoch -- the two differ by
      nineteen. The page passes it through untouched and the server translates
      it via the day, which is the only thing the two schemes agree about. */
-  var m = /[?&]no=([^&]*)/.exec(location.search);
-  if (m && !/^\d+$/.test(m[1])) return Promise.reject(new Error("no such board"));
-  var q = m ? "?no=" + m[1] : "";
+  /* THE PATH FIRST, BECAUSE THE PATH IS WHAT THE FAMILY GENERATES.
+     permalinkPath() in functions/_lib/permalink.js builds every board address in
+     this estate as /<theme>/<game>/daily/<key> — the sitemap, each archive index
+     and the route itself all call it — and this loader read only
+     location.search. So an archive permalink carried its number in a place
+     nothing here looked at, found nothing, and asked for TODAY.
+     The page then set the archived day's title, og:title and canonical
+     correctly and rendered today's puzzle underneath: right heading, right
+     canonical, wrong board. Nobody reports that, because it does not look
+     broken — the only person who can tell is somebody who already knows what
+     the 15th's board should be.
+     AND A VALUE THAT IS PRESENT AND UNREADABLE IS REFUSED IN EITHER PLACE.
+     Falling back to today is what made this invisible in the first place, so it
+     must not be the recovery from a bad value either. Absent from BOTH is the
+     only route to today. */
+  var fromPath = /\/daily\/([^/?#]+)\/?$/.exec(location.pathname);
+  var fromQuery = /[?&]no=([^&]*)/.exec(location.search);
+  var raw = fromPath ? fromPath[1] : (fromQuery ? fromQuery[1] : null);
+  if (raw !== null && !/^\d+$/.test(raw)) return Promise.reject(new Error("no such board"));
+  var q = raw === null ? "" : "?no=" + raw;
   return fetch(API + "daily" + q, {cache: "no-cache"}).then(function(r){
     if (!r.ok) throw new Error("no board");
     return r.json();
