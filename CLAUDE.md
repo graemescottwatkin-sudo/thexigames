@@ -372,6 +372,25 @@ Where facts live — extend these, never copy them:
   whether free play may OPEN it is a different question and still `released()`.
   Sealed/unknown/malformed ids get one identical 404 (no-store, noindex, zero
   content).
+- **WORD SEARCH FREE PLAY SERVES THE SOLVED BOARD, AND THAT IS THE DECISION —
+  stop reporting it as a leak.** `/api/wordsearch/puzzle` returns the raw board
+  — every placement and the secret bonus word — for any id `released()` allows,
+  and `released()` asks `firstScheduledDay`, which reads the pre-launch
+  inventory on purpose. Free play marks finds LOCALLY (`judgedHere()` in its
+  game.js), so it cannot work without them; the daily judges server-side
+  through `/api/wordsearch/find` and is not affected.
+  MEASURED 17 Sep 2026, and the figure everyone reaches for is the wrong one:
+  it is not "233 future boards". `ws_schedule` holds 374 boards, **370 of which
+  have a row after today** — the schedule is a ROTATION, so a board that has
+  already run will run again. Narrowing `released()` to boards that have run
+  leaves 22 boards in free play and still exposes all 22. There is no subset
+  that is safe; only 4 boards in the whole bank have no future day.
+  So the exposure is structural and it is accepted: anyone who opens free play
+  can read a future daily. Closing it means serving `publicPuzzle` and judging
+  free play through `/find` like the daily — which also ends offline free play.
+  Owner's call, 17 Sep 2026: LEAVE IT. Written down here because two separate
+  reviews have now found it and filed it as a leak, and the second one cost a
+  day's work before anybody checked whether it was already known.
 - Date/time: the SERVER decides what day it is, in UTC. Never compute a date
   client-side and send it up.
 

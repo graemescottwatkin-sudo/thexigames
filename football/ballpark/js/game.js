@@ -5,7 +5,7 @@
      it is yesterday's code. aligned_test asserts the two agree, and until
      this game launched it had no BUILD at all — three of its assets were on
      three different tags, which is the same fault with nobody checking. */
-  var BUILD = "v001f";
+  var BUILD = "v001g";
   if (window.XIPlays && document.documentElement) {
     document.documentElement.setAttribute("data-build", BUILD);
   }
@@ -64,13 +64,34 @@
 
   /* ---- talking to the server ------------------------------------------- */
 
+  /* A FAILURE IS NOT A VERDICT, and this used to return one.
+   *
+   * Every failure — a dropped connection, a 400, a 500 — became {}, and lock()
+   * handed that straight to settle() with no rejection path. settle() reads
+   * `!!r.green` (false) and `Number(r.points) || 0` (zero), so a single dropped
+   * request scored that question 0 and moved the board on. The SERVER's round
+   * never advanced, so every later question was refused too and scored 0 the
+   * same way, and the eleventh Next wrote a W and a near-zero score into the
+   * row — first banked wins, for a round the server never finished.
+   *
+   * r.ok was never checked either, so a 400 that arrived as JSON was graded
+   * exactly like a verdict.
+   *
+   * Four of this family's other games already stop and say so (HiLo, Grid,
+   * QuickFire, Who Am I). This one advanced. Found 17 Sep 2026 by review.
+   *
+   * Now: a non-ok status or a network failure REJECTS, and each caller decides.
+   * The no-database paths that legitimately answer without a round still come
+   * back as 200s and are unaffected. */
   function post(path, body) {
     return fetch("/api/ballpark/" + path, {
       method: "POST",
       headers: { "content-type": "application/json", "X-XI-Games": "1" },
       body: JSON.stringify(body),
-    }).then(function (r) { return r.json().catch(function () { return {}; }); })
-      .catch(function () { return {}; });
+    }).then(function (r) {
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json().catch(function () { throw new Error("bad json"); });
+    });
   }
 
   /* ---- the numbers on screen -------------------------------------------- */
@@ -216,6 +237,15 @@
       if (r && typeof r.subsUsed === "number") subsUsed = r.subsUsed;
       if (!timer) timer = setInterval(tick, 100);
       paint(); tick();
+    }).catch(function (e) {
+      /* The clock never started, so the question is not open on the server and
+         a guess would be refused. Fall back to this device's clock so the
+         board is playable, and let the answer's own catch handle the refusal
+         if it comes — better than a page that sits with no clock at all. */
+      skew = 0; clockMs = Date.now();
+      if (!timer) timer = setInterval(tick, 100);
+      accountNote("open", e);
+      paint(); tick();
     });
     paint();
   }
@@ -245,6 +275,25 @@
       token: token, playId: playId, idx: step + 1, guess: guesses[step],
     }).then(function (r) {
       settle(r);
+    }).catch(function (e) {
+      /* NOTHING IS SETTLED WITHOUT A VERDICT. The lock is handed back so the
+         player can send the same guess again; the question stays open on the
+         server, which is why retrying works and why advancing would not.
+         The guess itself is kept — guesses[step] is already written — so a
+         retry sends what they actually chose rather than the slider's current
+         position. */
+      locked = false;
+      slider.disabled = false;
+      accountNote("answer", e);
+      /* paint() FIRST, then the message. paint() rewrites #val from the
+         slider whenever the question is touched or locked, so setting the
+         message before it is setting a string that is overwritten in the same
+         tick — which is how a failure would have looked exactly like success.
+         Caught by reading the order rather than by the suite. */
+      paint();
+      $("lock").disabled = false;
+      $("narrow").disabled = over || subsUsed >= R.SUBS;
+      $("val").textContent = "That did not reach the referee — lock it again";
     });
   }
 
@@ -312,7 +361,13 @@
   $("narrow").addEventListener("click", function () {
     if (over || locked) return;
     $("narrow").disabled = true;
-    post("narrow", { token: token, playId: playId, idx: step + 1 }).then(function (r) {
+    post("narrow", { token: token, playId: playId, idx: step + 1 }).catch(function (e) {
+      /* A narrow that did not land has charged nothing — the server charges as
+         it answers — so the button comes back rather than the cost being
+         assumed. Returning null falls into the guard below. */
+      accountNote("narrow", e);
+      return null;
+    }).then(function (r) {
       if (!r || typeof r.lo !== "number") { $("narrow").disabled = false; return; }
       var q = board.questions[step];
       setRange(Number(r.lo), Number(r.hi), Number(q.step) || 1);

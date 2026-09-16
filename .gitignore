@@ -9,6 +9,23 @@ data/clues-production.sql
 data/puzzles-production.sql
 data/*-production.sql
 data/ws-production.sql
+# THE PATTERN ABOVE NEEDS THE SUFFIX, AND TWO IMPORTERS NO LONGER USE IT.
+# `data/*-production.sql` does not match `data/wa-production.rewritten.sql`,
+# which is exactly what Who Am I's and QuickFire's importers write when
+# --rewrite-history is passed — a whole bank, answers included, under a name
+# git was happy to track. Added 17 Sep 2026 after a review found it; no such
+# file had been created yet, so nothing was committed and nothing leaked.
+# The repository is PUBLIC. A bank that reaches GitHub is a bank that stays
+# there, so these patterns are deliberately wider than the files that exist.
+data/*-production*.sql
+data/*.rewritten.sql
+# AND THE SAME FILES WRITTEN FROM THE WRONG DIRECTORY. import_wordsearch.js
+# and import_quickfire.js resolve their output against the CURRENT WORKING
+# DIRECTORY rather than the repo root, so running either from tools/ writes
+# tools/data/…-production.sql, which the anchored patterns above do not cover.
+# The importers should be fixed to anchor on ROOT; until then this catches it.
+**/data/*-production*.sql
+**/data/*.rewritten.sql
 # Grid XI's boards. The grid starts EMPTY, so every letter in one is an
 # answer and a board committed here is a board solved. D1 is the only copy.
 data/gd-production.sql

@@ -15,11 +15,29 @@
      the family more time than any layout question: the footer line, the
      console, and the named window variable. If this is not the build just
      deployed, the deploy has not landed — do not start debugging the game. */
-  var BUILD = "v002r";
+  var BUILD = "v002s";
   window.WORDSEARCHXI_BUILD = BUILD;
   try { console.log("Wordsearch XI build " + BUILD); } catch (e) {}
 
   var $ = function (id) { return document.getElementById(id); };
+
+  /* THE SCORING MODULE, BOUND. js/scoring.js publishes itself as
+     window.XIWS_SCORING (scoring.js:109) and this file has referenced it as a
+     bare `S` since v002i — S.FOUL_STEP_MAX, S.FOUL_CAP, S.FOUL_RESET_MS in
+     acceptFoul — without ever declaring it. This is a strict-mode IIFE, so
+     every one of those was a ReferenceError.
+     WHAT THAT LOOKED LIKE, and why it survived three weeks: in the daily the
+     throw lands inside the /find promise and is swallowed by its `.catch`
+     (the "unjudged" one), so a wrong drag produced NO red flash, NO "FOUL +N'"
+     and NO penalty minutes — while the server recorded the foul anyway. At
+     full time the verified score came back lower than the card and the player
+     was told they had lost minutes they were never shown losing. In free play
+     it threw synchronously and wrong drags were simply free.
+     Nothing reported it because nothing could: frontend_test captured the
+     clock before the wrong drag and never compared it afterwards. That
+     assertion is now real; see football/wordsearch/frontend_test.mjs.
+     Found 17 Sep 2026 by a review, not by a player. */
+  var S = window.XIWS_SCORING;
 
   /* ---- scoring — XI_SCORING_CORE-compatible curve ---------------------- */
   /* 600 real seconds is 90 match minutes: a word search is a ten-minute

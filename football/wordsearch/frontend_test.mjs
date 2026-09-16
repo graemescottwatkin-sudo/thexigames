@@ -246,6 +246,18 @@ drag([0, 1, 2]);
 await new Promise((r) => setTimeout(r, 50));
 t("a wrong selection is a foul, not a find",
   d.getElementById("count").textContent === "1");
+/* AND THE FOUL IS ACTUALLY APPLIED. `before` was captured above and then never
+   compared — for three weeks acceptFoul() threw a ReferenceError on every
+   wrong drag (a bare `S`, never declared) and this suite stayed green, because
+   "the count did not go up" is true of a foul that was scored AND of a foul
+   that crashed. The count was the only thing asked.
+   The clock is the cheapest witness: a foul adds penalty minutes and
+   updateClock() redraws it, so a wrong drag must move it. Asserting the
+   CHANGE rather than a specific value keeps this honest if the escalation is
+   ever retuned — the rule lives in js/scoring.js, not here. */
+t("and the foul is applied rather than thrown away",
+  d.getElementById("clock").textContent !== before,
+  `clock was ${JSON.stringify(before)}, now ${JSON.stringify(d.getElementById("clock").textContent)}`);
 
 /* find the rest, then the bonus */
 // One at a time, each waited for: eleven selections are eleven round trips
