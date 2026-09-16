@@ -33,6 +33,25 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+/* THE GAME'S NUMBERS ARE THE GAME'S, and this file used to keep its own copies.
+ * qf-round.js already says why, for the server: "every tunable in the game
+ * lives here and nowhere else", imported rather than restated, because a second
+ * copy agrees on the day it is written and disagrees the first time anybody
+ * tunes one. The importer was the second copy nobody had noticed — PER_BOARD =
+ * 11 and BENCH = 3 as literals, while the page and the server both read
+ * config.js.
+ *
+ * Nothing had drifted. The cost was that it could, in one direction and
+ * silently: lowering SUBS_PER_DAILY to 2 would give players two substitutions
+ * while this file went on demanding three-question benches, and nothing
+ * anywhere compares the two. The importer would have kept refusing boards that
+ * matched the game.
+ *
+ * Found 16 Sep 2026 while asking why the bench is what ends the calendar. It is
+ * — at every bank size measured, the build stops for want of a bench and never
+ * for want of an eleven — and that is a real finding about the BANK. It should
+ * not also have been a number this file was free to be wrong about. */
+import CONFIG from "../football/quickfire/js/config.js";
 
 const argIdx = process.argv.indexOf("--source");
 const SRC = argIdx > -1 ? process.argv[argIdx + 1] : "../quickfirexi-source";
@@ -66,8 +85,21 @@ const OUT = path.join(process.cwd(), "data", "qf-production.sql");
  * importer weaker than it was. */
 const LOOKBACK_DAYS = 7;    // an ANSWER must not reappear inside this window
 const MAX_CHARS = 16;       // past this the answer row wraps on a phone
-const PER_BOARD = 11;
-const BENCH = 3;
+const PER_BOARD = CONFIG.QUESTIONS_PER_DAILY;   // an XI of questions
+const BENCH = CONFIG.SUBS_PER_DAILY;            // one bench question per substitution
+
+/* A REFUSAL RATHER THAN A DEFAULT. `undefined` reaching the checks below would
+   compare false against every length and refuse all 77 boards with a message
+   about the wrong thing. If config.js is ever restructured this names the field
+   that moved. */
+for (const [name, value] of [["QUESTIONS_PER_DAILY", PER_BOARD], ["SUBS_PER_DAILY", BENCH]]) {
+  if (!Number.isInteger(value) || value < 1) {
+    console.error(`REFUSED: CONFIG.${name} is ${JSON.stringify(value)}, not a positive whole number.`);
+    console.error("  football/quickfire/js/config.js is where the game's tunables live, and this");
+    console.error("  importer reads them rather than keeping a copy. Nothing was written.");
+    process.exit(2);
+  }
+}
 
 const bankPath = path.join(SRC, "bank.json");
 if (!fs.existsSync(bankPath)) {
