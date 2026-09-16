@@ -353,6 +353,33 @@ fs.mkdirSync(path.dirname(OUT), { recursive: true });
  * only record of the calendar outside the database. --rewrite-history overrides
  * it, loudly, because a guard with no override meets the case where the
  * override was right and then gets deleted in a hurry by whoever is blocked. */
+/* NAMED FOR THE FAMILY'S RULE, NOT FOR THIS FILE'S SHAPE, and that is the whole
+   reason it is a function rather than a loop.
+   This was written inline. It worked, it was tested, and a grep for
+   `servedClash` across tools/ returned nothing for QuickFire — so the check that
+   proves this importer is guarded reported that it was not. The monorepo session
+   only found it by reading the file after their own grep came back empty.
+   A guard that cannot be found by the name everybody searches for is a guard the
+   next person concludes is missing, and the fix after that conclusion is to add
+   a second one. import_hilo.js and import_whoami.mjs answer to this name; so
+   does this now. */
+function servedClash(prev, next, today) {
+  const out = [];
+  for (const day of Object.keys(prev || {}).sort()) {
+    if (day > today) continue;
+    const was = prev[day], now = (next || {})[day];
+    if (!now) { out.push(`${day}: served ${was.length} slots, and this import has no daily for it at all`); continue; }
+    if (now.length !== was.length) { out.push(`${day}: ${was.length} slots served, ${now.length} now`); continue; }
+    for (let i = 0; i < was.length; i++) {
+      if (was[i].qid !== now[i].qid || was[i].role !== now[i].role || was[i].slot !== now[i].slot) {
+        out.push(`${day}: ${was[i].role} slot ${was[i].slot} was question ${was[i].qid} -> ${now[i].qid}`);
+        break;
+      }
+    }
+  }
+  return out;
+}
+
 function servedCalendarFromSql(sql) {
   const cal = {};
   const re = /INSERT INTO qf_daily_slot \(play_date, slot, question_id, role\) VALUES \('([^']+)', (\d+), '((?:[^']|'')*)', '([a-z]+)'\)/g;
@@ -379,19 +406,7 @@ function servedCalendarFromSql(sql) {
     next[d.date] = rows;
   }
 
-  const clashes = [];
-  for (const day of Object.keys(previous).sort()) {
-    if (day > todayKey) continue;
-    const was = previous[day], now = next[day];
-    if (!now) { clashes.push(`${day}: served ${was.length} slots, and this import has no daily for it at all`); continue; }
-    if (now.length !== was.length) { clashes.push(`${day}: ${was.length} slots served, ${now.length} now`); continue; }
-    for (let i = 0; i < was.length; i++) {
-      if (was[i].qid !== now[i].qid || was[i].role !== now[i].role || was[i].slot !== now[i].slot) {
-        clashes.push(`${day}: ${was[i].role} slot ${was[i].slot} was question ${was[i].qid} -> ${now[i].qid}`);
-        break;
-      }
-    }
-  }
+  const clashes = servedClash(previous, next, todayKey);
 
   if (clashes.length && !process.argv.includes("--rewrite-history")) {
     console.error(`REFUSED: ${clashes.length} day(s) at or before today would change.`);
