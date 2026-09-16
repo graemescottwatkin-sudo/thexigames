@@ -34,6 +34,7 @@
 import { PERMA_GAMES, boardKeys, permalinkPath, gamePath } from "./permalink.js";
 import { dailyDayKey } from "./daily.js";
 import { FREE_ARCHIVE_DAYS } from "./archive.js";
+import { HAS_ANSWERS } from "./games.js";
 import { sitePage, htmlResponse, esc } from "./site-page.js";
 
 const SITE = "https://www.thexigames.com";
@@ -92,8 +93,15 @@ each at its own permanent address. Today's is ${esc(newest ? newest.full : "")}.
 <ul>${months(game, keys)}</ul>
 <p class="sub">Today and the ${FREE_ARCHIVE_DAYS} days behind it are open to everybody.
 Older boards ask for a free account, so the archive is worth keeping.</p>
-<a class="cta" href="${esc(gamePath(game))}">Play today's board</a>
-<a class="cta ghost" href="${esc(gamePath(game))}answers/">Answers</a>`
+<a class="cta" href="${esc(gamePath(game))}">Play today's board</a>${
+  /* ONLY WHERE THERE IS AN ANSWERS PAGE TO REACH. This link was unconditional,
+     so Codeword, QuickFire and Who Am I each offered an Answers button from
+     their own archive that went to a 404 — and Who Am I's 404 then told the
+     player their crossword was waiting. The three absences are decisions (see
+     HAS_ANSWERS in games.js); the button now follows the decision. */
+  HAS_ANSWERS.has(game)
+    ? `\n<a class="cta ghost" href="${esc(gamePath(game))}answers/">Answers</a>`
+    : ""}`
     : `<h1>${esc(name)} — every board</h1>
 <p class="sub">The boards will be listed here, each at its own permanent
 address, as soon as there are any.</p>

@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Off the pitch — Crossword XI</title>
+<title>Off the pitch — The XI Games</title>
 <meta name="robots" content="noindex">
 <meta name="theme-color" content="#1E6B45">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%231E6B45'/%3E%3Crect x='6' y='6' width='8' height='8' fill='%23fff'/%3E%3Crect x='18' y='6' width='8' height='8' fill='%23fff' opacity='.45'/%3E%3Crect x='6' y='18' width='8' height='8' fill='%23fff' opacity='.45'/%3E%3Crect x='18' y='18' width='8' height='8' fill='%23fff'/%3E%3C/svg%3E">
@@ -48,8 +48,38 @@ a.btn:hover{background:var(--pitch-deep)}
   <div class="card">
     <div class="code">404 &middot; Page not found</div>
     <h1>Out for a throw-in</h1>
-    <p>That page has gone off the pitch. Today&rsquo;s crossword is still waiting.</p>
-    <a class="btn" href="/">Back to the puzzle</a>
+    <!-- NAMES NO GAME UNTIL IT KNOWS WHICH ONE. This read "Today's crossword is
+         still waiting" on every 404 across all nine games, so a Who Am I player
+         who mistyped a URL was told to go and play a different puzzle, and sent
+         to it by the button. The same fault xi-chrome.js fixed in the footer,
+         still here because a static 404 has no chrome.
+         The fallback below is deliberately game-neutral rather than the
+         crossword's: if the script does not run, a generic page is right for
+         everyone, where a named one is wrong for eight games out of nine. -->
+    <p id="msg">That page has gone off the pitch. Today&rsquo;s puzzle is still waiting.</p>
+    <a class="btn" id="back" href="/">Back to the games</a>
   </div>
+<script>
+(function () {
+  /* The path is the only clue a 404 has about where the player meant to be.
+     Cloudflare serves this file for any miss, so /football/whoami/answers/
+     arrives here with the game still readable in the URL. */
+  var NAMES = {
+    crossword: "Crossword XI", wordsearch: "Wordsearch XI", scrambled: "Scrambled XI",
+    hilo: "HiLo XI", vowels: "Vowels XI", grid: "Grid XI", codeword: "Codeword XI",
+    quickfire: "QuickFire XI", whoami: "Who Am I XI", ballpark: "Ballpark XI"
+  };
+  var m = /^\/football\/([a-z]+)\//.exec(location.pathname || "");
+  var slug = m && m[1];
+  var name = slug && NAMES[slug];
+  if (!name) return;                     /* site-wide page: the neutral copy is right */
+  document.title = "Off the pitch — " + name;
+  document.getElementById("msg").innerHTML =
+    "That page has gone off the pitch. Today’s " + name + " board is still waiting.";
+  var back = document.getElementById("back");
+  back.href = "/football/" + slug + "/";
+  back.textContent = "Back to " + name;
+})();
+</script>
 </body>
 </html>

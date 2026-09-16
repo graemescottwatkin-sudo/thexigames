@@ -25,7 +25,7 @@ import {
 } from "../functions/_lib/permalink.js";
 import { dailyNoForDay, dailyDayKey, dailyNumber, ANSWERS_AFTER_DAYS } from "../functions/_lib/daily.js";
 import { FREE_ARCHIVE_DAYS } from "../functions/_lib/archive.js";
-import { GAMES, BUILT, launchNumber, LAUNCHED } from "../functions/_lib/games.js";
+import { GAMES, BUILT, launchNumber, LAUNCHED, HAS_ANSWERS } from "../functions/_lib/games.js";
 import fs from "node:fs";
 
 let pass = 0, fail = 0;
@@ -249,6 +249,21 @@ console.log("\nThe pages that link to it");
   for (const game of Object.keys(PERMA_GAMES)) {
     t(`${game}: its archive is in the sitemap`,
       map.includes(`<loc>https://www.thexigames.com${gamePath(game)}archive/</loc>`));
+  }
+
+  /* AN ARCHIVE MUST NOT OFFER AN ANSWERS PAGE THAT DOES NOT EXIST.
+     The button was unconditional, so Codeword, QuickFire and Who Am I each
+     linked a 404 from their own archive — and the 404 they reached then told
+     the reader their CROSSWORD was waiting. Found by clicking the live site,
+     which is the only place it was visible: every suite was green.
+     Asked in both directions, because a rule that only checks the absences
+     passes just as well if the button is removed from every game. */
+  for (const game of Object.keys(PERMA_GAMES)) {
+    const html = await (await archiveRoute({ env }, game)).text();
+    const offers = html.includes(`${gamePath(game)}answers/`);
+    t(`${game}: archive offers Answers only if the game has one`,
+      offers === HAS_ANSWERS.has(game),
+      offers ? "offers it" : "does not");
   }
   /* AND THE ANSWERS INDEXES NOW LINK BOARDS THEMSELVES. This is the check the
      backlog's own verification asked for: an answers index with zero links to

@@ -217,6 +217,25 @@ export function validMode(v) {
  * games while the server counted five. Nothing was broken and nothing showed
  * an error — QuickFire and HiLo simply could not be looked at.
  */
+/* ---- WHICH GAMES HAVE AN ANSWERS PAGE, and it is one fact in one place ----
+ *
+ * THE ABSENCES ARE DECISIONS, NOT GAPS. A codeword's solution IS its grid;
+ * QuickFire's answers are the three options you did not pick; and Who Am I's
+ * would publish ten doors nobody else has opened yet — that last one actively
+ * spoils a board still being played.
+ *
+ * shared/xi-chrome.js already knew this for the FOOTER, where an absent Answers
+ * entry is deliberate and commented as such. The archive page did not, and
+ * rendered an Answers button for every game unconditionally — so all three of
+ * those games linked to a 404 from their own archive. Two places reasoning
+ * about one fact and only one of them told.
+ *
+ * This is the server's copy; the client's is in xi-chrome.js GAME_PAGES. If a
+ * game gains or loses an answers page, both change. */
+export const HAS_ANSWERS = new Set([
+  "crossword", "wordsearch", "scrambled", "hilo", "vowels", "grid"
+]);
+
 export const LABELS = {
   crossword: "Crossword XI",
   wordsearch: "Wordsearch XI",
