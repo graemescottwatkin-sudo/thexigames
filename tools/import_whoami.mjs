@@ -121,12 +121,20 @@ export function servedClash(prev, next, today) {
     const now = (next || {})[day];
     if (!now) { out.push({ day, why: `served ${was.length} doors, and this import has no board for it at all` }); continue; }
     if (now.length !== was.length) { out.push({ day, why: `${was.length} doors served, ${now.length} now` }); continue; }
+    /* EVERY DIFFERING SLOT, NOT THE FIRST — see the same fix in
+       import_quickfire.js, where breaking early reported one bench swap on days
+       that had changed eight doors of eleven, and the override was sized against
+       that report. Right for deciding IF a day clashes, wrong for saying WHAT. */
+    const diff = [];
     for (let i = 0; i < was.length; i++) {
       const a = was[i], b = now[i];
       if (a.club !== b.club || String(a.leave) !== String(b.leave) || a.player !== b.player) {
-        out.push({ day, why: `slot ${i + 1} was ${a.club} (${a.leave}) -> ${b.club} (${b.leave})` });
-        break;
+        diff.push(`slot ${i + 1}: ${a.club} (${a.leave}) -> ${b.club} (${b.leave})`);
       }
+    }
+    if (diff.length) {
+      out.push({ day, why: `${diff.length} of ${was.length} doors change — ` +
+        diff.slice(0, 3).join("; ") + (diff.length > 3 ? `; and ${diff.length - 3} more` : "") });
     }
   }
   return out;
@@ -313,6 +321,9 @@ function main() {
       console.error(`REFUSED: ${clashes.length} day(s) at or before today would change.`);
       console.error(`  Those boards have been served. Changing one shows the right date over the`);
       console.error(`  wrong puzzle, and the archive link somebody holds stops meaning what it meant.`);
+      console.error(`  THIS CANNOT PRICE IT FOR YOU: whether a changed door was actually PLAYED`);
+      console.error(`  lives in wa_round, which this importer never reads. The counts are the`);
+      console.error(`  scope, not the cost. Check the rounds before deciding.`);
       for (const c of clashes.slice(0, 8)) console.error(`  x ${c.day}: ${c.why}`);
       if (clashes.length > 8) console.error(`  ...and ${clashes.length - 8} more`);
     }
@@ -442,9 +453,37 @@ function main() {
     return;
   }
 
-  fs.mkdirSync(path.dirname(OUT), { recursive: true });
-  fs.writeFileSync(OUT, lines.join("\n") + "\n", "utf8");
-  console.log(`wrote ${path.relative(ROOT, OUT)} — ${lines.length} statements`);
+  /* AN OVERRIDE MUST NOT DESTROY THE RECORD IT OVERRODE.
+   *
+   * The guard's only memory of what was served is the last SQL this importer
+   * emitted. Under --rewrite-history that file was overwritten with the very
+   * calendar the guard had just refused — so the NEXT run compared against the
+   * rewritten version, found no clash, and would have applied in silence.
+   *
+   * A guard whose memory is the file a refused run overwrites can be disarmed by
+   * refusing once and running again. That is not a hypothetical: the operator
+   * found it by restoring the previous file by hand, out of caution, and noticing
+   * that if they had not, the next run would have gone through clean.
+   *
+   * So an override writes ALONGSIDE rather than over. The record survives, a
+   * later bare run still refuses, and putting the new file in its place is a
+   * deliberate act taken after the import has actually been applied — which is
+   * the only moment at which the new calendar IS what was served. */
+  /* A CLASH, NOT MERELY AN UNCOVERED PAST. uncoveredPast fires when there is no
+     previous file at all — a genuine first import — and then there is no record
+     to preserve and writing to OUT is right. Only a served day actually CHANGING
+     means the file about to be overwritten is the last evidence of what it held. */
+  const REWROTE = REWRITE && clashes.length > 0;
+  const target = REWROTE ? OUT.replace(/(\.sql)?$/, ".rewritten$1") : OUT;
+
+  fs.mkdirSync(path.dirname(target), { recursive: true });
+  fs.writeFileSync(target, lines.join("\n") + "\n", "utf8");
+  console.log(`wrote ${path.relative(ROOT, target)} — ${lines.length} statements`);
+  if (REWROTE) {
+    console.warn(`  ${path.relative(ROOT, OUT)} is UNCHANGED and still records what was served.`);
+    console.warn(`  Apply the file above, then move it over that one — not before. Until you do,`);
+    console.warn(`  another run without --rewrite-history will refuse again, which is correct.`);
+  }
 }
 
 main();

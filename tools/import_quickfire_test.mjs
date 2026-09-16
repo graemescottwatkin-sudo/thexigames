@@ -218,6 +218,30 @@ console.log("=== The days that have been served ===");
   /* A served day dropped from the bank entirely. */
   const dropped = cleanBank(2, PAST);
   dropped.dailies = dropped.dailies.slice(1);
+  /* MANY SLOTS, NOT ONE — the case that would have caught the under-report.
+     Every existing case changes a single slot, so a message naming only the
+     first difference is indistinguishable from one naming all of them. A real
+     refusal said "bench slot 2" on days where eight of eleven XI slots had
+     moved, and the override was sized against that. */
+  const many = cleanBank(2, PAST);
+  {
+    /* ROTATE WITHIN THE DAY. Copying ids in from the other daily puts the same
+       question on two boards and the run refuses on THAT — the fixture fault
+       that has now caught me three times: a mutation that breaks a different
+       contract passes the test while never reaching the guard. A rotation of
+       eight slots is a genuinely different board and entirely legal. */
+    const ids = many.dailies[0].questionIds;
+    const head = ids.slice(0, 8);
+    head.push(head.shift());
+    for (let i = 0; i < 8; i++) ids[i] = head[i];
+  }
+  const rMany = go(dir, many);
+  t("a refusal reports EVERY changed slot, not the first",
+    rMany.status === 1 && /8 of 11 XI slots/.test(rMany.out),
+    (rMany.out.split(String.fromCharCode(10)).find((l) => l.includes("slots change")) || "").trim());
+  t("  and says it cannot price the change itself",
+    /CANNOT PRICE IT FOR YOU/.test(rMany.out));
+
   const r3 = go(dir, dropped);
   t("REFUSES a served day that has vanished from the bank",
     r3.status === 1 && /no daily for it at all/.test(r3.out), r3.out.split("\n")[0]);
@@ -227,9 +251,26 @@ console.log("=== The days that have been served ===");
   const r4 = go(dir, cleanBank(2, PAST));
   t("an unchanged re-import is allowed", r4.status === 0, r4.out.split("\n")[0]);
 
+  /* mtime RE-CAPTURED HERE, because the unchanged re-import above legitimately
+     rewrote the file. Comparing against the value taken before it would have
+     reported the override as having clobbered the record when what moved it was
+     an allowed write — a test failing for the right reason at the wrong moment. */
+  const recordBefore = fs.statSync(sql).mtimeMs;
   const r5 = go(dir, changed, ["--rewrite-history"]);
   t("--rewrite-history lets it through and says so",
     r5.status === 0 && /REWRITING HISTORY/.test(r5.out), r5.out.split("\n")[0]);
+
+  /* THE OVERRIDE MUST NOT DISARM THE GUARD. It used to overwrite the very file
+     the guard reads as its record of what was served — so refusing once and
+     running again went through in silence. The override writes ALONGSIDE now:
+     the record is untouched and a second bare run must still refuse. */
+  t("  and leaves the served record untouched",
+    fs.statSync(sql).mtimeMs === recordBefore &&
+    fs.existsSync(sql.replace(/[.]sql$/, ".rewritten.sql")),
+    "the rewritten calendar goes beside the record, not over it");
+  const r6 = go(dir, changed);
+  t("  so running again without the flag still refuses", r6.status === 1,
+    "a guard whose memory the override erased could be disarmed by refusing once");
 
   fs.rmSync(dir, { recursive: true, force: true });
 }

@@ -370,15 +370,37 @@ function servedClash(prev, next, today) {
     const was = prev[day], now = (next || {})[day];
     if (!now) { out.push(`${day}: served ${was.length} slots, and this import has no daily for it at all`); continue; }
     if (now.length !== was.length) { out.push(`${day}: ${was.length} slots served, ${now.length} now`); continue; }
+    /* EVERY DIFFERING SLOT, NOT THE FIRST. This broke on the first difference,
+       which is right for deciding IF a day clashes and wrong for saying WHAT
+       clashes — and the two are not separable, because the message is the only
+       thing a human reads before deciding whether to override.
+       It cost a near miss: a real refusal reported "bench slot 2" on three days
+       where 8, 8 and 10 of the 11 XI slots had changed. The operator measured
+       the cost as nil, passed --rewrite-history, and only caught it by diffing
+       the SQL by hand afterwards. Six questions somebody had answered would have
+       been removed from the day they answered them.
+       A refusal that under-reports its own scope is worse than a terse one: the
+       override gets sized against the report. */
+    const xi = [], bench = [];
     for (let i = 0; i < was.length; i++) {
       if (was[i].qid !== now[i].qid || was[i].role !== now[i].role || was[i].slot !== now[i].slot) {
-        out.push(`${day}: ${was[i].role} slot ${was[i].slot} was question ${was[i].qid} -> ${now[i].qid}`);
-        break;
+        (was[i].role === "bench" ? bench : xi).push(
+          `${was[i].role} slot ${was[i].slot}: ${was[i].qid} -> ${now[i].qid}`);
       }
     }
+    if (!xi.length && !bench.length) continue;
+    const nXi = was.filter((r) => r.role !== "bench").length;
+    const nBench = was.length - nXi;
+    const parts = [];
+    if (xi.length) parts.push(`${xi.length} of ${nXi} XI slots`);
+    if (bench.length) parts.push(`${bench.length} of ${nBench} bench slots`);
+    out.push(`${day}: ${parts.join(", ")} change — ` + [...xi, ...bench].slice(0, 3).join("; ") +
+      (xi.length + bench.length > 3 ? `; and ${xi.length + bench.length - 3} more` : ""));
   }
   return out;
 }
+
+let WOULD_CLASH = false;
 
 function servedCalendarFromSql(sql) {
   const cal = {};
@@ -412,17 +434,43 @@ function servedCalendarFromSql(sql) {
     console.error(`REFUSED: ${clashes.length} day(s) at or before today would change.`);
     console.error("  Those questions have been served. Changing one shows the right date over the");
     console.error("  wrong board, and anybody's result for that day stops meaning what it meant.");
+    console.error("  THIS CANNOT PRICE IT FOR YOU: whether a changed question was actually");
+    console.error("  ANSWERED lives in the results tables, which this importer never reads. The");
+    console.error("  counts below are the scope, not the cost. Check the results before deciding.");
     for (const c of clashes.slice(0, 8)) console.error("  x " + c);
     if (clashes.length > 8) console.error(`  ...and ${clashes.length - 8} more`);
     console.error("  If you really mean to rewrite what people have played: --rewrite-history");
     process.exit(1);
   }
+  WOULD_CLASH = clashes.length > 0;
   if (clashes.length) {
     console.warn(`REWRITING HISTORY because --rewrite-history was passed: ${clashes.length} served day(s) change.`);
   }
 }
 
-fs.writeFileSync(OUT, out.join("\n") + "\n");
+/* AN OVERRIDE MUST NOT DESTROY THE RECORD IT OVERRODE.
+ *
+ * The guard's only memory of what was served is the last SQL this importer
+ * emitted. Under --rewrite-history that file was overwritten with the very
+ * calendar the guard had just refused — so the NEXT run compared against the
+ * rewritten version, found no clash, and would have applied in silence.
+ *
+ * A guard whose memory is the file a refused run overwrites can be disarmed by
+ * refusing once and running again. That is not a hypothetical: the operator
+ * found it by restoring the previous file by hand, out of caution, and noticing
+ * that if they had not, the next run would have gone through clean.
+ *
+ * So an override writes ALONGSIDE rather than over. The record survives, a
+ * later bare run still refuses, and putting the new file in its place is a
+ * deliberate act taken after the import has actually been applied — which is
+ * the only moment at which the new calendar IS what was served. */
+const REWROTE = process.argv.includes("--rewrite-history") && WOULD_CLASH;
+const TARGET = REWROTE ? OUT.replace(/(\.sql)?$/, ".rewritten$1") : OUT;
+fs.writeFileSync(TARGET, out.join("\n") + "\n");
+if (REWROTE) {
+  console.warn(`  ${OUT} is UNCHANGED and still records what was served.`);
+  console.warn(`  Apply the file just written, then move it over that one — not before.`);
+}
 
 const distinct = new Set(questions.map((x) => norm(x.answer))).size;
 console.log(`Wrote ${OUT}`);
