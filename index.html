@@ -718,22 +718,46 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
       <article class="game">
         <div class="cap" style="background:var(--kit-09)">
           <span class="num">9</span>
-          <!-- PLACEHOLDER ART, generic until the owner has the real thing, the
-               same standing as Codeword's and QuickFire's. Eleven doors with
-               one ajar: enough to read as "pick a club" at card size, and not a
-               drawing of the game. Swap the <g> for the artwork and nothing
-               else on the card needs to change. -->
+          <!-- ELEVEN DOORS, ONE OPEN, AND IT NOW ACTUALLY IS THAT.
+               This comment already said "eleven doors with one ajar". The art
+               under it was eight rectangles in a four-by-two grid with none of
+               them open, which reads as a grid game — and this card sits three
+               along from Grid XI and two from Codeword. A note describing what
+               the picture does not do is the fault the rest of this week has
+               been about, so the picture now matches the note.
+               Eleven uprights for the eleven clubs, ten shut and one standing
+               open on a gold question mark: the whole game at a glance, which
+               is all a card gets. House style unchanged — white at two
+               opacities, one gold accent, no perspective and no crest. -->
           <svg class="prev" viewBox="0 0 220 120" aria-hidden="true">
-            <g>
-              <rect x="40" y="22" width="30" height="34" rx="3" fill="#fff" fill-opacity=".28"/>
-              <rect x="78" y="22" width="30" height="34" rx="3" fill="#fff" fill-opacity=".28"/>
-              <rect x="116" y="22" width="30" height="34" rx="3" fill="#fff" fill-opacity=".9"/>
-              <rect x="154" y="22" width="30" height="34" rx="3" fill="#fff" fill-opacity=".28"/>
-              <rect x="40" y="64" width="30" height="34" rx="3" fill="#fff" fill-opacity=".28"/>
-              <rect x="78" y="64" width="30" height="34" rx="3" fill="#fff" fill-opacity=".28"/>
-              <rect x="116" y="64" width="30" height="34" rx="3" fill="#fff" fill-opacity=".28"/>
-              <rect x="154" y="64" width="30" height="34" rx="3" fill="#fff" fill-opacity=".28"/>
+            <!-- THREE DOORS, NOT ELEVEN, AND THE FIRST ATTEMPT WAS ELEVEN.
+                 Drawn literally, eleven uprights at fifteen pixels wide read as
+                 a fence or a barcode, and the open one reads as a lighter
+                 stripe rather than as a doorway — checked by rendering it at
+                 card size beside HiLo's, which works precisely because it is
+                 two big shapes with room around them. A card has one job at one
+                 glance and legibility beats the head count: three says "doors,
+                 pick one" where eleven says "stripes". -->
+            <g fill="#fff">
+              <g fill-opacity=".28">
+                <rect x="28" y="22" width="44" height="80" rx="3"/>
+                <rect x="148" y="22" width="44" height="80" rx="3"/>
+              </g>
+              <!-- The handle is what makes an upright rectangle a door rather
+                   than a tile, and it is the detail that survives scaling. -->
+              <g fill-opacity=".55">
+                <circle cx="64" cy="62" r="2.6"/>
+                <circle cx="156" cy="62" r="2.6"/>
+              </g>
             </g>
+            <!-- THE MIDDLE ONE IS OPEN. An empty frame rather than a filled
+                 panel: a doorway you can see through is how you say "open"
+                 without drawing perspective. -->
+            <rect x="88" y="22" width="44" height="80" rx="3"
+                  fill="none" stroke="#fff" stroke-width="2.6"/>
+            <text x="110" y="78" text-anchor="middle" font-size="46"
+                  font-family="Barlow Condensed, Arial Narrow, Arial, sans-serif"
+                  font-weight="700" fill="#F2C94C">?</text>
           </svg>
         </div>
         <div class="body">
