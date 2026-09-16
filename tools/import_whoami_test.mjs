@@ -195,8 +195,25 @@ console.log("\n=== The SQL it emits is SQL D1 will accept ===");
   t("the calendar is cleared before it is rewritten",
     /DELETE FROM wa_door;/.test(sql) && /DELETE FROM wa_board;/.test(sql),
     "re-running with a new --from must not leave yesterday's calendar behind");
-  t("the bank is upserted rather than deleted",
-    /INSERT OR REPLACE INTO wa_player/.test(sql) && !/DELETE FROM wa_player/.test(sql));
+  /* THE BANK IS STILL UPSERTED. This asserted that the word DELETE never
+     appears against wa_player at all, which was the right way to say it while
+     nothing deleted a player — and it is the assertion that caught the orphan
+     cleanup being added, correctly, because that IS a change to this rule.
+     The rule it protects is "a player row must not vanish under an archived
+     board". A blanket ban is one way to guarantee that; the narrower statement
+     below is another, and it also removes a player the bank has dropped — which
+     the blanket version left in wa_player for ever, and wa_player is what the
+     search serves. Five aliases survived a correct import that way and the live
+     game went on offering two Kanus.
+     So: no unconditional delete, and the conditional one must carry BOTH of its
+     halves. A delete missing either half is the failure this replaces. */
+  t("the bank is upserted, never wholesale deleted",
+    /INSERT OR REPLACE INTO wa_player/.test(sql) && !/DELETE FROM wa_player;/.test(sql));
+  const orphan = (sql.match(/DELETE FROM wa_player WHERE[^;]*;/) || [])[0] || "";
+  t("and a player the bank dropped is removed only if no door points at it",
+    /NOT IN \(SELECT DISTINCT player_id FROM wa_door\)/.test(orphan) &&
+    /AND id NOT IN \(/.test(orphan),
+    orphan ? orphan.slice(0, 96) + "…" : "no conditional delete emitted at all");
   t("every board gets eleven doors in the SQL",
     (sql.match(/INSERT OR REPLACE INTO wa_door/g) || []).length === 22,
     "two boards of eleven");

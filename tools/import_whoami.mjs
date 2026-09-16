@@ -374,6 +374,32 @@ function main() {
     });
   }
 
+  /* ---- A PLAYER THE BANK NO LONGER HAS ---------------------------------
+   *
+   * The bank is UPSERTED and never deleted, which is right — a player row that
+   * an old door still points at must not vanish under it. But it means a player
+   * REMOVED from the bank stays in wa_player for ever, and wa_player is what
+   * /api/whoami/names serves.
+   *
+   * Found by importing: five alias rows were removed from the bank this morning
+   * — KANU beside NWANKWO KANU, BOJAN beside BOJAN KRKIC, and EI UR GU JOHNSEN,
+   * which is Eiður Guðjohnsen with the eth deleted rather than folded. The
+   * calendar came out correct and the live search still offered every one of
+   * them. Typing "KANU" still returned two Kanus, which is the exact defect the
+   * bank edit was made to fix.
+   *
+   * SO: delete a player the bank does not have AND no door points at. Both
+   * halves. The second is what makes this safe — it cannot remove anybody an
+   * archived board still needs, and if a door does point at a departed player
+   * that is a contract-3 failure which has already refused the import above. */
+  const keep = new Set([...byName.keys()].map((n) => fold(n)));
+  const used = new Set();
+  for (const b of dated) for (const d of b.doors || []) used.add(fold(d.answer));
+  lines.push(
+    "/* players the bank no longer holds, and that no door points at */",
+    "DELETE FROM wa_player WHERE id NOT IN (SELECT DISTINCT player_id FROM wa_door)" +
+      " AND id NOT IN (" + [...keep].map((k) => q(k)).join(", ") + ");");
+
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, lines.join("\n") + "\n", "utf8");
   console.log(`wrote ${path.relative(ROOT, OUT)} — ${lines.length} statements`);
