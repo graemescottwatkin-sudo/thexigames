@@ -210,6 +210,25 @@
 
   function show() {
     var q = board.questions[step];
+    /* clockMs FIRST, AND IT IS THE WHOLE BUG. Reported live 17 Sep 2026: wait
+       on the reveal and the next question is dead before you see it.
+       show() reset locked, touched, narrowedSecs and clockLen — and left
+       clockMs holding the moment the PREVIOUS question opened. post("open")
+       is asynchronous, so between unlocking here and the server's answer
+       arriving, the 100ms tick computes secsLeft() from the old question's
+       start: elapsed = (time taken to answer it) + (time spent reading the
+       reveal). The instant that crosses R.CLOCK, tick()'s `if (left <= 0)
+       lock(true)` fires and auto-submits the untouched midpoint on a question
+       the player has not seen.
+       That is exactly the reported shape — under twenty seconds fine, over
+       twenty dead — because the threshold IS clockLen. It was not a stale
+       timer: there is one interval in this file and nothing else schedules
+       anything.
+       elapsed() reads `clockMs ? … : 0`, so clearing it here means the new
+       question shows its full allowance until the server says when it opened.
+       The player who reads the answer is the one this hurt, which inverts what
+       the reveal is for. */
+    clockMs = 0;
     locked = false; touched = false; narrowedSecs = 0; clockLen = R.CLOCK;
     $("q").innerHTML = escapeHtml(q.question) +
       (q.detail ? "<small>" + escapeHtml(q.detail) + "</small>" : "");

@@ -293,9 +293,21 @@ console.log("\nAnd it IS launched, which every one of these makes true");
   })(), "an unreleased game is named nowhere until it launches");
 
   t("the hub names it, now that it is out", /Who Am I XI/.test(hub));
-  t("and gives it a card that can be played and an archive to open",
-    /href="\/football\/whoami\/"[^>]*aria-label="Play Who Am I XI today"/.test(hub) &&
-    /href="\/football\/whoami\/archive\/"/.test(hub));
+  /* THREE DESTINATIONS, AND THEY MUST STAY THREE. The picture opens the
+     game's own home, "Play today" skips the cover and starts the daily
+     (the landing reads ?play=1 — see shared/xi-chrome.js), and "Past
+     puzzles" opens the archive. Asserted separately because the fault
+     worth catching is two of them collapsing onto one address, which is
+     what the card did before 17 Sep 2026: the picture was inert and the
+     button went to the home page, so there was no route to the board. */
+  t("and gives it a card whose picture opens its home",
+    new RegExp('<a class="cap" href="/football/whoami/"').test(hub));
+  t("and a Play today that goes to the board, not back to the home page",
+    hub.includes('href="/football/whoami/?play=1" aria-label="Play Who Am I XI today"'),
+    "a plain compare, not a pattern: the ? in ?play=1 is a regex quantifier and "
+    + "was silently eaten writing this check, which then passed on the wrong thing");
+  t("and an archive to open",
+    new RegExp('href="/football/whoami/archive/"').test(hub));
   t("and a row in the hub's table, so the front door knows it was played today",
     /id: "whoami"[\s\S]*key: "xiwa\.results\.v1"/.test(hub));
 

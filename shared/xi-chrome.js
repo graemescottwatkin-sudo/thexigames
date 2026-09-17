@@ -858,6 +858,51 @@
        hold up a page for a question that only matters when a board is
        started. */
     try { playedToday(); } catch (e) { /* a season that cannot be asked decides nothing */ }
+    try { autoPlay(); } catch (e) { /* a hub link must never break a landing */ }
+  }
+
+  /* ---- ?play=1 — "Play today" from the hub, straight into the board ------
+   *
+   * The hub's card has three destinations and they are three different things:
+   * the picture goes to the game's own home, "Past puzzles" goes to the
+   * archive, and "Play today" is meant to skip the cover and start.
+   *
+   * IT CANNOT BE A LINK TO THE BOARD. The hub is a static file, so a direct
+   * /daily/N would have to be built from the DEVICE's clock — and this
+   * project's rule is that the server decides what day it is. A wrong clock
+   * would link to a board that is not out yet and 403s. So the hub asks for
+   * "today" in words and the landing, which already knows the day from its own
+   * endpoint, does the starting.
+   *
+   * ONE IMPLEMENTATION, NOT TEN. Every landing already has the control: eight
+   * games use `.home-choice.hero`, QuickFire uses #kickOff, and Grid has no
+   * cover at all — it opens on the board, so it needs nothing and gets
+   * nothing. Putting this in each game.js would be ten copies of one rule, ten
+   * tags and ten deploys, which is the fault this file exists to avoid.
+   *
+   * THE PARAMETER IS REMOVED ONCE IT HAS FIRED. Otherwise a refresh mid-board,
+   * or the back button, re-clicks a cover that is no longer there — and on a
+   * game that has already started, re-clicking start is not harmless. */
+  function autoPlay() {
+    if (!/(^|[?&])play=1(&|$)/.test(location.search)) return;
+    /* Taken out of the address first, so nothing below can fire twice. */
+    try {
+      var url = location.pathname + location.search.replace(/(^|[?&])play=1(&|$)/, "$1")
+        .replace(/[?&]$/, "") + location.hash;
+      history.replaceState(null, "", url);
+    } catch (e) { /* an address that cannot be rewritten is still worth playing */ }
+
+    /* The cover is drawn when the daily lands, which is a network round trip
+       after this runs — so wait for it rather than assuming it is there. Four
+       seconds of looking, then give up and leave the player on the home page,
+       which is a page they asked for rather than an error. */
+    var tries = 0;
+    (function look() {
+      var el = document.querySelector(".home-choice.hero, #kickOff");
+      var shown = el && !el.hidden && el.offsetParent !== null && !el.disabled;
+      if (shown) { el.click(); return; }
+      if (++tries < 40) setTimeout(look, 100);
+    })();
   }
 
   if (document.readyState === "loading") {

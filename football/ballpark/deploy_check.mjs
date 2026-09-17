@@ -193,6 +193,26 @@ console.log("\nIt counts plays and banks results, like every built game");
     !!settler && /grades\[step\]\s*=/.test(settler),
     "derivable from guess, answer and tolerance — and therefore not a fact about the round; "
     + "change a tolerance and every recomputed grade changes with it");
+  /* THE CLOCK A QUESTION INHERITS FROM THE ONE BEFORE IT.
+     show() unlocks the board and the 100ms tick computes the countdown from
+     clockMs, which post("open") only refreshes when the server answers. If
+     show() leaves clockMs holding the PREVIOUS question's start, the first
+     tick after unlocking reads an elapsed time of "however long the player
+     took to answer, plus however long they read the reveal" — and the moment
+     that passes R.CLOCK, tick()'s `left <= 0` auto-locks a question nobody has
+     seen and submits the untouched midpoint.
+     Reported live on 17 Sep 2026 by the owner: over twenty seconds on the
+     reveal and the next question was dead on arrival. The threshold was the
+     allowance itself.
+     This is a static check on a live-only fault, which is weaker than it
+     should be — Ballpark has no page-level suite at all, which is why two
+     player-facing bugs in this file have now been found by playing rather
+     than by testing. Written so the order cannot silently reverse; the real
+     answer is a jsdom journey for this game. */
+  t("showing a question clears the clock before it unlocks",
+    !!bodyOf("show") && /clockMs\s*=\s*0/.test(bodyOf("show")) &&
+      bodyOf("show").indexOf("clockMs = 0") < bodyOf("show").indexOf("locked = false"),
+    "otherwise the first tick charges the previous question's time to this one");
   t("and the recorded row carries the eleven as asked",
     !!recorder && /asked:/.test(recorder) && /guesses\[/.test(recorder) && /grades\[/.test(recorder),
     "id, guess, grade — the question and the answer are on the board the id names");
@@ -235,9 +255,21 @@ console.log("\nAnd it IS launched, which every one of these makes true");
   })(), "an unreleased game is named nowhere until it launches");
 
   t("the hub names it, now that it is out", /Ballpark XI/.test(hub));
-  t("and gives it a card that can be played and an archive to open",
-    /href="\/football\/ballpark\/"[^>]*aria-label="Play Ballpark XI today"/.test(hub) &&
-    /href="\/football\/ballpark\/archive\/"/.test(hub));
+  /* THREE DESTINATIONS, AND THEY MUST STAY THREE. The picture opens the
+     game's own home, "Play today" skips the cover and starts the daily
+     (the landing reads ?play=1 — see shared/xi-chrome.js), and "Past
+     puzzles" opens the archive. Asserted separately because the fault
+     worth catching is two of them collapsing onto one address, which is
+     what the card did before 17 Sep 2026: the picture was inert and the
+     button went to the home page, so there was no route to the board. */
+  t("and gives it a card whose picture opens its home",
+    new RegExp('<a class="cap" href="/football/ballpark/"').test(hub));
+  t("and a Play today that goes to the board, not back to the home page",
+    hub.includes('href="/football/ballpark/?play=1" aria-label="Play Ballpark XI today"'),
+    "a plain compare, not a pattern: the ? in ?play=1 is a regex quantifier and "
+    + "was silently eaten writing this check, which then passed on the wrong thing");
+  t("and an archive to open",
+    new RegExp('href="/football/ballpark/archive/"').test(hub));
   t("and a row in the hub's table, so the front door knows it was played today",
     /id: "ballpark"[\s\S]*?key: "xibp\.results"/.test(hub));
   t("it is in the sitemap, offered to a crawler", /football\/ballpark\//.test(sitemap));
