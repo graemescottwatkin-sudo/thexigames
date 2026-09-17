@@ -22,6 +22,7 @@ import { fileURLToPath, pathToFileURL } from "node:url";
 import {
   epochOf, dayForNo, ordinalToday, readsOff, gateBoard, gatePackage,
   readPackage, digestFor, payloadOf, payloadDigest, stableJson, sqlFor,
+  liveFromSql, calendarClashes,
 } from "./import_codeword.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -230,6 +231,73 @@ console.log("\n=== A published board is frozen (contract 9.3) ===");
   t("with no captured live state the freeze check refuses nothing, by design",
     !has(faultsFor(changedPast, {}, { now, live: null }), "ordinal"),
     "null live is the caller having captured nothing");
+  /* AND THE CALLER NOW CAPTURES ONE. Until 17 Sep 2026 main() called
+     gatePackage with no `live` at all, so the branch above was not a
+     documented edge case — it was EVERY run, while the tool printed "boards at
+     or below it are frozen". The freeze is only worth having if something
+     hands it the digests, so that is asserted here rather than left to the
+     CLI. */
+  const frozen = faultsFor(changedPast, {}, { now, live: liveFromSql(sqlFor(makePackage(boards).boards, "s", epochOf(makePackage(boards).index, makePackage(boards).manifest), "st")).payloads });
+  t("and WITH live state the same change is refused",
+    has(frozen, "ordinal"),
+    frozen.find((f) => /ordinal/.test(f)) || "no ordinal fault");
+}
+
+console.log("\n=== The memory: what the last emitted file said was live ===");
+{
+  /* The round trip that matters: sqlFor writes it, liveFromSql reads it back.
+     Two functions in one file that must agree about a format — the shape this
+     project has been bitten by whenever only one side was tested. */
+  const pkg = makePackage([goodBoard(1), goodBoard(2), goodBoard(3)]);
+  const epochUtc = epochOf(pkg.index, pkg.manifest);
+  const sql = sqlFor(pkg.boards, "2026-09-17T00:00:00Z", epochUtc, "staged");
+  const live = liveFromSql(sql);
+  t("what sqlFor writes, liveFromSql reads back",
+    live.known && live.payloads.size === 3 && live.days.size === 3,
+    `${live.payloads.size} board(s), ${live.days.size} day(s)`);
+  t("and the digests match the ones the gate computes",
+    live.payloads.get(1) === payloadDigest(pkg.boards[0].board),
+    "otherwise the freeze compares two different hashes and refuses everything");
+  t("and each day maps to the board the calendar gave it",
+    live.days.get(dayForNo(epochUtc, 2)) === 2);
+
+  /* ABSENT IS NOT CLEAN. `known` is the flag the CLI prints on, so that a run
+     with nothing to compare says so instead of reading as a silent pass. */
+  const none = liveFromSql(null);
+  t("with no previous file at all, known is false rather than empty-and-quiet",
+    none.known === false && none.payloads === null,
+    "a comparison against nothing must not report agreement");
+}
+
+console.log("\n=== The calendar, which the payload freeze cannot see ===");
+{
+  /* THE EPOCH HOLE. Contract 9.3 freezes a board's PAYLOAD keyed on its
+     ordinal. The DAY an ordinal lands on is derived from the epoch, read fresh
+     from each package — so two packages differing ONLY in declared epoch have
+     identical digests and a schedule shifted by N days. 9.3 refuses nothing;
+     DELETE FROM cw_schedule then rewrites the calendar under boards people
+     have played. epochOf() demands INDEX.json and manifest.json agree, but
+     both come from one build and a restage moves them together. */
+  const boards = [goodBoard(1), goodBoard(2), goodBoard(3), goodBoard(4)];
+  const at = (epoch) => {
+    const p = makePackage(boards);
+    p.index.dates.epoch = epoch; p.manifest.epoch = epoch;
+    return p;
+  };
+  const base = at("2026-09-13");
+  const wasSql = sqlFor(base.boards, "s", epochOf(base.index, base.manifest), "st");
+  const days = liveFromSql(wasSql).days;
+  const now = Date.parse(dayForNo(epochOf(base.index, base.manifest), 3) + "T12:00:00Z");
+
+  t("the same epoch clashes with nothing", calendarClashes(days, at("2026-09-13"), now).length === 0);
+  const moved = calendarClashes(days, at("2026-09-14"), now);
+  t("an epoch moved by one day is refused, naming the days",
+    moved.length > 0, moved[0] || "no clash reported");
+  t("and only for days at or before today — the future is still free to move",
+    moved.every((f) => f.slice(0, 10) <= dayForNo(epochOf(base.index, base.manifest), 3)),
+    moved.join(" | "));
+  t("with no memory it refuses nothing, which is the caller's to announce",
+    calendarClashes(null, at("2026-09-14"), now).length === 0);
 }
 
 console.log("\n=== The digest table, and the lookup that must not silently miss ===");

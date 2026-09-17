@@ -358,6 +358,66 @@ export function sqlFor(boards, stamp, epochUtc, staged) {
   return lines.join("\n") + "\n";
 }
 
+/* ---- the memory: what the last emitted file said was live ---------------
+ *
+ * Every other importer in this family keeps its served-day memory in the SQL
+ * it last wrote. This one had none at all, which is why contract 9.3 has never
+ * run: there was nothing to pass it.
+ *
+ * ABSENT IS NOT CLEAN. A missing file means nothing can be compared, and this
+ * says so rather than returning empty maps that would read as "nothing has
+ * changed" — that is the fault the 9.3 comment itself warns about, one level
+ * out. `known` is what the caller checks before trusting a silent pass. */
+export function liveFromSql(text) {
+  const sql = text !== undefined
+    ? text
+    : (fs.existsSync(OUT) ? fs.readFileSync(OUT, "utf8") : null);
+  if (sql === null) return { known: false, payloads: null, days: null };
+  const payloads = new Map();
+  const re = /INSERT OR REPLACE INTO cw_board \(no, day, payload, updated_at\) VALUES \((\d+), '([^']*)', '((?:[^']|'')*)'/g;
+  let m;
+  while ((m = re.exec(sql))) {
+    /* THROUGH stableJson, NOT OVER THE RAW TEXT. payloadDigest hashes
+       stableJson(payloadOf(board)); sqlFor writes JSON.stringify(payloadOf(board)),
+       which is the same data with the keys in whatever order they happened to
+       be built in. Hashing the stored text directly produced a digest that
+       matched nothing, so EVERY board read as changed and the freeze would have
+       refused a package identical to the one live.
+       Caught by the round-trip assertion in import_codeword_test — the first
+       run of it went red on exactly this, which is the whole reason the test
+       compares against payloadDigest rather than against itself. */
+    let parsed = null;
+    try { parsed = JSON.parse(m[3].replace(/''/g, "'")); } catch (e) { parsed = null; }
+    if (parsed === null) continue;
+    payloads.set(Number(m[1]),
+      crypto.createHash("sha256").update(stableJson(parsed)).digest("hex").slice(0, 16));
+  }
+  const days = new Map();
+  const rs = /INSERT INTO cw_schedule \(day, board_no\) VALUES \('([^']*)', (\d+)\)/g;
+  while ((m = rs.exec(sql))) days.set(m[1], Number(m[2]));
+  return { known: payloads.size > 0 && days.size > 0, payloads, days };
+}
+
+/* THE DAY A BOARD LANDS ON, WHICH 9.3 DOES NOT GUARD.
+ *
+ * Refuses any day at or before today whose board number changes, and any that
+ * disappears. Both halves: a day that changes hands shows the right date over
+ * the wrong puzzle, and a day that vanishes orphans an archive link. */
+export function calendarClashes(prevDays, pkg, now = Date.now()) {
+  if (!prevDays || !prevDays.size) return [];
+  const epochUtc = epochOf(pkg.index, pkg.manifest);
+  const today = new Date(now).toISOString().slice(0, 10);
+  const next = new Map();
+  for (const { board } of pkg.boards) next.set(dayForNo(epochUtc, board.no), board.no);
+  const out = [];
+  for (const [day, was] of [...prevDays].sort()) {
+    if (day > today) continue;
+    if (!next.has(day)) { out.push(`${day} was board ${was} and this package has no board for it at all`); continue; }
+    if (next.get(day) !== was) out.push(`${day} was board ${was} and would become board ${next.get(day)}`);
+  }
+  return out;
+}
+
 /* ------------------------------------------------------------- the CLI --- */
 
 function main() {
@@ -371,7 +431,26 @@ function main() {
   try { pkg = readPackage(SOURCE); }
   catch (e) { console.error(`\nREFUSED: ${e.message}\n`); process.exit(1); }
 
-  const faults = gatePackage(pkg, { now: Date.now() });
+  /* THE FREEZE HAD NOTHING TO COMPARE AGAINST, SO IT REFUSED NOTHING.
+   gatePackage's `live` argument defaults to null and main() never passed one,
+   so contract 9.3 — "a published board is frozen" — was skipped on EVERY real
+   run, while this file went on printing "boards at or below it are frozen".
+   The code was right; nothing ever called it with an argument.
+   Found 17 Sep 2026 by review. I had told another session the day before that
+   9.3 was the strongest served-day guard in the family. It was the only one
+   that never executed.
+   The previous emitted SQL is the memory, the way it is for every other
+   importer here — read it back, and hand 9.3 the digests it was written for. */
+const previous = liveFromSql();
+const faults = gatePackage(pkg, { now: Date.now(), live: previous.payloads });
+/* AND THE HALF 9.3 CANNOT SEE. It freezes a board's PAYLOAD keyed on its
+   ordinal; the DAY each ordinal lands on is derived from the epoch, which is
+   read fresh from each package. Two packages differing only in declared epoch
+   produce identical digests and a schedule shifted by N days — 9.3 refuses
+   nothing and DELETE FROM cw_schedule rewrites it. epochOf() demands INDEX.json
+   and manifest.json agree, but both come from one build and a restage moves
+   them together; the comment above epochOf records exactly that happening. */
+for (const f of calendarClashes(previous.days, pkg)) faults.push(f);
   if (faults.length) {
     console.error(`\nNothing written. ${faults.length} problem(s):\n`);
     for (const f of faults.slice(0, 40)) console.error("  - " + f);
@@ -387,7 +466,20 @@ function main() {
   console.log(`Epoch ${new Date(epochUtc).toISOString().slice(0, 10)}, read from the package ` +
     `and agreed by manifest.json.`);
   console.log(`Staged ${staged || "(no stamp)"}.`);
-  console.log(`Today is ordinal ${ordinalToday(epochUtc)}; boards at or below it are frozen.`);
+  /* WHAT THE FREEZE ACTUALLY DID, rather than what it intends. This line used
+     to read "boards at or below it are frozen" on every run, including the runs
+     where `live` was null and 9.3 refused nothing — a claim the tool did not
+     enforce, printed in the tool's own voice. Say which of the two happened. */
+  const todayOrdinal = ordinalToday(epochUtc);
+  if (previous.known) {
+    console.log(`Today is ordinal ${todayOrdinal}; ${previous.payloads.size} board(s) and ` +
+      `${previous.days.size} day(s) compared against ${path.basename(OUT)}.`);
+  } else {
+    console.log(`Today is ordinal ${todayOrdinal}. NOTHING WAS FROZEN: there is no previous`);
+    console.log(`  ${path.basename(OUT)} to compare against, so neither the payload`);
+    console.log("  freeze nor the calendar check could refuse anything. That is correct for a");
+    console.log("  first import and is a silent pass for any other, which is why it is said here.");
+  }
 
   if (VERIFY_STAGED) {
     console.log("\n--verify-staged: gate only, nothing written.\n");

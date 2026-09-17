@@ -504,13 +504,32 @@ t("the deleted penalty constants have not returned", (() => {
   const files = ["js/engine.js", "js/game.js"].map((f) => path.join(DIR, f))
     .concat(["functions/_lib/scoring.js", "functions/api/finish.js"]
       .map((f) => path.join(ROOT, f)));
+  /* THIS CHECK OPENED NO FILE FOR THREE WEEKS.
+     `files` are ABSOLUTE paths, and `has`/`read` are the DIR-relative helpers
+     (`path.join(DIR, p)`), so every one became …\football\crossword\C:\Users\…
+     and `has()` was false for all four. The loop body never ran, `found` stayed
+     empty, and the check reported a pass over nothing. The v146 original used
+     relative names and worked; the two-roots refactor made the paths absolute
+     and left the helpers behind.
+     Proven by execution 17 Sep 2026: all four files exist, has() returns false
+     for all four.
+     A FLOOR, because that is what would have caught it. This is a walk, and a
+     walk that finds no files reports the same clean pass as a walk that finds
+     no faults — the shape this project has now met a dozen times. */
   const found = [];
+  let opened = 0;
   files.forEach((f) => {
-    if (!has(f)) return;
-    const src = read(f);
-    names.forEach((n) => { if (src.includes(n)) found.push(n + " in " + f); });
+    if (!fs.existsSync(f)) return;
+    opened++;
+    const src = fs.readFileSync(f, "utf8");
+    names.forEach((n) => { if (src.includes(n)) found.push(n + " in " + path.basename(f)); });
   });
-  deadConsts = found.join(", ");
+  if (opened !== files.length) {
+    deadConsts = `only ${opened} of ${files.length} files could be opened — this check ` +
+      `cannot refuse anything it did not read`;
+    return false;
+  }
+  deadConsts = found.length ? found.join(", ") : `${opened} files read, none carry them`;
   return !found.length;
 })(), deadConsts);
 
