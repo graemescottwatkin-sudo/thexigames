@@ -193,7 +193,43 @@ a.shirt{padding:4px;gap:0}
   font-size:clamp(26px,4vw,38px);letter-spacing:.02em;text-transform:uppercase;
   color:var(--ink);margin:0;line-height:1}
 .section .lede{margin:4px 0 18px;color:var(--ink-soft);font-size:15px}
-.grid{display:grid;gap:18px;grid-template-columns:repeat(3,1fr)}
+/* ---------- the starting XI ----------
+
+   THE NUMBERS WERE ALREADY SAYING THIS AND THE LAYOUT WAS NOT. A shirt number
+   is a POSITION: one keeps goal, two to five defend, six to eight hold the
+   middle, nine to eleven play up. The page had eleven of them and drew a
+   three-column block, which is a list wearing a grid's clothes.
+
+   So the block is a pitch, and the cards stand in 4-3-3 -- read downward from
+   the attack, the way a team sheet is.
+
+   NO CARD IS PLACED BY HAND. A row is a BAND OF SHIRT NUMBERS rather than a
+   list of games, so the day a game signs for the eleven it walks out of the
+   vacancy and into the front three and nothing in this file is edited to let
+   it. Same reasoning as boardKeys() and LAUNCHED: derive the position from
+   the one fact, never write it down a second time beside it.
+
+   The grass and the markings come off --pitch-deep rather than out of a hex,
+   so the dark theme mows it too. */
+.pitch{position:relative;isolation:isolate;
+  display:flex;flex-direction:column;gap:18px;
+  padding:26px 20px;border-radius:16px;
+  background:repeating-linear-gradient(180deg,
+    var(--pitch-deep) 0 76px,
+    color-mix(in srgb,var(--pitch-deep) 90%,#FFFFFF) 76px 152px)}
+.pitch-row{display:flex;justify-content:center;gap:16px}
+/* The markings, drawn and not lettered, and behind the cards. aria-hidden in
+   the markup: a penalty area is decoration and the team sheet is above it. */
+.pitch .lines{position:absolute;inset:12px;z-index:-1;pointer-events:none;
+  border:1px solid rgba(233,245,236,.20)}
+.pitch .lines::before{content:"";position:absolute;left:0;top:50%;
+  width:100%;height:1px;background:rgba(233,245,236,.20)}
+.pitch .lines::after{content:"";position:absolute;left:50%;top:50%;
+  width:130px;height:130px;margin:-65px 0 0 -65px;border-radius:50%;
+  border:1px solid rgba(233,245,236,.20)}
+.pitch .lines i{position:absolute;left:28%;width:44%;height:84px;top:-1px;
+  border:1px solid rgba(233,245,236,.20)}
+.pitch .lines i.far{top:auto;bottom:-1px}
 
 /* SIX CARDS, ONE SET. They were sized by their contents, so a longer blurb or
    a taller drawing made a taller card — most visibly Grid XI, which had lost
@@ -242,6 +278,43 @@ a.cap:focus-visible{outline:3px solid var(--pitch);outline-offset:2px}
 .past{display:inline-block;padding:6px 4px;font-size:13px;color:var(--ink-faint);
   text-decoration:none;border-bottom:1px solid transparent}
 .past:hover,.past:focus-visible{color:var(--ink);border-bottom-color:var(--ink-faint)}
+
+/* ELEVEN CARDS ON ONE SCREEN. The blurb comes off: a sentence under each of
+   eleven cards is a wall of text where a formation should be, and the game's
+   own home page -- which the picture opens -- says it better and at length.
+   THE THREE DOORS STAY, because they were the point of the card: the picture
+   to the game, the button to today's board, the link to the archive. */
+.pitch .game{width:calc((100% - 48px) / 4);flex:0 0 auto;
+  border:0;box-shadow:0 5px 14px rgba(9,26,17,.34)}
+.pitch .game .cap{height:112px;padding:8px}
+.pitch .game .body{padding:10px 6px 4px;gap:4px}
+.pitch .game h3{font-size:17px;text-align:center}
+.pitch .game p{display:none}
+.pitch .game .acts{padding-top:10px;gap:4px}
+.pitch .game .btn{padding:9px 10px;min-height:40px;font-size:14px}
+.pitch .game .past{font-size:12px;padding:4px}
+/* THE ELEVENTH PLACE, DRAWN AS AN EMPTY PLACE. The squad has ten worn numbers
+   and one unsigned, and a formation has eleven positions -- so the vacancy
+   stands in one. It NAMES NOTHING: an unreleased game is named nowhere in
+   served markup, and a vacancy is not a title.
+   Not a .soon-card and not inside .soon-grid. Those are counted against the
+   games in TESTING -- chrome_test asserts the count exactly -- and a card
+   borrowed from them would put that count one out. */
+.pitch .vacancy{background:rgba(255,255,255,.07);
+  border:1px dashed rgba(233,245,236,.34);box-shadow:none;
+  align-items:center;justify-content:center;text-align:center;
+  gap:2px;padding:16px 10px}
+.pitch .vacancy .sq{font-family:var(--disp);font-weight:700;font-size:40px;
+  line-height:1;color:#C3D8C9}
+.pitch .vacancy h3{color:#EAF3EC;font-size:17px;margin:10px 0 0}
+.pitch .vacancy small{font-size:11.5px;color:#BFD3C5}
+
+/* The heading carries the shape the cards below it are standing in. */
+.sec-head{display:flex;align-items:flex-end;justify-content:space-between;
+  gap:16px;flex-wrap:wrap;margin:0 0 18px}
+.sec-head .lede{margin:4px 0 0}
+.formation{font-family:var(--disp);font-weight:700;font-size:20px;
+  letter-spacing:.22em;color:var(--pitch);margin:0 0 3px;white-space:nowrap}
 
 /* ---------- the season ----------
 
@@ -330,8 +403,19 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
 
 :focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
-@media (max-width:980px){
-  .grid{grid-template-columns:repeat(2,1fr)}
+/* A PITCH NEEDS A PITCH'S WIDTH. Below this a row of four is four thumbnails,
+   so the formation becomes the squad it was drawn from: two columns, IN SHIRT
+   ORDER, on the same grass. The rows go display:contents so the cards become
+   the grid's own children -- the formation is a desktop LAYOUT and the
+   numbering is the fact underneath it, which is why the order can be restored
+   from the numeral rather than from a second list. */
+@media (max-width:860px){
+  .pitch{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));
+    gap:12px;padding:16px 14px}
+  .pitch-row{display:contents}
+  .pitch .game{width:auto;order:var(--shirt,99)}
+  .pitch .game .cap{height:128px}
+  .pitch .lines{display:none}
 }
 /* ONE SHELF WHERE ONE SHELF FITS. Above this width the eleven sit on a single
    line, live games and unsigned numbers together, which is what a team sheet
@@ -357,9 +441,9 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
     min-width:0;text-align:center}
   .shirt .xi{display:none}
 }
-@media (max-width:620px){
-  .grid{grid-template-columns:1fr}
-  .game .cap{height:170px}
+@media (max-width:460px){
+  .pitch{grid-template-columns:1fr}
+  .pitch .game .cap{height:160px}
 }
 </style>
 </head>
@@ -473,157 +557,102 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
   </section>
 
   <section class="section">
-    <h2 class="big">Pick your puzzle</h2>
-    <p class="lede">A new board in every game, every day.</p>
-    <div class="grid">
+    <div class="sec-head">
+      <div>
+        <h2 class="big">Pick your puzzle</h2>
+        <p class="lede">A new board in every game, every day.</p>
+      </div>
+      <!-- The shape, not a control: there is one formation and it is the one
+           the shirt numbers describe. A picker would be a second place the
+           positions are decided. -->
+      <p class="formation" aria-hidden="true">4&#8211;3&#8211;3</p>
+    </div>
+    <div class="pitch">
+      <!-- Touchline, halfway line, centre circle and the two boxes. -->
+      <div class="lines" aria-hidden="true"><i></i><i class="far"></i></div>
 
+      <div class="pitch-row"><!-- the front three -->
       <article class="game">
-        <a class="cap" href="/football/crossword/" aria-label="Crossword XI home" style="background:var(--kit-01)">
-          <span class="num">1</span>
-          <!-- Two entries crossing on a shared letter, one of them still
-               empty: a crossword, not an icon of one. Ordinary words — never a
-               board that is still to come. -->
+        <a class="cap" href="/football/whoami/" aria-label="Who Am I XI home" style="background:var(--kit-09)">
+          <span class="num">9</span>
+          <!-- THE ARTWORK AS PROVIDED, not a redrawing of it. The first attempt at
+               this card was a hand-written SVG path and it did not look like a
+               face; the mockup carries a real silhouette and this is that file,
+               decoded out of its data: URI and served as an image.
+               A FILE RATHER THAN INLINE BASE64, because this page is
+               Cache-Control: no-store — it is fetched fresh on every visit, so
+               37KB of base64 would be 37KB every time. As a file it is fetched
+               once and revalidated.
+               An account glyph would say "sign in"; this game is about a person.
+               The clubs stay lettered: the cards never show a board still to come. -->
           <svg class="prev" viewBox="0 0 220 120" aria-hidden="true">
+            <clipPath id="waCrop"><rect x="22" y="12" width="96" height="96" rx="10"/></clipPath>
+            <image href="/football/whoami/silhouette.png?v=1" x="22" y="12"
+                   width="96" height="96" clip-path="url(#waCrop)"
+                   preserveAspectRatio="xMidYMid slice"/>
+            <text x="130" y="32" font-size="10" fill="#FFFFFFCC" letter-spacing="1.2">WHOSE CAREER?</text>
+            <g fill="#fff" font-size="11">
+              <text x="130" y="56">2008-12  Club A</text>
+              <text x="130" y="78">2012-17  Club B</text>
+              <text x="130" y="100">2017-?  Club C</text>
+            </g>
+          </svg>
+        </a>
+        <div class="body">
+          <h3>Who Am I XI</h3>
+          <p>Eleven club doors, one hidden player behind each.</p>
+          <div class="acts">
+            <a class="btn" href="/football/whoami/?play=1" aria-label="Play Who Am I XI today">Play today</a>
+            <a class="past" href="/football/whoami/archive/" aria-label="Who Am I XI past puzzles">Past puzzles</a>
+          </div>
+        </div>
+      </article>
+      <article class="game">
+        <a class="cap" href="/football/ballpark/" aria-label="Ballpark XI home" style="background:var(--kit-10)">
+          <span class="num">10</span>
+          <!-- THE WHOLE SCALE, SO THE BAND MEANS SOMETHING. Nought to a hundred, the
+           answer at fifty, and the band that scores running 45 to 55 — a tenth
+           of the range, drawn a tenth of the width. The guess sits inside it at
+           48. Everything outside the band is visible, which is the point: close
+           enough counts, and you can see how close that is. -->
+          <svg class="prev" viewBox="0 0 220 120" aria-hidden="true">
+            <text x="110" y="24" font-size="11" fill="#FFFFFFCC" text-anchor="middle"
+                  letter-spacing="1.4">45-55 EARNS POINTS</text>
+            <rect x="24" y="66" width="172" height="8" rx="4" fill="#FFFFFF33"/>
+            <rect x="101.4" y="66" width="17.2" height="8" rx="4" fill="#F2C94C"/>
+            <path d="M110.0 59 L110.0 81" stroke="#fff" stroke-width="2"/>
+            <g fill="#FFFFFFAA" font-size="11">
+              <text x="24" y="94" text-anchor="middle">0</text>
+              <text x="110.0" y="94" text-anchor="middle">50</text>
+              <text x="196" y="94" text-anchor="middle">100</text>
+            </g>
             <g>
-              <rect x="62" y="12" width="30" height="30" rx="3" fill="#fff" fill-opacity=".22"/>
-              <rect x="95" y="12" width="30" height="30" rx="3" fill="#fff"/>
-              <rect x="128" y="12" width="30" height="30" rx="3" fill="#fff" fill-opacity=".22"/>
-              <rect x="62" y="45" width="30" height="30" rx="3" fill="#fff"/>
-              <rect x="95" y="45" width="30" height="30" rx="3" fill="#fff"/>
-              <rect x="128" y="45" width="30" height="30" rx="3" fill="#fff"/>
-              <rect x="62" y="78" width="30" height="30" rx="3" fill="#fff" fill-opacity=".22"/>
-              <rect x="95" y="78" width="30" height="30" rx="3" fill="#fff"/>
-              <rect x="128" y="78" width="30" height="30" rx="3" fill="#fff" fill-opacity=".22"/>
-            </g>
-            <g fill="#123B27" font-size="21" text-anchor="middle">
-              <text x="110" y="35">T</text>
-              <text x="77" y="68">K</text>
-              <text x="110" y="68">I</text>
-              <text x="143" y="68">T</text>
-              <text x="110" y="101">P</text>
+              <path d="M100.6 56 L112.6 56 L106.6 65 Z" fill="#fff"/>
+              <text x="106.6" y="50" font-size="12" fill="#fff" text-anchor="middle">YOUR GUESS 48</text>
             </g>
           </svg>
         </a>
         <div class="body">
-          <h3>Crossword XI</h3>
-          <p>Eleven clues. One football crossword.</p>
+          <h3>Ballpark XI</h3>
+          <p>Eleven questions with a number for an answer. Close enough counts.</p>
           <div class="acts">
-            <a class="btn" href="/football/crossword/?play=1" aria-label="Play Crossword XI today">Play today</a>
-            <a class="past" href="/football/crossword/archive/" aria-label="Crossword XI past puzzles">Past puzzles</a>
+            <a class="btn" href="/football/ballpark/?play=1" aria-label="Play Ballpark XI today">Play today</a>
+            <a class="past" href="/football/ballpark/archive/" aria-label="Ballpark XI past puzzles">Past puzzles</a>
           </div>
         </div>
       </article>
-
-      <article class="game">
-        <a class="cap" href="/football/wordsearch/" aria-label="Wordsearch XI home" style="background:var(--kit-02)">
-          <span class="num">2</span>
-          <!-- Three rows of six, every letter on a column and every row the
-           same length: the word found reads along a row, so the eye has to
-           be able to follow one. GOAL, marked the way the game marks it.
-           Ordinary football words, never a board still to come. -->
-          <svg class="prev" viewBox="0 0 220 120" aria-hidden="true">
-            <rect x="54" y="51" width="111" height="26" rx="13" fill="#F2C94C" fill-opacity=".85"/>
-            <g fill="#123B27" font-size="17" text-anchor="middle">
-              <text x="42" y="40">G</text><text x="69" y="40">N</text><text x="96" y="40">T</text><text x="123" y="40">S</text><text x="150" y="40">R</text><text x="177" y="40">P</text>
-              <text x="42" y="70">G</text><text x="69" y="70">O</text><text x="96" y="70">A</text><text x="123" y="70">L</text><text x="150" y="70">E</text><text x="177" y="70">R</text>
-              <text x="42" y="100">L</text><text x="69" y="100">E</text><text x="96" y="100">G</text><text x="123" y="100">E</text><text x="150" y="100">N</text><text x="177" y="100">D</text>
-            </g>
-          </svg>
-        </a>
-        <div class="body">
-          <h3>Wordsearch XI</h3>
-          <p>Find the XI. Discover the bonus.</p>
-          <div class="acts">
-            <a class="btn" href="/football/wordsearch/?play=1" aria-label="Play Wordsearch XI today">Play today</a>
-            <a class="past" href="/football/wordsearch/archive/" aria-label="Wordsearch XI past puzzles">Past puzzles</a>
-          </div>
-        </div>
+      <!-- THE ELEVENTH, AND IT IS NOT A GAME. aria-hidden because it is the
+           shape of the formation and not information: the team sheet above
+           already counts what is still to sign, out of the squad list, and
+           saying it twice is two answers about one number. -->
+      <article class="game vacancy" aria-hidden="true">
+        <span class="sq">11</span>
+        <h3>Still to sign</h3>
+        <small>The next game is coming.</small>
       </article>
+      </div>
 
-      <article class="game">
-        <a class="cap" href="/football/scrambled/" aria-label="Scrambled XI home" style="background:var(--kit-03)">
-          <span class="num">3</span>
-          <!-- FOUR TILES OUT OF ORDER, and the word is the one every player knows:
-           LOAG is GOAL scrambled. A real football word rather than a name,
-           because the cards must never show a board still to come. -->
-          <svg class="prev" viewBox="0 0 220 120" aria-hidden="true">
-            <g><rect x="26" y="38" width="38" height="44" rx="6" fill="#fff"/><text x="45" y="69" font-size="26" fill="#123B27" text-anchor="middle">L</text></g>
-            <g><rect x="70" y="38" width="38" height="44" rx="6" fill="#fff"/><text x="89" y="69" font-size="26" fill="#123B27" text-anchor="middle">O</text></g>
-            <g><rect x="114" y="38" width="38" height="44" rx="6" fill="#fff"/><text x="133" y="69" font-size="26" fill="#123B27" text-anchor="middle">A</text></g>
-            <g><rect x="158" y="38" width="38" height="44" rx="6" fill="#fff"/><text x="177" y="69" font-size="26" fill="#123B27" text-anchor="middle">G</text></g>
-          </svg>
-        </a>
-        <div class="body">
-          <h3>Scrambled XI</h3>
-          <p>Untangle eleven player names.</p>
-          <div class="acts">
-            <a class="btn" href="/football/scrambled/?play=1" aria-label="Play Scrambled XI today">Play today</a>
-            <a class="past" href="/football/scrambled/archive/" aria-label="Scrambled XI past puzzles">Past puzzles</a>
-          </div>
-        </div>
-      </article>
-
-      <article class="game">
-        <a class="cap" href="/football/hilo/" aria-label="HiLo XI home" style="background:var(--kit-04)">
-          <span class="num">4</span>
-          <!-- HIGHER OR LOWER, AND THE THING BEING ASKED BETWEEN THEM. Two arrows
-           pointing the two ways the call can go, with the unknown boxed in the
-           middle — the shape of the decision rather than a number. -->
-          <svg class="prev" viewBox="0 0 220 120" aria-hidden="true">
-            <g fill="#fff">
-              <path d="M44 74 L60 48 L76 74 Z"/>
-              <text x="60" y="96" font-size="12" text-anchor="middle" letter-spacing="1.5">HIGHER</text>
-              <path d="M144 48 L160 74 L176 48 Z"/>
-              <text x="160" y="96" font-size="12" text-anchor="middle" letter-spacing="1.5">LOWER</text>
-            </g>
-            <rect x="94" y="38" width="32" height="44" rx="8" fill="none" stroke="#fff"
-                  stroke-width="2" stroke-dasharray="5 4"/>
-            <text x="110" y="69" font-size="26" fill="#fff" text-anchor="middle">?</text>
-          </svg>
-        </a>
-        <div class="body">
-          <h3>HiLo XI</h3>
-          <p>Eleven higher-or-lower calls.</p>
-          <div class="acts">
-            <a class="btn" href="/football/hilo/?play=1" aria-label="Play HiLo XI today">Play today</a>
-            <a class="past" href="/football/hilo/archive/" aria-label="HiLo XI past puzzles">Past puzzles</a>
-          </div>
-        </div>
-      </article>
-
-      <article class="game">
-        <a class="cap" href="/football/vowels/" aria-label="Vowels XI home" style="background:var(--kit-05)">
-          <span class="num">5</span>
-          <!-- A name with its vowels taken out, and the gaps waiting. -->
-          <svg class="prev" viewBox="0 0 220 120" aria-hidden="true">
-            <g>
-              <rect x="8" y="41" width="30" height="38" rx="4" fill="#fff"/>
-              <rect x="43" y="41" width="30" height="38" rx="4" fill="#fff" fill-opacity=".22"/>
-              <rect x="78" y="41" width="30" height="38" rx="4" fill="#fff" fill-opacity=".22"/>
-              <rect x="113" y="41" width="30" height="38" rx="4" fill="#fff"/>
-              <rect x="148" y="41" width="30" height="38" rx="4" fill="#fff" fill-opacity=".22"/>
-              <rect x="183" y="41" width="30" height="38" rx="4" fill="#fff"/>
-            </g>
-            <g fill="#8E2F45" font-size="21" text-anchor="middle">
-              <text x="23" y="68">R</text>
-              <text x="128" y="68">N</text>
-              <text x="198" y="68">Y</text>
-            </g>
-            <g stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".85">
-              <path d="M50 70h16M85 70h16M155 70h16"/>
-            </g>
-          </svg>
-        </a>
-        <div class="body">
-          <h3>Vowels XI</h3>
-          <p>Put the missing vowels back.</p>
-          <div class="acts">
-            <a class="btn" href="/football/vowels/?play=1" aria-label="Play Vowels XI today">Play today</a>
-            <a class="past" href="/football/vowels/archive/" aria-label="Vowels XI past puzzles">Past puzzles</a>
-          </div>
-        </div>
-      </article>
-
+      <div class="pitch-row"><!-- the middle three -->
       <article class="game">
         <a class="cap" href="/football/grid/" aria-label="Grid XI home" style="background:var(--kit-06)">
           <span class="num">6</span>
@@ -652,7 +681,6 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
           </div>
         </div>
       </article>
-
       <article class="game">
         <a class="cap" href="/football/codeword/" aria-label="Codeword XI home" style="background:var(--kit-07)">
           <span class="num">7</span>
@@ -679,7 +707,6 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
           </div>
         </div>
       </article>
-
       <article class="game">
         <a class="cap" href="/football/quickfire/" aria-label="QuickFire XI home" style="background:var(--kit-08)">
           <span class="num">8</span>
@@ -717,77 +744,155 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
           </div>
         </div>
       </article>
+      </div>
 
+      <div class="pitch-row"><!-- the back four -->
       <article class="game">
-        <a class="cap" href="/football/whoami/" aria-label="Who Am I XI home" style="background:var(--kit-09)">
-          <span class="num">9</span>
-          <!-- THE ARTWORK AS PROVIDED, not a redrawing of it. The first attempt at
-               this card was a hand-written SVG path and it did not look like a
-               face; the mockup carries a real silhouette and this is that file,
-               decoded out of its data: URI and served as an image.
-               A FILE RATHER THAN INLINE BASE64, because this page is
-               Cache-Control: no-store — it is fetched fresh on every visit, so
-               37KB of base64 would be 37KB every time. As a file it is fetched
-               once and revalidated.
-               An account glyph would say "sign in"; this game is about a person.
-               The clubs stay lettered: the cards never show a board still to come. -->
+        <a class="cap" href="/football/wordsearch/" aria-label="Wordsearch XI home" style="background:var(--kit-02)">
+          <span class="num">2</span>
+          <!-- Three rows of six, every letter on a column and every row the
+           same length: the word found reads along a row, so the eye has to
+           be able to follow one. GOAL, marked the way the game marks it.
+           Ordinary football words, never a board still to come. -->
           <svg class="prev" viewBox="0 0 220 120" aria-hidden="true">
-            <clipPath id="waCrop"><rect x="22" y="12" width="96" height="96" rx="10"/></clipPath>
-            <image href="/football/whoami/silhouette.png?v=1" x="22" y="12"
-                   width="96" height="96" clip-path="url(#waCrop)"
-                   preserveAspectRatio="xMidYMid slice"/>
-            <text x="130" y="32" font-size="10" fill="#FFFFFFCC" letter-spacing="1.2">WHOSE CAREER?</text>
-            <g fill="#fff" font-size="11">
-              <text x="130" y="56">2008-12  Club A</text>
-              <text x="130" y="78">2012-17  Club B</text>
-              <text x="130" y="100">2017-?  Club C</text>
+            <rect x="54" y="51" width="111" height="26" rx="13" fill="#F2C94C" fill-opacity=".85"/>
+            <g fill="#123B27" font-size="17" text-anchor="middle">
+              <text x="42" y="40">G</text><text x="69" y="40">N</text><text x="96" y="40">T</text><text x="123" y="40">S</text><text x="150" y="40">R</text><text x="177" y="40">P</text>
+              <text x="42" y="70">G</text><text x="69" y="70">O</text><text x="96" y="70">A</text><text x="123" y="70">L</text><text x="150" y="70">E</text><text x="177" y="70">R</text>
+              <text x="42" y="100">L</text><text x="69" y="100">E</text><text x="96" y="100">G</text><text x="123" y="100">E</text><text x="150" y="100">N</text><text x="177" y="100">D</text>
             </g>
           </svg>
         </a>
         <div class="body">
-          <h3>Who Am I XI</h3>
-          <p>Eleven club doors, one hidden player behind each.</p>
+          <h3>Wordsearch XI</h3>
+          <p>Find the XI. Discover the bonus.</p>
           <div class="acts">
-            <a class="btn" href="/football/whoami/?play=1" aria-label="Play Who Am I XI today">Play today</a>
-            <a class="past" href="/football/whoami/archive/" aria-label="Who Am I XI past puzzles">Past puzzles</a>
+            <a class="btn" href="/football/wordsearch/?play=1" aria-label="Play Wordsearch XI today">Play today</a>
+            <a class="past" href="/football/wordsearch/archive/" aria-label="Wordsearch XI past puzzles">Past puzzles</a>
           </div>
         </div>
       </article>
-
       <article class="game">
-        <a class="cap" href="/football/ballpark/" aria-label="Ballpark XI home" style="background:var(--kit-10)">
-          <span class="num">10</span>
-          <!-- THE WHOLE SCALE, SO THE BAND MEANS SOMETHING. Nought to a hundred, the
-           answer at fifty, and the band that scores running 45 to 55 — a tenth
-           of the range, drawn a tenth of the width. The guess sits inside it at
-           48. Everything outside the band is visible, which is the point: close
-           enough counts, and you can see how close that is. -->
+        <a class="cap" href="/football/scrambled/" aria-label="Scrambled XI home" style="background:var(--kit-03)">
+          <span class="num">3</span>
+          <!-- FOUR TILES OUT OF ORDER, and the word is the one every player knows:
+           LOAG is GOAL scrambled. A real football word rather than a name,
+           because the cards must never show a board still to come. -->
           <svg class="prev" viewBox="0 0 220 120" aria-hidden="true">
-            <text x="110" y="24" font-size="11" fill="#FFFFFFCC" text-anchor="middle"
-                  letter-spacing="1.4">45-55 EARNS POINTS</text>
-            <rect x="24" y="66" width="172" height="8" rx="4" fill="#FFFFFF33"/>
-            <rect x="101.4" y="66" width="17.2" height="8" rx="4" fill="#F2C94C"/>
-            <path d="M110.0 59 L110.0 81" stroke="#fff" stroke-width="2"/>
-            <g fill="#FFFFFFAA" font-size="11">
-              <text x="24" y="94" text-anchor="middle">0</text>
-              <text x="110.0" y="94" text-anchor="middle">50</text>
-              <text x="196" y="94" text-anchor="middle">100</text>
+            <g><rect x="26" y="38" width="38" height="44" rx="6" fill="#fff"/><text x="45" y="69" font-size="26" fill="#123B27" text-anchor="middle">L</text></g>
+            <g><rect x="70" y="38" width="38" height="44" rx="6" fill="#fff"/><text x="89" y="69" font-size="26" fill="#123B27" text-anchor="middle">O</text></g>
+            <g><rect x="114" y="38" width="38" height="44" rx="6" fill="#fff"/><text x="133" y="69" font-size="26" fill="#123B27" text-anchor="middle">A</text></g>
+            <g><rect x="158" y="38" width="38" height="44" rx="6" fill="#fff"/><text x="177" y="69" font-size="26" fill="#123B27" text-anchor="middle">G</text></g>
+          </svg>
+        </a>
+        <div class="body">
+          <h3>Scrambled XI</h3>
+          <p>Untangle eleven player names.</p>
+          <div class="acts">
+            <a class="btn" href="/football/scrambled/?play=1" aria-label="Play Scrambled XI today">Play today</a>
+            <a class="past" href="/football/scrambled/archive/" aria-label="Scrambled XI past puzzles">Past puzzles</a>
+          </div>
+        </div>
+      </article>
+      <article class="game">
+        <a class="cap" href="/football/hilo/" aria-label="HiLo XI home" style="background:var(--kit-04)">
+          <span class="num">4</span>
+          <!-- HIGHER OR LOWER, AND THE THING BEING ASKED BETWEEN THEM. Two arrows
+           pointing the two ways the call can go, with the unknown boxed in the
+           middle — the shape of the decision rather than a number. -->
+          <svg class="prev" viewBox="0 0 220 120" aria-hidden="true">
+            <g fill="#fff">
+              <path d="M44 74 L60 48 L76 74 Z"/>
+              <text x="60" y="96" font-size="12" text-anchor="middle" letter-spacing="1.5">HIGHER</text>
+              <path d="M144 48 L160 74 L176 48 Z"/>
+              <text x="160" y="96" font-size="12" text-anchor="middle" letter-spacing="1.5">LOWER</text>
             </g>
+            <rect x="94" y="38" width="32" height="44" rx="8" fill="none" stroke="#fff"
+                  stroke-width="2" stroke-dasharray="5 4"/>
+            <text x="110" y="69" font-size="26" fill="#fff" text-anchor="middle">?</text>
+          </svg>
+        </a>
+        <div class="body">
+          <h3>HiLo XI</h3>
+          <p>Eleven higher-or-lower calls.</p>
+          <div class="acts">
+            <a class="btn" href="/football/hilo/?play=1" aria-label="Play HiLo XI today">Play today</a>
+            <a class="past" href="/football/hilo/archive/" aria-label="HiLo XI past puzzles">Past puzzles</a>
+          </div>
+        </div>
+      </article>
+      <article class="game">
+        <a class="cap" href="/football/vowels/" aria-label="Vowels XI home" style="background:var(--kit-05)">
+          <span class="num">5</span>
+          <!-- A name with its vowels taken out, and the gaps waiting. -->
+          <svg class="prev" viewBox="0 0 220 120" aria-hidden="true">
             <g>
-              <path d="M100.6 56 L112.6 56 L106.6 65 Z" fill="#fff"/>
-              <text x="106.6" y="50" font-size="12" fill="#fff" text-anchor="middle">YOUR GUESS 48</text>
+              <rect x="8" y="41" width="30" height="38" rx="4" fill="#fff"/>
+              <rect x="43" y="41" width="30" height="38" rx="4" fill="#fff" fill-opacity=".22"/>
+              <rect x="78" y="41" width="30" height="38" rx="4" fill="#fff" fill-opacity=".22"/>
+              <rect x="113" y="41" width="30" height="38" rx="4" fill="#fff"/>
+              <rect x="148" y="41" width="30" height="38" rx="4" fill="#fff" fill-opacity=".22"/>
+              <rect x="183" y="41" width="30" height="38" rx="4" fill="#fff"/>
+            </g>
+            <g fill="#8E2F45" font-size="21" text-anchor="middle">
+              <text x="23" y="68">R</text>
+              <text x="128" y="68">N</text>
+              <text x="198" y="68">Y</text>
+            </g>
+            <g stroke="#fff" stroke-width="2.4" stroke-linecap="round" opacity=".85">
+              <path d="M50 70h16M85 70h16M155 70h16"/>
             </g>
           </svg>
         </a>
         <div class="body">
-          <h3>Ballpark XI</h3>
-          <p>Eleven questions with a number for an answer. Close enough counts.</p>
+          <h3>Vowels XI</h3>
+          <p>Put the missing vowels back.</p>
           <div class="acts">
-            <a class="btn" href="/football/ballpark/?play=1" aria-label="Play Ballpark XI today">Play today</a>
-            <a class="past" href="/football/ballpark/archive/" aria-label="Ballpark XI past puzzles">Past puzzles</a>
+            <a class="btn" href="/football/vowels/?play=1" aria-label="Play Vowels XI today">Play today</a>
+            <a class="past" href="/football/vowels/archive/" aria-label="Vowels XI past puzzles">Past puzzles</a>
           </div>
         </div>
       </article>
+      </div>
+
+      <div class="pitch-row"><!-- in goal -->
+      <article class="game">
+        <a class="cap" href="/football/crossword/" aria-label="Crossword XI home" style="background:var(--kit-01)">
+          <span class="num">1</span>
+          <!-- Two entries crossing on a shared letter, one of them still
+               empty: a crossword, not an icon of one. Ordinary words — never a
+               board that is still to come. -->
+          <svg class="prev" viewBox="0 0 220 120" aria-hidden="true">
+            <g>
+              <rect x="62" y="12" width="30" height="30" rx="3" fill="#fff" fill-opacity=".22"/>
+              <rect x="95" y="12" width="30" height="30" rx="3" fill="#fff"/>
+              <rect x="128" y="12" width="30" height="30" rx="3" fill="#fff" fill-opacity=".22"/>
+              <rect x="62" y="45" width="30" height="30" rx="3" fill="#fff"/>
+              <rect x="95" y="45" width="30" height="30" rx="3" fill="#fff"/>
+              <rect x="128" y="45" width="30" height="30" rx="3" fill="#fff"/>
+              <rect x="62" y="78" width="30" height="30" rx="3" fill="#fff" fill-opacity=".22"/>
+              <rect x="95" y="78" width="30" height="30" rx="3" fill="#fff"/>
+              <rect x="128" y="78" width="30" height="30" rx="3" fill="#fff" fill-opacity=".22"/>
+            </g>
+            <g fill="#123B27" font-size="21" text-anchor="middle">
+              <text x="110" y="35">T</text>
+              <text x="77" y="68">K</text>
+              <text x="110" y="68">I</text>
+              <text x="143" y="68">T</text>
+              <text x="110" y="101">P</text>
+            </g>
+          </svg>
+        </a>
+        <div class="body">
+          <h3>Crossword XI</h3>
+          <p>Eleven clues. One football crossword.</p>
+          <div class="acts">
+            <a class="btn" href="/football/crossword/?play=1" aria-label="Play Crossword XI today">Play today</a>
+            <a class="past" href="/football/crossword/archive/" aria-label="Crossword XI past puzzles">Past puzzles</a>
+          </div>
+        </div>
+      </article>
+      </div>
 
     </div>
   </section>
@@ -957,6 +1062,21 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
     return WORDS[left] || String(left);
   }
   function upper(w) { return w.charAt(0).toUpperCase() + w.slice(1); }
+
+  /* THE PITCH IS A LAYOUT; THE SHIRT IS THE FACT UNDER IT. On a phone the
+     formation collapses to two columns and the cards have to come back to
+     1..11 -- so the order is READ OFF THE NUMERAL ON THE CARD rather than
+     written a second time beside it in a style attribute. Put the number in
+     two places and the day a game changes shirt they disagree, and the one
+     that is wrong is the one nobody looks at. */
+  (function () {
+    var cards = document.querySelectorAll(".pitch .game");
+    for (var i = 0; i < cards.length; i++) {
+      var tag = cards[i].querySelector(".num, .sq");
+      var n = tag ? parseInt(tag.textContent, 10) : NaN;
+      if (n > 0) cards[i].style.setProperty("--shirt", String(n));
+    }
+  })();
   (function () {
     var n = stillToSign();
     var a = document.getElementById("toSign");
