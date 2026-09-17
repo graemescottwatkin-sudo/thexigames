@@ -721,21 +721,26 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
       <article class="game">
         <a class="cap" href="/football/whoami/" aria-label="Who Am I XI home" style="background:var(--kit-09)">
           <span class="num">9</span>
-          <!-- A PLAYER IN SILHOUETTE AND THE CAREER THAT NAMES HIM. A side profile
-           with the contours a face actually has — brow, nose, lips, chin —
-           because an account glyph says "sign in" and this game is about a
-           person. The clubs are lettered rather than named: the cards never
-           show a board still to come. -->
+          <!-- THE ARTWORK AS PROVIDED, not a redrawing of it. The first attempt at
+               this card was a hand-written SVG path and it did not look like a
+               face; the mockup carries a real silhouette and this is that file,
+               decoded out of its data: URI and served as an image.
+               A FILE RATHER THAN INLINE BASE64, because this page is
+               Cache-Control: no-store — it is fetched fresh on every visit, so
+               37KB of base64 would be 37KB every time. As a file it is fetched
+               once and revalidated.
+               An account glyph would say "sign in"; this game is about a person.
+               The clubs stay lettered: the cards never show a board still to come. -->
           <svg class="prev" viewBox="0 0 220 120" aria-hidden="true">
-            <g transform="translate(-18 12) scale(0.82)">
-              <path d="M46 116 C46 100 56 92 72 88 C78 86 80 82 80 76 C72 68 68 56 70 46 C73 30 86 20 100 21 C112 22 120 30 122 40 C123 46 123 50 124 54 C127 58 133 64 136 69 C138 72 136 74 132 74 C128 74 126 75 126 78 C126 81 128 82 127 84 C125 87 120 89 114 90 C106 92 100 96 98 102 C97 107 97 112 97 116 Z" fill="#C9D3CE"/>
-              <circle cx="112" cy="52" r="2.6" fill="#8D9A94"/>
-            </g>
-            <text x="116" y="30" font-size="10" fill="#FFFFFFCC" letter-spacing="1.3">WHOSE CAREER?</text>
+            <clipPath id="waCrop"><rect x="22" y="12" width="96" height="96" rx="10"/></clipPath>
+            <image href="/football/whoami/silhouette.png?v=1" x="22" y="12"
+                   width="96" height="96" clip-path="url(#waCrop)"
+                   preserveAspectRatio="xMidYMid slice"/>
+            <text x="130" y="32" font-size="10" fill="#FFFFFFCC" letter-spacing="1.2">WHOSE CAREER?</text>
             <g fill="#fff" font-size="11">
-              <text x="116" y="54">2008-12  Club A</text>
-              <text x="116" y="76">2012-17  Club B</text>
-              <text x="116" y="98">2017-?  Club C</text>
+              <text x="130" y="56">2008-12  Club A</text>
+              <text x="130" y="78">2012-17  Club B</text>
+              <text x="130" y="100">2017-?  Club C</text>
             </g>
           </svg>
         </a>
