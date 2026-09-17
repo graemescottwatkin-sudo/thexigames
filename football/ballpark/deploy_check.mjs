@@ -262,14 +262,40 @@ console.log("\nAnd it IS launched, which every one of these makes true");
      worth catching is two of them collapsing onto one address, which is
      what the card did before 17 Sep 2026: the picture was inert and the
      button went to the home page, so there was no route to the board. */
+  /* THE THREE DESTINATIONS, READ OFF THE CARD ITSELF. This asked for
+     `<a class="cap" href=...>` and a literal aria-label until 17 Sep 2026,
+     which pinned a CONTRACT to two pieces of cosmetics: the homepage was
+     rebuilt to an approved editorial design, the three destinations all
+     survived intact, and this went red for a class name.
+     Worse, the old form never checked the three were on the SAME CARD — three
+     matches anywhere in a 60KB file satisfied it, so a card that had lost its
+     play link passed as long as some other card had one. The card is located
+     by its data-game, which is the game's id and the one fact that cannot be
+     restyled, and the three hrefs are demanded INSIDE it. */
+  const cardBallpark = (() => {
+    const at = hub.indexOf('data-game="ballpark"');
+    if (at < 0) return "";
+    const start = hub.lastIndexOf("<article", at);
+    const end = hub.indexOf("</article>", at);
+    return start < 0 || end < 0 ? "" : hub.slice(start, end);
+  })();
+  t("the hub carries a card for it, found by its id",
+    cardBallpark.length > 0, cardBallpark.length + " chars");
+  /* THE PICTURE, AND NOT MERELY A LINK TO THE HOME PAGE. Written as
+     `card.includes('href="/football/ballpark/"')` first, which the TITLE link
+     satisfies just as well — so replacing the picture with a dead span left
+     this green under a name that says "picture". Proven by sabotage on
+     17 Sep 2026. It now demands an anchor to the home that WRAPS THE IMAGE. */
   t("and gives it a card whose picture opens its home",
-    new RegExp('<a class="cap" href="/football/ballpark/"').test(hub));
+    /<a[^>]+href="\/football\/ballpark\/"[^>]*>\s*<img/.test(cardBallpark));
   t("and a Play today that goes to the board, not back to the home page",
-    hub.includes('href="/football/ballpark/?play=1" aria-label="Play Ballpark XI today"'),
+    cardBallpark.includes('href="/football/ballpark/?play=1"'),
     "a plain compare, not a pattern: the ? in ?play=1 is a regex quantifier and "
     + "was silently eaten writing this check, which then passed on the wrong thing");
+  t("and the play link names the game, for a screen reader",
+    /Play[\s\S]{0,120}Ballpark\s*XI/.test(cardBallpark) || cardBallpark.includes('aria-label="Play Ballpark XI today"'));
   t("and an archive to open",
-    new RegExp('href="/football/ballpark/archive/"').test(hub));
+    cardBallpark.includes('href="/football/ballpark/archive/"'));
   t("and a row in the hub's table, so the front door knows it was played today",
     /id: "ballpark"[\s\S]*?key: "xibp\.results"/.test(hub));
   t("it is in the sitemap, offered to a crawler", /football\/ballpark\//.test(sitemap));

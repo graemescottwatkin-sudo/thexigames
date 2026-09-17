@@ -300,14 +300,40 @@ console.log("\nAnd it IS launched, which every one of these makes true");
      worth catching is two of them collapsing onto one address, which is
      what the card did before 17 Sep 2026: the picture was inert and the
      button went to the home page, so there was no route to the board. */
+  /* THE THREE DESTINATIONS, READ OFF THE CARD ITSELF. This asked for
+     `<a class="cap" href=...>` and a literal aria-label until 17 Sep 2026,
+     which pinned a CONTRACT to two pieces of cosmetics: the homepage was
+     rebuilt to an approved editorial design, the three destinations all
+     survived intact, and this went red for a class name.
+     Worse, the old form never checked the three were on the SAME CARD — three
+     matches anywhere in a 60KB file satisfied it, so a card that had lost its
+     play link passed as long as some other card had one. The card is located
+     by its data-game, which is the game's id and the one fact that cannot be
+     restyled, and the three hrefs are demanded INSIDE it. */
+  const cardWhoami = (() => {
+    const at = hub.indexOf('data-game="whoami"');
+    if (at < 0) return "";
+    const start = hub.lastIndexOf("<article", at);
+    const end = hub.indexOf("</article>", at);
+    return start < 0 || end < 0 ? "" : hub.slice(start, end);
+  })();
+  t("the hub carries a card for it, found by its id",
+    cardWhoami.length > 0, cardWhoami.length + " chars");
+  /* THE PICTURE, AND NOT MERELY A LINK TO THE HOME PAGE. Written as
+     `card.includes('href="/football/whoami/"')` first, which the TITLE link
+     satisfies just as well — so replacing the picture with a dead span left
+     this green under a name that says "picture". Proven by sabotage on
+     17 Sep 2026. It now demands an anchor to the home that WRAPS THE IMAGE. */
   t("and gives it a card whose picture opens its home",
-    new RegExp('<a class="cap" href="/football/whoami/"').test(hub));
+    /<a[^>]+href="\/football\/whoami\/"[^>]*>\s*<img/.test(cardWhoami));
   t("and a Play today that goes to the board, not back to the home page",
-    hub.includes('href="/football/whoami/?play=1" aria-label="Play Who Am I XI today"'),
+    cardWhoami.includes('href="/football/whoami/?play=1"'),
     "a plain compare, not a pattern: the ? in ?play=1 is a regex quantifier and "
     + "was silently eaten writing this check, which then passed on the wrong thing");
+  t("and the play link names the game, for a screen reader",
+    /Play[\s\S]{0,120}Who\s*Am\s*I\s*XI/.test(cardWhoami) || cardWhoami.includes('aria-label="Play Who Am I XI today"'));
   t("and an archive to open",
-    new RegExp('href="/football/whoami/archive/"').test(hub));
+    cardWhoami.includes('href="/football/whoami/archive/"'));
   t("and a row in the hub's table, so the front door knows it was played today",
     /id: "whoami"[\s\S]*key: "xiwa\.results\.v1"/.test(hub));
 

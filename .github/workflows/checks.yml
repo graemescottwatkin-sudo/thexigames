@@ -134,6 +134,26 @@ jobs:
       - name: The live table says the same thing it always did
         run: node tools/table_test.mjs
 
+      # THE FRONT DOOR'S DAILY FEATURE. Two of the ten games are featured and
+      # which two is a property of the BOARD DAY — so everybody gets the same
+      # pair, which is what the line under the heading promises. Two ways for
+      # that to be quietly wrong and neither shows on the page: a game featured
+      # AND listed among the compact eight appears twice while another vanishes,
+      # and a pair derived from the DEVICE clock passes every check run in
+      # Britain while a player in Auckland sees tomorrow's. This site has
+      # shipped the second fault before, on this same page, in September 2026.
+      #
+      # It runs the REAL page in jsdom with /api/daily stubbed to a chosen day
+      # and reads the DOM that comes out, rather than re-implementing the rule —
+      # a test that re-implements what it checks agrees with itself and proves
+      # nothing. Five sabotages were each watched to fail before it was trusted,
+      # and two of its checks were VACUOUS on the first draft: counting two
+      # featured cards passed with the epoch guard deleted (the wrong two were
+      # featured) and with the ordering deleted (they were featured but not
+      # first). Both now name the pair rather than count it.
+      - name: The front door features the same two games for everybody
+        run: node tools/lineup_test.mjs
+
       # ONE SEASON, AT THE TOP LEVEL, and three suites because it has three
       # parts that can drift apart: the rule, the account's rows, and the
       # device's own record. The last one runs the real shared/xi-plays.js
