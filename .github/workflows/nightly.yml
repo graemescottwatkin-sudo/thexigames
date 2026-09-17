@@ -48,3 +48,25 @@ jobs:
           PREFLIGHT_SECRET: ${{ secrets.PREFLIGHT_SECRET }}
           DAYS: ${{ github.event.inputs.days || '14' }}
         run: node tools/preflight_live.mjs
+
+      # IS EVERY GAME LIVE ON THE TAG ITS GATE RECORDS?
+      #
+      # post_deploy is step 6 of the deploy sequence and it is a write somebody
+      # has to remember. Nothing made forgetting VISIBLE, so on 17 Sep 2026
+      # three pushes went out without it, LAST_SHIPPED went ten hours stale, and
+      # the gate — which compares changed bytes against LAST_SHIPPED — read a
+      # second, different build under an already-shipped tag as a legitimate
+      # bump. A broken script reached players under a URL marked immutable for a
+      # year, while the live_check passed because BUILD read the same in both.
+      #
+      # Here rather than in checks.yml deliberately: on a push, CI and the Pages
+      # deploy race, so "live" is sometimes the old tag and sometimes the new
+      # one and the check would have to tolerate both — which tolerates the
+      # exact state being hunted. Hours after a deploy there is no race and the
+      # resting state is exact.
+      #
+      # `if: always()` so a red preflight above does not hide this: two
+      # independent questions, two answers.
+      - name: Every game is live on the tag its gate records
+        if: always()
+        run: node tools/shipped_check.mjs
