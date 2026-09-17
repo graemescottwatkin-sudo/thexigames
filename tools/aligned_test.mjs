@@ -374,10 +374,81 @@ t("every released game is on the chrome's squad list, at its own path",
     missing.length
       ? missing.map((g) => `${g.id} (${g.prefix}.)`).join(", ") + " would survive Clear everything"
       : swept.join(" "));
-  const stray = swept.filter((p) => !GAMES.some((g) => g.prefix + "." === p));
-  t("and sweeps nothing that is not a game's",
+
+  /* AND EVERY FAMILY-LEVEL KEY IS CLASSIFIED, which is the half the check
+     above could not see. It asks "is every GAME's prefix swept" and the answer
+     was yes on 17 September 2026 while the season survived a reset, because
+     xi.season.v1 is not a game: no row in GAMES, no prefix in that table, and
+     therefore invisible to a check that iterates GAMES. The third recurrence
+     of "Clear everything doesn't", arriving through the one door the guard
+     written after the second recurrence was not watching.
+
+     So this iterates the KEYS rather than the games. Every "xi.*" literal in
+     shared/ must be either SWEPT or explicitly KEPT, and a key that is neither
+     fails here — which forces the question "is this a record or a preference"
+     to be answered when the key is added rather than when a player notices.
+     The answer is written as a line in RECORD_KEEP, so each keep reads as a
+     decision rather than a gap.
+
+     It iterates the population rather than filtering it, so `unclassified` can
+     hold a name and the check can represent what it forbids.
+
+     WHICH OF THE TWO ACTUALLY HOLDS THE LINE, because their names do not say
+     so. While "xi." is in RECORD_PREFIXES a NEW family key is swept by that
+     prefix, so `unclassified` cannot be non-empty and this check is a backstop
+     rather than a live guard — proven, by adding an unclassified xi. key and
+     watching it stay green. The assertion that bites is the one below it, that
+     "xi." is swept at all; this one only speaks once somebody narrows the
+     sweep, which is precisely how the season was lost. Both are needed and
+     neither is the whole rule.
+
+     ITS REACH IS THE "xi." SPELLING. A family-level key under some other
+     prefix — xifam., say — is in no population here at any size, and no
+     sabotage in either direction reaches it. Annotated rather than attempted:
+     a patch for it would be a guess wearing an assertion's clothes. */
+  const keepDecl = /var RECORD_KEEP = \[([\s\S]*?)\];/.exec(chrome);
+  const kept = keepDecl ? (keepDecl[1].match(/"([^"]+)"/g) || []).map((x) => x.slice(1, -1)) : [];
+  t("the chrome's keep list can be found and read", !!keepDecl && kept.length > 0,
+    keepDecl ? kept.length + " kept by name" : "RECORD_KEEP not found in xi-chrome.js");
+  /* THE LIST IS THE DIRECTORY, not a list here — the rule the deploy sequence
+     follows, so a family-level key added in a NEW shared file is covered by
+     existing rather than by somebody remembering to extend an array. */
+  const sharedJs = fs.readdirSync("shared")
+    .filter((f) => f.endsWith(".js")).sort();
+  const familyKeys = [...new Set(
+    sharedJs.flatMap((f) => (read(`shared/${f}`).match(/"xi\.[A-Za-z0-9._-]+"/g) || []))
+  )].map((x) => x.slice(1, -1)).sort();
+  /* A FLOOR, because everything below is "every k is classified" and every()
+     over an empty list is true. If the walk finds no keys — shared/ moved, the
+     quoting style changed — this block would go green having read nothing. */
+  t("the family-level keys can be found and read",
+    sharedJs.length >= 4 && familyKeys.length >= 4,
+    `${familyKeys.length} key(s) across ${sharedJs.length} shared file(s): ${familyKeys.join(" ")}`);
+  const unclassified = familyKeys.filter((k) =>
+    kept.indexOf(k) === -1 && !swept.some((p) => k.indexOf(p) === 0));
+  t("and every one is either swept by a reset or deliberately kept",
+    unclassified.length === 0,
+    unclassified.length
+      ? unclassified.join(", ") + " is neither cleared nor kept — classify it"
+      : familyKeys.length + " keys classified");
+  /* A GAME'S PREFIX, OR THE FAMILY'S. "xi." is swept deliberately, so that a
+     family-level RECORD — the season was one — cannot survive a reset by not
+     being a game. It is the one prefix here that sweeps keys this table knows
+     nothing about, which is exactly why the classification check above it
+     exists: everything under xi. is cleared unless RECORD_KEEP names it, and
+     an unnamed new key fails there. The two checks are halves of one rule and
+     neither is safe alone — this one alone would have refused the fix, and
+     that one alone would let a stray game prefix through. */
+  const FAMILY = "xi.";
+  const stray = swept.filter((p) =>
+    p !== FAMILY && !GAMES.some((g) => g.prefix + "." === p));
+  t("and sweeps nothing but the games' prefixes and the family's",
     stray.length === 0,
-    stray.length ? stray.join(", ") + " — a prefix no game in this table writes" : "");
+    stray.length ? stray.join(", ") + " — a prefix no game in this table writes"
+      : swept.length + " prefixes, all accounted for");
+  t("and the family prefix is swept, so a family-level record cannot outlive a reset",
+    swept.indexOf(FAMILY) !== -1,
+    "xi.season.v1 survived Clear everything until 17 Sep 2026 for want of this");
 }
 /* THE SITEMAP IS GENERATED NOW, so this reads the generator rather than a
    file. The file it replaced held thirteen URLs and not one board, months
@@ -835,8 +906,8 @@ t("no game carries a private copy of a shared file",
 
    Move both constants together, in the post-deploy commit, exactly as a game's
    LAST_SHIPPED and LAST_SHIPPED_ASSETS move together. */
-const SHARED_TAG = "v44";
-const SHARED_HASH = "cfc998a58f0f6eea";
+const SHARED_TAG = "v45";
+const SHARED_HASH = "d85bc153c2dcaea8";
 /* EVERY PAGE THAT LINKS THE SHARED LAYER, not the games alone. The hub, the
    two static pages and the unlaunched game all carry the chrome now, and the
    server-rendered shell writes the tag from a constant of its own — so a tag
@@ -1101,6 +1172,54 @@ console.log("\nThe landing shell is defined once");
 
   t("every game loads it", GAMES.every((g) =>
     read(`${g.dir}/index.html`).indexOf("shared/xi-landing.css") > -1));
+}
+
+/* ---- and every game asks for the family's face ---- */
+/* SETTING --body IS NOT THE SAME AS USING IT. xi-tokens.css defines --body and
+   every game loads it, and four games still rendered in Times New Roman on the
+   live site on 17 September 2026 — hilo, grid, whoami and ballpark — because
+   their stylesheets said `body{margin:0}` and nothing more. Headings named
+   var(--disp) and came out in Barlow Condensed; everything else inherited the
+   USER AGENT's serif. Half condensed sans, half Times, on four of ten pages.
+
+   NOTHING COULD HAVE CAUGHT IT. There was no failure to find: the fonts load,
+   and every fallback chain in the tokens ends in sans-serif, so a check that
+   the token is defined, or that the font link is present, passes on all ten.
+   The only question that separates the four is whether the game's own
+   stylesheet ASKS, and nothing was asking it.
+
+   Deliberately loose about HOW. `body{...font-family:var(--body)}`,
+   `html, body {...}` and the shorthand `font:15px/1.45 var(--body)` are all in
+   use across the ten and all correct; demanding one spelling would fail three
+   games for being themselves. What it demands is that a rule whose selector
+   includes body sets a font from --body.
+
+   SCOPE, because the name is broader than the behaviour: the population is
+   GAMES, this suite's table, NOT the football/ directory. A directory with a
+   stylesheet and no GAMES row is invisible here — proven, by creating one and
+   watching this stay green — and that is correct rather than a hole, because a
+   game with no row fails the integration checks above long before it reaches
+   this one. The row is the thing a new game cannot skip.
+
+   It ITERATES the population rather than filtering it, which is why the
+   violating-member case is reachable by taking the font off a game that has
+   one: `serif` can hold a name, so the check can represent what it forbids.
+   A version that collected only the compliant games would have counted its own
+   successes and no sabotage in either direction would have moved it. */
+{
+  console.log("\nEvery game asks for the family's face, not the browser's");
+  const serif = [];
+  for (const g of GAMES) {
+    const css = read(`${g.dir}/css/style.css`).replace(/\/\*[\s\S]*?\*\//g, "");
+    /* Every rule whose selector names body, then whether any sets a font from
+       the token. A game may spell it html,body or body alone. */
+    const asks = [...css.matchAll(/(^|\})([^{}]*\bbody\b[^{}]*)\{([^}]*)\}/g)]
+      .some((m) => /font(-family)?\s*:[^;]*var\(--body\)/.test(m[3]));
+    if (!asks) serif.push(g.name);
+  }
+  t("every game's stylesheet sets a body font from --body", serif.length === 0,
+    serif.length ? serif.join(", ") + " inherit the browser's serif"
+      : GAMES.length + " games");
 }
 
 /* ---- games consume tokens; they never define them ---- */

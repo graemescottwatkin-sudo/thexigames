@@ -257,9 +257,30 @@ export async function onRequest({ request, env, params }) {
     return json({ ownerPlays, ownerFinished, days, hours });
   }
 
-  /* ---- Clear my own record ---- */
+  /* ---- Clear my own record ----
+
+     TWO TABLES, BECAUSE THE SEASON IS NOT A RESULT. This deleted from results
+     and nothing else, so a signed-in player who asked for a clean slate kept
+     their whole season: /api/season reads season_play, which migration 032
+     created as a separate table and which NOTHING in this repository has ever
+     deleted from. Reported 17 Sep 2026 — "i still see my season stats on the
+     home page" — and the strip was right, the button was wrong.
+
+     The local half of the same fault is in shared/xi-chrome.js: xi.season.v1
+     is a FAMILY-level key and the sweep held only game prefixes. Both halves
+     had to move or the season would simply come back from whichever side was
+     still holding it.
+
+     IRREVERSIBLE, AND IT REACHES EVERY DEVICE the account is signed in on.
+     That is what the button says it does and it is the owner's decision of
+     17 Sep 2026, taken with that consequence stated. Batched so a half-cleared
+     record is not a state anybody can end up in — results gone and a season
+     still standing is exactly the bug being fixed. */
   if (route === "reset-my-record" && request.method === "POST") {
-    await env.DB.prepare("DELETE FROM results WHERE user_id = ?").bind(me.id).run();
+    await env.DB.batch([
+      env.DB.prepare("DELETE FROM results WHERE user_id = ?").bind(me.id),
+      env.DB.prepare("DELETE FROM season_play WHERE user_id = ?").bind(me.id),
+    ]);
     return json({ ok: true, cleared: true });
   }
 

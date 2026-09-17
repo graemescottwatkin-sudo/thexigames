@@ -992,13 +992,36 @@
      table a new game must be added to anyway for its integration to pass. The
      list still lives here, because a browser file cannot import one; what is
      new is that leaving a game out of it now fails a suite. */
+  /* AND A THIRD TIME, from a direction the guard could not see. The sweep held
+     ten GAME prefixes and the aligned_test check added last time asserts it
+     holds every prefix in the GAMES table — so a missing GAME is now caught.
+     The season is not a game. It lives at xi.season.v1, a FAMILY-level key,
+     has no row in GAMES, and was therefore invisible to both the sweep and the
+     check written to protect the sweep. Reported 17 Sep 2026: "if i click clear
+     all on the admin panel i still see my season stats on the home page".
+
+     SO THE FAMILY PREFIX IS SWEPT TOO, and the polarity is inverted with it.
+     Before, a key was kept unless it was listed for clearing, so anything new
+     survived a reset in silence. Now everything under xi. is CLEARED unless it
+     is named in RECORD_KEEP — so the next family-level record is cleared by
+     existing, and the next family-level PREFERENCE fails a suite until somebody
+     classifies it. A list that forgets should forget in the safe direction. */
   var RECORD_PREFIXES = ["fcw.", "xiws.", "xisc.", "xihl.", "xivw.",
-                         "xigd.", "qfx.", "xicw.", "xiwa.", "xibp."];
+                         "xigd.", "qfx.", "xicw.", "xiwa.", "xibp.", "xi."];
   var RECORD_KEEP = [
     /* Identity. Wiping this would cut the player off from results already
        synced to their account, which clearing local history has no business
        doing. */
     "xi.deviceCode", "fcw.deviceCode",
+    /* THE ENTRANT KEY IS IDENTITY, not a record. It names a PERSON in a
+       challenge table, and xi-challenge.js says why a new one is worse than
+       none: re-keying silently gives somebody a second entry in a table they
+       are already in. Adopted from fcw.entrant for exactly that reason. */
+    "xi.entrant", "fcw.entrant",
+    /* Campaign attribution, which the player never chose and clearing would
+       only corrupt reporting for. A reset clears what you have DONE; how you
+       arrived is neither that nor a preference. */
+    "xi.attr", "fcw.attr",
     /* Who you play as, family-wide and per game. */
     "xi.club", "fcw.clubPref",
     /* How it looks and plays. */

@@ -5,7 +5,7 @@
      it is yesterday's code. aligned_test asserts the two agree, and until
      this game launched it had no BUILD at all — three of its assets were on
      three different tags, which is the same fault with nobody checking. */
-  var BUILD = "v001h";
+  var BUILD = "v001i";
   if (window.XIPlays && document.documentElement) {
     document.documentElement.setAttribute("data-build", BUILD);
   }

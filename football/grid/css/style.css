@@ -34,7 +34,18 @@
    a gutter the other five do not have; aligned_test asks all six the same
    question. The rest of the shell — the bar, the footer, .sr-only — is the
    shared layer's and is not restated here. */
-body{margin:0}
+/* THE FAMILY'S FACE, SAID OUT LOUD. This was `body{margin:0}` and nothing
+   else, so every element that did not name a font inherited the USER AGENT's
+   default — Times New Roman — while the headings, which do name var(--disp),
+   came out in Barlow Condensed. The page read half condensed sans and half
+   serif and nothing in the tree said why: the fonts load here, and every
+   fallback chain in xi-tokens.css ends in sans-serif, so there was no failure
+   to find. The cascade simply never asked.
+   Measured on the live site 17 Sep 2026: getComputedStyle(document.body)
+   returned "Times New Roman" for hilo, grid, whoami and ballpark, and
+   "Public Sans" for the other six. aligned_test now refuses a game whose
+   stylesheet does not set it, so the eleventh cannot arrive in serif. */
+body{margin:0;font-family:var(--body)}
 .gd-wrap{max-width:760px; margin:0 auto; padding:14px 12px 40px}
 
 .gd-kicker{font-family:var(--disp); font-size:13px; letter-spacing:.14em;
