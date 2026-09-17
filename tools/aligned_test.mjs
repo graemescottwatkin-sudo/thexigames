@@ -341,6 +341,44 @@ const chrome = read("shared/xi-chrome.js");
 t("every released game is on the chrome's squad list, at its own path",
   GAMES.every((g) => chrome.indexOf(`href: "/${g.dir}/"`) > -1 &&
                      chrome.indexOf(`"${g.name}"`) > -1));
+
+/* "CLEAR EVERYTHING" MUST REACH EVERY GAME, AND TWICE IT HAS NOT.
+ *
+ * The sweep lives in the chrome because it is the one operation that has to
+ * cross every game's prefix, and it is a hand-written array — so it goes stale
+ * at a launch, silently, and the player who finds out is the one who asked for
+ * a clean slate and kept half their history.
+ *
+ * It happened once with four games and was widened. It had happened again by
+ * 17 Sep 2026: five launches later the array still named five prefixes of ten,
+ * so Vowels, Grid, Codeword, Who Am I and Ballpark survived a reset and the
+ * hub went on lighting their shirts.
+ *
+ * The array cannot be derived — a browser file imports nothing — so the CHECK
+ * is what moves: this table is the one a new game must join for its
+ * integration to pass at all, and now the sweep is held against it. A game
+ * added here and not there fails before it ships. */
+{
+  const decl = /var RECORD_PREFIXES = \[([^\]]*)\]/.exec(chrome);
+  const swept = decl ? (decl[1].match(/"([^"]+)"/g) || []).map((s) => s.slice(1, -1)) : [];
+  /* THE FLOOR FIRST. Both assertions below are "every x is in y", and every()
+     over an empty list is true — so a rename of the constant would turn this
+     whole block green rather than red, which is the fault it exists to catch
+     wearing a different hat. */
+  t("the chrome's record sweep can be found and read",
+    !!decl && swept.length >= GAMES.length,
+    decl ? `${swept.length} prefix(es) for ${GAMES.length} games` : "RECORD_PREFIXES not found in xi-chrome.js");
+  const missing = GAMES.filter((g) => swept.indexOf(g.prefix + ".") === -1);
+  t("and it sweeps every game's prefix, so a reset clears all of them",
+    missing.length === 0,
+    missing.length
+      ? missing.map((g) => `${g.id} (${g.prefix}.)`).join(", ") + " would survive Clear everything"
+      : swept.join(" "));
+  const stray = swept.filter((p) => !GAMES.some((g) => g.prefix + "." === p));
+  t("and sweeps nothing that is not a game's",
+    stray.length === 0,
+    stray.length ? stray.join(", ") + " — a prefix no game in this table writes" : "");
+}
 /* THE SITEMAP IS GENERATED NOW, so this reads the generator rather than a
    file. The file it replaced held thirteen URLs and not one board, months
    after the permalinks shipped — a hand-kept list of pages that appear daily
@@ -797,8 +835,8 @@ t("no game carries a private copy of a shared file",
 
    Move both constants together, in the post-deploy commit, exactly as a game's
    LAST_SHIPPED and LAST_SHIPPED_ASSETS move together. */
-const SHARED_TAG = "v42";
-const SHARED_HASH = "2eaf3fc770c25146";
+const SHARED_TAG = "v43";
+const SHARED_HASH = "4292e8d8bf5277cd";
 /* EVERY PAGE THAT LINKS THE SHARED LAYER, not the games alone. The hub, the
    two static pages and the unlaunched game all carry the chrome now, and the
    server-rendered shell writes the tag from a constant of its own — so a tag

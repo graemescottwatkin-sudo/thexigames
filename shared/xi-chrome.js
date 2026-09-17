@@ -933,7 +933,22 @@
      stay. The keeps are listed by name so each one reads as a decision rather
      than a gap, which is how the crossword's own list was written and the one
      part of it worth carrying over. */
-  var RECORD_PREFIXES = ["fcw.", "xiws.", "xisc.", "xihl.", "qfx."];
+  /* AND IT HAPPENED AGAIN, to this very list. The comment above records the
+     crossword-only sweep being widened to four games; five more games have
+     launched since and none of them was added. Measured 17 Sep 2026: Vowels
+     (xivw.), Grid (xigd.), Codeword (xicw.), Who Am I (xiwa.) and Ballpark
+     (xibp.) all write records and none was swept, so "Clear everything"
+     cleared five games of ten and the hub went on lighting the other five.
+     A player who asked for a clean slate got half of one, again, and again
+     with no warning that the rest had survived.
+     A HAND-WRITTEN LIST OF GAMES IS A LIST THAT GOES STALE AT THE NEXT LAUNCH
+     — twice now — so the check moved rather than the habit: tools/aligned_test
+     asserts this array holds every prefix in its GAMES table, which is the
+     table a new game must be added to anyway for its integration to pass. The
+     list still lives here, because a browser file cannot import one; what is
+     new is that leaving a game out of it now fails a suite. */
+  var RECORD_PREFIXES = ["fcw.", "xiws.", "xisc.", "xihl.", "xivw.",
+                         "xigd.", "qfx.", "xicw.", "xiwa.", "xibp."];
   var RECORD_KEEP = [
     /* Identity. Wiping this would cut the player off from results already
        synced to their account, which clearing local history has no business
