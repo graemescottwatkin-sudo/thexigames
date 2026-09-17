@@ -276,3 +276,176 @@ body{margin:0;font-family:var(--body)}
 .how-steps li{margin:0 0 7px}
 .how-steps li:last-child{margin-bottom:0}
 .how-steps b{color:var(--ink);font-weight:600}
+
+/* ================= THE APPROVED DESIGN =================
+   Graeme approved an editorial direction for this game on 17 Sep 2026: warm
+   paper, deep green, a muted green-grey portrait panel, white-paper cards and
+   restrained gold. The palette is declared here rather than in the shared
+   tokens, because the family's tokens paint ten games and this is one game's
+   look. Everything structural still comes from --body/--disp. */
+.wa-ed{
+  --wa-paper:#F3F0E7; --wa-ink:#153E2D; --wa-soft:#637066;
+  --wa-card:#FFFDF7; --wa-line:#DCDFD2; --wa-gold:#8B691B;
+  --wa-face:#CFD7CF;
+}
+:root[data-theme="dark"] .wa-ed{
+  --wa-paper:#18221E; --wa-ink:#EDF2E9; --wa-soft:#B8C4B9;
+  --wa-card:#222B25; --wa-line:#384B3F; --wa-gold:#E4C865;
+  --wa-face:#42514A;
+}
+.wa-ed .eyebrow{font-family:var(--disp);font-weight:600;font-size:12px;
+  letter-spacing:.2em;text-transform:uppercase;color:var(--wa-soft);margin:0 0 6px}
+.wa-ed .waTitle{font-family:var(--disp);font-weight:700;
+  font-size:clamp(26px,4.4vw,38px);line-height:1.02;color:var(--wa-ink);margin:0 0 8px}
+.wa-ed .waSub{font-family:var(--disp);font-weight:700;font-size:23px;
+  color:var(--wa-ink);margin:0}
+.wa-ed .lede{color:var(--wa-soft);font-size:15px;margin:0 0 16px;max-width:60ch}
+/* The rule, set apart with a gold edge because it governs every card below. */
+.wa-ed .mechanism{margin:0 0 22px;padding:12px 16px;font-size:14px;
+  color:var(--wa-ink);background:rgba(21,62,45,.05);
+  border-left:3px solid var(--wa-gold);line-height:1.5}
+:root[data-theme="dark"] .wa-ed .mechanism{background:rgba(255,255,255,.05)}
+.wa-ed .chooseHead,.wa-ed .cluesHead{display:flex;align-items:baseline;
+  justify-content:space-between;gap:12px;margin:0 0 10px}
+.wa-ed .ch-label,.wa-ed .ch-hint{font-family:var(--disp);font-size:12px;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--wa-soft)}
+
+/* ---- the eleven cards ---- */
+.wa-ed .doors{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.wa-ed .door{display:flex;flex-direction:column;align-items:flex-start;gap:2px;
+  min-height:104px;padding:14px 16px 12px;text-align:left;cursor:pointer;
+  background:var(--wa-card);border:1px solid var(--wa-line);border-radius:6px;
+  color:var(--wa-ink);font-family:var(--body);
+  transition:border-color .12s ease,background .12s ease,transform .12s ease}
+.wa-ed .door:hover:not([disabled]){border-color:var(--wa-soft);transform:translateY(-1px)}
+.wa-ed .door .d-club{font-family:var(--disp);font-weight:700;font-size:17px;line-height:1.1}
+.wa-ed .door .d-year{font-family:var(--disp);font-weight:700;font-size:31px;
+  line-height:1;color:var(--wa-ink);margin:4px 0 2px}
+.wa-ed .door .d-cap{font-family:var(--disp);font-size:10.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--wa-soft)}
+/* THE CHOSEN ONE, and it must not rely on colour alone. */
+.wa-ed .door.on{background:var(--wa-ink);border-color:var(--wa-ink);color:#F6F3EA}
+.wa-ed .door.on .d-year,.wa-ed .door.on .d-cap{color:#F6F3EA}
+.wa-ed .door.on::after{content:"\2713";position:absolute;right:14px;bottom:12px;
+  font-size:17px;font-weight:700}
+.wa-ed .door{position:relative}
+.wa-ed .door:focus-visible{outline:3px solid var(--wa-gold);outline-offset:2px}
+.wa-ed .door[disabled]{opacity:.5;cursor:default}
+.wa-ed .door.mine{opacity:1;border-color:var(--wa-gold)}
+.wa-ed .door .d-mine{font-family:var(--disp);font-size:10.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--wa-gold);margin-top:4px}
+
+/* ---- committing ---- */
+.wa-ed .commit{display:flex;align-items:center;justify-content:space-between;
+  gap:18px;flex-wrap:wrap;margin:22px 0 0;padding:18px 0 0;
+  border-top:1px solid var(--wa-line)}
+.wa-ed .cm-label{display:block;font-family:var(--disp);font-size:11px;
+  letter-spacing:.18em;text-transform:uppercase;color:var(--wa-soft)}
+.wa-ed .cm-pick{display:block;font-family:var(--disp);font-weight:700;
+  font-size:21px;color:var(--wa-ink);margin:3px 0 2px;min-height:24px}
+.wa-ed .cm-note{display:block;font-size:13px;color:var(--wa-soft)}
+.wa-ed .commit .kick{min-height:52px;padding:14px 26px}
+.wa-ed .kick[disabled]{opacity:.45;cursor:default}
+
+/* ---- the player ---- */
+.wa-ed .playHead{display:flex;align-items:flex-start;justify-content:space-between;
+  gap:20px;flex-wrap:wrap;margin:0 0 14px}
+.wa-ed .matchHead{display:flex;gap:26px;align-items:flex-start}
+.wa-ed .mh-one{display:flex;flex-direction:column;gap:3px}
+.wa-ed .mh-one .label{font-family:var(--disp);font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--wa-soft)}
+.wa-ed .matchHead .clock,.wa-ed .matchHead .worthVal{font-family:var(--disp);
+  font-weight:700;font-size:30px;line-height:1;color:var(--wa-ink)}
+.wa-ed .matchHead .of{font-size:12px;color:var(--wa-soft);margin-left:5px}
+.wa-ed .profile{display:grid;grid-template-columns:200px minmax(0,1fr);
+  background:var(--wa-card);border:1px solid var(--wa-line);border-radius:6px;
+  overflow:hidden;margin:0 0 20px}
+.wa-ed .pf-face{position:relative;background:var(--wa-face);display:flex;
+  align-items:flex-end;justify-content:center}
+.wa-ed .pf-face img{display:block;width:100%;height:100%;object-fit:cover;
+  object-position:50% 12%}
+.wa-ed .pf-q{position:absolute;top:14px;right:14px;width:38px;height:38px;
+  border-radius:50%;background:#F2CE55;color:#1D3F2C;display:flex;
+  align-items:center;justify-content:center;font-family:var(--disp);
+  font-weight:700;font-size:21px}
+.wa-ed .pf-cap{position:absolute;left:0;right:0;bottom:0;padding:9px 12px;
+  background:var(--wa-ink);color:#F6F3EA;font-family:var(--disp);font-size:16px;
+  line-height:1.1;text-transform:uppercase}
+.wa-ed .pf-cap b{display:block;font-size:10.5px;letter-spacing:.16em;
+  color:#C8DCCF;font-weight:600;margin-bottom:2px}
+.wa-ed .pf-facts{padding:20px 22px;display:flex;flex-direction:column;min-width:0}
+.wa-ed .pf-kicker{font-family:var(--disp);font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--wa-soft)}
+.wa-ed .pf-pre{font-size:14px;color:var(--wa-soft);margin:12px 0 2px}
+.wa-ed .pf-club{font-family:var(--disp);font-weight:700;
+  font-size:clamp(24px,3.4vw,32px);line-height:1.05;color:var(--wa-ink)}
+.wa-ed .pf-years{font-family:var(--disp);font-weight:700;font-size:21px;
+  color:var(--wa-gold);margin:4px 0 0}
+.wa-ed .pf-years i{font-style:normal;margin:0 9px;color:var(--wa-soft)}
+.wa-ed .pf-nums{display:flex;gap:34px;margin:16px 0 0;padding:14px 0 0;
+  border-top:1px solid var(--wa-line)}
+.wa-ed .pf-num{display:flex;flex-direction:column;gap:2px;
+  font-family:var(--disp);font-size:10.5px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--wa-soft)}
+.wa-ed .pf-num b{font-size:31px;line-height:1;color:var(--wa-ink)}
+.wa-ed .guessAsk{font-family:var(--disp);font-weight:700;font-size:19px;
+  color:var(--wa-ink);margin:0 0 8px}
+.wa-ed .cluesHead{margin:26px 0 12px}
+
+/* ---- the two hint cards ---- */
+.wa-ed .ladder{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px}
+.wa-ed .clues{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;
+  margin:16px 0 0}
+.wa-ed .rung,.wa-ed .clue{background:var(--wa-card);border:1px solid var(--wa-line);
+  border-radius:6px;padding:16px 18px;text-align:left;color:var(--wa-ink)}
+.wa-ed .rung{display:flex;flex-direction:column;align-items:flex-start;gap:4px;
+  cursor:pointer;font-family:var(--body);min-height:96px;
+  transition:border-color .12s ease,transform .12s ease}
+.wa-ed .rung:hover:not([disabled]){border-color:var(--wa-soft);transform:translateY(-1px)}
+.wa-ed .rung:focus-visible{outline:3px solid var(--wa-gold);outline-offset:2px}
+.wa-ed .rung .r-sub{font-family:var(--disp);font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--wa-soft)}
+.wa-ed .rung .r-label{font-family:var(--disp);font-weight:700;font-size:21px;line-height:1.1}
+/* THE PRICE, BEFORE IT IS SPENT, and in gold so it reads as the cost rather
+   than as part of the label. */
+.wa-ed .rung .r-cost{font-family:var(--disp);font-weight:700;font-size:13px;
+  letter-spacing:.06em;color:var(--wa-gold)}
+.wa-ed .clue .c-label{display:block;font-family:var(--disp);font-weight:700;
+  font-size:21px;line-height:1.1;margin:0 0 8px}
+.wa-ed .clue .c-body{display:block;font-size:14px;line-height:1.55;color:var(--wa-ink)}
+/* The career as a timeline, the chosen spell marked in place. */
+.wa-ed .clue .spell{display:grid;grid-template-columns:82px minmax(0,1fr);
+  gap:2px 12px;padding:7px 9px;border-left:2px solid var(--wa-line);
+  font-size:13px;align-items:baseline}
+.wa-ed .clue .spell.mine{background:rgba(21,62,45,.07);border-left-color:var(--wa-gold)}
+:root[data-theme="dark"] .wa-ed .clue .spell.mine{background:rgba(255,255,255,.07)}
+.wa-ed .clue .sp-years{font-family:var(--disp);font-size:12px;letter-spacing:.04em;
+  color:var(--wa-soft)}
+.wa-ed .clue .sp-club{font-weight:600}
+.wa-ed .giveup{margin-top:22px}
+
+/* ---- the widths ---- */
+@media (max-width:900px){
+  .wa-ed .doors{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .wa-ed .profile{grid-template-columns:150px minmax(0,1fr)}
+}
+@media (max-width:700px){
+  .wa-ed .doors{grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+  .wa-ed .ladder,.wa-ed .clues{grid-template-columns:1fr}
+  /* THE PROFILE STAYS A PROFILE ON A PHONE. The brief asks for the full human
+     figure kept rather than cropped to a stripe, so the panel stacks and the
+     portrait takes a readable height instead of being squeezed to a column. */
+  .wa-ed .profile{grid-template-columns:1fr}
+  .wa-ed .pf-face{height:230px}
+  .wa-ed .pf-face img{object-position:50% 18%}
+  .wa-ed .playHead{gap:14px}
+  .wa-ed .matchHead{gap:22px}
+  .wa-ed .commit{gap:14px}
+  .wa-ed .commit .kick{width:100%}
+}
+@media (max-width:420px){
+  .wa-ed .doors{grid-template-columns:1fr}
+  .wa-ed .door{min-height:0}
+  .wa-ed .door .d-year{font-size:28px}
+  .wa-ed .pf-nums{gap:24px}
+}

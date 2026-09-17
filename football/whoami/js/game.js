@@ -19,7 +19,7 @@
  * one especially, because deciding it here would need the club's whole roster
  * and a roster is a candidate list for the door.
  */
-var BUILD = "v001f";
+var BUILD = "v001g";
 
 (function bootstrap() {
   'use strict';
@@ -205,7 +205,8 @@ function start() {
   ['waHome', 'waGame', 'waToday', 'waTodayKicker', 'waTodayState',
    'navToday', 'waPastCount',
    'boardNo', 'boardDate', 'screenDoors', 'screenPlay', 'screenDone',
-   'doors', 'careers', 'lede', 'playClub', 'playLeft', 'clues', 'ladder',
+   'doors', 'mechanism', 'lede', 'playClub', 'playLeft', 'playNums',
+   'commit', 'commitPick', 'playChoice', 'clues', 'ladder',
    'stripFill', 'clockValue', 'worthNow', 'giveUp',
    'guessInput', 'guessGo', 'suggest', 'feedback', 'tries',
    'doneKicker', 'doneBody', 'shareText', 'copyShare', 'backToDoors']
@@ -269,6 +270,41 @@ function start() {
 
   /* ------------------------------------------------------------ the board */
 
+  /* WHICH CARD IS CHOSEN, which is not the same as which door is OPEN. Nothing
+     is sent until the play button is pressed; until then this is a value on
+     the page and no more. */
+  var picked = null;
+
+  function choose(d, btn) {
+    picked = d;
+    [].forEach.call(el.doors.querySelectorAll('.door'), function (o) {
+      var on = o === btn;
+      o.classList.toggle('on', on);
+      o.setAttribute('aria-checked', on ? 'true' : 'false');
+      o.tabIndex = on ? 0 : -1;
+    });
+    if (el.commitPick) {
+      el.commitPick.textContent = d.club + ' · ' + d.leave;
+    }
+    if (el.playChoice) el.playChoice.disabled = false;
+  }
+
+  /* ARROW KEYS MOVE INSIDE THE GROUP and wrap, which is what a radiogroup
+     does. Without this the cards are eleven tab stops and the role is a claim
+     the keyboard does not honour. */
+  function arrowMove(ev, btn) {
+    var keys = { ArrowRight: 1, ArrowDown: 1, ArrowLeft: -1, ArrowUp: -1 };
+    var step = keys[ev.key];
+    if (!step) return;
+    var all = [].slice.call(el.doors.querySelectorAll('.door:not([disabled])'));
+    var at = all.indexOf(btn);
+    if (at < 0) return;
+    ev.preventDefault();
+    var next = all[(at + step + all.length) % all.length];
+    next.focus();
+    next.click();
+  }
+
   function renderDoors() {
     /* ONE DOOR A DAY, AND THIS IS WHERE IT IS ENFORCED.
      *
@@ -290,25 +326,43 @@ function start() {
      */
     var done = !!state.finished;
     el.doors.innerHTML = '';
-    BOARD.doors.forEach(function (d) {
+    picked = null;
+    BOARD.doors.forEach(function (d, i) {
       var b = document.createElement('button');
       var mine = done && Number(state.slot) === Number(d.slot);
       b.className = 'door' + (done ? ' spent' : '') + (mine ? ' mine' : '');
       b.type = 'button';
       b.disabled = done;
+      /* ONE CONTROL, ELEVEN OPTIONS. Each card is a radio rather than a
+         button, because choosing is no longer the same act as committing:
+         role tells a screen reader it is one choice among eleven, and
+         aria-checked tells it which. Only the selected card is tabbable, so
+         Tab reaches the group once and the arrow keys move inside it — the
+         pattern a radiogroup is expected to have. */
+      b.setAttribute('role', 'radio');
+      b.setAttribute('aria-checked', 'false');
+      b.tabIndex = (i === 0 && !done) ? 0 : -1;
       /* THE LABEL IS ON THE CONTROL, not only inside a child of it. A screen
          reader reads the accessible name of the button, and with the text in a
          generic span the tree showed the label detached from the thing you
          press. */
       b.setAttribute('aria-label', done
-        ? (mine ? d.club + ' — the door you played' : d.club + ' — not yours today')
-        : 'Play the ' + d.club + ' door');
+        ? (mine ? d.club + ', left in ' + d.leave + ' — the clue you played'
+                : d.club + ', left in ' + d.leave + ' — not yours today')
+        : d.club + ', left the club in ' + d.leave);
       b.innerHTML = '<span class="d-club">' + esc(d.club) + '</span>' +
-        '<span class="d-left">left ' + esc(d.leave) + '</span>' +
+        '<span class="d-year">' + esc(d.leave) + '</span>' +
+        '<span class="d-cap">Year left the club</span>' +
         (mine ? '<span class="d-mine">Yours today</span>' : '');
-      if (!done) b.addEventListener('click', function () { openDoor(d); });
+      if (!done) {
+        b.addEventListener('click', function () { choose(d, b); });
+        b.addEventListener('keydown', function (ev) { arrowMove(ev, b); });
+      }
       el.doors.appendChild(b);
     });
+    if (el.commit) el.commit.hidden = done || !BOARD.doors.length;
+    if (el.playChoice) el.playChoice.disabled = true;
+    if (el.commitPick) el.commitPick.textContent = '';
 
     /* AND THE LINE ABOVE THEM STOPS BEING UNTRUE. It read "Pick a club. One
        player behind each door, and you get one go at him" to somebody who had
@@ -333,14 +387,24 @@ function start() {
        there is a one-club man and a journeyman in here today; "3, 6, 13" says
        nothing. The numbering is this list's own order, which is sorted and
        attributes to nobody. */
-    var c = BOARD.careers || [];
-    el.careers.innerHTML = c.length
-      ? '<span class="cr-head">Today’s ' + c.length + ' players</span>' +
-        c.map(function (n, i) {
-          return '<span class="cr-one"><b>Player ' + (i + 1) + '</b>' +
-            n + (n === 1 ? ' club' : ' clubs') + '</span>';
-        }).join('')
-      : '';
+    /* THE SENTENCE, NOT THE BADGES. "Player 1 · 3 clubs" told nobody anything
+       it did not already have to decode, and it was the first thing under the
+       heading. What a player needs is the RULE: two of these cards can be the
+       same man, so eleven choices are not eleven puzzles.
+       BOTH FIGURES ARE COUNTED. doors.length is the spells on the board and
+       careers.length is the players they come from — "six" was never a
+       constant, and a board that ever holds five would have made a sentence
+       with a 6 in it a lie on the front of the game. */
+    var spells = (BOARD.doors || []).length;
+    var players = (BOARD.careers || []).length;
+    if (el.mechanism) {
+      el.mechanism.textContent = (spells && players)
+        ? 'Today’s ' + spells + ' club spells come from ' + players +
+          (players === 1 ? ' career.' : ' careers.') +
+          (players < spells ? ' Some choices lead to the same player.' : '') +
+          ' Choose one clue to play.'
+        : '';
+    }
   }
 
   /* PICKING UP A DOOR ALREADY OPEN, which is not the same as opening one.
@@ -380,6 +444,7 @@ function start() {
        grepping for the name rather than by running it, which is luck. */
     el.playClub.textContent = door.club;
     el.playLeft.textContent = 'left in ' + door.leave;
+    if (el.playNums) el.playNums.innerHTML = '';
     el.clues.innerHTML = '';
     el.guessInput.value = '';
     el.guessGo.disabled = true;
@@ -477,13 +542,36 @@ function start() {
     box.className = 'clue';
     var bits = ['<span class="c-label">' + esc(r.label) + '</span>'];
 
+    /* THE STARTING SPELL IS THE PROFILE, NOT A CLUE BOX. It is the one clue
+       every player gets, it is never bought, and the design leads with it
+       beside the silhouette — so it fills the panel and adds nothing to the
+       list below. Returning here is what keeps the two hint cards as the only
+       things under "Need another clue?"; drawn as a box as well it would be
+       the same fact twice on one screen.
+       THE FIELDS ARE THE SERVER'S. club, from, to, apps and goals come off
+       r.spell exactly as they always did; nothing here computes a year or a
+       total. */
     if (r.spell) {
       var s = r.spell;
-      var years = (s.from ? s.from : '') + (s.to ? '–' + s.to : '');
-      bits.push('<span class="c-body">' + esc(s.club) +
-        (years ? ', ' + esc(years) : '') +
-        (s.apps != null ? ' · ' + esc(s.apps) + (Number(s.apps) === 1 ? ' app' : ' apps') : '') +
-        (s.goals ? ' · ' + esc(s.goals) + (Number(s.goals) === 1 ? ' goal' : ' goals') : '') + '</span>');
+      if (el.playClub) el.playClub.textContent = s.club || '';
+      if (el.playLeft) {
+        el.playLeft.innerHTML = s.from
+          ? '<b>' + esc(s.from) + '</b>' + (s.to ? '<i>—</i><b>' + esc(s.to) + '</b>' : '')
+          : '';
+      }
+      if (el.playNums) {
+        var nums = '';
+        if (s.apps != null) {
+          nums += '<span class="pf-num"><b>' + esc(s.apps) + '</b>' +
+            (Number(s.apps) === 1 ? 'Appearance' : 'Appearances') + '</span>';
+        }
+        if (s.goals != null) {
+          nums += '<span class="pf-num"><b>' + esc(s.goals) + '</b>' +
+            (Number(s.goals) === 1 ? 'Goal' : 'Goals') + '</span>';
+        }
+        el.playNums.innerHTML = nums;
+      }
+      return;
     }
     if (r.spells && r.spells.length) {
       /* THE CAREER AS A LADDER, one club a row, in the order it happened.
@@ -890,6 +978,12 @@ function start() {
   });
   el.guessInput.addEventListener('keydown', function (e) {
     if (e.key === 'Enter') { e.preventDefault(); submitGuess(); }
+  });
+  /* THE ONE PLACE A DOOR IS OPENED FROM. The cards choose; this commits, and
+     it is the only path to openDoor — so a card cannot spend the day's single
+     go by being clicked once. */
+  el.playChoice.addEventListener('click', function () {
+    if (picked) openDoor(picked);
   });
   el.guessGo.addEventListener('click', submitGuess);
 

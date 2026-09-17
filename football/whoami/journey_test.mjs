@@ -253,8 +253,27 @@ console.log("=== The landing, and then the board ===");
     doc.getElementById("boardNo").textContent);
   const doors = [...doc.querySelectorAll("#doors .door")];
   t("eleven doors are drawn", doors.length === 11, String(doors.length));
+  /* The year is its own element now, and labelled, so this reads the parts
+     rather than a sentence that the design no longer writes. */
   t("each is a club and a year",
-    /Arsenal/.test(doors[0].textContent) && /left 2010/.test(doors[0].textContent));
+    /Arsenal/.test(doors[0].querySelector(".d-club").textContent) &&
+    /2010/.test(doors[0].querySelector(".d-year").textContent) &&
+    /year left/i.test(doors[0].querySelector(".d-cap").textContent),
+    doors[0].textContent.replace(/\s+/g, " ").trim());
+}
+
+/* CHOOSING IS NOT COMMITTING, since 18 Sep 2026. Every card used to open its
+   door on the first click — one go a day, irreversible, and a misclick spent
+   it — so the approved design made the cards a radiogroup and put the commit on
+   its own button. Every journey here went through that first click, so they go
+   through this instead: it selects the card and then presses Play, which is
+   what a player now does. Written once so the two-step lives in one place and
+   a third step would not have to be chased through seven call sites. */
+function playDoor(click, doc, i) {
+  const card = [...doc.querySelectorAll("#doors .door")][i];
+  click(card);
+  click(doc.getElementById("playChoice"));
+  return card;
 }
 
 console.log("=== The landing wears the family's shape ===");
@@ -349,15 +368,80 @@ console.log("=== Nothing on the board is an answer ===");
      visible at a glance and lets anyone with the name list pair doors off each
      other. The server dedupes to players, so the count of chips is the count of
      players and the multiplicities are gone. */
-  const chips = [...doc.querySelectorAll("#careers .cr-one")];
-  t("the careers panel shows one chip per player, not per door",
-    chips.length === board().careers.length && chips.length < 11,
-    chips.length + " chips for 11 doors");
-  t("and each says whose it is and how many clubs, rather than a bare number",
-    chips.every((c) => /Player \d+/.test(c.textContent) && /club/.test(c.textContent)),
-    chips[0] && chips[0].textContent);
+  /* THE CHIPS ARE GONE AND THE RULE THEY PROTECTED IS NOT. They were a row of
+     "Player 1 · 3 clubs", and the approved design of 18 Sep 2026 replaced them
+     with one sentence — because anonymous chips told a reader nothing they did
+     not have to decode, while the thing they actually need to know is that two
+     cards can be the same man.
+     THE LEAK GUARD IS WHAT MATTERS AND IT MOVES WITH IT. What must never be
+     visible is the GROUPING: which doors share a player. A count of players is
+     safe, a count per door is not. So this reads the sentence, checks it names
+     both live figures, and checks it attaches neither to any card. */
+  const say = doc.getElementById("mechanism").textContent;
+  t("the mechanism is stated in a sentence, with both figures counted live",
+    say.includes(String(board().doors.length)) &&
+    say.includes(String(board().careers.length)) &&
+    board().careers.length < board().doors.length,
+    say);
+  t("and it warns that choices can share a player without saying which",
+    /same player/i.test(say) &&
+    !board().doors.some((d) => say.includes(d.club)),
+    say);
   t("and no door carries a count of its own",
     ![...doc.querySelectorAll("#doors .door")].some((d) => /\b\d\s*clubs?\b/i.test(d.textContent)));
+}
+
+console.log("=== Choosing a card is not spending the day's go ===");
+{
+  /* THE WHOLE POINT OF THE TWO-STEP, and the only assertion that can tell the
+     two designs apart. Every card used to open its door on the first click:
+     one go a day, irreversible, and a misclick spent it with no way back. The
+     approved design of 18 Sep 2026 separates choosing from committing.
+
+     The journeys below all go through playDoor, which clicks the card AND the
+     button — so they would pass just as well if the card still committed on
+     its own. This is the case that would not. */
+  const { doc, click, w, srv } = await open();
+  click(doc.getElementById("waToday"));
+  await settle(w);
+
+  const cards = [...doc.querySelectorAll("#doors .door")];
+  click(cards[1]);
+  await settle(w);
+  t("choosing a card opens no round",
+    !srv.calls.some((c) => c.pathname === "/api/whoami/play"),
+    "nothing is sent until the player commits");
+  t("and the play screen is not shown", !visible(doc, "screenPlay"));
+  t("the choice is shown back before it is taken",
+    /Chelsea/.test(doc.getElementById("commitPick").textContent),
+    doc.getElementById("commitPick").textContent);
+  t("and it is marked as the one chosen, for a screen reader too",
+    cards[1].getAttribute("aria-checked") === "true" &&
+    cards[0].getAttribute("aria-checked") === "false");
+
+  /* CHANGING YOUR MIND IS FREE, which is the thing the old design could not
+     offer at any price. */
+  click(cards[3]);
+  await settle(w);
+  t("choosing another moves the choice rather than spending one",
+    cards[3].getAttribute("aria-checked") === "true" &&
+    cards[1].getAttribute("aria-checked") === "false" &&
+    !srv.calls.some((c) => c.pathname === "/api/whoami/play"));
+
+  click(doc.getElementById("playChoice"));
+  await settle(w);
+  /* THE SLOT SENT, not the club displayed. First written against playClub,
+     which failed — and the failure was the test's, not the page's: the profile
+     now shows the club from the SERVER's spell rather than the card's own
+     label, which is right, because the server knows the real spell and the
+     card only knows what it was drawn with. The stub answers with the same
+     Chelsea spell whatever slot it is asked for, so playClub could never have
+     distinguished the two cards. The slot in the request can. */
+  const plays = srv.calls.filter((c) => c.pathname === "/api/whoami/play");
+  t("and pressing Play opens exactly one round, against the card chosen LAST",
+    plays.length === 1 && plays[0].body.slot === board().doors[3].slot,
+    plays.length + " round(s), slot " + (plays[0] && plays[0].body.slot) +
+      " (wanted " + board().doors[3].slot + ")");
 }
 
 console.log("=== Opening a door gives one spell and nothing else ===");
@@ -365,7 +449,7 @@ console.log("=== Opening a door gives one spell and nothing else ===");
   const { doc, click, w, srv } = await open();
   click(doc.getElementById("waToday"));
   await settle(w);
-  click([...doc.querySelectorAll("#doors .door")][1]);   // Chelsea
+  playDoor(click, doc, 1);   // Chelsea
   await settle(w);
 
   t("the play screen is shown", visible(doc, "screenPlay"));
@@ -374,11 +458,20 @@ console.log("=== Opening a door gives one spell and nothing else ===");
   t("and the first rung was taken automatically, because it is free",
     srv.calls.some((c) => c.pathname === "/api/whoami/clue" && c.body.stage === 1));
 
+  /* THE FREE SPELL IS THE PROFILE, NOT A CLUE BOX, since 18 Sep 2026: the
+     approved design leads with it beside the silhouette, so it fills the panel
+     and adds nothing to the list of bought clues. Read from the panel and from
+     the clue list TOGETHER, because the leak guards below are about the whole
+     screen and it would be no use checking the half the spell left. */
   const clues = doc.getElementById("clues").textContent;
-  t("the spell is the door's own club", /Chelsea/.test(clues) && /333 apps/.test(clues));
+  const panel = doc.getElementById("startClue").textContent;
+  const screen = panel + " " + clues;
+  t("the spell is the door's own club",
+    /Chelsea/.test(panel) && /333/.test(panel),
+    panel.replace(/\s+/g, " ").trim());
   t("and the rest of the career is not on the page",
-    !/Arsenal/.test(clues), "five spells is the career delivered one at a time");
-  t("nobody is named", !clues.toUpperCase().includes("CECH"));
+    !/Arsenal/.test(screen), "five spells is the career delivered one at a time");
+  t("nobody is named", !screen.toUpperCase().includes("CECH"));
 
   const rungs = [...doc.querySelectorAll("#ladder .rung")];
   /* TWO SUBSTITUTIONS, NOT THREE. Giving up was the third and is not one — it
@@ -396,7 +489,7 @@ console.log("=== The near miss, which the page could not decide for itself ===")
   const { doc, click, w } = await open();
   click(doc.getElementById("waToday"));
   await settle(w);
-  click([...doc.querySelectorAll("#doors .door")][1]);
+  playDoor(click, doc, 1);
   await settle(w);
 
   const input = doc.getElementById("guessInput");
@@ -421,7 +514,7 @@ console.log("=== Naming him ===");
   const { doc, click, w, seasons, played } = await open();
   click(doc.getElementById("waToday"));
   await settle(w);
-  click([...doc.querySelectorAll("#doors .door")][1]);
+  playDoor(click, doc, 1);
   await settle(w);
 
   const input = doc.getElementById("guessInput");
@@ -463,7 +556,7 @@ console.log("=== Buying the ladder, and giving up ===");
   const { doc, click, w, srv } = await open();
   click(doc.getElementById("waToday"));
   await settle(w);
-  click([...doc.querySelectorAll("#doors .door")][1]);
+  playDoor(click, doc, 1);
   await settle(w);
 
   const rung = (label) => [...doc.querySelectorAll("#ladder .rung")]
@@ -534,7 +627,7 @@ console.log("\n=== Coming back to a door already open ===");
   const first = await open();
   first.click(first.doc.getElementById("waToday"));
   await settle(first.w);
-  first.click([...first.doc.querySelectorAll("#doors .door")][1]);   // Chelsea
+  playDoor(first.click, first.doc, 1);   // Chelsea
   await settle(first.w);
   const saved = first.w.localStorage.getItem("xiwa.daily.v1:2026-09-15");
   t("a round in progress is saved", !!saved && JSON.parse(saved).slot === 2,
@@ -550,8 +643,8 @@ console.log("\n=== Coming back to a door already open ===");
     back.doc.getElementById("playClub").textContent === "Chelsea",
     back.doc.getElementById("playClub").textContent || "(empty)");
   t("and the spell is there to read again",
-    /333 apps/.test(back.doc.getElementById("clues").textContent),
-    "the free rung is served again, charged nothing");
+    /333/.test(back.doc.getElementById("startClue").textContent),
+    "the free rung is served again, charged nothing — into the profile panel");
   t("and it did NOT open a second round",
     back.srv.calls.filter((c) => c.pathname === "/api/whoami/play").length === 0,
     "a day that banks one result must not open two");
@@ -579,7 +672,7 @@ console.log("\n=== One door a day, which is the whole basis of the game ===");
   const { doc, click, w, srv } = await open();
   click(doc.getElementById("waToday"));
   await settle(w);
-  click([...doc.querySelectorAll("#doors .door")][1]);   // Chelsea
+  playDoor(click, doc, 1);   // Chelsea
   await settle(w);
 
   const input = doc.getElementById("guessInput");
@@ -622,7 +715,7 @@ console.log("\n=== The type-ahead searches the answer SPACE ===");
   const { doc, click, w } = await open();
   click(doc.getElementById("waToday"));
   await settle(w);
-  click([...doc.querySelectorAll("#doors .door")][1]);
+  playDoor(click, doc, 1);
   await settle(w);
 
   const input = doc.getElementById("guessInput");

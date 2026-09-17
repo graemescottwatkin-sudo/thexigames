@@ -34,7 +34,7 @@
 <link rel="stylesheet" href="/shared/xi-landing.css?v=v45">
 <link rel="stylesheet" href="/shared/xi-chrome.css?v=v45">
 <script src="/shared/xi-theme.js?v=v45"></script>
-<link rel="stylesheet" href="css/style.css?v=v001f">
+<link rel="stylesheet" href="css/style.css?v=v001g">
 </head>
 <body>
 
@@ -164,7 +164,7 @@
 
 <!-- Hidden with the HTML hidden ATTRIBUTE rather than a class, so it is hidden
      to a screen reader as well and not merely invisible. -->
-<div id="waGame" hidden>
+<div id="waGame" class="wa-ed" hidden>
 <main class="app">
 
   <div class="boardHead">
@@ -174,37 +174,92 @@
 
   <!-- ---- choosing a door ---- -->
   <section class="screen" id="screenDoors">
-    <p class="lede" id="lede">Pick a club. One player behind each door, and you get one
-      go at him.</p>
-    <div class="doors" id="doors" role="group" aria-label="Choose a club"></div>
-    <!-- THE DAY'S CAREER LENGTHS, SORTED AND UNATTRIBUTED. In slot order these
-         would say how many clubs each door's player had, which narrows eleven
-         doors to a handful. Sorted, they are a shape of the day. -->
-    <p class="careers" id="careers"></p>
+    <p class="eyebrow">The daily football identity puzzle</p>
+    <h2 class="waTitle">Choose where the story begins.</h2>
+    <p class="lede" id="lede">Pick a club and the year a player left. Use his time
+      there to work out who he is.</p>
+
+    <!-- THE MECHANISM, SAID PLAINLY AND COUNTED LIVE. It used to be a row of
+         "Player 1 · 3 clubs" badges: anonymous, unattached to any door, and
+         read as noise by everybody who saw them. What a player actually needs
+         to know is that two of these cards can lead to the same man, so the
+         eleven are not eleven separate puzzles. Both numbers come off the
+         board — doors and careers — because "six" stops being true the moment
+         a board has five. -->
+    <p class="mechanism" id="mechanism"></p>
+
+    <div class="chooseHead">
+      <span class="ch-label">Your starting clue</span>
+      <span class="ch-hint">Club + year left</span>
+    </div>
+    <!-- A RADIOGROUP, NOT ELEVEN BUTTONS. Choosing is now separate from
+         committing, so the cards are one control with one value rather than
+         eleven independent ones — which is what a screen reader needs to say
+         "3 of 11" and what a keyboard needs for arrow keys to move between
+         them. -->
+    <div class="doors" id="doors" role="radiogroup"
+         aria-labelledby="chooseLabel"></div>
+    <span id="chooseLabel" class="sr-only">Choose your starting clue</span>
+
+    <!-- COMMITTING IS ITS OWN ACT. Every card used to open its door on the
+         first click: one a day, irreversible, and a misclick spent it. The
+         choice is shown back before it is taken. -->
+    <div class="commit" id="commit" hidden>
+      <div class="cm-say">
+        <span class="cm-label">Your choice</span>
+        <span class="cm-pick" id="commitPick"></span>
+        <span class="cm-note">Start with his appearances and goals for this club.</span>
+      </div>
+      <button class="kick" id="playChoice" type="button" disabled>
+        Play this clue <span aria-hidden="true">&#8594;</span>
+      </button>
+    </div>
   </section>
 
   <!-- ---- playing one ---- -->
   <section class="screen" id="screenPlay" hidden>
-    <div class="doorHead">
-      <span class="dh-club" id="playClub"></span>
-      <span class="dh-left" id="playLeft"></span>
+    <div class="playHead">
+      <div>
+        <p class="eyebrow">Who Am I XI &middot; today&#8217;s mystery</p>
+        <h2 class="waTitle">One career. One name.</h2>
+      </div>
+      <!-- The match clock and what the board is worth at this minute, together
+           and above the answer field. Both are the SERVER's numbers; this
+           displays them and never decides them. -->
+      <div class="matchHead">
+        <span class="mh-one">
+          <span class="label">Match clock</span>
+          <span class="clock"><span id="clockValue">0</span><span class="prime">&#39;</span><span class="of">/ 90&#39;</span></span>
+        </span>
+        <span class="mh-one">
+          <span class="label">Available points</span>
+          <span class="worthVal" id="worthNow">114</span>
+        </span>
+      </div>
     </div>
-
-    <!-- The match clock and what the board is worth at this minute. Both are
-         the SERVER's numbers; this displays them and never decides them. -->
     <div class="strip" aria-hidden="true"><div class="stripFill" id="stripFill"></div></div>
-    <div class="matchHead">
-      <span class="clock"><span id="clockValue">0</span><span class="prime">&#39;</span></span>
-      <span class="worthBox">
-        <span class="label">Worth now</span>
-        <span class="worthVal" id="worthNow">114</span>
-      </span>
+
+    <!-- THE PROFILE. One generic silhouette for every player, every day — it
+         is a picture of nobody on purpose, because a likeness would be the
+         answer. The facts beside it are the starting clue, drawn from the
+         spell the server sent for the door that was chosen. -->
+    <div class="profile">
+      <div class="pf-face">
+        <img src="/football/whoami/silhouette.png?v=2" alt="" width="400" height="400"
+             decoding="async">
+        <span class="pf-q" aria-hidden="true">?</span>
+        <span class="pf-cap"><b>The mystery player</b>Who am I?</span>
+      </div>
+      <div class="pf-facts" id="startClue">
+        <span class="pf-kicker">Your starting clue &middot; included</span>
+        <span class="pf-pre">I played for</span>
+        <span class="pf-club" id="playClub"></span>
+        <span class="pf-years" id="playLeft"></span>
+        <span class="pf-nums" id="playNums"></span>
+      </div>
     </div>
 
-    <div class="clues" id="clues"></div>
-
-    <div class="ladder" id="ladder"></div>
-
+    <p class="guessAsk">Recognise the career?</p>
     <div class="guessRow">
       <input id="guessInput" type="text" autocomplete="off" autocorrect="off"
              autocapitalize="words" spellcheck="false"
@@ -215,6 +270,16 @@
 
     <p class="feedback" id="feedback" role="status" aria-live="polite"></p>
     <p class="tries" id="tries"></p>
+
+    <div class="cluesHead">
+      <h3 class="waSub">Need another clue?</h3>
+      <span class="ch-hint">Hints cost points. Your choice.</span>
+    </div>
+    <!-- The substitutions, and what they bought. A rung that has been taken
+         becomes the card that shows its clue, in place — so the page never has
+         a row of spent buttons above a separate list of answers. -->
+    <div class="ladder" id="ladder"></div>
+    <div class="clues" id="clues"></div>
 
     <!-- Leaving the pitch. Not a substitution and not on the ladder: it ends
          the board at nothing, so it sits apart from the things you buy. -->
@@ -238,9 +303,9 @@
 <footer class="xic-foot"></footer>
 
 <script src="/shared/xi-chrome.js?v=v45"></script>
-<script src="js/config.js?v=v001f"></script>
+<script src="js/config.js?v=v001g"></script>
 <script src="/shared/xi-season.js?v=v45"></script>
 <script src="/shared/xi-plays.js?v=v45"></script>
-<script src="js/game.js?v=v001f"></script>
+<script src="js/game.js?v=v001g"></script>
 </body>
 </html>
