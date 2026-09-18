@@ -5,7 +5,7 @@
      it is yesterday's code. aligned_test asserts the two agree, and until
      this game launched it had no BUILD at all — three of its assets were on
      three different tags, which is the same fault with nobody checking. */
-  var BUILD = "v001i";
+  var BUILD = "v001j";
   if (window.XIPlays && document.documentElement) {
     document.documentElement.setAttribute("data-build", BUILD);
   }
@@ -45,7 +45,8 @@
      between this device's clock and the server's, so a device set five minutes
      fast does not show five minutes of a twenty-second question gone. */
   var clockMs = 0, skew = 0, clockLen = R.CLOCK, narrowedSecs = 0;
-  var results = [], points = [], bangOns = 0, subsUsed = 0, lockedSecs = 0;
+  var results = [], points = [], bangOns = 0, subsUsed = 0, lockedSecs = 0,
+      lockedWorth = 0;
   /* WHAT THE PLAYER GUESSED AND WHAT THEY WERE TOLD, kept per question because
      neither survives anywhere else. `results` is a boolean and `bangOns` is a
      count; the guess was sent to the server and discarded here, and the grade
@@ -127,7 +128,7 @@
     }
     $("gradesList").innerHTML = out;
     $("gradesHead").textContent = q && q.strict
-      ? "What it is worth — graded strictly" : "What it is worth";
+      ? "How scoring works — this one is graded strictly" : "How scoring works";
   }
 
   /* ---- painting ---------------------------------------------------------- */
@@ -167,14 +168,42 @@
       d.className = results[i] === true ? "ok" : results[i] === false ? "bad"
         : (i === step && !over ? "cur" : "");
     }
+    /* ONLY THE ANSWERED ROWS ARE SHOWN. Eleven blank rows was a page mostly
+       made of nothing before a player had done anything, and the design of
+       18 Sep 2026 asks for the opposite: the sheet fills as the round goes.
+       The rows are all still BUILT — they carry state and are addressed by
+       index — so this hides rather than rebuilds, and an index never shifts
+       under the code that reads it. */
+    var answeredRows = 0, ptsSoFar = 0;
     for (var j = 0; j < sheet.children.length; j++) {
       var li = sheet.children[j], r = results[j];
-      li.className = r === true ? "ok" : r === false ? "bad" : "";
-      li.querySelector("span").textContent = r === undefined ? ""
+      var done = r !== undefined;
+      li.className = (r === true ? "ok" : r === false ? "bad" : "") + (done ? "" : " unplayed");
+      li.hidden = !done;
+      if (done) { answeredRows++; ptsSoFar += (points[j] || 0); }
+      li.querySelector("span").textContent = !done ? ""
         : board.questions[j].question.replace(/\?$/, "");
-      li.querySelector("em").textContent = r === undefined ? ""
+      li.querySelector("em").textContent = !done ? ""
         : (answersSeen[j] === undefined ? "" : fmt(answersSeen[j], board.questions[j]) + " " + DOT + " ") +
           points[j];
+    }
+    if ($("sheetCount")) {
+      $("sheetCount").textContent = answeredRows
+        ? answeredRows + " answered " + DOT + " " + ptsSoFar +
+          (ptsSoFar === 1 ? " point" : " points")
+        : "";
+    }
+    /* The footnote says where the rest will go, and stops saying it once they
+       are all here — a line promising questions that have all been played is
+       the same kind of untruth as eleven empty rows. */
+    if ($("sheetFoot")) {
+      var left = sheet.children.length - answeredRows;
+      $("sheetFoot").textContent = left <= 0 ? ""
+        : answeredRows === 0
+          ? "Every question you answer will appear here."
+          : "Question" + (left === 1 ? " " : "s ") +
+            (answeredRows + 1) + (left === 1 ? "" : "–" + sheet.children.length) +
+            " will appear here as you play.";
     }
     $("running").textContent = scoreNow;
 
@@ -234,6 +263,12 @@
       (q.detail ? "<small>" + escapeHtml(q.detail) + "</small>" : "");
     setRange(Number(q.lo), Number(q.hi), Number(q.step) || 1);
     $("band").className = "band"; $("mark").className = "mark";
+    /* THE RESULT GOES AWAY WITH THEM. It holds the previous question's answer,
+       and a block left standing while the next question opens would be the one
+       thing this page must never do. */
+    $("result").hidden = true;
+    $("qNo").innerHTML = (step + 1) +
+      '<small> of ' + board.questions.length + '</small>';
     var v = $("verdict"); v.textContent = ""; v.className = "verdict";
     $("lock").disabled = true;
     $("next").hidden = true; $("next").disabled = true;
@@ -282,6 +317,11 @@
     if (over || locked || (!touched && !byClock)) return;
     locked = true;
     lockedSecs = Math.ceil(secsLeft());
+    /* WHAT THE CLOCK STILL OFFERED at the instant of the lock, captured for the
+       same reason lockedSecs is: the result explains the score as "the clock
+       left N available", and by the time settle() runs the clock has moved on
+       and offer() would answer a different question. */
+    lockedWorth = offer();
     slider.disabled = true;
     $("lock").disabled = true; $("narrow").disabled = true;
 
@@ -316,6 +356,87 @@
     });
   }
 
+  /* ---- the result, drawn from the engine ---------------------------------
+   *
+   * THE ZONES COME FROM rules.js, the same file the SERVER grades with, so the
+   * bands a player sees and the bands they were judged against cannot drift
+   * apart. See R.zonesFor for why the geometry lives there.
+   */
+  function zoneClass(z, count) {
+    if (!z.scoring) return "z-none";
+    var steps = ["z-1", "z-2", "z-3", "z-4"];
+    return steps[Math.min(z.depth, steps.length - 1)];
+  }
+
+  function drawResult(q, r, guess) {
+    var answer = Number(r.answer);
+    if (!isFinite(answer)) { $("result").hidden = true; return; }
+    var tol = Number(q.tolerance);
+    var away = Math.abs(guess - answer);
+    var zones = R.zonesFor(q, hi - lo);
+
+    /* Painted outermost first so the closer, darker bands sit on top. */
+    var html = "";
+    for (var i = zones.length - 1; i >= 0; i--) {
+      var z = zones[i];
+      var a = Math.max(lo, answer - z.outerHalf), b = Math.min(hi, answer + z.outerHalf);
+      if (b <= a) continue;
+      html += '<span class="rz ' + zoneClass(z, zones.length) + '" style="left:' +
+        pct(a) + '%;width:' + (pct(b) - pct(a)) + '%"></span>';
+    }
+    $("rsZones").innerHTML = html;
+
+    $("rsGuess").innerHTML = fmt(guess, q) + (q.unit ? '<em>' + escapeHtml(q.unit) + '</em>' : '');
+    $("rsAnswer").innerHTML = fmt(answer, q) + (q.unit ? '<em>' + escapeHtml(q.unit) + '</em>' : '');
+    $("rsAway").textContent = away === 0 ? "bang on"
+      : fmt(away, q) + " away";
+    $("rsAnswerMark").style.left = pct(answer) + "%";
+    $("rsGuessMark").style.left = pct(Math.max(lo, Math.min(hi, guess))) + "%";
+    $("rsAnswerAt").textContent = fmt(answer, q);
+    $("rsGuessAt").textContent = fmt(guess, q);
+    /* THE TWO LABELS COLLIDE WHEN THE GUESS IS CLOSE, which is exactly when a
+       player most wants to read both. Measured on the sample question: 35 and
+       39 on a 17-60 range sit nine percent apart and overlap at phone width.
+       The guess steps down a line rather than being hidden. */
+    $("rsTrack").classList.toggle("tight",
+      Math.abs(pct(answer) - pct(Math.max(lo, Math.min(hi, guess)))) < 18);
+    $("rsLo").textContent = fmt(lo, q);
+    $("rsHi").textContent = fmt(hi, q);
+
+    var pts = points[step];
+    $("rsBanner").className = "rs-banner " + (r.green ? "ok" : pts > 0 ? "part" : "bad");
+    $("rsGrade").textContent = r.grade || "";
+    $("rsPts").textContent = pts > 0
+      ? "+" + pts + (pts === 1 ? " point" : " points") : "No points";
+    /* THE DISTANCE IN THE PLAYER'S OWN UNITS, said in words under the verdict:
+       "4 caps away" is the thing they want and "1 ballpark" is the thing the
+       engine thinks in. */
+    $("rsDist").textContent = away === 0
+      ? "You had it exactly."
+      : "You were " + fmt(away, q) + (q.unit ? " " + q.unit : "") + " away.";
+
+    /* THE KEY CARRIES THE NAMES, so the bands are not colour alone. */
+    var key = "";
+    for (var k = 0; k < zones.length; k++) {
+      key += '<li class="' + zoneClass(zones[k], zones.length) +
+        (r.grade === zones[k].label ? ' hit' : '') + '"><i></i>' +
+        escapeHtml(zones[k].label) + '</li>';
+    }
+    $("rsKey").innerHTML = key;
+
+    /* WRITTEN FROM THE OUTCOME, not from a template with the numbers left in.
+       It says what the clock did and what the distance did, because those are
+       the two things that made the score and the player saw only one of them. */
+    var offered = lockedWorth;
+    $("rsWhy").innerHTML = '<b>The clock left ' + offered +
+      (offered === 1 ? " point" : " points") + ' available.</b> ' +
+      (pts > 0
+        ? "Your distance landed in a scoring band, so you banked " +
+          (pts === offered ? "all of it." : pts + (pts === 1 ? " point." : " points."))
+        : "Your distance landed outside the scoring bands, so none of it was banked.");
+    $("result").hidden = false;
+  }
+
   function settle(r) {
     var q = board.questions[step];
     results[step] = !!r.green;
@@ -348,6 +469,7 @@
       $("band").className = "band on";
       $("mark").style.left = pct(r.answer) + "%";
       $("mark").className = "mark on";
+      drawResult(q, r, guesses[step]);
     }
 
     $("secs").innerHTML = lockedSecs + "<small>s</small>";
@@ -368,6 +490,12 @@
       (r.spentSub ? " and a substitution" : "");
 
     $("lock").hidden = true;
+    /* The button says which question it opens, so the primary action on the
+       result names its destination rather than saying "Next". */
+    if ($("nextOf")) {
+      $("nextOf").textContent = (step + 2) <= board.questions.length
+        ? (step + 2) + " of " + board.questions.length : "";
+    }
     $("next").hidden = false; $("next").disabled = false;
     $("next").focus();
     paint();

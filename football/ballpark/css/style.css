@@ -29,7 +29,12 @@ body{margin:0;font-family:var(--body)}
 /* ---- the scoreboard ----------------------------------------------------- */
 
 .board{
-  display:grid; grid-template-columns:repeat(4,1fr); gap:1px;
+  /* FIVE CELLS SINCE 18 SEP 2026, when the question counter joined the clock,
+     the worth, the score and the substitutions. It was repeat(4,1fr) and the
+     fifth dropped onto a row of its own, full width — a layout that was right
+     for as long as the count of cells happened to match. Derived from the
+     children instead, so a sixth would sit down beside them. */
+  display:grid; grid-template-columns:repeat(auto-fit,minmax(110px,1fr)); gap:1px;
   background:var(--line); border:1px solid var(--line); border-radius:12px;
   overflow:hidden; margin:0 0 14px;
 }
@@ -59,6 +64,9 @@ body{margin:0;font-family:var(--body)}
 
 @media (max-width:560px){
   .board{grid-template-columns:repeat(2,1fr)}
+  /* An odd number of cells leaves the last one orphaned beside an empty half,
+     which reads as a cell that failed to load. It takes the row instead. */
+  .board .bd-cell:last-child{grid-column:1 / -1}
   .bd-cell>b{font-size:22px}
 }
 
@@ -354,3 +362,150 @@ body{margin:0;font-family:var(--body)}
    waits for every button here that toggles with `hidden` and carries a class
    that sets display, so it is fixed once, for the page, rather than per rule. */
 [hidden]{display:none !important}
+
+/* ================= THE RESULT =================
+   Approved 18 Sep 2026. Lighter greens for decreasing accuracy, grey for the
+   band that pays nothing, and gold reserved for one thing only: the answer.
+   Nothing here is drawn before the lock — the markup is hidden and the answer
+   is not in the page until the server sends it. */
+.result{margin:14px 0 0}
+.rs-banner{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:0 0 14px;
+  padding:12px 16px;border-left:3px solid var(--ok,#1E6B45);
+  background:rgba(30,107,69,.07)}
+.rs-banner b{font-family:var(--disp);font-weight:700;font-size:20px;
+  letter-spacing:.02em;text-transform:uppercase}
+.rs-banner span{font-family:var(--disp);font-weight:700;font-size:15px;color:var(--ink-soft)}
+.rs-banner.bad{border-left-color:var(--ink-faint);background:rgba(0,0,0,.05)}
+.rs-banner.part{border-left-color:var(--gold)}
+/* Three facts, and the distance between them. */
+.rs-facts{display:flex;align-items:center;justify-content:center;gap:22px;
+  flex-wrap:wrap;margin:0 0 14px;text-align:center}
+.rs-fact{display:flex;flex-direction:column;gap:2px}
+.rs-l{font-family:var(--disp);font-size:10.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-faint)}
+.rs-fact b{font-family:var(--disp);font-weight:700;font-size:34px;line-height:1;
+  color:var(--ink)}
+.rs-fact b em{font-style:normal;font-size:14px;color:var(--ink-soft);margin-left:3px}
+.rs-away{font-family:var(--disp);font-weight:700;font-size:13px;
+  padding:5px 12px;border-radius:999px;background:rgba(0,0,0,.06);color:var(--ink-soft)}
+/* The track: zones behind, two labelled markers in front. */
+.rs-track{position:relative;height:18px;border-radius:4px;overflow:visible;
+  background:var(--line);margin:26px 0 0}
+.rs-zones{position:absolute;inset:0;border-radius:4px;overflow:hidden;display:block}
+/* A FLOOR ON THE WIDTH, because a true percentage can round to nothing.
+   Measured 18 Sep 2026: a question with range 0-100000 and tolerance 1 puts
+   every scoring band under 0.5% of the track — so a player who was BANG ON
+   would have seen a grey bar, a gold line and no green anywhere, which reads
+   as a miss. The floor keeps the innermost bands visible as a tight cluster at
+   the answer, which is what they are.
+   IT FLOORS WIDTH AND NEVER POSITION: the left edge stays exact, and the two
+   markers are positioned independently, so nothing a player reads off the
+   track moves. A band drawn 4px wide instead of 0.3px overstates its size on
+   the most extreme ranges and that is the honest trade — invisible is wrong,
+   slightly wide is legible. */
+.rz{position:absolute;top:0;bottom:0;display:block;min-width:4px}
+.z-1{background:#1E6B45}
+.z-2{background:#4E9370}
+.z-3{background:#8FBBA2}
+.z-4{background:#C6DCCF}
+.z-none{background:#D3D6D0}
+.rs-answer,.rs-guess{position:absolute;top:-8px;transform:translateX(-50%);
+  display:flex;flex-direction:column;align-items:center;gap:2px}
+.rs-answer i{display:block;width:3px;height:34px;background:var(--gold)}
+.rs-guess i{display:block;width:14px;height:14px;border-radius:50%;
+  background:var(--card);border:3px solid var(--ink);margin-top:2px}
+.rs-answer span,.rs-guess span{font-family:var(--disp);font-size:10px;
+  letter-spacing:.12em;text-transform:uppercase;white-space:nowrap}
+.rs-answer span{color:var(--gold)}
+.rs-guess span{color:var(--ink)}
+.rs-answer{top:-30px}
+.rs-guess{top:-4px}
+.rs-ends{display:flex;justify-content:space-between;margin:28px 0 0;
+  font-family:var(--disp);font-size:12px;color:var(--ink-faint)}
+/* THE KEY, because the bands must not mean anything by colour alone. */
+.rs-key{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-wrap:wrap;
+  justify-content:center;gap:6px 16px;font-size:12px;color:var(--ink-soft)}
+.rs-key li{display:flex;align-items:center;gap:6px}
+.rs-key i{width:11px;height:11px;border-radius:2px;display:block}
+.rs-key .hit{color:var(--ink);font-weight:700}
+.rs-key .z-1 i{background:#1E6B45}.rs-key .z-2 i{background:#4E9370}
+.rs-key .z-3 i{background:#8FBBA2}.rs-key .z-4 i{background:#C6DCCF}
+.rs-key .z-none i{background:#D3D6D0}
+.rs-why{margin:14px 0 0;padding:11px 14px;background:rgba(0,0,0,.04);
+  font-size:13px;line-height:1.5;color:var(--ink-soft)}
+.rs-why b{color:var(--ink)}
+/* The guide, collapsed. */
+.grades summary{cursor:pointer;display:flex;flex-direction:column;gap:2px;
+  padding:10px 0;list-style:none}
+.grades summary::-webkit-details-marker{display:none}
+.grades .gr-head{font-family:var(--disp);font-size:11px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-faint)}
+.grades .gr-say{font-size:13px;color:var(--ink)}
+.grades summary:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+
+@media (max-width:620px){
+  .rs-facts{gap:14px}
+  .rs-fact b{font-size:27px}
+  .rs-key{gap:5px 12px;font-size:11.5px}
+  .acts .kick,.acts .ghostBtn{width:100%}
+}
+
+/* ---- the result, closer to the approved reference ---- */
+.rs-banner{display:flex;align-items:center;gap:16px;flex-wrap:nowrap;
+  padding:16px 20px;margin:0 0 18px}
+.rs-icon{flex:0 0 auto;width:44px;height:44px;border-radius:50%;
+  background:var(--ok,#1E6B45);display:flex;align-items:center;justify-content:center}
+.rs-icon::before{content:"\2197";color:#fff;font-size:20px;line-height:1}
+.rs-banner.bad .rs-icon{background:var(--ink-faint)}
+.rs-banner.bad .rs-icon::before{content:"\2715"}
+.rs-banner.part .rs-icon{background:var(--gold)}
+.rs-said{display:flex;flex-direction:column;gap:1px;min-width:0}
+.rs-said b{font-family:var(--disp);font-weight:700;font-size:21px;
+  letter-spacing:.03em;text-transform:uppercase;line-height:1.05}
+.rs-pts{font-family:var(--disp);font-weight:700;font-size:14px;
+  letter-spacing:.04em;text-transform:uppercase;color:var(--ink)}
+.rs-dist{font-size:13.5px;color:var(--ink-soft)}
+/* The markers carry their value above the label. */
+.rs-answer b,.rs-guess b{font-family:var(--disp);font-weight:700;font-size:19px;
+  line-height:1;color:var(--ink)}
+.rs-answer,.rs-guess{gap:1px}
+.rs-answer{top:-52px}
+.rs-guess{top:-52px}
+.rs-answer i{margin-top:2px}
+/* When the two are close their labels would sit on top of each other, so the
+   guess drops a line. Both stay readable; neither is hidden. */
+.rs-track.tight .rs-guess{top:-92px}
+.rs-track.tight .rs-guess i{height:74px;width:2px;background:var(--ink);
+  border-radius:0;border:0;margin-top:2px}
+.rs-track.tight .rs-guess::after{content:"";position:absolute;bottom:-9px;
+  left:50%;transform:translateX(-50%);width:14px;height:14px;border-radius:50%;
+  background:var(--card);border:3px solid var(--ink)}
+/* Next question: the primary action, inside the card, on the right. */
+.acts .kick.next{margin-left:auto;padding:14px 22px;font-size:16px}
+.acts .kick.next small{font-weight:400;opacity:.85;margin:0 4px}
+/* The guide reads as one row. */
+.grades summary{flex-direction:row;align-items:center;justify-content:space-between;gap:16px}
+.gr-left{display:flex;flex-direction:column;gap:2px;min-width:0}
+.gr-more{font-size:14px;color:var(--pitch);text-decoration:underline;
+  text-underline-offset:3px;white-space:nowrap}
+.grades[open] .gr-more i{display:none}
+/* The eleven. */
+.eleven{border:1px solid var(--line);border-radius:12px;overflow:hidden;
+  margin:18px 0 0;background:var(--card)}
+.el-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px;
+  padding:11px 16px;border-bottom:1px solid var(--line)}
+.el-t{font-family:var(--disp);font-size:11px;letter-spacing:.18em;
+  text-transform:uppercase;color:var(--ink-faint)}
+.el-n{font-size:12px;font-weight:600;color:var(--ink-soft)}
+.eleven .sheet{margin:0;padding:0;list-style:none}
+.eleven .sheet li[hidden]{display:none}
+.el-foot{margin:0;padding:11px 16px;border-top:1px solid var(--line);
+  font-size:12px;color:var(--ink-faint)}
+.eleven .sheet li:only-child{border-bottom:0}
+@media (max-width:620px){
+  .rs-banner{gap:12px;padding:14px}
+  .rs-icon{width:36px;height:36px}
+  .rs-said b{font-size:18px}
+  .acts .kick.next{margin-left:0;width:100%}
+  .grades summary{flex-direction:column;align-items:flex-start;gap:6px}
+}

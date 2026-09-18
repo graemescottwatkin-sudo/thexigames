@@ -397,6 +397,17 @@ jobs:
           # the runner, and a check that passes when it finds no problems also
           # passes when it finds nothing at all.
           node tools/import_ballpark.js --check
+          # THE PROXIMITY ZONES ON THE RESULT SCREEN, which are the scoring
+          # ladder drawn to scale. Three silent ways to get it wrong: fixed
+          # fractions of the track (right for one question, wrong for the rest,
+          # because a rung's threshold is in BALLPARKS and a ballpark is the
+          # question's own tolerance); a hardcoded five-band legend, which on a
+          # STRICT question names two bands that do not exist and mis-names the
+          # one that does; and greying by position rather than by multiplier,
+          # which would grey "Wide" — a band that pays a quarter.
+          # It executes rules.js, the file the SERVER grades with, so the bands
+          # a player sees and the bands they were judged against cannot drift.
+          node football/ballpark/zones_test.mjs
           # And the guards on the calendar it writes, which until now were
           # proved only by hand-sabotage in one evening's session. The boundary
           # is the one that matters: rebuilding from tomorrow must carry TODAY

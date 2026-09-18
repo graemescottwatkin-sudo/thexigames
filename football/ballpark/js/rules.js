@@ -135,13 +135,53 @@
       : { sub: 0, seconds: NARROW_SECS };
   }
 
+  /* THE PROXIMITY ZONES, which are the ladder drawn to scale.
+   *
+   * IT LIVES HERE AND NOT IN THE PAGE because it is the ladder's own geometry:
+   * a rung's threshold is in BALLPARKS, a ballpark is the question's tolerance,
+   * so the band around the answer is threshold x tolerance and its width on a
+   * track is different for every question. Put it in game.js and there would be
+   * two descriptions of one rule, which is how the ladder came to be hardcoded
+   * markup the first time.
+   *
+   * WHAT IT RETURNS is one entry per rung, ordered closest first, each with the
+   * half-width it reaches and whether it SCORES — which is the multiplier being
+   * above zero, not the position in the list. On the ordinary ladder "Wide"
+   * pays a quarter and only "Way out" pays nothing, so greying the last row by
+   * its index would grey a band that scores.
+   *
+   * The outermost rung is Infinity and has no width of its own; it is given the
+   * span it needs to reach the ends of the question's range, so a caller can
+   * clamp it rather than handle a special case.
+   */
+  function zonesFor(q, span) {
+    var L = ladderFor(q);
+    var tol = Number(q && q.tolerance);
+    if (!isFinite(tol) || tol <= 0) return [];
+    var reach = Math.max(Number(span) || 0, tol);
+    var out = [], prev = 0;
+    for (var i = 0; i < L.length; i++) {
+      var at = L[i][0];
+      out.push({
+        label: L[i][2],
+        mult: L[i][1],
+        scoring: L[i][1] > 0,
+        innerHalf: prev * tol,
+        outerHalf: at === Infinity ? reach : at * tol,
+        depth: i,
+      });
+      prev = at === Infinity ? prev : at;
+    }
+    return out;
+  }
+
   var api = {
     MAX_SCORE: MAX_SCORE, QUESTIONS: QUESTIONS, PTS: PTS, SUBS: SUBS,
     CLOCK: CLOCK, GRACE: GRACE, NARROW_SECS: NARROW_SECS, BONUS_CAP: BONUS_CAP,
     GRADES: GRADES, STRICT_GRADES: STRICT_GRADES,
     ladderFor: ladderFor, ballparksOut: ballparksOut, gradeFor: gradeFor,
     pointsAt: pointsAt, pointsFor: pointsFor, score: score,
-    narrowCost: narrowCost,
+    narrowCost: narrowCost, zonesFor: zonesFor,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   root.XIBP = api;

@@ -32,7 +32,7 @@
 <!-- The theme, stamped before first paint: light unless the player chose
      dark, decided in one shared place for every page of the family. -->
 <script src="/shared/xi-theme.js?v=v45"></script>
-<link rel="stylesheet" href="css/style.css?v=v001i">
+<link rel="stylesheet" href="css/style.css?v=v001j">
 <!-- NO data-game ON <html>, DELIBERATELY. The accent palette lives in
      shared/xi-tokens.css, which every page of the site loads, and this game has
      not launched — naming it there would name it to everybody. QuickFire XI is
@@ -195,6 +195,10 @@
            four things scattered round the board. -->
       <div class="board" aria-label="Scoreboard">
         <div class="bd-cell">
+          <span class="bd-l">Question</span>
+          <b id="qNo">1<small id="qOf"> of 11</small></b>
+        </div>
+        <div class="bd-cell">
           <span class="bd-l">Clock</span>
           <b class="secs" id="secs">20<small>s</small></b>
         </div>
@@ -246,6 +250,39 @@
         </div>
         <div class="ends"><span id="lo">0</span><span id="hi">100</span></div>
 
+        <!-- THE RESULT, and every part of it is hidden until the lock. The
+             answer is not in this page before then — the server's PUBLIC_KEYS
+             omit it — so none of this can leak early even by mistake. -->
+        <div class="result" id="result" hidden>
+          <div class="rs-banner" id="rsBanner">
+            <span class="rs-icon" id="rsIcon" aria-hidden="true"></span>
+            <span class="rs-said">
+              <b id="rsGrade"></b>
+              <span class="rs-pts" id="rsPts"></span>
+              <span class="rs-dist" id="rsDist"></span>
+            </span>
+          </div>
+          <div class="rs-facts">
+            <span class="rs-fact"><span class="rs-l">Your guess</span><b id="rsGuess"></b></span>
+            <span class="rs-away" id="rsAway"></span>
+            <span class="rs-fact"><span class="rs-l">Correct answer</span><b id="rsAnswer"></b></span>
+          </div>
+          <!-- THE ZONES ARE DERIVED, one per rung of the ladder this question
+               is graded on, at that rung's threshold in ballparks times the
+               question's own tolerance. Five for an ordinary question, THREE
+               for a strict one, and the labels come with them. -->
+          <div class="rs-track" id="rsTrack">
+            <span class="rs-zones" id="rsZones"></span>
+            <span class="rs-answer" id="rsAnswerMark"><b id="rsAnswerAt"></b><span>Answer</span><i></i></span>
+            <span class="rs-guess" id="rsGuessMark"><b id="rsGuessAt"></b><span>Your guess</span><i></i></span>
+          </div>
+          <div class="rs-ends"><span id="rsLo"></span><span id="rsHi"></span></div>
+          <!-- Shape and text as well as colour, so the bands mean something to
+               somebody who cannot tell the greens apart. -->
+          <ul class="rs-key" id="rsKey"></ul>
+          <p class="rs-why" id="rsWhy"></p>
+        </div>
+
         <p class="verdict" id="verdict" role="status" aria-live="polite"></p>
 
         <div class="acts">
@@ -253,20 +290,43 @@
           <button class="ghostBtn" id="narrow" type="button">
             Narrow the range <small id="narrowCost">1 sub, free</small>
           </button>
-          <button class="kick" id="next" type="button" disabled hidden>Next</button>
+          <button class="kick next" id="next" type="button" disabled hidden>
+            Next question <small id="nextOf"></small> <span aria-hidden="true">&rarr;</span>
+          </button>
         </div>
 
         <!-- THE LADDER THAT APPLIES TO THIS QUESTION, drawn from the question
              rather than written into the page: a strict question shows its
              harsher terms BEFORE the lock, not as a surprise after it. -->
-        <div class="grades">
-          <p class="gr-head" id="gradesHead">What it is worth</p>
+        <!-- HOW SCORING WORKS, COLLAPSED. This was an open list of every rung
+             with its current value, which on a run-down clock reads
+             "1, 1, 1, 0, 0" — five rows that look arbitrary because the
+             multiplier has flattened them. The rule is stable and the numbers
+             are not, so the rule is what it states; the number that matters is
+             the one awarded, and that is in the result above. Still a real
+             <details>, so the full ladder is a keystroke away and nothing is
+             hidden from anybody who wants it. -->
+        <details class="grades" id="grades">
+          <summary>
+            <span class="gr-left">
+              <span class="gr-head" id="gradesHead">How scoring works</span>
+              <span class="gr-say">Closer guesses earn a larger share of the points left on the clock.</span>
+            </span>
+            <span class="gr-more">View scoring guide <i aria-hidden="true">+</i></span>
+          </summary>
           <ul id="gradesList"></ul>
-        </div>
+        </details>
       </section>
 
       <!-- The eleven, as they settle. -->
-      <ol class="sheet" id="sheet"></ol>
+      <div class="eleven">
+        <div class="el-head">
+          <span class="el-t">The eleven</span>
+          <span class="el-n" id="sheetCount"></span>
+        </div>
+        <ol class="sheet" id="sheet"></ol>
+        <p class="el-foot" id="sheetFoot"></p>
+      </div>
     </div>
 
     <!-- FULL TIME -->
@@ -294,7 +354,7 @@
 <!-- The rules, the same file the server grades with. It holds the ladders, the
      clock and what a substitution costs — and no answers, which is the whole
      arrangement: see the note at the top of it. -->
-<script src="js/rules.js?v=v001i"></script>
-<script src="js/game.js?v=v001i"></script>
+<script src="js/rules.js?v=v001j"></script>
+<script src="js/game.js?v=v001j"></script>
 </body>
 </html>
