@@ -154,6 +154,20 @@ jobs:
       - name: The front door features the same two games for everybody
         run: node tools/lineup_test.mjs
 
+      # ?play=1 MUST START THE GAME, AND START IT ONCE. The hub's ten cards all
+      # link to /football/<game>/?play=1, and autoPlay() in shared/xi-chrome.js
+      # turns that into a started board. Two opposite failures, and the visible
+      # one is not the expensive one: clicking before the game binds its handler
+      # leaves the player on the menu — measured live on 18 Sep 2026, four of the
+      # ten games — while retrying until the control disappears posts the start
+      # three or four times on any game that starts through a round trip,
+      # spending an allowance the player cannot get back.
+      # The loop is read out of the shipped file and run against a late-binding
+      # handler, a slow start, and a game with no control at all. Time is a
+      # counter rather than a clock, so it cannot flake on a loaded runner.
+      - name: The hub's Play today opens the board, exactly once
+        run: node tools/autoplay_test.mjs
+
       # ONE SEASON, AT THE TOP LEVEL, and three suites because it has three
       # parts that can drift apart: the rule, the account's rows, and the
       # device's own record. The last one runs the real shared/xi-plays.js

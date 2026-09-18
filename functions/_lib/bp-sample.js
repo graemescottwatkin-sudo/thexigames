@@ -200,7 +200,7 @@ export const BP_SAMPLE_BOARDS = [
    {
     "id": "appointed-alfredo-di-stefano-real-madrid",
     "question": "In which year was Alfredo Di Stefano first appointed manager of Real Madrid?",
-    "detail": "His first permanent spell at the club. Caretakers are not counted.",
+    "detail": "His first spell in charge of the club, whether or not it began as a caretaker appointment.",
     "answer": 1982,
     "lo": 1971,
     "hi": 1990,

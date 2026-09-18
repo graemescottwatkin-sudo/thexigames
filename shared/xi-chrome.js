@@ -896,11 +896,68 @@
        after this runs — so wait for it rather than assuming it is there. Four
        seconds of looking, then give up and leave the player on the home page,
        which is a page they asked for rather than an error. */
-    var tries = 0;
+    /* AND A CLICK IS NOT A START. This clicked the moment the button was
+       VISIBLE and returned satisfied — but a button is rendered before its
+       game binds a handler to it, so the click landed on nothing and the
+       player was left on the menu with the address already rewritten.
+       Found on Codeword, live, on 18 Sep 2026: the hub's card opened the menu
+       every time while a manual click on the same button started the board.
+       A race, so it was intermittent by nature and invisible to any check that
+       asked "did we click".
+       So it clicks and then LOOKS AGAIN: the button going away is the game
+       starting, and while it is still there the click did not take. Same four
+       seconds, spent confirming rather than assuming. */
+    /* CLICKING IS NOT STARTING, AND CLICKING TWICE IS WORSE THAN NOT STARTING.
+       Two faults, one loop, and they pull against each other:
+
+       The first version clicked the moment the control was VISIBLE and
+       returned satisfied. A control is rendered before its game binds a
+       handler to it, so the click landed on nothing and the player sat on the
+       menu with the address already rewritten. Measured live on 18 Sep 2026:
+       four of the ten games — wordsearch, hilo, codeword, whoami — never
+       started from the hub's card, while a click by hand on the same button
+       started them every time.
+
+       The obvious repair is to keep clicking until the control goes away. That
+       is worse. A game that starts through a network round trip leaves the
+       button on screen for a few hundred milliseconds, so a 100ms retry posts
+       the start three or four times — and "spent two of today's allowance" is
+       a fault a player cannot undo, where "did not start" is one they fix by
+       pressing the button themselves.
+
+       So: click, then WAIT a beat for it to take, and only click again if the
+       control is still there after a full second. Three presses at most, which
+       is what an impatient person does, and the same four-second budget. */
+    /* GONE ONLY MEANS STARTED IF IT WAS EVER THERE. Three of the ten games —
+       QuickFire, Scrambled, Vowels — ship their start screen with `hidden` on
+       it and reveal it only when the board fetch resolves. A loop that treats
+       "not visible" as "started" returns on its FIRST look, before the cover
+       is drawn, and never clicks at all: it would have killed Play today on
+       those three while fixing it on the other four.
+
+       So the loop waits for the control to be SEEN, and only after that does
+       its disappearance mean anything. Before it has been seen, absence is
+       "not yet" and the loop keeps looking; after, absence is "started" and
+       the loop stops. */
+    var tries = 0, clicks = 0, sinceClick = 0, seen = false;
     (function look() {
       var el = document.querySelector(".home-choice.hero, #kickOff");
-      var shown = el && !el.hidden && el.offsetParent !== null && !el.disabled;
-      if (shown) { el.click(); return; }
+      var shown = !!el && !el.hidden && el.offsetParent !== null;
+      if (shown) seen = true;
+      /* Started: it was on screen and now it is not. That is the only evidence
+         a start actually happened, and the only reason to stop early. */
+      else if (seen) return;
+
+      /* CLICK ONCE, THEN WAIT FOR IT TO TAKE. Retrying every tick posts the
+         start three or four times on any game that starts through a round
+         trip — the button is still there while the request is in flight — and
+         a spent allowance is not something a player can undo. */
+      if (shown && !el.disabled && (clicks === 0 || (tries - sinceClick) >= 10)
+          && clicks < 3) {
+        el.click();
+        clicks++;
+        sinceClick = tries;
+      }
       if (++tries < 40) setTimeout(look, 100);
     })();
   }
