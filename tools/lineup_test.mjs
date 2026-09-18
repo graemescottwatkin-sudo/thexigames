@@ -246,5 +246,37 @@ console.log("\nThe date on the page is the board's date");
   t("the cover's stamp follows it too", r.coverDay === "25", r.coverDay);
 }
 
+console.log("\n=== The strip earns its colour ===");
+{
+  /* EVERY SHIRT WORE ITS KIT FROM THE MOMENT THE PAGE LOADED, so ten colours
+     said nothing about what the player had done — the two games finished today
+     looked much like the eight that had not. Colour is what a FINISHED board
+     pays out now, and the strip fills in as the day goes on.
+     THE KIT TRAVELS AS --kit, NOT AS A BACKGROUND. Inline `background:` beats
+     every class rule underneath it and could only have been overridden with
+     !important, so an inline background on a dot is the fault returning
+     whatever the stylesheet says. */
+  const d = new JSDOM(HTML).window.document;
+  const dots = [...d.querySelectorAll(".shirt .dot")];
+  t("every shirt's dot carries its kit as a custom property",
+    dots.length === 10 && dots.every((el) =>
+      /--kit:\s*var\(--kit-\d\d\)/.test(el.getAttribute("style") || "")),
+    `${dots.length} dots`);
+  t("and none of them paints itself unconditionally",
+    dots.every((el) => !/background\s*:/.test(el.getAttribute("style") || "")),
+    "an inline background cannot be undone by a class");
+  /* AND THE STYLESHEET GIVES THE COLOUR ONLY TO A FINISHED SHIRT. Asserted on
+     the rule rather than on a rendered colour, because jsdom does not resolve
+     custom properties through a cascade — what can be proved here is which
+     selector the payout hangs off, and that is the thing that would regress. */
+  const paints = HUB.match(/\.shirt\.done\s+\.dot\s*\{[^}]*\}/);
+  t("the kit is paid out to a played shirt and to no other",
+    !!paints && /background\s*:\s*var\(--kit\)/.test(paints[0]),
+    paints ? paints[0].replace(/\s+/g, " ") : "no .shirt.done .dot rule at all");
+  t("and an unplayed dot has a neutral fill of its own",
+    /\.shirt \.dot\{[^}]*background:var\(--ed-rule\)/.test(HUB.split(String.fromCharCode(10)).join("")),
+    "otherwise an unplayed shirt is a hole in the strip");
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

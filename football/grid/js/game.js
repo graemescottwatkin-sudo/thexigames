@@ -32,7 +32,7 @@
 
   var R = window.XIGR_RULES;
   var $ = function (id) { return document.getElementById(id); };
-  var BUILD = "v002e";
+  var BUILD = "v002f";
 
   var S = {
     board: null,          // the PUBLIC board: shape, lengths, crossings. No letters.
@@ -510,6 +510,7 @@
       "<p>" + S.score.solved + " of " + R.ENTRIES + " solved &middot; " +
       S.misses + (S.misses === 1 ? " miss" : " misses") + "</p>" +
       "<table>" + rows + "</table>" +
+      '<div id="shareRow"></div>' +
       /* THE COMMUNITY LINE, WRITTEN INTO THE CARD RATHER THAN PLACED IN THE
          PAGE. Every other game has a static results card and puts an empty
          .xic-community in it; this one BUILDS its card from a string on every
@@ -521,6 +522,31 @@
        full time on the same page re-fills the fresh box rather than doubling
        the line. */
     if (window.XIChrome && window.XIChrome.community) window.XIChrome.community(el);
+    /* THE FAMILY'S SHARE ROW, AND THIS GAME HAD NO SHARE AT ALL — not a row,
+       not a copy button, not a line of text to send. Every other game offers
+       one, so a player who had just finished a Grid had nothing to do with it.
+       THE TEXT IS COMPOSED HERE because there was none to reuse, built to the
+       shape the other games already use: the game and its board number, the
+       score over the family's 114, and what it took. No answer and no letter
+       of one — a share is read by people who have not played it yet.
+       Mounted after the card is written, like the community line above and for
+       the same reason: neither element exists until that innerHTML has run,
+       and both are thrown away by the next one. */
+    if (window.XIShare && $("shareRow")) {
+      window.XIShare.mount($("shareRow"), {
+        text: function () {
+          return [
+            "GRID XI",
+            S.no != null ? "No. " + S.no : "Free play",
+            "",
+            S.score.total + "/" + R.MAX_SCORE,
+            S.score.solved + "/" + R.ENTRIES + " solved",
+            S.misses + (S.misses === 1 ? " miss" : " misses")
+          ].join(String.fromCharCode(10));
+        },
+        url: function () { return location.href; }
+      });
+    }
     if (window.XIPlays && window.XIPlays.active) {
       if (window.XIPlays.active()) window.XIPlays.end(S.score.solved === R.ENTRIES);
     }
@@ -587,6 +613,36 @@
 
   /* ---- boot -------------------------------------------------------------- */
 
+  /* The result this device banked for the board now on screen, if any. */
+  function bankedFor(no) {
+    if (no == null) return null;
+    var all = readResults();
+    for (var i = 0; i < all.length; i++) {
+      if (all[i] && Number(all[i].no) === Number(no)) return all[i];
+    }
+    return null;
+  }
+
+  /* THE FULL TIME CARD, REBUILT FROM THE RECORD. Deliberately not fullTime():
+     that one draws the answer table out of S.answers, which the server sends
+     at the whistle and nothing keeps, so on a fresh page it would print eleven
+     dashes and call them the board. What can honestly be shown is what was
+     banked, and it says plainly that the board is still there to replay. */
+  function showBanked() {
+    var rec = bankedFor(S.no);
+    var el = $("gdFullTime");
+    if (!rec || !el) return;
+    el.hidden = false;
+    el.innerHTML = "<h2>Full time</h2>" +
+      '<p class="score">' + rec.score + "<small>/" + R.MAX_SCORE + "</small></p>" +
+      "<p>" + rec.solved + " of " + R.ENTRIES + " solved &middot; " +
+      rec.misses + (rec.misses === 1 ? " miss" : " misses") + "</p>" +
+      "<p>You played this board. The grid below is still here if you want" +
+      " another go — a replay is not recorded.</p>" +
+      '<div class="xic-community"></div>';
+    if (window.XIChrome && window.XIChrome.community) window.XIChrome.community(el);
+  }
+
   function boot() {
     if (window.XIChrome && window.XIChrome.init) window.XIChrome.init({ game: "grid" });
     wire();
@@ -608,6 +664,18 @@
           boardKey: "gd:" + r.no, dailyNo: r.no, total: R.ENTRIES,
         });
       }
+      /* ---- A FINISHED BOARD STAYS FINISHED ---------------------------
+       * Grid banks its result in xigd.results and NOTHING ON BOOT EVER READ
+       * IT. Come back to a board you finished and you got an empty grid, a
+       * full turn budget and no sign you had played it — the same fault
+       * Codeword had, found the same day.
+       * WHAT COMES BACK IS THE RECORD, NOT THE ROUND. The letters and the
+       * server's answer list are not stored anywhere, and this does not
+       * invent them: the card shows the score, the solved count and the
+       * misses that were banked, which is what "I finished this" means. The
+       * board underneath is left alone — replaying is still allowed, and the
+       * server decides on its own whether a replay is scored. */
+      showBanked();
       render();
     }).catch(function () {
       msg("Could not reach the server — check your connection.", true);

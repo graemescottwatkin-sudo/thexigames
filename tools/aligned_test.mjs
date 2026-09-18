@@ -906,6 +906,37 @@ t("no game carries a private copy of a shared file",
 
    Move both constants together, in the post-deploy commit, exactly as a game's
    LAST_SHIPPED and LAST_SHIPPED_ASSETS move together. */
+/* ---- THE SHARE ROW, ON EVERY GAME ---------------------------------------
+ *
+ * The crossword's row — the buttons, the platforms and the copy fallback — is
+ * shared/xi-share.js, and five games mounted it while five did not. Four of
+ * those offered a bare "Copy result" with nothing to send it with, and Grid
+ * offered nothing at all: no row, no button, no line of text.
+ *
+ * ASKED OF EVERY LAUNCHED GAME, so an eleventh cannot ship without one. The
+ * row may be placed in the page OR written into a card the game builds — Grid
+ * rebuilds its full time from a string, so a row in its markup would be
+ * destroyed by the innerHTML that writes the card, exactly as the community
+ * box is. Both are the same promise; a game with neither fails. */
+/* WHAT THIS CAN AND CANNOT SEE, said rather than left to be found. It reads
+   SOURCE: that the row is placed, the script is loaded and mount is called
+   somewhere. Wrapping the call in `if (false && ...)` leaves every one of those
+   strings in place and this stays green — proved by sabotage, not assumed. It
+   is a WIRING check and is named as one. That the row actually appears at full
+   time is proved by execution in football/grid/journey_test.mjs, which plays a
+   board to the whistle and reads the card. */
+t("every game is wired for the family's share row", (() => {
+  const missing = GAMES.filter((g) => {
+    const html = has(`${g.dir}/index.html`) ? read(`${g.dir}/index.html`) : "";
+    const js = has(`${g.dir}/js/game.js`) ? read(`${g.dir}/js/game.js`) : "";
+    const placed = /id="shareRow"/.test(html) || /id=.shareRow./.test(js);
+    const mounted = /XIShare\.mount/.test(js);
+    const loaded = /xi-share\.js/.test(html);
+    return !(placed && mounted && loaded);
+  }).map((g) => g.name);
+  return GAMES.length > 0 && missing.length === 0;
+})(), `${GAMES.length} games checked`);
+
 /* ---- THE COMMUNITY LINE, ON EVERY GAME'S RESULTS CARD -------------------
  *
  * The end of a round is the one moment a player is pleased with the game and

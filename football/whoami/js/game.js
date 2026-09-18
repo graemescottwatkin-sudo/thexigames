@@ -19,7 +19,7 @@
  * one especially, because deciding it here would need the club's whole roster
  * and a roster is a candidate list for the door.
  */
-var BUILD = "v001h";
+var BUILD = "v001i";
 
 (function bootstrap() {
   'use strict';
@@ -763,6 +763,18 @@ function start() {
     html += '</div>';
     el.doneBody.innerHTML = html;
     el.shareText.value = shareTextFor(r, solved);
+    /* THE FAMILY'S SHARE ROW. The same buttons, the same platforms and the same
+       copy fallback every other game offers, from shared/xi-share.js — this
+       game had a bare "Copy result" and nothing to send it with. Mounted once:
+       the text is read when a button is pressed, not when the row is built, so
+       a later result does not need a remount. */
+    var shareRow = document.getElementById("shareRow");
+    if (window.XIShare && shareRow) {
+      window.XIShare.mount(shareRow, {
+        text: function () { return el.shareText.value; },
+        url: function () { return location.href; },
+      });
+    }
     show('screenDone');
   }
 

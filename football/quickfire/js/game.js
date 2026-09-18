@@ -31,7 +31,7 @@
  * link so a friend could replay the exact eleven, and that is now a board
  * number in the fragment, which is shorter and does not describe the board.
  */
-var BUILD = "v001h";
+var BUILD = "v001i";
 
 (function bootstrap() {
   'use strict';
@@ -750,6 +750,18 @@ function start() {
     html += '</ol>';
     el.resultsBody.innerHTML = html;
     el.shareText.value = shareTextFor(s);
+    /* THE FAMILY'S SHARE ROW. The same buttons, the same platforms and the same
+       copy fallback every other game offers, from shared/xi-share.js — this
+       game had a bare "Copy result" and nothing to send it with. Mounted once:
+       the text is read when a button is pressed, not when the row is built, so
+       a later result does not need a remount. */
+    var shareRow = document.getElementById("shareRow");
+    if (window.XIShare && shareRow) {
+      window.XIShare.mount(shareRow, {
+        text: function () { return el.shareText.value; },
+        url: function () { return location.href; },
+      });
+    }
     show('screenResults');
   }
 

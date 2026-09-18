@@ -5,7 +5,7 @@
      it is yesterday's code. aligned_test asserts the two agree, and until
      this game launched it had no BUILD at all — three of its assets were on
      three different tags, which is the same fault with nobody checking. */
-  var BUILD = "v001l";
+  var BUILD = "v001m";
   if (window.XIPlays && document.documentElement) {
     document.documentElement.setAttribute("data-build", BUILD);
   }
@@ -730,6 +730,17 @@
     rr.textContent = words[resultLetter] || "";
     rr.className = "res " + resultLetter;
     $("ftShare").textContent = share;
+    /* THE FAMILY'S SHARE ROW. The same buttons, the same platforms and the same
+       copy fallback every other game offers, from shared/xi-share.js — this
+       game had a bare "Copy result" and nothing to send it with. Mounted once:
+       the text is read when a button is pressed, not when the row is built, so
+       a later result does not need a remount. */
+    if (window.XIShare && $("shareRow")) {
+      window.XIShare.mount($("shareRow"), {
+        text: function () { return $("ftShare").textContent; },
+        url: function () { return location.href; },
+      });
+    }
     $("ft").hidden = false;
     /* BANKED AT THE WHISTLE, after the score is settled and before anything
        else can go wrong. */

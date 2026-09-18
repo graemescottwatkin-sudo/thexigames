@@ -260,6 +260,50 @@ server.listen(0, "127.0.0.1", async () => {
     }
   }
 
+  console.log("\nSolving the board out ends it too");
+  {
+    /* THE OTHER WAY A BOARD ENDS, and the one the owner reported: "Grid didn't
+       pop up a complete when finished". The block below reaches full time by
+       BURNING THE TURN BUDGET, so the only ending ever exercised was the losing
+       one. Solving all eleven is the ending a player actually wants, and
+       nothing drove it.
+       RULES.isOver is `solved >= ENTRIES || turns <= 0`, and the two halves are
+       reached by different roads: the second by turnsAfter counting down, the
+       first from the server's `solved` set, which is built only from guesses it
+       has RECORDED as correct. A board can be complete on screen without that
+       set being full, because green propagates across crossings — an entry can
+       have every cell confirmed without ever having been guessed. This asks for
+       the ending directly rather than reasoning about which road it took. */
+    const remaining = BOARD.entries.filter((x) => !G.state().solved[x.n]);
+    for (const x of remaining) {
+      if (G.state().over) break;
+      G.pick(BOARD.entries.indexOf(x));
+      const typed = G.state().typed;
+      for (let j = 0; j < typed.length; j++) if (!typed[j]) G.type(x.answer[j]);
+      G.submit();
+      await wait(250);
+    }
+    const st = G.state();
+    t("every entry is solved", Object.keys(st.solved).length === RULES.ENTRIES,
+      Object.keys(st.solved).length + " of " + RULES.ENTRIES);
+    t("the server calls the board over on a completed grid", st.over === true,
+      "solved " + Object.keys(st.solved).length + ", turns " + st.turns);
+    t("and full time is on screen without the turns running out",
+      d.getElementById("gdFullTime").hidden === false && st.turns > 0,
+      "turns left " + st.turns);
+    /* NOT THE MAXIMUM, AND SAYING SO. Written as "the full score for a clean
+       board" first, and it failed at 113: this run is not clean — a block above
+       deliberately guesses wrong to prove a miss is marked, so the efficiency
+       points are down one. The score is the SERVER'S arithmetic for what this
+       round actually did, which is what should be asserted; expecting 114 here
+       was expecting a different game to have been played. */
+    t("and the score is the server's, for a board solved rather than lost",
+      !!st.score && st.score.solved === RULES.ENTRIES &&
+      st.score.total === RULES.score({ solved: st.score.solved, misses: st.misses,
+                                       hints: st.score.hints || 0 }).total,
+      st.score ? st.score.total + " with " + st.misses + " miss(es)" : "no score");
+  }
+
   console.log("\nFull time");
   {
     /* Burn the budget. The page cannot end the board itself — it ends when the
@@ -280,11 +324,88 @@ server.listen(0, "127.0.0.1", async () => {
       d.querySelector("#gdFullTime .score") && d.querySelector("#gdFullTime .score").textContent);
     /* AND ONLY NOW DO THE ANSWERS ARRIVE. Not before — the server sends them
        when the round it has been counting says the board is finished. */
+    /* ---- the share row, and the community line, on the finished card ----
+       THIS GAME HAD NO SHARE AT ALL: no row, no copy button, no text. Every
+       other game offers one, so a player who had just finished a Grid had
+       nothing to do with it.
+       PROVED BY EXECUTION, because the source check in aligned_test cannot see
+       this. That one reads that the row is placed, the script is loaded and
+       mount is called; wrapping the call in `if (false && ...)` leaves all
+       three strings intact and it stays green. Sabotage said so. What cannot
+       be faked is the row being in the card after a board has actually been
+       played to the whistle, which is what is asserted here.
+       BOTH ELEMENTS ARE WRITTEN BY THE SAME innerHTML that builds the card, so
+       neither exists until this moment and both are destroyed by the next
+       full time — that is why the game mounts and fills them after the write
+       rather than placing them in index.html. */
+    /* THE ROW MUST BE FILLED, NOT MERELY PRESENT. First written as "the box
+       exists", and the box is written into the card by the same string either
+       way — disabling the mount left this green. What mount() actually does is
+       add .xis to the target and put a Share button inside it, so that is what
+       is asked for. Caught by sabotage. */
+    const shareRow = d.querySelector("#gdFullTime #shareRow");
+    t("the finished card carries the family's share row",
+      !!shareRow && shareRow.classList.contains("xis") &&
+      !!shareRow.querySelector("button"),
+      shareRow ? "row is " + (shareRow.className || "(unfilled)")
+               : "a player with nothing to send it with is the fault this closes");
+    t("and the community line, pointing at the subreddit",
+      !!d.querySelector("#gdFullTime .xic-community"),
+      "placed by the game, filled by the chrome");
+    /* AND THE SHARE TEXT NAMES THE BOARD AND THE SCORE, WITHOUT NAMING AN
+       ANSWER. A share is read by people who have not played it yet. */
+    t("the share text is the score, never an answer", (() => {
+      const row = d.querySelector("#gdFullTime #shareRow");
+      if (!row) return false;
+      const txt = row.textContent || "";
+      const answers = (BOARD.entries || []).map((e) => e.answer).filter(Boolean);
+      return !answers.some((ans) => txt.indexOf(ans) >= 0);
+    })(), "eleven answers checked against the row");
     t("the answers arrive at full time, from the server", !!G.state().answers);
     t("and the grid fills in", letters().length > 0);
     t("the score the page shows is the one the server computed",
       d.querySelector("#gdFullTime .score").textContent.indexOf(String(G.state().score.total)) === 0,
       JSON.stringify(G.state().score));
+  }
+
+  /* ---- coming back to a board you have already finished ----------------
+   * Grid banked its result in xigd.results and NOTHING ON BOOT READ IT: a
+   * finished board reopened as an empty grid with a full turn budget and no
+   * sign it had been played. Codeword had the same fault, found the same day,
+   * and for the same reason — every suite either game had drove a FIRST visit.
+   * A device that has finished nothing behaves identically either way, which
+   * is why nothing caught it.
+   * A SECOND PAGE, with the record already on the device. */
+  {
+    const banked = { no: G.state().no, title: "x", score: 97, solved: 11,
+                     misses: 1, hints: 0, at: Date.now() };
+    const dom2 = await JSDOM.fromURL(origin + "/", {
+      runScripts: "dangerously", pretendToBeVisual: true, resources: "usable",
+      beforeParse(w2) {
+        w2.matchMedia = () => ({ matches: false, addListener() {}, removeListener() {} });
+        w2.scrollTo = () => {}; w2.scrollBy = () => {};
+        w2.fetch = (u, o) => fetch(String(u).startsWith("http") ? u : origin + u, o);
+        w2.Element.prototype.scrollIntoView = function () {};
+        try { w2.localStorage.setItem("xigd.results", JSON.stringify([banked])); } catch (e) {}
+      },
+    });
+    const d2 = dom2.window.document;
+    await wait(2500);
+    const ft2 = d2.getElementById("gdFullTime");
+    t("a board this device finished opens on its Full Time card",
+      !!ft2 && ft2.hidden === false, ft2 ? "hidden=" + ft2.hidden : "no #gdFullTime");
+    /* THE BANKED FIGURES, NOT RECOMPUTED ONES. Nothing of the round is stored,
+       so a card that worked its score out from the grid in front of it would
+       read zero — the number has to come from the record. */
+    t("and it shows the score that was banked",
+      !!ft2 && ft2.textContent.indexOf(String(banked.score)) >= 0,
+      ft2 && ft2.textContent.replace(/\s+/g, " ").slice(0, 80));
+    /* AND THE BOARD IS STILL THERE. This restores a record, not a round: the
+       grid stays playable and the server decides whether a replay scores. */
+    t("with the grid still playable underneath",
+      d2.querySelectorAll("#gdBoard .gd-cell.on").length > 0,
+      d2.querySelectorAll("#gdBoard .gd-cell.on").length + " cells");
+    dom2.window.close();
   }
 
   w.close();

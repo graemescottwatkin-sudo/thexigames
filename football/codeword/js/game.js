@@ -3,7 +3,7 @@
   /* THE BUILD, PAIRED WITH THE ?v= ON THIS FILE'S OWN SCRIPT TAG. A stale
      cached script is otherwise invisible: the page loads, the game runs, and
      it is yesterday's code. aligned_test asserts the two agree. */
-  var BUILD = "v001h";
+  var BUILD = "v001i";
   if (window.XIPlays && document.documentElement) {
     document.documentElement.setAttribute("data-build", BUILD);
   }
@@ -952,11 +952,52 @@ function boot(BOARD){
     document.getElementById("ftScore").textContent = score;
     var rr = document.getElementById("ftRes"); rr.textContent = words[res]; rr.className = "res " + res;
     document.getElementById("ftShare").textContent = share;
+    /* THE FAMILY'S SHARE ROW. The same buttons, platforms and copy fallback
+       every other game offers, from shared/xi-share.js — this game had a bare
+       "Copy result" and nothing to send it with. Mounted once: the text is read
+       when a button is pressed, not when the row is built. */
+    var shareRow = document.getElementById("shareRow");
+    if (window.XIShare && shareRow) {
+      window.XIShare.mount(shareRow, {
+        text: function () { return document.getElementById("ftShare").textContent; },
+        url: function () { return location.href; },
+      });
+    }
     document.getElementById("ft").classList.add("on");
     document.getElementById("copy").onclick = function(){ try { navigator.clipboard.writeText(share); toast("Copied"); } catch(e){ toast("Select and copy the text"); } };
   }
   document.getElementById("whistle").addEventListener("click", function(){ if (!over) fullTime(); });
   document.getElementById("again").addEventListener("click", restart);
+
+  /* ---- A FINISHED BOARD STAYS FINISHED -----------------------------------
+   *
+   * THE COMPLAINT: "Codeword daily doesn't retain completion". It did not.
+   * This game keeps its results in xicw.results and nothing else — no board
+   * state, deliberately — and NOTHING ON BOOT EVER READ THEM. Come back to a
+   * board you finished an hour ago and you got an empty grid, a running clock
+   * and no sign you had played it at all. The only hint was a toast saying
+   * "Replay — this one is not recorded", and that arrives after the FIRST
+   * KEYSTROKE, because the round is opened by starting to type. So the player
+   * is told they have already done this only once they have begun doing it
+   * again.
+   *
+   * hasPlayedBoard() already knew. It was used for one thing — telling the
+   * server not to score a replay — and its answer was never shown to anybody.
+   *
+   * WHAT IS RESTORED IS THE RESULT, NOT THE GRID. The letters are not kept
+   * anywhere and this does not invent them: the Full Time card comes back with
+   * the score, the solved count, the minute and the outcome that were banked,
+   * which is what "I finished this" means here. The board underneath stays
+   * playable and Play again still works — a replay simply is not recorded,
+   * which was already the rule.
+   * Off the daily this does nothing: a free board has no day to have finished. */
+  if (DAILY && BOARD_DAY) {
+    var mine = null, past = readResults();
+    for (var pi = 0; pi < past.length; pi++) {
+      if (past[pi] && past[pi].day === BOARD_DAY) { mine = past[pi]; break; }
+    }
+    if (mine) showFullTime(mine);
+  }
   function restart(){
     clearInterval(timer);
     guess = {}; pencil = {}; locked = {}; wrongMark = {}; solvedWords = {};

@@ -35,8 +35,9 @@
 <link rel="stylesheet" href="/shared/xi-tokens.css?v=v48">
 <link rel="stylesheet" href="/shared/xi-landing.css?v=v48">
 <link rel="stylesheet" href="/shared/xi-chrome.css?v=v48">
+<link rel="stylesheet" href="/shared/xi-share.css?v=v48">
 <script src="/shared/xi-theme.js?v=v48"></script>
-<link rel="stylesheet" href="css/style.css?v=v001h">
+<link rel="stylesheet" href="css/style.css?v=v001i">
 </head>
 <body>
 <!-- The bar and the footer are MOUNTED, not written: shared/xi-chrome.js fills
@@ -150,6 +151,7 @@
     <pre id="ftShare"></pre>
     <div class="xic-community"></div>
     <div class="row"><button class="btn primary" id="copy">Copy result</button><button class="btn" id="again">Play again</button></div>
+    <div id="shareRow"></div>
   </div>
 </div>
 <div class="toast" id="toast"></div>
@@ -157,10 +159,11 @@
 <footer class="xic-foot"></footer>
 
 <script src="/shared/xi-chrome.js?v=v48"></script>
+<script src="/shared/xi-share.js?v=v48"></script>
 <script src="/shared/xi-season.js?v=v48"></script>
 <script src="/shared/xi-plays.js?v=v48"></script>
 <script>XIChrome.init({ game: "codeword" });</script>
-<script src="js/game.js?v=v001h"></script>
+<script src="js/game.js?v=v001i"></script>
 <!-- THE SWITCH, and it is only a switch. The board loads and renders behind
      the landing exactly as it did before; this shows it. The game's own clock
      starts on the first interaction rather than on load, so nothing is running

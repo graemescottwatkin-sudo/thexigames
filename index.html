@@ -223,11 +223,27 @@ a.shirt{display:flex;align-items:center;gap:9px;min-height:44px;
   padding:6px 14px 6px 6px;border:1px solid var(--ed-rule);border-radius:999px;
   background:transparent;color:var(--ed-ink);
   transition:border-color .12s ease,transform .12s ease,background .12s ease}
+/* COLOUR IS EARNED, NOT DEFAULT. Every shirt wore its kit from the moment the
+   page loaded, so a strip of ten colours said nothing about what the player had
+   actually done — the two games finished today looked much like the eight that
+   had not. The kit is now what a FINISHED board pays out: unplayed shirts sit
+   in neutral and fill in as the day goes on, which is the whole point of a
+   strip you come back to.
+   THE KIT TRAVELS AS A CUSTOM PROPERTY, not as a background. Written inline as
+   `background:var(--kit-NN)` it beat every class rule underneath it and could
+   only have been overridden with !important; as `--kit` the markup still says
+   which colour this shirt wears — one fact, in one place, per the shirt rules
+   — and the stylesheet decides WHEN it is shown. */
 .shirt .dot{flex:0 0 auto;width:30px;height:30px;border-radius:50%;
-  display:flex;align-items:center;justify-content:center;color:#fff;
-  font-family:var(--disp);font-weight:700;font-size:15px;line-height:1}
-/* The amber and sky kits are light: their numeral takes ink, like the cards. */
-.shirt .dot.on-light{color:var(--ink)}
+  display:flex;align-items:center;justify-content:center;
+  background:var(--ed-rule);color:var(--ed-soft);
+  font-family:var(--disp);font-weight:700;font-size:15px;line-height:1;
+  transition:background .15s ease,color .15s ease}
+/* Played today: the shirt takes its kit. */
+.shirt.done .dot{background:var(--kit);color:#fff}
+/* The amber and sky kits are light: their numeral takes ink, like the cards.
+   Only once it is wearing one — a neutral dot keeps the soft ink above. */
+.shirt.done .dot.on-light{color:var(--ink)}
 /* THE NAMES COME OFF THE SHELF, NOT OUT OF THE PAGE. Ten named shirts wrapped
    to two rows and pushed the cards below the fold; the cards name every game
    anyway, a few centimetres further down. So the strip becomes the numbers it
@@ -542,39 +558,39 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
     <div class="xi-strip">
       <div class="strip-row">
         <a class="shirt live" id="shirt1" href="/football/crossword/" title="Crossword XI" aria-label="Crossword XI">
-          <span class="dot" style="background:var(--kit-01)" aria-hidden="true">1</span>
+          <span class="dot" style="--kit:var(--kit-01)" aria-hidden="true">1</span>
           <span class="lbl">Crossword<span class="xi"> XI</span></span></a>
         <a class="shirt live" id="shirt2" href="/football/wordsearch/" title="Wordsearch XI" aria-label="Wordsearch XI">
-          <span class="dot on-light" style="background:var(--kit-02)" aria-hidden="true">2</span>
+          <span class="dot on-light" style="--kit:var(--kit-02)" aria-hidden="true">2</span>
           <span class="lbl">Wordsearch<span class="xi"> XI</span></span></a>
         <a class="shirt live" id="shirt3" href="/football/scrambled/" title="Scrambled XI" aria-label="Scrambled XI">
-          <span class="dot on-light" style="background:var(--kit-03)" aria-hidden="true">3</span>
+          <span class="dot on-light" style="--kit:var(--kit-03)" aria-hidden="true">3</span>
           <span class="lbl">Scrambled<span class="xi"> XI</span></span></a>
         <a class="shirt live" id="shirt4" href="/football/hilo/" title="HiLo XI" aria-label="HiLo XI">
-          <span class="dot" style="background:var(--kit-04)" aria-hidden="true">4</span>
+          <span class="dot" style="--kit:var(--kit-04)" aria-hidden="true">4</span>
           <span class="lbl">HiLo<span class="xi"> XI</span></span></a>
         <a class="shirt live" id="shirt5" href="/football/vowels/" title="Vowels XI" aria-label="Vowels XI">
-          <span class="dot" style="background:var(--kit-05)" aria-hidden="true">5</span>
+          <span class="dot" style="--kit:var(--kit-05)" aria-hidden="true">5</span>
           <span class="lbl">Vowels<span class="xi"> XI</span></span></a>
         <a class="shirt live" id="shirt6" href="/football/grid/" title="Grid XI" aria-label="Grid XI">
-          <span class="dot" style="background:var(--kit-06)" aria-hidden="true">6</span>
+          <span class="dot" style="--kit:var(--kit-06)" aria-hidden="true">6</span>
           <span class="lbl">Grid<span class="xi"> XI</span></span></a>
         <!-- Codeword XI launched 14 September 2026 and took the seventh, the
              next free number. The unsigned shirts below lose one from the top
              rather than the roster growing a twelfth. -->
         <a class="shirt live" id="shirt7" href="/football/codeword/" title="Codeword XI" aria-label="Codeword XI">
-          <span class="dot" style="background:var(--kit-07)" aria-hidden="true">7</span>
+          <span class="dot" style="--kit:var(--kit-07)" aria-hidden="true">7</span>
           <span class="lbl">Codeword<span class="xi"> XI</span></span></a>
         <!-- QuickFire XI launched 15 September 2026 on the eighth, the next
              free number, and keeps the purple it was already wearing — a kit
              belongs to the game, not to the number. -->
         <a class="shirt live" id="shirt8" href="/football/quickfire/" title="QuickFire XI" aria-label="QuickFire XI">
-          <span class="dot" style="background:var(--kit-08)" aria-hidden="true">8</span>
+          <span class="dot" style="--kit:var(--kit-08)" aria-hidden="true">8</span>
           <span class="lbl">QuickFire<span class="xi"> XI</span></span></a>
         <!-- Who Am I XI launched 15 September 2026 on the ninth, the next free
              number, and keeps the teal it was already wearing. -->
         <a class="shirt live" id="shirt9" href="/football/whoami/" title="Who Am I XI" aria-label="Who Am I XI">
-          <span class="dot" style="background:var(--kit-09)" aria-hidden="true">9</span>
+          <span class="dot" style="--kit:var(--kit-09)" aria-hidden="true">9</span>
           <span class="lbl">Who Am I<span class="xi"> XI</span></span></a>
         <!-- Ballpark XI took the tenth on 16 September 2026, the next free
              number, and keeps the slate it was already wearing. Its LAUNCHED
@@ -582,7 +598,7 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
              address since the family epoch without holding a shirt, and dating
              the launch later would have hidden twenty-one boards that ran. -->
         <a class="shirt live" id="shirt10" href="/football/ballpark/" title="Ballpark XI" aria-label="Ballpark XI">
-          <span class="dot" style="background:var(--kit-10)" aria-hidden="true">10</span>
+          <span class="dot" style="--kit:var(--kit-10)" aria-hidden="true">10</span>
           <span class="lbl">Ballpark<span class="xi"> XI</span></span></a>
       </div>
       <div class="strip-row soon-row">
