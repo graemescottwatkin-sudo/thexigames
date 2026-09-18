@@ -15,7 +15,7 @@
      the family more time than any layout question: the footer line, the
      console, and the named window variable. If this is not the build just
      deployed, the deploy has not landed — do not start debugging the game. */
-  var BUILD = "v002u";
+  var BUILD = "v002v";
   window.WORDSEARCHXI_BUILD = BUILD;
   try { console.log("Wordsearch XI build " + BUILD); } catch (e) {}
 
@@ -87,6 +87,12 @@
   var timer = null, wrongResetTimer = null, finishTimeout = null, toastTimer = null;
   var helpUsed = new Set(), assisted = false;
   var varPauseStart = 0, varPauseUntil = 0, varFrozenScore = 114;
+  /* THE BONUS WINDOW rides the VAR pause rather than inventing a second clock.
+     Everything a free period needs is already here — the match clock stops,
+     the score is held, and startedAt is corrected by exactly the pause — so
+     this flag says only WHY the clock is stopped: a VAR review restarts play,
+     a bonus window ends the match. One freeze, two endings. */
+  var bonusWindow = false;
   var dragging = false, startIndex = null, preview = [], cellEls = [];
   var grid = null, hlayer = null;
 
@@ -340,6 +346,8 @@
   });
 
   /* ---- clock ----------------------------------------------------------- */
+  /* One number, named once: the free hunt after the XI are complete. */
+  var BONUS_SECONDS = 30;
   function varActive() { return varPauseUntil > 0 && Date.now() < varPauseUntil; }
   /* ---- the live league table ------------------------------------------
      Your score IS your club's points in a real historical season, and it moves
@@ -369,10 +377,18 @@
   }
   function updateClock() {
     if (varActive()) {
-      $("clock").textContent = "VAR";
-      renderScore(varFrozenScore);
+      var left = Math.max(1, Math.ceil((varPauseUntil - Date.now()) / 1000));
+      /* THE SAME FREEZE, SAID TWO WAYS. A VAR review interrupts a match still
+         being played; the bonus window is time given after it is effectively
+         won, so the banner must not say "VAR review" or the player is told the
+         wrong thing about their own clock. */
       $("varBanner").classList.remove("hidden");
-      $("varCountdown").textContent = Math.max(1, Math.ceil((varPauseUntil - Date.now()) / 1000)) + "s";
+      $("varBanner").querySelector("b").textContent = bonusWindow ? "Bonus time" : "VAR review";
+      $("varBanner").querySelector("span").textContent = bonusWindow
+        ? "free · find the secret" : "match clock stopped";
+      $("clock").textContent = bonusWindow ? "BONUS" : "VAR";
+      renderScore(varFrozenScore);
+      $("varCountdown").textContent = left + "s";
       return;
     }
     $("varBanner").classList.add("hidden");
@@ -383,6 +399,17 @@
     var now = Date.now();
     if (varPauseUntil) {
       if (now < varPauseUntil) { updateClock(); return; }
+      /* TWO ENDINGS TO ONE FREEZE. A VAR review hands the match back; a bonus
+         window is the end of it — the XI are already complete, so there is
+         nothing to restart and the whistle goes. Checked before the clock is
+         handed back, or the match would resume for one tick and charge for a
+         second nobody played. */
+      if (bonusWindow) {
+        bonusWindow = false;
+        varPauseStart = 0; varPauseUntil = 0;
+        finish("complete");
+        return;
+      }
       /* Add back exactly the pause, however late the tick fires. */
       if (startedAt) startedAt += (varPauseUntil - varPauseStart);
       varPauseStart = 0; varPauseUntil = 0;
@@ -897,9 +924,22 @@
       : (bonusLen ? bonusLen + " letters · " : "") + "Hidden in the grid · +10 points";
     if (found.size >= 11) {
       if (bonusFound) { finish("complete"); return; }
-      $("finishPrompt").classList.add("show");
-      clearTimeout(finishTimeout);
-      finishTimeout = setTimeout(function () { finish("complete"); }, 30000);
+      /* THIRTY FREE SECONDS FOR THE SECRET. The XI are in and the bonus is not;
+         the player used to get a prompt and a silent thirty-second fuse while
+         the MATCH CLOCK KEPT RUNNING, so hunting for the bonus cost points and
+         nothing said so. The clock stops now, the score is held where the
+         eleventh find left it, and the seconds are shown counting down.
+         Guarded so it arms once: this runs on every render, and re-arming it
+         on each one would hand out an endless thirty seconds. */
+      if (!bonusWindow) {
+        bonusWindow = true;
+        varPauseStart = Date.now();
+        varPauseUntil = varPauseStart + BONUS_SECONDS * 1000;
+        varFrozenScore = finalScore();
+        $("finishPrompt").classList.add("show");
+        clearTimeout(finishTimeout);
+        updateClock();
+      }
     }
   }
   function toast(t) {
@@ -1661,8 +1701,13 @@
       if (!e.target.closest(".menuWrap")) closeMenus();
     });
     document.addEventListener("keydown", function (e) { if (e.key === "Escape") closeMenus(); });
+    /* HIDES THE PROMPT, DOES NOT BUY TIME. It used to clear the fuse, which
+       made the hunt unlimited — and unlimited with the match clock RUNNING, so
+       every extra second cost points while nothing said so. The allocation is
+       thirty free seconds and it keeps running underneath; this only gets the
+       banner out of the way of the grid. */
     $("keepBtn").onclick = function () {
-      $("finishPrompt").classList.remove("show"); clearTimeout(finishTimeout);
+      $("finishPrompt").classList.remove("show");
     };
     $("finishBtn").onclick = function () { finish("complete"); };
     $("shareBtn").onclick = doShare;

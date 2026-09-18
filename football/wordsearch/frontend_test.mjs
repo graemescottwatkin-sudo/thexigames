@@ -289,6 +289,46 @@ for (let i = 1; i < 11; i++) {
 t("ten more drags complete the XI", d.getElementById("count").textContent === "11");
 t("the finish prompt offers the secret hunt",
   d.getElementById("finishPrompt").classList.contains("show"));
+/* ---- and the hunt is thirty FREE seconds -----------------------------
+   The prompt used to come with a silent thirty-second fuse while the MATCH
+   CLOCK KEPT RUNNING, so hunting for the bonus cost points and nothing said
+   so — and "Keep hunting" cleared the fuse, making it unlimited and unlimited
+   at a price. The clock stops now, the score is held where the eleventh find
+   left it, and the seconds are shown.
+   ASSERTED ON THE BANNER THE PLAYER READS, not on the internal state: the
+   freeze is shared with a VAR review, and the one thing that must NOT happen
+   is the player being told their clock stopped for a review that is not
+   happening. */
+{
+  const banner = d.getElementById("varBanner");
+  t("the clock stops for the bonus hunt",
+    d.getElementById("clock").textContent === "BONUS",
+    d.getElementById("clock").textContent);
+  t("and the banner says it is free, not a VAR review",
+    !!banner && !banner.classList.contains("hidden") &&
+    /Bonus time/.test(banner.textContent) && !/VAR/.test(banner.textContent),
+    banner ? banner.textContent.replace(/\s+/g, " ").trim() : "no banner");
+  t("with the seconds counting down",
+    /^\d+s$/.test(d.getElementById("varCountdown").textContent),
+    d.getElementById("varCountdown").textContent);
+  /* AND THE SCORE IS HELD. A free period that quietly kept scoring would be
+     the same fault in a nicer banner. */
+  const heldScore = d.getElementById("score").textContent;
+  await new Promise((r) => setTimeout(r, 1200));
+  t("and the score does not move while it runs",
+    d.getElementById("score").textContent === heldScore,
+    heldScore + " -> " + d.getElementById("score").textContent);
+  /* "Keep hunting" hides the banner; it must not buy more time. */
+  d.getElementById("keepBtn").dispatchEvent(new w.Event("click"));
+  /* LONG ENOUGH FOR A TICK TO REPAINT. Written as 50ms first and it read a
+     stale clock: cancelling the window does not clear the text, the next tick
+     does, so the check passed on a sabotage that had plainly worked. */
+  await new Promise((r) => setTimeout(r, 1200));
+  t("hiding the prompt does not cancel the allocation",
+    !d.getElementById("finishPrompt").classList.contains("show") &&
+    d.getElementById("clock").textContent === "BONUS",
+    "the thirty seconds keep running underneath");
+}
 // THE SECRET IS THE SERVER'S NOW. The page is given a clue and a length, so
 // the suite drags it from the server's copy - which is the separation being
 // tested, expressed in how the test has to be written.

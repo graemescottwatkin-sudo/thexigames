@@ -278,5 +278,49 @@ console.log("\n=== The strip earns its colour ===");
     "otherwise an unplayed shirt is a hole in the strip");
 }
 
+console.log("\n=== The strapline counts the whole squad ===");
+{
+  /* IT COUNTED ONLY THE PLAYABLE ONES and read "Ten ways to find them", which
+     was true about today and not about what the club is. The owner's call: the
+     line counts eleven, the unsigned shirt included, because eleven is the
+     promise the name makes — and the strip shows that shirt as a number
+     waiting rather than a game anybody can open, so nothing is claimed to be
+     playable that is not.
+     THE NUMBER IS NEVER WRITTEN DOWN. That is the whole point of the helper it
+     comes from: the word "nine" was once typed into three sentences and
+     releasing a game left all three wrong. What is asserted here is that the
+     markup's static fallback agrees with the strip, and that the script counts
+     BOTH classes — so when the eleventh game launches and .soon becomes .live,
+     the total does not move. */
+  const d = new JSDOM(HTML).window.document;
+  const live = d.querySelectorAll(".xi-strip a.shirt.live").length;
+  const soon = d.querySelectorAll(".xi-strip .shirt.soon").length;
+  const WORDS = ["none", "one", "two", "three", "four", "five", "six",
+                 "seven", "eight", "nine", "ten", "eleven"];
+  const want = WORDS[live + soon] || String(live + soon);
+  const el = d.getElementById("liveCount");
+  t("the strip holds a whole squad of eleven", live + soon === 11,
+    live + " playable, " + soon + " waiting");
+  t("and the line printed before any script agrees with it",
+    !!el && el.textContent.toLowerCase() === want,
+    el ? el.textContent : "no #liveCount");
+  /* AND IT IS DERIVED, not typed. Both classes must be counted, or the number
+     drops by one the day the eleventh shirt is signed. */
+  t("the count is read off the strip, both classes",
+    /querySelectorAll\("\.xi-strip a\.shirt\.live"\)\.length/.test(HUB) &&
+    /querySelectorAll\("\.xi-strip \.shirt\.soon"\)\.length/.test(HUB),
+    "a number typed into a sentence is a number nobody updates");
+  /* READ OFF THE RENDERED SENTENCE, NOT THE SOURCE. Written against HUB first
+     and it failed on the comment three lines above the code it guards, which
+     quotes the old wording to explain why it changed. A check that greps the
+     file reads the prose as well as the program — this project's own rule —
+     so it asks the paragraph the visitor actually sees. */
+  const sub = d.querySelector(".hero-say .sub");
+  t("and the sentence says games rather than ways",
+    !!sub && /games to find them/.test(sub.textContent) &&
+    !/ways to find them/.test(sub.textContent),
+    sub ? sub.textContent.replace(/\s+/g, " ").trim() : "no .sub");
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

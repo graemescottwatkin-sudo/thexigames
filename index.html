@@ -525,7 +525,7 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
     <div class="hero-say">
       <p class="hero-kicker">The daily football puzzle club</p>
       <h1>The beautiful game.<br>A different<br><em>kind of challenge.</em></h1>
-      <p class="sub">Eleven answers. <span id="liveCount">Ten</span> ways to find them.<br>
+      <p class="sub">Eleven answers. <span id="liveCount">Eleven</span> games to find them.<br>
          Your daily football fix starts here.</p>
       <!-- THE LABEL NAMES THE GAME IT OPENS. It is written here as the first
            game in shirt order so the button is never empty and never lies
@@ -1082,7 +1082,20 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
     /* AND HOW MANY THERE ARE TO PLAY, counted the same way and for the same
        reason: the banner says "six games" and it said "four games" eight weeks
        ago. A number typed into a sentence is a number nobody updates. */
-    var live = document.querySelectorAll(".xi-strip a.shirt.live").length;
+    /* THE WHOLE SQUAD, NOT ONLY THE SIGNED PART. This counted a.shirt.live and
+       the line read "Ten ways to find them" — true about what is playable
+       today and not what the club IS. The owner's call: the sentence counts
+       the eleven, the unsigned shirt included, because eleven is the promise
+       the name makes and the strip already shows that shirt as a number
+       waiting rather than a game anybody can open.
+       STILL COUNTED FROM THE STRIP rather than written down, which is the
+       reason this function exists: the word "nine" was typed into three
+       sentences once and releasing a game left all three wrong. Adding the
+       unsigned shirt changes WHICH shirts are counted, not where the number
+       comes from — so the day an eleventh game launches, .soon becomes .live
+       and the total does not move. */
+    var live = document.querySelectorAll(".xi-strip a.shirt.live").length +
+               document.querySelectorAll(".xi-strip .shirt.soon").length;
     var c = document.getElementById("liveCount");
     if (c) c.textContent = upper(WORDS[live] || String(live));
     var b = document.getElementById("toSignProse");
