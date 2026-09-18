@@ -32,7 +32,7 @@
 
   var R = window.XIGR_RULES;
   var $ = function (id) { return document.getElementById(id); };
-  var BUILD = "v002d";
+  var BUILD = "v002e";
 
   var S = {
     board: null,          // the PUBLIC board: shape, lengths, crossings. No letters.
@@ -509,7 +509,18 @@
       '<p class="score">' + S.score.total + "<small>/" + R.MAX_SCORE + "</small></p>" +
       "<p>" + S.score.solved + " of " + R.ENTRIES + " solved &middot; " +
       S.misses + (S.misses === 1 ? " miss" : " misses") + "</p>" +
-      "<table>" + rows + "</table>";
+      "<table>" + rows + "</table>" +
+      /* THE COMMUNITY LINE, WRITTEN INTO THE CARD RATHER THAN PLACED IN THE
+         PAGE. Every other game has a static results card and puts an empty
+         .xic-community in it; this one BUILDS its card from a string on every
+         full time, so a box placed in index.html would be thrown away by the
+         innerHTML above. The box is emitted here and filled below. */
+      '<div class="xic-community"></div>';
+    /* Filled after the write, because the element did not exist until now.
+       XIChrome fills any empty .xic-community and is idempotent, so a second
+       full time on the same page re-fills the fresh box rather than doubling
+       the line. */
+    if (window.XIChrome && window.XIChrome.community) window.XIChrome.community(el);
     if (window.XIPlays && window.XIPlays.active) {
       if (window.XIPlays.active()) window.XIPlays.end(S.score.solved === R.ENTRIES);
     }

@@ -906,8 +906,48 @@ t("no game carries a private copy of a shared file",
 
    Move both constants together, in the post-deploy commit, exactly as a game's
    LAST_SHIPPED and LAST_SHIPPED_ASSETS move together. */
-const SHARED_TAG = "v47";
-const SHARED_HASH = "3f34bfb66d94d9ce";
+/* ---- THE COMMUNITY LINE, ON EVERY GAME'S RESULTS CARD -------------------
+ *
+ * The end of a round is the one moment a player is pleased with the game and
+ * still on it, so the subreddit is offered there as well as in the footer.
+ * Built by the chrome from one href; each game only says WHERE, with an empty
+ * .xic-community box, exactly as it places .xic-foot.
+ *
+ * ASKED OF EVERY LAUNCHED GAME, so an eleventh cannot ship without one by
+ * nobody remembering. The box may live in the page OR in the game's own js:
+ * Grid builds its full-time card from a string on every round, so a box in its
+ * markup would be destroyed by the innerHTML that writes the card, and it
+ * emits the box itself instead. Both are the same promise — that a finished
+ * board offers the line — so both count, and a game with neither fails. */
+t("every game's results card carries the community box", (() => {
+  const missing = GAMES.filter((g) => {
+    const html = has(`${g.dir}/index.html`) ? read(`${g.dir}/index.html`) : "";
+    const js = has(`${g.dir}/js/game.js`) ? read(`${g.dir}/js/game.js`) : "";
+    return !/xic-community/.test(html) && !/xic-community/.test(js);
+  }).map((g) => g.name);
+  return GAMES.length > 0 && missing.length === 0;
+})(), `${GAMES.length} games checked`);
+/* AND THE CHROME IS THE ONLY THING THAT FILLS IT. A game writing its own href
+   would be the subreddit in eleven places again — the fault the footer was
+   built shared to avoid — and the day it moves, ten of them would be wrong.
+   THE PATTERN IS A SUBREDDIT ADDRESS, NOT THE WORD "REDDIT". Written as
+   /reddit\.com/ first and it failed on the crossword, which has neither a link
+   nor a mention of this community: it offers Reddit in its "where did you hear
+   about us" dropdown, and a comment names reddit.com among the spellings that
+   attribution slug folds together. Both are that game's own business. What may
+   not be duplicated is an address pointing INTO a subreddit. */
+t("and no game writes the link itself", (() => {
+  const guilty = GAMES.filter((g) => {
+    const html = has(`${g.dir}/index.html`) ? read(`${g.dir}/index.html`) : "";
+    const js = has(`${g.dir}/js/game.js`) ? read(`${g.dir}/js/game.js`) : "";
+    const sub = /reddit\.com\/r\//i;
+    return sub.test(html) || sub.test(js);
+  }).map((g) => g.name);
+  return guilty.length === 0;
+})(), "the href lives once, in shared/xi-chrome.js");
+
+const SHARED_TAG = "v48";
+const SHARED_HASH = "842a089aaa437ea9";
 /* EVERY PAGE THAT LINKS THE SHARED LAYER, not the games alone. The hub, the
    two static pages and the unlaunched game all carry the chrome now, and the
    server-rendered shell writes the tag from a constant of its own — so a tag

@@ -239,6 +239,18 @@ a.xic-slot:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; 
 
 /* ---- the footer ------------------------------------------------------- */
 
+/* THE COMMUNITY LINE ON A RESULTS CARD. Quiet on purpose: it sits under a
+   score the player has just earned and must not compete with it, so it takes
+   the soft ink and the body face rather than the display one. Centred because
+   every results card it lands in is centred. */
+.xic-community { margin: 14px 0 2px }
+.xic-community-in { display: flex; flex-wrap: wrap; gap: 6px;
+  align-items: baseline; justify-content: center;
+  font-family: var(--body); font-size: 14px; color: var(--ink-soft) }
+.xic-community-link { color: var(--ink); text-decoration: underline;
+  text-underline-offset: 2px }
+.xic-community-link:hover { text-decoration-thickness: 2px }
+
 .xic-foot {
   border-top: 1px solid var(--line);
   background: var(--paper);

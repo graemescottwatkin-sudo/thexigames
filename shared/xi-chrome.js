@@ -792,6 +792,36 @@
     paintAccount();
   }
 
+  /* ---- the community line, for a results card ---------------------------
+   *
+   * THE FOOTER IS NOT WHERE ANYBODY IS LOOKING when they have just finished a
+   * board. The end of a round is the one moment a player is pleased with the
+   * game and still on it, so the subreddit is offered there as well — the same
+   * single href, built here rather than written into ten results screens.
+   *
+   * FILLED, NOT PLACED. Each game puts an empty .xic-community where its own
+   * card has room, exactly as it places .xic-foot, and this fills it. Games
+   * that rebuild their results card from a string call community() again
+   * afterwards, because innerHTML on the parent throws this away with
+   * everything else — which is why it is idempotent and why it re-fills an
+   * element that has been emptied. */
+  function community(root) {
+    var scope = root && root.querySelectorAll ? root : document;
+    Array.prototype.forEach.call(scope.querySelectorAll(".xic-community"), function (box) {
+      if (box.querySelector(".xic-community-in")) return;   // already built
+      var wrap = el("div", "xic-community-in");
+      wrap.appendChild(el("span", "xic-community-say", "Talk about today's board"));
+      var a = el("a", "xic-community-link", "r/FootballQuizzes");
+      a.href = COMMUNITY_HREF;
+      /* Same reasoning as the footer's: a new tab, and noopener so the page
+         opened gets no handle on a game that may be mid-round. */
+      a.target = "_blank";
+      a.rel = "noopener";
+      wrap.appendChild(a);
+      box.appendChild(wrap);
+    });
+  }
+
   function buildFooter(foot) {
     var inner = el("div", "xic-foot-in");
 
@@ -866,6 +896,7 @@
     Array.prototype.forEach.call(document.querySelectorAll(".xic-foot"), function (f) {
       if (!f.querySelector(".xic-foot-in")) buildFooter(f);
     });
+    community();
     loadSession();
     /* WARMED HERE, so the synchronous check below has an answer by the time a
        human can click anything. Fired and not awaited: the chrome must not
@@ -1291,5 +1322,8 @@
     settings: { open: openPop, close: closePop, add: addSetting },
     permalink: { read: permaRead, show: permaShow, clear: permaClear, aged: permaAged },
     records: { clear: clearRecords, prefixes: RECORD_PREFIXES, keep: RECORD_KEEP },
+    /* Exposed so a game that rebuilds its results card can fill the box again
+       — innerHTML on the parent takes the line with it. Idempotent. */
+    community: community,
     addSetting: addSetting };
 })();
