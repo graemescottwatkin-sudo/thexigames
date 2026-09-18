@@ -15,6 +15,8 @@
  * it when assertions are added — REVIEW, not raise: a floor set to the exact
  * count flaps on an honest skip, and one left alone stops being able to refuse.
  */
+import { launchNumber } from "../../functions/_lib/games.js";
+
 const BASE = "https://www.thexigames.com";
 const expectArg = process.argv.indexOf("--expect");
 const EXPECT = expectArg > -1 ? process.argv[expectArg + 1] : null;
@@ -107,10 +109,25 @@ if (todayNo) {
   const rubbish = await get("/api/codeword/daily?no=not-a-number");
   t("a malformed number is refused identically, not coerced to today",
     rubbish.status === 404, String(rubbish.status));
-  const before = await get("/api/codeword/daily?no=1");
+  /* WHICH NUMBER IS "BEFORE THIS GAME EXISTED" IS DERIVED. This asked for
+     board 1 and required a 404, with the note "family board 1 is 26 August,
+     three weeks before the queue starts" — true while Codeword launched on
+     14 September 2026. After the reset of 18 September the family's board 1 IS
+     Codeword's launch board and the site rightly SERVES it, so the check
+     failed for production being correct, and its own detail line was still
+     quoting a date the site no longer has.
+     One below the launch is the board that never existed, whatever the launch
+     is. On a launch day that number is 0, which is not a board in any scheme —
+     still the right thing to refuse, and said plainly rather than dressed up
+     as a pre-launch board that does not exist. */
+  const firstNo = launchNumber("codeword") || 1;
+  const beforeNo = firstNo - 1;
+  const before = await get(`/api/codeword/daily?no=${beforeNo}`);
   t("and a number from before this game existed is refused",
     before.status === 404,
-    "family board 1 is 26 August, three weeks before the queue starts");
+    beforeNo >= 1
+      ? `board ${beforeNo} is before Codeword's first, #${firstNo}`
+      : `Codeword launched on board ${firstNo}, so nothing precedes it; 0 is refused too`);
 
   /* A board that HAS gone, if there is one. On launch day there is not, and
      that is a legitimate skip rather than a failure. */

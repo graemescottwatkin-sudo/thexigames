@@ -453,10 +453,33 @@ console.log(`
      the board it was about, and nothing else on the site pointed at a board at
      all — five links for hundreds of addresses, and only ever the ones whose
      answers had aged past the seal. */
-  const ans = await fetch(HUB + "/football/crossword/answers/1");
-  const ansHtml = ans.status === 200 ? await ans.text() : "";
-  t("a published answers page links the board it is about",
-    ansHtml.includes('href="/football/crossword/daily/1"'), String(ans.status));
+  /* WHICH BOARD IS PUBLISHED IS ASKED, NOT ASSUMED. This fetched /answers/1
+     and required a 200 that linked board 1. Board 1 is published only once it
+     is more than ANSWERS_AFTER_DAYS old; after the family reset to day 1 on
+     18 September 2026 it is TODAY, correctly sealed, and answers 404 — so the
+     check failed for the seal working, which is the one thing on this page
+     that must never stop working.
+     The index names the boards that are actually past the seal, so it is read
+     first and the newest of them is followed. When there is none — the game's
+     first week — the sealed board is asserted to be sealed instead, which is
+     the claim that matters on that day and is NOT a skip. */
+  const ansIdxEarly = await fetch(HUB + "/football/crossword/answers/");
+  const ansIdxEarlyHtml = ansIdxEarly.status === 200 ? await ansIdxEarly.text() : "";
+  const published = [...ansIdxEarlyHtml.matchAll(/href="\/football\/crossword\/answers\/(\d+)"/g)]
+    .map((m) => Number(m[1])).sort((x, y) => y - x);
+  if (published.length) {
+    const no = published[0];
+    const ans = await fetch(HUB + "/football/crossword/answers/" + no);
+    const ansHtml = ans.status === 200 ? await ans.text() : "";
+    t("a published answers page links the board it is about",
+      ansHtml.includes('href="/football/crossword/daily/' + no + '"'),
+      `board ${no}, HTTP ${ans.status}`);
+  } else {
+    const sealed = await fetch(HUB + "/football/crossword/answers/" + (key || 1));
+    t("a published answers page links the board it is about",
+      sealed.status === 404,
+      `nothing past the seal yet; today's board #${key} is sealed (HTTP ${sealed.status})`);
+  }
 
   /* AND THE ARCHIVE, which is the page that links ALL of them. Asked of the
      live site rather than the tree: the suite proves the page is built right,
@@ -490,10 +513,20 @@ console.log(`
      `curl .../answers/ | grep -c 'daily/'` was zero on production. */
   const ansIdx = await fetch(HUB + "/football/crossword/answers/");
   const ansIdxHtml = ansIdx.status === 200 ? await ansIdx.text() : "";
+  /* IT MUST ALWAYS CARRY THE WAY BACK TO PLAY, and it links boards once there
+     are any. Requiring a /daily/N link unconditionally was right while boards
+     had aged past the seal; in the game's first week the index has none to
+     link and says "The game is new" instead, so this failed for the page being
+     honest. The archive link is demanded in BOTH states — that is the half
+     that keeps the page from being a dead end — and the empty state must say
+     so rather than simply being blank. */
+  const ansIdxLinks = /href="\/football\/crossword\/daily\/\d+"/.test(ansIdxHtml);
+  const ansIdxNew = /The game is new/.test(ansIdxHtml);
   t("the answers index links boards and the archive",
-    /href="\/football\/crossword\/daily\/\d+"/.test(ansIdxHtml) &&
+    ansIdx.status === 200 && ansIdxLinks !== ansIdxNew &&
     ansIdxHtml.includes('href="/football/crossword/archive/"'),
-    "an index that only links answers is a dead end for anyone who wants to play");
+    ansIdxLinks ? "links boards and the archive"
+                : "nothing past the seal yet, and says so — archive still linked");
 
   const future = await fetch(HUB + "/football/crossword/daily/99999", { redirect: "manual" });
   t("a board that does not exist yet is not a page", future.status === 404, String(future.status));

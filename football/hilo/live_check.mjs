@@ -132,7 +132,27 @@ console.log("\nThe themes");
 /* DERIVED FROM THE PAGE, like the club block above: which themes exist today
    is a fact about what has run, not about this file. */
 const themeSlug = (clubsHtml.match(/href="\/football\/hilo\/theme\/([a-z-]+)\/"/) || [])[1];
-t("the index links a theme page", !!themeSlug, themeSlug);
+/* A THEME PAGE EXISTS ONLY ONCE A BOARD HAS RUN, and on the family's first day
+   none has. This required a theme link unconditionally, which held while HiLo
+   had weeks of boards behind it; after the reset of 18 September 2026 the
+   archive is empty by construction — it stops at yesterday and there is no
+   yesterday — so there is nothing to group into a theme and the check failed
+   for the site being right.
+   How many days have run is asked of the site rather than assumed, so this
+   stays a real demand from tomorrow onward: with a day in the archive a theme
+   page MUST be linked, and with none the index must carry no theme link at all
+   rather than half a page of dead ones. */
+const arcRes = await get("/api/hilo/archive");
+const arcBody = arcRes.status === 200 ? await arcRes.json().catch(() => null) : null;
+const daysRun = arcBody && Array.isArray(arcBody.days) ? arcBody.days.length : null;
+if (daysRun === null) {
+  t("the index links a theme page", false, `archive unreadable — HTTP ${arcRes.status}`);
+} else if (daysRun > 0) {
+  t("the index links a theme page", !!themeSlug, `${daysRun} day(s) run -> ${themeSlug}`);
+} else {
+  t("the index links a theme page", !themeSlug,
+    "no board has run yet, so there is no theme to link — and none is linked");
+}
 if (themeSlug) {
   const tp = await get("/football/hilo/theme/" + themeSlug + "/");
   const tpHtml = tp.status === 200 ? await tp.text() : "";

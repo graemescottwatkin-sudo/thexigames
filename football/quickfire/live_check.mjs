@@ -86,12 +86,27 @@ onPage("the canonical names this page",
 onPage("the shared chrome is referenced, not copied",
   /shared\/xi-chrome\.css/.test(pageText) && /shared\/xi-chrome\.js/.test(pageText));
 
+const CR = String.fromCharCode(13), LF = String.fromCharCode(10);
 /* ---- the bytes behind the tag, which the gate cannot see ---------------- */
 {
   const here = path.dirname(fileURLToPath(import.meta.url));
   const localJs = fs.readFileSync(path.join(here, "js/game.js"), "utf8");
   const localTag = (localJs.match(/BUILD\s*=\s*"(v\d+[a-z]?)"/) || [])[1] || "";
-  const sum = (s) => crypto.createHash("sha256").update(s).digest("hex").slice(0, 16);
+  /* CRLF NORMALISED BEFORE HASHING, which this did not do and the five game
+     asset hashes have always done. What ships is what is in git, and a Windows
+     checkout writes CRLF — so hashing the working tree's bytes asks a
+     different question on each machine. This check was green on every CI run,
+     because a Linux runner checks out LF, and red on the owner's machine
+     against a deploy that was byte-perfect: "live a356247cf1a01ef1 vs local
+     ff442bb764f68eaf", where a356247cf1a01ef1 is what BOTH files hash to once
+     the line endings agree. A check that fails only where the release is
+     actually made is worse than no check: the person doing the release learns
+     to expect its red.
+     CLAUDE.md names this rule and counted six places; this is the seventh.
+     Split/join rather than a regex, so the pattern cannot be mangled by a
+     tool that rewrites this file. */
+  const lf = (s) => String(s).split(CR + LF).join(LF);
+  const sum = (s) => crypto.createHash("sha256").update(lf(s)).digest("hex").slice(0, 16);
   if (!tag || !localTag || tag !== localTag) {
     w("the deployed game.js is the file in this checkout",
       `not comparable — live ${tag || "?"}, this checkout ${localTag || "?"}`);

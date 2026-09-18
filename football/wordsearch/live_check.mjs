@@ -27,6 +27,8 @@ import { fileURLToPath } from "node:url";
    how many boards may be published is counted from it. */
 import { LAUNCHED } from "../../functions/_lib/games.js";
 
+const LAUNCH_DAY = LAUNCHED.wordsearch;
+
 const BASE = "https://www.thexigames.com";
 const expectArg = process.argv.indexOf("--expect");
 const EXPECT = expectArg > -1 ? process.argv[expectArg + 1] : null;
@@ -286,7 +288,18 @@ t("the answers index is served", ansIndex.status === 200, "HTTP " + ansIndex.sta
 const listed = [...new Set([...ansText.matchAll(/\/football\/wordsearch\/answers\/(XIWS-\d{4})/g)]
   .map((m) => m[1]))];
 const firstAnswered = listed[0];
-t("it lists published boards", !!firstAnswered, firstAnswered);
+/* OR SAYS THERE ARE NONE YET. This required at least one published board,
+   which held while the word search had months of boards behind it. Its launch
+   moved to 18 September 2026 with the rest of the family and the seal is
+   ANSWERS_AFTER_DAYS, so for the first week no board can be both past its
+   launch and old enough to publish — and the index correctly lists nothing.
+   The check failed for the seal working, which is the one rule on this page
+   that must never stop working. Both states are named, and exactly one of them
+   may hold, so a blank or broken index satisfies neither. */
+const ansSaysNew = /The game is new|no published boards|not yet/i.test(ansText);
+t("it lists published boards", !!firstAnswered !== ansSaysNew,
+  firstAnswered || (ansSaysNew ? "nothing past the seal yet, and the index says so"
+                               : "no boards listed and no explanation given"));
 /* THE COUNT IS THE CHECK, and it is derived rather than pinned. A board can
    only be published once it has RUN, so the index can never hold more boards
    than the game has had days: (today - launch + 1) is the ceiling, and it is
@@ -398,8 +411,19 @@ const a = arch.status === 200 ? await arch.json() : null;
 t("the archive endpoint answers", arch.status === 200 && !!a && Array.isArray(a.days), "HTTP " + arch.status);
 t("it is not cacheable, because midnight moves it", /no-store/.test(arch.headers.get("cache-control") || ""));
 if (a) {
+  /* THE CLAIM IS THE BOUND, NOT THE COUNT. This demanded at least one day AND
+     that every day be before today. The bound is what this exists for — the
+     word search once advertised 238 boards it had never run — but the count
+     stopped being available on 18 September 2026, when the game reset to day 1
+     and the archive, which stops at yesterday, correctly held nothing.
+     So the bound is asserted unconditionally and the emptiness is allowed only
+     while the game has had no completed day. A silently empty archive on any
+     later day still fails. */
   t("it stops at yesterday: every day is before the server's today",
-    a.days.length > 0 && a.days.every((e) => e.day < a.today), a.days.length + " days, today " + a.today);
+    a.days.every((e) => e.day < a.today) &&
+    (a.days.length > 0 || a.today <= LAUNCH_DAY),
+    a.days.length + " days, today " + a.today +
+      (a.days.length ? "" : " — nothing has run yet, which is right on day one"));
   t("newest first", a.days.every((e, i) => i === 0 || a.days[i - 1].day >= e.day));
   t("it carries identity only — no grid, no names, no bonus",
     a.days.every((e) => e.id && e.theme && !e.grid && !e.answers && !e.bonus));
