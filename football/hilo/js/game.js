@@ -10,7 +10,7 @@
  * more, 114 the ceiling. This file is the page: the landing the family
  * shares, the ladder of two rows, the clock, the answers list, the share.
  */
-var BUILD = "v002g";
+var BUILD = "v002h";
 
 (function () {
   "use strict";
@@ -739,6 +739,32 @@ var BUILD = "v002g";
     }).catch(function () { /* unverified, and the round plays on */ });
   }
 
+  /* THE RESULT CARD, REBUILT FROM WHAT WAS BANKED. Deliberately not fullTime():
+     that one needs a live round — g.results, g.worths, the board in play — and
+     none of it survives a reload. What can honestly be shown is the record. */
+  function showBanked(rec) {
+    if (!rec) return;
+    var words = { W: "Win", D: "Draw", L: "Loss" };
+    $("ftScore").textContent = rec.score;
+    var rr = $("ftRes");
+    rr.textContent = words[rec.result] || "";
+    rr.className = "res " + (rec.result || "");
+    $("ftLine").textContent = rec.right + " right, " + rec.wrong + " wrong" +
+      (rec.bonus ? ", " + rec.bonus + " for the runs" : "") + ".";
+    /* No verified note: that belongs to a round the server has just judged. */
+    if ($("ftVerified")) $("ftVerified").textContent = "";
+    $("shareText").value = "HiLo XI " + DOT + " " + rec.right + "/11 right " + DOT + " " +
+      rec.score + "/114 " + DOT + " " + (words[rec.result] || "") +
+      String.fromCharCode(10) + "thexigames.com/hilo";
+    if (window.XIShare && $("shareRow")) {
+      window.XIShare.mount($("shareRow"), {
+        text: function () { return $("shareText").value; },
+        url: function () { return location.href; },
+      });
+    }
+    show("screenResults");
+  }
+
   /* ---- full time ------------------------------------------------------- */
   function fullTime() {
     if (!g || g.over) return;
@@ -909,7 +935,14 @@ var BUILD = "v002g";
         return;
       }
       var had = todayResult();
-      if (had) { toast("Today's board is played — " + had.score + " pts"); return; }
+      /* THE CARD, NOT A TOAST. Finishing a daily and pressing Play today again
+         used to get a line of text that vanished in two seconds: the score was
+         all you were shown, and the board you had played was gone. A finished
+         board should still be there to look at.
+         What comes back is the RECORD, not the round — the calls themselves are
+         not stored and this does not invent them. The card carries the score,
+         the result and the split, which is what was banked. */
+      if (had) { showBanked(had); return; }
       starting = true;
       /* AND WHAT THE ACCOUNT SAYS, not only this device. todayResult() reads
          localStorage, which a device that has never synced does not have — so

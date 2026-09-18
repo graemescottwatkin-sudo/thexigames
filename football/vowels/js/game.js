@@ -15,7 +15,7 @@
  *   - no practice. There is now an archive picker and a finals catalogue; what
  *     is still missing is a practice mode, which this game may never want.
  */
-var BUILD = "v001q";
+var BUILD = "v001r";
 
 (function () {
   "use strict";
@@ -1437,6 +1437,53 @@ var BUILD = "v001q";
       .catch(function () { settleVerified(false); /* the card keeps its own number */ });
   }
 
+  /* Today's banked result for THIS board, if this device has one. Keyed on the
+     board number, which is what recordResult writes for a numbered game. */
+  function bankedToday() {
+    if (!state.board || state.board.no == null ||
+        state.board.no !== state.todayNo) return null;
+    var list = readResults();
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] && Number(list[i].no) === Number(state.board.no)) return list[i];
+    }
+    return null;
+  }
+
+  /* THE RESULT CARD, REBUILT FROM THE RECORD. Deliberately not showResults():
+     that one recomputes from a live round — state.elapsed, state.help and the
+     eleven solved slots — and none of it survives a reload, so it would print
+     a fresh zero and call it the score. */
+  function showBanked(rec) {
+    var body = $("resultsBody");
+    body.innerHTML = "";
+    var score = document.createElement("div");
+    score.className = "ftScore";
+    score.textContent = rec.score + " / " + SCORING.MAX_SCORE;
+    body.appendChild(score);
+    var line = document.createElement("p");
+    line.className = "ftLine";
+    var mins = Math.floor((rec.elapsedSeconds || 0) / 60);
+    var secs = (rec.elapsedSeconds || 0) % 60;
+    /* No DOT constant in this game — the separator is written out. */
+    line.textContent = "Played · " + mins + "m " + (secs < 10 ? "0" : "") + secs + "s" +
+      (rec.help ? " · " + rec.help + " off the bench" : "");
+    body.appendChild(line);
+    var note = document.createElement("p");
+    note.className = "ftNote";
+    note.textContent = "You finished this board. The daily is one attempt.";
+    body.appendChild(note);
+    if ($("shareText")) $("shareText").value =
+      "Vowels XI · board " + rec.no + " · " +
+      rec.score + "/" + SCORING.MAX_SCORE;
+    if (window.XIShare && $("shareRow")) {
+      window.XIShare.mount($("shareRow"), {
+        text: function () { return $("shareText").value; },
+        url: function () { return location.href; },
+      });
+    }
+    show("screenResults");
+  }
+
   function showResults() {
     var res = SCORING.computeScore(state.elapsed, state.help);
     var mins = Math.floor(state.elapsed / 60), secs = state.elapsed % 60;
@@ -1881,6 +1928,14 @@ var BUILD = "v001q";
     /* The game's own name, written as a literal because tools/build_vowels.js
        rewrites "vowels" to "vowels" when it generates the copy — so this
        line is correct in both without either knowing about the other. */
+    /* THE CARD, NOT ANOTHER ROUND. A daily already finished ON THIS DEVICE
+       comes back to what it came to, rather than reopening as if it had never
+       been played. Checked before the account, because a local record is the
+       stronger evidence: it is this device's own, and it carries the score to
+       show. What is restored is the RECORD — the letters are not stored and
+       this does not invent them. */
+    var mine = bankedToday();
+    if (mine) { showBanked(mine); return; }
     if (state.board && state.board.no === state.todayNo &&
         window.XIChrome && window.XIChrome.playedTodayHas &&
         window.XIChrome.playedTodayHas("vowels")) {

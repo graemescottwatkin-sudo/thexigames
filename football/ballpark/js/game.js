@@ -5,7 +5,7 @@
      it is yesterday's code. aligned_test asserts the two agree, and until
      this game launched it had no BUILD at all — three of its assets were on
      three different tags, which is the same fault with nobody checking. */
-  var BUILD = "v001m";
+  var BUILD = "v001n";
   if (window.XIPlays && document.documentElement) {
     document.documentElement.setAttribute("data-build", BUILD);
   }
@@ -876,7 +876,45 @@
     show();
   }
 
-  $("homeDaily").addEventListener("click", function () { kickOff(null); });
+  $("homeDaily").addEventListener("click", function () {
+    /* THE CARD, NOT ANOTHER ROUND. A daily already finished on this device
+       should come back to what it came to, rather than reopening as if it had
+       never been played. What is restored is the RECORD — the score, the
+       result, how many landed — because that is what was banked; the eleven
+       sliders are not replayed. */
+    var had = bankedToday();
+    if (had) { showBanked(had); return; }
+    kickOff(null);
+  });
+
+  /* Today's banked result, if this device has one. Keyed on the DAY, which is
+     what recordResult writes and what every other game in the family keys on. */
+  function bankedToday() {
+    if (!day) return null;
+    var list = readResults();
+    for (var i = 0; i < list.length; i++) {
+      if (list[i] && list[i].day === day) return list[i];
+    }
+    return null;
+  }
+
+  function showBanked(rec) {
+    var words = { W: "Win", D: "Draw", L: "Loss" };
+    $("ftScore").textContent = rec.score;
+    var rr = $("ftRes");
+    rr.textContent = words[rec.result] || "";
+    rr.className = "res " + (rec.result || "");
+    $("ftShare").textContent = "Ballpark XI " + DOT + " " + rec.score + "/114 " + DOT + " " +
+      (rec.inBallpark || 0) + "/11 in the ballpark" +
+      (rec.bangOns ? " " + DOT + " " + rec.bangOns + " bang on" : "");
+    if (window.XIShare && $("shareRow")) {
+      window.XIShare.mount($("shareRow"), {
+        text: function () { return $("ftShare").textContent; },
+        url: function () { return location.href; },
+      });
+    }
+    $("ft").hidden = false;
+  }
 
   /* ONE WAY IN, whichever card was pressed. `no` is null for today and a board
      number for a previous day; the server decides whether that number may be
