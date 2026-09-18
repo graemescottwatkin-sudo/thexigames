@@ -148,10 +148,24 @@ const board = boardForDay(bank, todayKey());
   /* AND NO FIELD THAT COULD CARRY ONE LATER. A key added to the stored board
      must not appear in the public one by accident — the leak that matters is
      the one somebody adds next year. */
-  const entryKeys = ["n", "dir", "r", "c", "len", "cells"];
+  const entryKeys = ["n", "dir", "r", "c", "len", "cells", "breaks"];
   t("a public entry carries no field beyond the shape",
     r.body.board.entries.every((e) => Object.keys(e).every((k) => entryKeys.includes(k))),
     Object.keys(r.body.board.entries[0]).join(", ") + " — `answer` and `member` must never be here");
+  /* `breaks` WAS ADDED TO THAT LIST ON PURPOSE, and the list is why it had to
+     be: publicBoard is a whitelist, so a new field is invisible to the client
+     until somebody widens both. It is where the words in an answer divide —
+     LEWISSKELLY is eleven letters with nothing to say the name is Lewis-Skelly,
+     which the owner hit playing day one.
+     WHAT IT MAY NOT BE IS LETTERS. Integers, inside the entry's own length, in
+     order. A string arriving here would be the leak this projection exists to
+     prevent, wearing a numeric name. */
+  t("and breaks are integers inside the entry, never letters",
+    r.body.board.entries.every((e) =>
+      Array.isArray(e.breaks) &&
+      e.breaks.every((k) => Number.isInteger(k) && k > 0 && k < e.len) &&
+      e.breaks.every((k, i) => i === 0 || k > e.breaks[i - 1])),
+    JSON.stringify(r.body.board.entries.map((e) => e.breaks)));
   /* THERE IS NO OPENING REVEAL. The owner's ruling of 6 September: a board
      opens on its title alone. */
   t("nothing is given at the start", !("given" in r.body.board) && !("opening" in r.body.board));

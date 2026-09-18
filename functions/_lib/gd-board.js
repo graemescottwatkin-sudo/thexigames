@@ -182,8 +182,28 @@ export function publicBoard(board, token) {
     title: board.title,
     rows: board.rows,
     cols: board.cols,
+    /* THIS MAP IS A WHITELIST, which is why no letter has ever escaped it: a
+       field added to the stored board is invisible here until somebody adds it
+       on purpose. `breaks` is added on purpose.
+       WHAT IT IS: the letter offsets into the ANSWER AS SERVED — post-fold,
+       A to Z only, zero-based — at which a new WORD begins. LEWISSKELLY is
+       eleven letters with nothing to say where the hyphen in Lewis-Skelly was,
+       and the owner hit that playing day one. So [5] means the divider falls
+       before the sixth letter. An empty array is a single word and is always
+       present, never absent and never null, so the client renders without a
+       presence check.
+       IT IS A DISCLOSURE, AND A DELIBERATE ONE. Knowing an eleven-letter
+       answer breaks after five is a real hint — it is the hint that was asked
+       for. It is also the ONLY thing here that says anything about the answer's
+       shape beyond its length, which the grid already draws, so it is worth
+       saying out loud that this line is the one to argue with if that ever
+       stops being wanted.
+       SAFE BY TYPE: they are integers. publicText still carries no letter of
+       any answer, which the gate proves by executing this function rather than
+       by reading it. */
     entries: (board.entries || []).map((e) => ({
       n: e.n, dir: e.dir, r: e.r, c: e.c, len: e.len, cells: e.cells,
+      breaks: Array.isArray(e.breaks) ? e.breaks.slice() : [],
     })),
     /* Structure, not content: which cells two entries share. The player learns
        this the moment a green propagates and needs it to render the grid. */

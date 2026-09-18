@@ -32,7 +32,7 @@
 
   var R = window.XIGR_RULES;
   var $ = function (id) { return document.getElementById(id); };
-  var BUILD = "v002c";
+  var BUILD = "v002d";
 
   var S = {
     board: null,          // the PUBLIC board: shape, lengths, crossings. No letters.
@@ -274,6 +274,30 @@
       });
     });
 
+    /* WHERE ONE WORD ENDS AND THE NEXT BEGINS.
+       LEWISSKELLY is eleven letters and nothing on the grid said the name is
+       Lewis-Skelly; the owner hit that on day one. The server sends `breaks` —
+       zero-based letter offsets into the answer at which a new word starts — so
+       the divider goes on the LEADING edge of the cell at that offset: the left
+       edge for an across entry, the top edge for a down one.
+       PER ENTRY, NOT PER CELL, because a cell can belong to two entries and a
+       break in one says nothing about the other. A crossing cell can carry both
+       classes, each drawn on the edge belonging to its own direction, so
+       neither is wrong.
+       DRAWN ON THE EMPTY GRID, not held back until letters appear. Showing it
+       only once the answer is filled would put the hint after the moment it is
+       needed: the owner wanted to know he was looking for two words WHILE
+       guessing, which is the whole of the request. It is a real hint, and it is
+       the one that was asked for. */
+    var brk = {};
+    b.entries.forEach(function (x) {
+      (x.breaks || []).forEach(function (k) {
+        var cell = x.cells[k];
+        if (!cell) return;
+        brk[cell] = (brk[cell] || "") + (x.dir === "down" ? " brk-t" : " brk-l");
+      });
+    });
+
     var selIdx = {};
     if (e) e.cells.forEach(function (cell, i) { selIdx[cell] = i; });
     var cur = cursorAt();
@@ -290,6 +314,7 @@
         var cell = r + "," + c;
         if (!inGrid[cell]) { html += '<div class="gd-cell"></div>'; continue; }
         var cls = ["gd-cell", "on"], ch = "";
+        if (brk[cell]) cls.push(brk[cell].trim());
         var inSel = cell in selIdx, i = selIdx[cell];
 
         if (S.confirmed[cell]) { cls.push("conf"); ch = S.confirmed[cell]; }

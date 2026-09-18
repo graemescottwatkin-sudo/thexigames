@@ -143,6 +143,52 @@ server.listen(0, "127.0.0.1", async () => {
       letters() || "(empty, as it must be)");
     t("fifteen turns to start",
       d.getElementById("gdTurns").textContent === String(RULES.TURNS_START));
+
+    /* ---- where one word ends and the next begins --------------------- */
+    /* LEWISSKELLY WAS ELEVEN LETTERS WITH NOTHING TO SAY IT WAS TWO WORDS,
+       which the owner hit playing day one. The server sends the offsets; the
+       grid draws a divider on the LEADING edge of the cell at each one.
+       ON THE EMPTY GRID, which is the point: the hint is wanted while
+       guessing, not once the answer is filled in. The assertions just above
+       have proved not one letter is on the board, so what is checked here is
+       drawn with nothing else on screen. */
+    const expected = [];
+    BOARD.entries.forEach((e) => {
+      (e.breaks || []).forEach((k) => {
+        expected.push({ cell: e.cells[k], cls: e.dir === "down" ? "brk-t" : "brk-l" });
+      });
+    });
+    t("this board is one that actually breaks, or the rest proves nothing",
+      expected.length > 0,
+      expected.length + " break(s) across " +
+        BOARD.entries.filter((e) => (e.breaks || []).length).length + " entries");
+    t("every break is drawn on the leading edge of its own cell",
+      expected.every(({ cell, cls }) => {
+        const el = d.querySelector('.gd-cell[data-cell="' + cell + '"]');
+        return el && el.classList.contains(cls);
+      }),
+      expected.map((x) => x.cell + ":" + x.cls).join(" "));
+    /* AND NOWHERE ELSE. A divider on a cell that does not start a word is a
+       lie about the answer's shape, and worse than none at all. */
+    const marked = [...d.querySelectorAll(".gd-cell.brk-l, .gd-cell.brk-t")];
+    const wanted = new Set(expected.map((x) => x.cell + ":" + x.cls));
+    const stray = marked.flatMap((el) => {
+      const cell = el.getAttribute("data-cell");
+      return ["brk-l", "brk-t"]
+        .filter((c) => el.classList.contains(c) && !wanted.has(cell + ":" + c))
+        .map((c) => cell + ":" + c);
+    });
+    t("and no divider is drawn where no word begins", stray.length === 0,
+      stray.join(" ") || marked.length + " cells carry one, all of them earned");
+    /* THE DIRECTION IS THE ENTRY'S, NOT THE CELL'S. A cell belongs to an across
+       entry and a down entry at once, and a break in one says nothing about the
+       other — so an across break must never arrive as a top edge. */
+    t("an across break is a left edge and a down break is a top one",
+      expected.every(({ cell, cls }) => {
+        const el = d.querySelector('.gd-cell[data-cell="' + cell + '"]');
+        const other = cls === "brk-l" ? "brk-t" : "brk-l";
+        return el && (!el.classList.contains(other) || wanted.has(cell + ":" + other));
+      }), "a crossing may carry both, but only if both were asked for");
   }
 
   console.log("\nThe page holds no answer, anywhere");

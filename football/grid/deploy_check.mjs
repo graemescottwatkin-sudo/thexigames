@@ -142,9 +142,45 @@ t("and not a letter of one, in any field", (() => {
   return !/[A-Z]{2,}/.test(stripped);
 })());
 t("a public entry carries no field beyond the shape", (() => {
-  const allowed = ["n", "dir", "r", "c", "len", "cells"];
+  /* `breaks` WAS ADDED HERE ON PURPOSE, and this list is the reason it had to
+     be: publicBoard is a whitelist, so a field added to the stored board stays
+     invisible to the client until somebody widens both deliberately. That is
+     what has kept every letter of every answer on the server side.
+     WHAT IT IS: the zero-based letter offsets into the answer at which a new
+     WORD begins. LEWISSKELLY is eleven letters with nothing to say the name is
+     Lewis-Skelly, which the owner hit playing day one.
+     IT IS A DISCLOSURE AND A DELIBERATE ONE — knowing an eleven-letter answer
+     breaks after five is a real hint, and it is the hint that was asked for.
+     This line is where to argue with it if that ever stops being wanted. */
+  const allowed = ["n", "dir", "r", "c", "len", "cells", "breaks"];
   return pub.entries.every((e) => Object.keys(e).every((k) => allowed.includes(k)));
 })(), "`answer` and `member` must never be here");
+/* AND WHAT breaks MAY CONTAIN, proved by executing the projection rather than
+   by reading it. Integers only, inside the entry's own length, in order. A
+   string arriving in this field would be the leak the whole projection exists
+   to prevent wearing a numeric name, and the letter check above strips the
+   field NAME rather than its contents. */
+/* ASKED OF A BOARD THAT ACTUALLY BREAKS. Written against GD_SAMPLE_BOARDS[0]
+   first, whose eleven entries are all single words: every array came back
+   empty and every() over nothing is true, so the check passed without ever
+   looking at an offset. The sample carries a second board precisely because
+   one board cannot show both states, and the one with breaks is found here
+   rather than indexed, so a regenerated sample cannot silently reorder it
+   back to vacuous. If NEITHER board has one, that is said out loud instead of
+   passing quietly. */
+const brkBoard = GD_SAMPLE_BOARDS.find((bd) =>
+  (bd.entries || []).some((e) => (e.breaks || []).length));
+const brkPub = brkBoard ? publicBoard(brkBoard, boardToken(brkBoard.id)) : null;
+t("and breaks carry offsets, never letters", (() => {
+  if (!brkPub) return false;
+  return brkPub.entries.every((e) =>
+    Array.isArray(e.breaks) &&
+    e.breaks.every((k) => Number.isInteger(k) && k > 0 && k < e.len) &&
+    e.breaks.every((k, i) => i === 0 || k > e.breaks[i - 1])) &&
+    brkPub.entries.some((e) => e.breaks.length);
+})(), brkPub
+  ? `${brkBoard.id}: ${JSON.stringify(brkPub.entries.map((e) => e.breaks))}`
+  : "no sample board carries a break — this check can prove nothing");
 t("nothing is given at the start, so a board opens on its title alone",
   !("given" in pub) && !("opening" in pub),
   "the owner's ruling, 6 Sep 2026");

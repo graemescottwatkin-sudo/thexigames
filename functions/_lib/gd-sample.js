@@ -43,7 +43,8 @@ export const GD_SAMPLE_BOARDS = [
     ],
     "answer": "FERDINAND",
     "member": "Rio Ferdinand",
-    "qid": "gx-0082:rioferdinand"
+    "qid": "gx-0082:rioferdinand",
+    "breaks": []
    },
    {
     "n": 2,
@@ -60,7 +61,8 @@ export const GD_SAMPLE_BOARDS = [
     ],
     "answer": "TERRY",
     "member": "John Terry",
-    "qid": "gx-0082:johnterry"
+    "qid": "gx-0082:johnterry",
+    "breaks": []
    },
    {
     "n": 3,
@@ -79,7 +81,8 @@ export const GD_SAMPLE_BOARDS = [
     ],
     "answer": "GERRARD",
     "member": "Steven Gerrard",
-    "qid": "gx-0082:stevengerrard"
+    "qid": "gx-0082:stevengerrard",
+    "breaks": []
    },
    {
     "n": 4,
@@ -98,7 +101,8 @@ export const GD_SAMPLE_BOARDS = [
     ],
     "answer": "RONALDO",
     "member": "Cristiano Ronaldo",
-    "qid": "gx-0082:cristianoronaldo"
+    "qid": "gx-0082:cristianoronaldo",
+    "breaks": []
    },
    {
     "n": 5,
@@ -118,7 +122,8 @@ export const GD_SAMPLE_BOARDS = [
     ],
     "answer": "CASILLAS",
     "member": "Iker Casillas",
-    "qid": "gx-0082:ikercasillas"
+    "qid": "gx-0082:ikercasillas",
+    "breaks": []
    },
    {
     "n": 6,
@@ -136,7 +141,8 @@ export const GD_SAMPLE_BOARDS = [
     ],
     "answer": "TORRES",
     "member": "Fernando Torres",
-    "qid": "gx-0082:fernandotorres"
+    "qid": "gx-0082:fernandotorres",
+    "breaks": []
    },
    {
     "n": 7,
@@ -153,7 +159,8 @@ export const GD_SAMPLE_BOARDS = [
     ],
     "answer": "RAMOS",
     "member": "Sergio Ramos",
-    "qid": "gx-0082:sergioramos"
+    "qid": "gx-0082:sergioramos",
+    "breaks": []
    },
    {
     "n": 8,
@@ -169,7 +176,8 @@ export const GD_SAMPLE_BOARDS = [
     ],
     "answer": "KAKA",
     "member": "Kaká",
-    "qid": "gx-0082:kaka"
+    "qid": "gx-0082:kaka",
+    "breaks": []
    },
    {
     "n": 9,
@@ -186,7 +194,8 @@ export const GD_SAMPLE_BOARDS = [
     ],
     "answer": "MESSI",
     "member": "Lionel Messi",
-    "qid": "gx-0082:lionelmessi"
+    "qid": "gx-0082:lionelmessi",
+    "breaks": []
    },
    {
     "n": 10,
@@ -203,7 +212,8 @@ export const GD_SAMPLE_BOARDS = [
     ],
     "answer": "PUYOL",
     "member": "Carles Puyol",
-    "qid": "gx-0082:carlespuyol"
+    "qid": "gx-0082:carlespuyol",
+    "breaks": []
    },
    {
     "n": 11,
@@ -219,7 +229,8 @@ export const GD_SAMPLE_BOARDS = [
     ],
     "answer": "XAVI",
     "member": "Xavi",
-    "qid": "gx-0082:xavi"
+    "qid": "gx-0082:xavi",
+    "breaks": []
    }
   ],
   "crossings": [
@@ -385,7 +396,10 @@ export const GD_SAMPLE_BOARDS = [
     ],
     "answer": "TOTTENHAMHOTSPUR",
     "member": "Tottenham Hotspur Stadium",
-    "qid": "gx-0256:tottenhamhotspurstadium"
+    "qid": "gx-0256:tottenhamhotspurstadium",
+    "breaks": [
+     9
+    ]
    },
    {
     "n": 2,
@@ -408,7 +422,11 @@ export const GD_SAMPLE_BOARDS = [
     ],
     "answer": "STJAMESPARK",
     "member": "St James' Park",
-    "qid": "gx-0256:stjamespark"
+    "qid": "gx-0256:stjamespark",
+    "breaks": [
+     2,
+     7
+    ]
    },
    {
     "n": 3,
@@ -433,7 +451,10 @@ export const GD_SAMPLE_BOARDS = [
     ],
     "answer": "ETIHADSTADIUM",
     "member": "City of Manchester Stadium",
-    "qid": "gx-0256:cityofmanchesterstadium"
+    "qid": "gx-0256:cityofmanchesterstadium",
+    "breaks": [
+     6
+    ]
    },
    {
     "n": 4,
@@ -455,7 +476,10 @@ export const GD_SAMPLE_BOARDS = [
     ],
     "answer": "CITYGROUND",
     "member": "Stamford Bridge",
-    "qid": "gx-0256:stamfordbridge"
+    "qid": "gx-0256:stamfordbridge",
+    "breaks": [
+     4
+    ]
    },
    {
     "n": 5,
@@ -477,7 +501,10 @@ export const GD_SAMPLE_BOARDS = [
     ],
     "answer": "ELLANDROAD",
     "member": "Elland Road",
-    "qid": "gx-0256:ellandroad"
+    "qid": "gx-0256:ellandroad",
+    "breaks": [
+     6
+    ]
    },
    {
     "n": 6,
@@ -500,7 +527,10 @@ export const GD_SAMPLE_BOARDS = [
     ],
     "answer": "PORTMANROAD",
     "member": "Hill Dickinson Stadium",
-    "qid": "gx-0256:hilldickinsonstadium"
+    "qid": "gx-0256:hilldickinsonstadium",
+    "breaks": [
+     7
+    ]
    },
    {
     "n": 7,
@@ -519,7 +549,8 @@ export const GD_SAMPLE_BOARDS = [
     ],
     "answer": "ANFIELD",
     "member": "Anfield",
-    "qid": "gx-0256:anfield"
+    "qid": "gx-0256:anfield",
+    "breaks": []
    },
    {
     "n": 8,
@@ -540,7 +571,10 @@ export const GD_SAMPLE_BOARDS = [
     ],
     "answer": "VILLAPARK",
     "member": "Villa Park",
-    "qid": "gx-0256:villapark"
+    "qid": "gx-0256:villapark",
+    "breaks": [
+     5
+    ]
    },
    {
     "n": 9,
@@ -560,7 +594,8 @@ export const GD_SAMPLE_BOARDS = [
     ],
     "answer": "EMIRATES",
     "member": "Emirates Stadium",
-    "qid": "gx-0256:emiratesstadium"
+    "qid": "gx-0256:emiratesstadium",
+    "breaks": []
    },
    {
     "n": 10,
@@ -586,7 +621,11 @@ export const GD_SAMPLE_BOARDS = [
     ],
     "answer": "STADIUMOFLIGHT",
     "member": "Stadium of Light",
-    "qid": "gx-0256:stadiumoflight"
+    "qid": "gx-0256:stadiumoflight",
+    "breaks": [
+     7,
+     9
+    ]
    },
    {
     "n": 11,
@@ -609,7 +648,10 @@ export const GD_SAMPLE_BOARDS = [
     ],
     "answer": "OLDTRAFFORD",
     "member": "Old Trafford",
-    "qid": "gx-0256:oldtrafford"
+    "qid": "gx-0256:oldtrafford",
+    "breaks": [
+     3
+    ]
    }
   ],
   "crossings": [
