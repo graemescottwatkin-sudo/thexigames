@@ -277,9 +277,27 @@ export async function onRequest({ request, env, params }) {
      record is not a state anybody can end up in — results gone and a season
      still standing is exactly the bug being fixed. */
   if (route === "reset-my-record" && request.method === "POST") {
+    /* THREE TABLES, AND EACH ONE WAS ADDED AFTER SOMEBODY FOUND IT MISSING.
+       It deleted results only; season_play was added when clearing left the
+       season strip counting days that no longer had a result behind them. This
+       third one is the in-progress BOARD, and it is the one a player actually
+       sees: board_state holds the letters typed so far, the crossword pushes
+       them there so a board carries between devices, and the page pulls them
+       back on open. So "clear everything" wiped local storage, deleted the
+       results, reloaded — and the crossword then fetched the half-finished
+       board straight back off the account. From the outside that is the button
+       doing nothing, which is worse than a button that is not there.
+       021-board-state.sql anticipated exactly this: "the housekeeping path is
+       everything this player left behind". It was written and never wired up.
+       THE LIST IS WHAT A RECORD IS, AND THE TWO THAT ARE NOT ON IT ARE NOT AN
+       OVERSIGHT. `sessions` would sign the player out — a reset clears what you
+       have done, not who you are — and `users` is the identity the account's
+       own results are keyed to. Those are the only other tables carrying a
+       user_id, so this list is now complete rather than merely longer. */
     await env.DB.batch([
       env.DB.prepare("DELETE FROM results WHERE user_id = ?").bind(me.id),
       env.DB.prepare("DELETE FROM season_play WHERE user_id = ?").bind(me.id),
+      env.DB.prepare("DELETE FROM board_state WHERE user_id = ?").bind(me.id),
     ]);
     return json({ ok: true, cleared: true });
   }

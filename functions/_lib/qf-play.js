@@ -92,6 +92,10 @@ export async function answerRound(env, round, question, idx, pick) {
     return {
       idx, correct: !!already.correct, points: already.points,
       minute: already.minute, replayed: true,
+      /* THE SAME ANSWER ON A REPLAY. A player who reloads on a question they
+         got wrong must see what this returned the first time, or the page
+         tells them the answer once and then takes it away. */
+      ...(already.correct ? {} : { answer: question.answer }),
     };
   }
 
@@ -127,7 +131,10 @@ export async function answerRound(env, round, question, idx, pick) {
       "INSERT INTO qf_answer (play_id, idx, question_id, pick, correct, points, minute, at_ms) " +
       "VALUES (?, ?, ?, NULL, 0, 0, ?, ?)"
     ).bind(round.play_id, idx, question.id, minute, at).run();
-    return { idx, correct: false, points: 0, minute, timedOut: true, replayed: false };
+    /* A CLOCK THAT RAN OUT IS STILL A QUESTION THEY DID NOT GET, so it is told
+       what the answer was on the same terms as a wrong pick. */
+    return { idx, correct: false, points: 0, minute, timedOut: true, replayed: false,
+             answer: question.answer };
   }
 
   const verdict = judge(question, pick);
@@ -159,6 +166,15 @@ export async function answerRound(env, round, question, idx, pick) {
     idx, correct: verdict.correct, points, minute,
     penaltyMinutes: verdict.correct ? 0 : WRONG_PICK_MINUTES,
     replayed: false,
+    /* WHAT IT WAS, WHEN THEY DID NOT GET IT. Being marked wrong and not told
+       the answer leaves the player with nothing to learn and no way to check
+       the question was fair — the one thing a quiz owes them at the moment it
+       says no.
+       ONLY ON A WRONG PICK, and only for a question THIS round has just
+       answered. A right pick already knows, and the answer is never sent for a
+       question that has not been settled — which is the rule that keeps this
+       from becoming the leak the whole endpoint exists to prevent. */
+    ...(verdict.correct ? {} : { answer: question.answer }),
   };
 }
 

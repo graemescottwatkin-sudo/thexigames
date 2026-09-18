@@ -201,8 +201,56 @@ console.log("\nReplaying a day");
      crossword idea; unqualified it would reach any row whose daily_no matched. */
   t("replay only ever touches one day, and only the crossword's",
     /DELETE FROM results WHERE user_id = \? AND game = 'crossword' AND daily_no = \?/.test(src));
-  t("and clearing the record never touches the saved game",
-    /DELETE FROM results WHERE user_id = \?"/.test(src));
+  t("and clearing the record clears every row that IS the record",
+    /DELETE FROM results WHERE user_id = \?"/.test(src) &&
+    /DELETE FROM season_play WHERE user_id = \?"/.test(src) &&
+    /DELETE FROM board_state WHERE user_id = \?"/.test(src),
+    "results, season_play and board_state");
+  /* THE LIST IS DERIVED FROM THE CODE, so it cannot be short again.
+     It has been short twice. season_play was added when clearing left the
+     season strip counting days with no result behind them. board_state was
+     added when the owner cleared everything and the crossword pulled his
+     half-finished board straight back off the account — the button appearing
+     to do nothing, which is worse than no button at all. Both times the fix
+     was to remember one more table, and remembering is what failed.
+     DERIVED FROM THE QUERIES, NOT FROM THE MIGRATIONS. Scanning
+     data/migrations was the first attempt and it could only ever see one
+     table: results, sessions and users predate that directory and are not
+     declared in it, so a check named "every per-player table" would have been
+     watching a fifth of them while sounding complete. What every per-player
+     table DOES have is a query somewhere under functions/ that binds a
+     user_id, so that is what is read. A new table the server keys by player
+     fails this by existing. */
+  const fsm = await import("node:fs");
+  const SRC_ROOT = path.join(DIR, "../../functions");
+  const walk = (d) => fsm.readdirSync(d, { withFileTypes: true }).flatMap((e) =>
+    e.isDirectory() ? walk(path.join(d, e.name))
+      : (e.name.endsWith(".js") ? [path.join(d, e.name)] : []));
+  const serverSrc = walk(SRC_ROOT)
+    .map((f) => fsm.readFileSync(f, "utf8")).join(String.fromCharCode(10));
+  /* Every SQL fragment that mentions user_id, and the table each one names. */
+  const owned = [...new Set(
+    [...serverSrc.matchAll(/(?:FROM|INTO|UPDATE)[ 	]+([a-z_]{3,})/gi)]
+      .map((m) => ({ tbl: m[1].toLowerCase(), at: m.index }))
+      .filter(({ at }) => /user_id/.test(serverSrc.slice(at, at + 400)))
+      .map(({ tbl }) => tbl))];
+  /* KEPT ON PURPOSE, each with the reason it is not a record:
+       sessions     — signing the player out is not clearing what they have done
+       users        — the identity their own results are keyed to
+       source_press — how they arrived, which they never chose
+     Anything else that keys rows by player is a record and must be cleared. */
+  const KEPT = ["sessions", "users", "source_press"];
+  const unaccounted = owned.filter((tbl) =>
+    KEPT.indexOf(tbl) === -1 &&
+    !new RegExp("DELETE FROM " + tbl + " WHERE user_id").test(src));
+  /* A SCAN THAT FINDS NOTHING MUST NOT REPORT A PASS — it would agree that
+     every table is accounted for by having looked at none. The floor is the
+     three this route already deletes. */
+  t("every per-player table is either cleared or deliberately kept",
+    owned.length >= 3 && unaccounted.length === 0,
+    owned.length < 3
+      ? `the scan found only ${owned.length} tables — it is broken, not clean`
+      : `${owned.length} keyed by player; unaccounted: ${unaccounted.join(", ") || "none"}`);
 }
 
 /* EVERY GAME, ONE FUNNEL. The three attempt reports take ?game=, refuse a

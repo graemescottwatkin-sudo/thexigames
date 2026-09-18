@@ -327,34 +327,59 @@ t("the eleven rule is stated once", (() => {
 t("the scoring maximum is derived, not written down twice",
   /SCORE_BANDS\.reduce/.test(js) && !/\b1100\b/.test(js),
   "the maximum comes from the bands, so changing a band cannot leave it stale");
-/* THE ANSWER IS NOT IN THIS FILE'S REACH AT ALL, which is a stronger claim than
-   the one that stood here until 15 September 2026.
+/* THE ANSWER REACHES THIS FILE ONCE, AND ONLY FROM THE MARKING.
  *
- * That check demanded two test hooks — QFX_TEST_REVEAL and QFX_TEST_ANSWER —
- * be guarded by an IS_LIVE host comparison, because off the live host they
- * handed back the answer to the current question and on it they would have been
- * a cheat button. The guard was right and the hooks are now GONE, along with
- * the reason for them: the page is sent four options and no answer, so there is
- * no answer for a hook to hand back and no cheat to guard against.
+ * The check that stood here until 18 September 2026 demanded the string
+ * `.answer` appear nowhere in js/game.js at all. That was right while the page
+ * was sent no answer under any circumstances: the question payload carries four
+ * options and nothing else, so any mention of the field meant somebody had put
+ * it back where it could be read early. Before that it guarded two test hooks,
+ * QFX_TEST_REVEAL and QFX_TEST_ANSWER, which handed back the current answer and
+ * would have been a cheat button on the live host.
  *
- * A check whose subject has been deleted must not be deleted with it — that is
- * how a rule quietly stops applying. It is replaced by the property that made
- * the hooks dangerous in the first place: this file must not name the answer
- * field at all. If anybody ever puts it back in the payload, the page will have
- * to read it, and this is where that shows up. */
-t("the page never reads an answer, because it is never sent one", (() => {
-  /* STRIPPED. Half this file's header is about the answer no longer arriving,
-     and a check that read the comments would fail on the sentences explaining
-     why it passes — this project's own rule, in the file that quotes it. */
+ * WHAT CHANGED IS NOT THE RULE BUT WHAT IS SENT. A player who picks wrong is now
+ * told what the answer was, because being marked wrong and not told leaves
+ * nothing to learn and no way to see the question was fair. /api/quickfire/answer
+ * returns it for a question THIS round has settled and got wrong, and for no
+ * other — never for one still to come, never for one not yet answered.
+ *
+ * SO THE BAN NARROWS RATHER THAN LIFTS, and it narrows to the thing that was
+ * ever dangerous: the answer may be read off the MARKING RESPONSE and off
+ * nothing else. The question payload must still never carry it, the test hooks
+ * must stay gone, and the page must not keep a lookup of answers it was not
+ * handed one at a time. A rule that is merely deleted when its subject changes
+ * is a rule that quietly stops applying; this one is restated so the next
+ * person who widens the disclosure has to come through here. */
+t("the answer is read off the marking and off nothing else", (() => {
+  /* STRIPPED. Half this file's header is about where the answer may and may not
+     come from, and a check that read the comments would fail on the sentences
+     explaining why it passes — this project's own rule, in the file that quotes
+     it. */
   const code = js
     .replace(/\/\*[\s\S]*?\*\//g, " ")
     .replace(/(^|[^:])\/\/.*$/gm, "$1 ");
-  /* `.answer` as a property read, or "answer" as a key pulled off a payload.
-     `answered` is a count of questions and is not the answer to any of them. */
-  return !/\.answer\b/.test(code) &&
-         !/\banswer\s*:/.test(code) &&
-         !/QFX_TEST_(REVEAL|ANSWER)/.test(code);
-})(), "the hooks that handed it back are gone, and so is what they handed back");
+  /* THE HOOKS STAY GONE. Nothing about telling a player what they missed needs
+     a hook that hands back the answer to a question still in play. */
+  if (/QFX_TEST_(REVEAL|ANSWER)/.test(code)) return false;
+  /* IT IS NEVER TAKEN OFF A QUESTION. `question.answer`, `q.answer` and an
+     `answer` key read out of the board are all the early leak this began as. */
+  if (/(?<![\w$])(question|q|board|daily)\s*\.\s*answer(?![\w$])/.test(code)) return false;
+  /* AND IT IS NEVER WRITTEN INTO ONE — no lookup of answers the page was not
+     handed one at a time, which is what a map keyed by question id would be. */
+  if (/answers\s*\[/.test(code)) return false;
+  /* WHAT IS ALLOWED, NAMED RATHER THAN COUNTED. First attempt capped the
+     number of `.answer` reads at six; there were seven, and a cap is a
+     measurement wearing a law's clothes — it would need editing every time the
+     file grew a line, and it says nothing about whether the reads are safe.
+     The rule is WHERE each one comes from: `r`, the marking response, and `x`,
+     a row of state.results that the marking already put it on. Anything else —
+     a question, a board, a payload, a lookup — is the early leak this check has
+     always been about, and fails here by not being on the list. */
+  const receivers = [...code.matchAll(/([A-Za-z_$][\w$]*)\s*\.\s*answer(?![\w$])/g)]
+    .map((m) => m[1]);
+  const ALLOWED = ["r", "x"];
+  return receivers.length > 0 && receivers.every((who) => ALLOWED.indexOf(who) !== -1);
+})(), "it may come off /answer for a settled wrong pick, and from nowhere else");
 t("the board is fetched with the family CSRF header, relatively",
   /X-XI-Games/.test(js) && /\/api\/quickfire\/daily/.test(js) &&
   !/fetch\("https?:\/\//.test(js));

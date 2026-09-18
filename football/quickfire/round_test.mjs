@@ -317,6 +317,33 @@ console.log("\n=== Answering a question nobody served ===");
     started_ms: 1000, penalty_minutes: 0 }, q, 7, "A");
   t("and the same answer is taken once the question has been served",
     !ok.error && ok.correct === true, ok.error || `${ok.points} points`);
+
+  /* WHAT THE ANSWER ENDPOINT GIVES BACK WHEN THEY MISS IT.
+     Being marked wrong and not told what the answer was leaves the player
+     nothing to learn and no way to see the question was fair. The page had no
+     way to show it because it was never sent it — the whole point of moving
+     the marking to the server was that the answer stops travelling with the
+     question — so the disclosure has to be made here, deliberately and
+     narrowly.
+     THE RULE IS: only for a question THIS round has just settled, and only
+     when the pick was wrong. A right pick already knows. A question that has
+     not been answered is never told, which is what keeps this from becoming
+     the leak the endpoint exists to prevent. Both halves are asserted, because
+     one without the other is either a game that teaches nothing or a board
+     given away. */
+  const wrong = await answerRound(stub, { play_id: "p", question_idx: 7, question_ms: Date.now(),
+    started_ms: 1000, penalty_minutes: 0 }, q, 7, "B");
+  t("a wrong pick is told what the answer was",
+    wrong.correct === false && wrong.answer === "A", JSON.stringify(wrong));
+  t("and a right pick is told nothing it does not already know",
+    ok.correct === true && ok.answer === undefined,
+    "answer: " + JSON.stringify(ok.answer));
+  /* A CLOCK THAT RAN OUT IS A QUESTION THEY DID NOT GET, on the same terms. */
+  const late = await answerRound(stub, { play_id: "p", question_idx: 7,
+    question_ms: Date.now() - 100 * 60 * 1000, started_ms: 1000, penalty_minutes: 0 },
+    q, 7, null);
+  t("a clock that ran out is told too", late.timedOut === true && late.answer === "A",
+    JSON.stringify(late));
 }
 
 console.log("\n=== One clock for what day it is ===");

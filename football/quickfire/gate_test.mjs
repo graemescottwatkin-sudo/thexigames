@@ -72,11 +72,17 @@ prove("the scoring maximum written down twice", "js/game.js",
    "prove the sabotage applied" rule failing inside the prover itself.
 
    What guards the same ground now is a stronger claim: the page must not name
-   the answer at all, because it is never sent one. */
+   the answer at all, because it is never sent one. That stopped being true on
+   18 September 2026, when a wrong pick began to be told what the answer was:
+   being marked wrong and not told leaves the player nothing to learn. The gate
+   NARROWED rather than lifted — the answer may be read off the marking response
+   and off nothing else — and this sabotage is unchanged because it is still
+   exactly what the narrowed rule refuses: taking the answer off a question that
+   is still in play. Only the name of the check being proved moved. */
 prove("the page reading an answer it should never have", "js/game.js",
   swap("function renderClock(minute) {",
        "function renderClock(minute) {\n  var leak = current.question.answer;"),
-  "never reads an answer");
+  "read off the marking");
 
 /* The fault the word search rebuild retired: the bank in the browser. */
 prove("a bank pasted into a public file", "js/config.js",

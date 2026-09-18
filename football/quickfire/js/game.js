@@ -31,7 +31,7 @@
  * link so a friend could replay the exact eleven, and that is now a board
  * number in the fragment, which is shorter and does not describe the board.
  */
-var BUILD = "v001f";
+var BUILD = "v001g";
 
 (function bootstrap() {
   'use strict';
@@ -220,6 +220,23 @@ function start() {
     });
 
   /* ------------------------------------------------------------ rendering */
+
+  /* THE OPTION THAT WAS RIGHT, lit on the board itself, so the answer is where
+     the player is already looking rather than only in a line of prose beneath.
+     IT REUSES .option.right RATHER THAN INVENTING A CLASS. That style already
+     means "this is the right answer" — it is what a correct pick gets — and
+     the rule beside it, .option:disabled:not(.right):not(.wrong), is what
+     stops the answer being dimmed to 45% along with the options nobody chose.
+     A new class would have needed both of those written a second time.
+     Matched on the option's own text because that is what the server marks
+     against: the importer refuses a row unless exactly one option equals the
+     answer, so this can light one button and never two. */
+  function markCorrectOption(answer) {
+    var btns = el.options ? el.options.querySelectorAll('.option') : [];
+    Array.prototype.forEach.call(btns, function (b) {
+      if (b.textContent === answer) b.classList.add('right');
+    });
+  }
 
   function setFeedback(text, kind) {
     el.feedback.textContent = text || '';
@@ -418,21 +435,36 @@ function start() {
       correct: !!r.correct,
       minute: r.minute,
       points: r.points || 0,
-      timedOut: !!r.timedOut
+      timedOut: !!r.timedOut,
+      /* CARRIED SO THE RESULTS CARD CAN SAY IT TOO. Only ever set for a
+         question this round got wrong — the server sends it for no other —
+         so a missed row can name the answer and a scored row has nothing
+         extra to leak. */
+      answer: r.answer || null
     });
     state.totalScore += (r.points || 0);
     el.runningScore.textContent = state.totalScore;
 
+    /* WHAT IT WAS, WHEN THEY DID NOT GET IT. Being told "no" and not what the
+       answer was leaves nothing to learn and no way to see the question was
+       fair. The server sends it only for a question this round has settled and
+       only when the pick was wrong, so there is nothing here to withhold; if
+       it is absent the line simply does not appear rather than printing an
+       empty one. */
+    var says = r.answer ? ' — it was ' + r.answer : '';
     if (r.timedOut) {
-      setFeedback("FULL TIME — 0 points", 'fulltime');
+      setFeedback("FULL TIME — 0 points" + says, 'fulltime');
     } else if (r.correct) {
       setFeedback('GOAL — ' + r.minute + "'   +" + r.points + ' points', 'goal');
     } else {
       /* THE PENALTY IS SHOWN BECAUSE IT WAS CHARGED. A cost the player is not
          told about is a clock that appears to jump. */
       var cost = Number(r.penaltyMinutes) || 0;
-      setFeedback('NO — ' + (cost ? cost + " minutes gone" : 'not that one'), 'miss');
+      setFeedback('NO — ' + (cost ? cost + " minutes gone" : 'not that one') + says, 'miss');
     }
+    /* AND THE RIGHT BUTTON IS MARKED, so the answer is shown where the player
+       is already looking rather than only in a line of prose underneath. */
+    if (r.answer) markCorrectOption(r.answer);
 
     save();
     setTimeout(next, CONFIG.INTER_QUESTION_MS);
@@ -697,13 +729,22 @@ function start() {
     state.results.forEach(function (x) {
       var cls = x.correct ? 'hit' : 'missed';
       var minute = x.timedOut ? 'FT' : x.minute + "'";
-      /* THE PICK, NOT THE ANSWER. This page is never sent the answer, so a
-         breakdown cannot show what the right one was — and that is correct
-         rather than a gap: the board may still be somebody else's to play. */
+      /* THE PICK, AND NOW THE ANSWER WHERE THERE WAS ONE TO LEARN.
+         This said "this page is never sent the answer", which was true until
+         the answer endpoint began returning it for a question the round has
+         settled and got WRONG. The old note also gave the reason — "the board
+         may still be somebody else's to play" — and that reason still holds
+         for every question this player has NOT answered, which is why the
+         server sends nothing for those. For one they answered and missed, the
+         answer was already on screen when they missed it; withholding it from
+         the card they read afterwards teaches them nothing and looks like the
+         game keeping score without saying why. */
       var shown = x.pick === null ? 'No answer' : x.pick;
+      var was = (!x.correct && x.answer) ? x.answer : null;
       html += '<li class="' + cls + '">' +
         '<span class="bdMin">' + minute + '</span>' +
-        '<span class="bdAnswer">' + escapeHtml(shown) + '</span>' +
+        '<span class="bdAnswer">' + escapeHtml(shown) +
+          (was ? '<span class="bdWas"> — ' + escapeHtml(was) + '</span>' : '') + '</span>' +
         '<span class="bdPts">' + (x.points || 0) + '</span></li>';
     });
     html += '</ol>';

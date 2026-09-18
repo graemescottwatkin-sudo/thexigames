@@ -15,7 +15,7 @@
  *   - no practice. There is now an archive picker and a finals catalogue; what
  *     is still missing is a practice mode, which this game may never want.
  */
-var BUILD = "v002s";
+var BUILD = "v002t";
 
 (function () {
   "use strict";
@@ -53,6 +53,18 @@ var BUILD = "v002s";
     startedAt: null,
     elapsed: 0,
     picked: null,
+    /* WHICH TILE'S CAREER IS ON SCREEN — and deliberately NOT `picked`.
+       Eleven career lines drawn at once is the whole board shouting, so the
+       career is available on every tile and drawn on one. The obvious way to
+       do that is to gate the line on `picked`, and it renders nothing ever:
+       pick() returns early when state.over is true, so no tile is selectable
+       on the reveal at all, and it nulls picked for a solved tile on purpose,
+       because a solved tile has nothing left to sell.
+       `picked` means "what can I buy" and the bench is built on it —
+       syncBench early-returns on null. Coupling "what am I reading" to "what
+       can I buy" is how the enabled-but-inert bench button shipped the first
+       time, which journey_test caught. Two facts, two fields. */
+    reading: null,
     teamTalkDone: false,
     /* WHETHER THE CAREERS HAVE BEEN REVEALED, as one fact rather than as
        eleven. Derived from state.hints it would be wrong: a slot whose player
@@ -854,6 +866,10 @@ var BUILD = "v002s";
   }
 
   function drawPitch() {
+    /* The single funnel every path to the pitch goes through — a solve, a
+       purchase, Full Time, and a restored finished board. Defaulting here
+       rather than at each of them is what stops one being missed. */
+    if (state.over) defaultReading();
     var pitch = $("pitch");
     pitch.innerHTML = "";
     ["bottom", "top"].forEach(function (which) {
@@ -912,7 +928,12 @@ var BUILD = "v002s";
          Two clubs at most: the point is recognition, not a career listing —
          the full history is what the career hint sells, and repeating all of
          it here would give away for free what the bench charges for. */
-      if (got && got.clubs && got.clubs.length) {
+      /* ONE CAREER AT A TIME. This drew for every solved tile that had clubs,
+         which on a finished daily board is eleven lines at once. The career is
+         still carried by every tile — the payload is unchanged and the
+         aria-label below spells it out on all eleven — but only the tile being
+         read draws it. See state.reading for why this is not `picked`. */
+      if (got && got.clubs && got.clubs.length && String(slot.id) === state.reading) {
         var cl = document.createElement("span");
         cl.className = "clubs";
         cl.textContent = got.clubs.map(function (c) {
@@ -957,7 +978,10 @@ var BUILD = "v002s";
           : (bagless()
               ? "blanked, " + lenOf(slot).join(" and ") + " letters"
               : "scrambled, " + lenOf(slot).join(" and ") + " letters")));
-      el.addEventListener("click", function () { pick(slot.id); });
+      /* BOTH, and in this order. pick() owns the bench and refuses solved
+         tiles and the reveal; read() owns the career line and accepts exactly
+         those. Neither can be expressed as a condition on the other. */
+      el.addEventListener("click", function () { pick(slot.id); read(slot.id); });
       pitch.appendChild(el);
     });
 
@@ -972,6 +996,34 @@ var BUILD = "v002s";
   }
 
   /* ---- the bench -------------------------------------------------------- */
+
+  /* WHOSE CAREER TO SHOW. Reached from the tile click alongside pick(), and
+     independent of it: it never touches the bench, never clears picked, and
+     works when pick() will not — on the reveal, and on a solved tile during
+     play, which are exactly the two cases the feature is made of. */
+  function read(slotId) {
+    var got = state.solved[slotId];
+    /* Only a solved tile has a career to read. An unsolved one would be
+       claiming to show nothing rather than showing nothing. */
+    if (!got) return;
+    state.reading = String(slotId);
+    drawPitch();
+  }
+
+  /* THE TILE THE REVEAL OPENS ON. Left null, the panel is empty until the
+     player happens to click something, which reads as a career line that
+     failed to load. The goalkeeper is the natural first read: it is where the
+     eye starts and where the team sheet starts.
+     Chosen here rather than in checkFullTime() because a finished board is
+     also restored from a save, and a default set on only one of those paths
+     is a blank reveal for anyone who closes the tab and comes back. */
+  function defaultReading() {
+    if (state.reading || !state.board) return;
+    var slots = state.board.slots || [];
+    var gk = slots.find(function (s) { return s.pos === "GK" && state.solved[s.id]; });
+    var any = gk || slots.find(function (s) { return state.solved[s.id]; });
+    if (any) state.reading = String(any.id);
+  }
 
   function pick(slotId) {
     if (state.over) return;
@@ -1112,6 +1164,7 @@ var BUILD = "v002s";
         state.help += CFG.REVEAL_VOWEL_COST;
       } else if (kind === "name") {
         state.solved[id] = { name: r.name, clubs: r.clubs, how: "revealed" };
+        state.reading = String(id);   // bought, so it is the active card
         state.help += CFG.REVEAL_NAME_COST;
         state.picked = null;
         hideBench();
@@ -1255,6 +1308,9 @@ var BUILD = "v002s";
       if (r.error) return say(r.error, "bad");
       if (r.solvedId) {
         state.solved[r.solvedId] = { name: r.name, clubs: r.clubs, how: "solved" };
+        /* The player has just earned this one; it is the active card by any
+           reading of the word, so its career is the one on screen. */
+        state.reading = String(r.solvedId);
         $("answer").value = "";
         state.picked = null;
         hideBench();
@@ -1280,6 +1336,21 @@ var BUILD = "v002s";
   function checkFullTime() {
     if (Object.keys(state.solved).length < state.board.slots.length) return;
     state.over = true;
+    /* THE REVEAL ALWAYS OPENS ON THE SAME TILE. During play `reading` follows
+       the tile just solved or bought, so at Full Time it would be whichever
+       one happened to be last — while a finished board RESTORED from a save
+       has no reading at all and falls to the goalkeeper. Two paths to one
+       screen opening in two different places is the kind of difference that
+       gets read as a bug later, and neither the player nor the next reader of
+       this file could tell which was intended. Cleared here so both paths go
+       through defaultReading() and the reveal starts at the goalkeeper, where
+       a team sheet starts.
+       AND THE PITCH IS REDRAWN, because submit() draws BEFORE it calls this —
+       clearing the field alone left the last-solved tile's career on screen
+       with nothing to repaint it. */
+    state.reading = null;
+    defaultReading();
+    drawPitch();
     stopClock();
     playsEnd(true);
     save();

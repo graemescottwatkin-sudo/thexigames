@@ -114,14 +114,24 @@ function server(board, opts = {}) {
       if (body.pick === null || body.pick === undefined) {
         if (round.minute < 90) return [400, { error: "there is still time on the clock" }];
         round.answers.set(body.idx, 0);
-        return [200, { idx: body.idx, correct: false, points: 0, minute: 90, timedOut: true }];
+        /* THE ANSWER COMES BACK ON A CLOCK THAT RAN OUT, as the endpoint
+           does it. Re-applied here rather than rubber-stamped: a stub that
+           returned whatever the page wanted would prove nothing. */
+        return [200, { idx: body.idx, correct: false, points: 0, minute: 90, timedOut: true,
+                       answer: answerOf(q.id) }];
       }
       if (!q.options.includes(body.pick)) return [400, { error: "that was not one of the options" }];
       const correct = body.pick === answerOf(q.id);
       const points = correct ? 100 : 0;
       round.answers.set(body.idx, points);
+      /* AND ONLY WHEN THE PICK WAS WRONG. The same rule the endpoint keeps:
+         a right pick already knows the answer, and a question that has not
+         been settled is never told it at all. Written as the rule rather than
+         as "always send it", so the page cannot pass by being handed more
+         than production would hand it. */
       return [200, { idx: body.idx, correct, points, minute: round.minute,
-                     penaltyMinutes: correct ? 0 : 5 }];
+                     penaltyMinutes: correct ? 0 : 5,
+                     ...(correct ? {} : { answer: answerOf(q.id) }) }];
     }
     if (pathname === "/api/quickfire/sub") {
       if (round.subsUsed >= 3) return [400, { error: "no substitutions left" }];
@@ -275,11 +285,28 @@ console.log("\n=== A round, played end to end ===");
     new RegExp(`${expectedCorrect}\\s*/\\s*${PER_DAILY}`).test(shown.replace(/\s+/g, " ")),
     `expected ${expectedCorrect}/${PER_DAILY}`);
 
-  t("the breakdown shows what was PICKED, never the answer", (() => {
-    /* The page cannot show the right answer to a question it got wrong,
-       because it was never told it — and must not appear to. */
-    return /Wrong2a/.test(shown) && !/Right2\b/.test(shown);
-  })(), "a board somebody else has still to play");
+  /* WHAT A MISSED ROW SHOWS. This asserted the answer was NEVER on the card,
+     on the reason that the page was never told it. The page IS told it now,
+     for a question this round has settled and got wrong and for no other, so
+     the old assertion was defending a limitation rather than a rule.
+     The rule that survives is about WHICH answers: one the player answered and
+     missed, never one they have not reached. */
+  /* READ OFF THE ROW, NOT OUT OF THE FLATTENED TEXT. Written against `shown`
+     first and it failed on a card that was correct: textContent runs the
+     answer straight into the points column, so "Right2" arrives as "Right20"
+     and a word boundary can never match. The same shape as the crossword's
+     "3Current run" — a pattern looking for a value in concatenated text
+     matches nothing however right the value is. */
+  t("a missed row shows the pick AND what the answer was", (() => {
+    const missed = [...doc.querySelectorAll("#resultsBody .breakdown li.missed")];
+    const row = missed.find((li) => /Wrong2a/.test(li.textContent));
+    const was = row && row.querySelector(".bdWas");
+    return missed.length > 0 && !!was && was.textContent.includes("Right2");
+  })(), "being marked wrong and not told why teaches nothing");
+  t("and a scored row names no answer, having nothing to disclose", (() => {
+    const hits = [...doc.querySelectorAll("#resultsBody .breakdown li.hit")];
+    return hits.length > 0 && hits.every((li) => !li.querySelector(".bdWas"));
+  })(), "the server sends an answer only for a settled, wrong question")
 
   t("the result was banked under the family's key", (() => {
     const raw = w.localStorage.getItem("qfx.results.v1");

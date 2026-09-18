@@ -582,6 +582,88 @@ t("and the tiles read the names rather than the cypher",
     typeof end.detail.revealed === "number",
     JSON.stringify(end || null));
 }
+/* ---- one career at a time, on a board where every tile has one ---------- */
+/* THE REVEAL USED TO DRAW ELEVEN CAREER LINES AT ONCE. Every tile still
+   CARRIES its career — the payload is untouched and the accessible name spells
+   it out on all eleven — but only the tile being read draws one.
+   All four sample boards carry clubs on 11 of 11, so this is provable offline.
+   On a live iconic, champions or prem-last2 board no tile has a career at all
+   and there would be nothing here to see, which is why the count of tiles
+   WITH career data is asserted first: if the fixture ever stops carrying it,
+   this block says so instead of passing on an empty set. */
+{
+  const withCareer = board.slots.filter((sl) => sl.clubs && sl.clubs.length);
+  t("the fixture is a board whose tiles have careers",
+    withCareer.length === 11, `${withCareer.length} of 11 carry clubs`);
+
+  const drawn = () => [...doc.querySelectorAll(".slot .clubs")];
+  t("the reveal draws one career line, not eleven",
+    drawn().length === 1, `${drawn().length} drawn`);
+  const gk = board.slots.find((sl) => sl.pos === "GK");
+  /* WHAT THIS CANNOT TELL APART, said rather than left to be assumed. On every
+     sample board the goalkeeper is also the FIRST slot, so "defaults to the
+     GK" and "defaults to the first solved tile" look identical here — deleting
+     the `pos === "GK"` lookup leaves this green. It is not vacuous: making the
+     default the LAST tile fails it, so it does hold the reveal to opening on a
+     deliberate tile rather than wherever play happened to end. The narrower
+     claim would need a board whose sheet does not start with the keeper, which
+     the fixture set does not contain. */
+  t("and it is the goalkeeper's, so the panel is never empty to begin with",
+    !!gk && !!doc.querySelector(`.slot[data-slot="${gk.id}"] .clubs`),
+    gk ? `GK is ${gk.id}` : "no GK on this board");
+
+  /* THE MOVE IS THE FEATURE. A line that is drawn once and never moves is
+     indistinguishable from one hard-coded to the first tile. */
+  const other = board.slots.find((sl) => sl.id !== (gk || {}).id && sl.clubs && sl.clubs.length);
+  doc.querySelector(`.slot[data-slot="${other.id}"]`)
+    .dispatchEvent(new window.Event("click", { bubbles: true }));
+  t("clicking another tile moves the career to it",
+    drawn().length === 1 && !!doc.querySelector(`.slot[data-slot="${other.id}"] .clubs`),
+    `${drawn().length} drawn, on ${other.id}`);
+  t("and the goalkeeper's is no longer drawn",
+    !doc.querySelector(`.slot[data-slot="${gk.id}"] .clubs`),
+    "two at once is the crowding this exists to stop");
+
+  /* HIDDEN VISUALLY IS NOT HIDDEN FROM EVERYONE. A screen reader is not
+     crowded by what will not fit on a two-inch tile, so the career stays in
+     the accessible name of all eleven however few are drawn. */
+  /* HIDDEN VISUALLY IS NOT HIDDEN FROM EVERYONE, and the claim is exact: a
+     tile that is NOT drawing its career speaks the same clubs it WOULD draw.
+     Compared against itself rather than against the fixture, which was the
+     first attempt and was wrong — the reveal speaks premClubs, the league-only
+     list capped at two, while a slot's `clubs` is the whole career. Salah's
+     fixture entry runs to four clubs and his tile names one; asserting the
+     fixture's list appears in the label failed on a page that was correct.
+     So the label is read while the tile is silent, the tile is then clicked,
+     and what it draws must have been in that label all along. */
+  const probe = board.slots.find((sl) =>
+    sl.id !== other.id && !doc.querySelector(`.slot[data-slot="${sl.id}"]`).classList.contains("given"));
+  const labelBefore = doc.querySelector(`.slot[data-slot="${probe.id}"]`).getAttribute("aria-label") || "";
+  t("a tile that draws no career is still silent on screen",
+    !doc.querySelector(`.slot[data-slot="${probe.id}"] .clubs`), probe.id);
+  doc.querySelector(`.slot[data-slot="${probe.id}"]`)
+    .dispatchEvent(new window.Event("click", { bubbles: true }));
+  const drawnText = (doc.querySelector(`.slot[data-slot="${probe.id}"] .clubs`) || {}).textContent || "";
+  const clubsDrawn = drawnText.split(" · ").map((x) => x.replace(/\s+\d+ PL$/, "").replace(/ \(loan\)$/, ""));
+  t("but it was speaking that career the whole time",
+    drawnText.length > 0 && clubsDrawn.every((c) => labelBefore.includes(c)),
+    `drew "${drawnText}" — the label already said it`);
+  /* And the exception is named rather than folded into an every() that passes:
+     the free tile is stored as { name, how: "free" } with no clubs at all, so
+     it has nothing to speak and never did. Pre-existing, not this change. */
+  t("only the given tile has no career to speak, and it is one tile",
+    board.slots.filter((sl) =>
+      doc.querySelector(`.slot[data-slot="${sl.id}"]`).classList.contains("given")).length === 1,
+    "the free tile is handed over, not fetched, so no career comes with it");
+
+  /* AND THE BENCH IS NOT INVOLVED. "What am I reading" and "what can I buy"
+     are two facts; coupling them is how the enabled-but-inert bench button
+     shipped the first time. The round is over, so nothing is buyable. */
+  t("reading a tile does not raise the bench on a finished board",
+    $("benchRow").hidden === true,
+    "the bench belongs to picked, not to reading");
+}
+
 t("the Full Time card shows a score out of 114",
   /\/ 114$/.test(doc.querySelector(".ftScore").textContent),
   doc.querySelector(".ftScore").textContent);

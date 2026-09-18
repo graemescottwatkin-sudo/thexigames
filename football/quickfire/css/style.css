@@ -190,6 +190,11 @@ h1,h2{font-family:var(--disp);letter-spacing:.01em;margin:0}
 .breakdown li.subbed .bdMin{color:var(--ink-faint)}
 .breakdown li.missed .bdAnswer,.breakdown li.subbed .bdAnswer{color:var(--ink-soft)}
 .breakdown li.subbed .bdAnswer{text-decoration:line-through}
+/* THE ANSWER THEY MISSED, beside the pick they made. Not struck through and
+   not dimmed with the pick: it is the one part of a missed row worth reading,
+   so it takes the ink colour while the pick keeps the soft one. */
+.breakdown li.missed .bdWas{color:var(--ink)}
+.breakdown li.subbed .bdWas{text-decoration:none}
 .bdPts{color:var(--ink-soft)}
 .breakdown li.subbed .bdPts{color:var(--xi-ink)}
 
