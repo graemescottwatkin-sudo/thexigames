@@ -139,5 +139,37 @@ console.log("\nThe zones agree with the grade the server would give");
     wrong.length ? "disagreed at " + wrong.join(", ") : distances.length + " distances");
 }
 
+console.log("\nA close guess that scores nothing is still a close guess");
+{
+  /* THE CONTRADICTION THIS CATCHES, seen on the first live board: the result
+     read "In the ballpark" — a scoring band — beside "your distance landed
+     OUTSIDE the scoring bands", because the explanation branched on points > 0
+     and the clock had run down to nothing. Two different facts had one test
+     between them.
+     The page decides "did the distance score" by finding the zone the distance
+     falls in and reading its multiplier, which is what this checks: a distance
+     inside a paying band must report as scoring NO MATTER what the clock later
+     did to the award. */
+  const q = { tolerance: 4 };
+  const zones = R.zonesFor(q, 100);
+  const landedFor = (away) => zones.find((z) => away <= z.outerHalf);
+
+  const close = landedFor(5);             // 1.25 ballparks — "Just outside"
+  t("a distance inside a paying band reports as scoring",
+    !!close && close.scoring, close && close.label);
+  t("and that verdict does not depend on the points awarded",
+    close.scoring === (close.mult > 0),
+    "the ladder decides it, never the clock");
+  const far = landedFor(40);              // ten ballparks — way out
+  t("a distance outside every paying band reports as non-scoring",
+    !!far && !far.scoring, far && far.label);
+  /* The boundary, which is where an off-by-one would hide: four ballparks is
+     the last paying rung, and a hair past it is not. */
+  t("the last paying band still pays at its edge",
+    landedFor(16).scoring && landedFor(16).label === "Wide");
+  t("and a hair beyond it does not",
+    !landedFor(16.001).scoring && landedFor(16.001).label === "Way out");
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

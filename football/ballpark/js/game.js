@@ -5,7 +5,7 @@
      it is yesterday's code. aligned_test asserts the two agree, and until
      this game launched it had no BUILD at all — three of its assets were on
      three different tags, which is the same fault with nobody checking. */
-  var BUILD = "v001j";
+  var BUILD = "v001k";
   if (window.XIPlays && document.documentElement) {
     document.documentElement.setAttribute("data-build", BUILD);
   }
@@ -424,16 +424,32 @@
     }
     $("rsKey").innerHTML = key;
 
-    /* WRITTEN FROM THE OUTCOME, not from a template with the numbers left in.
-       It says what the clock did and what the distance did, because those are
-       the two things that made the score and the player saw only one of them. */
-    var offered = lockedWorth;
+    /* WRITTEN FROM THE OUTCOME, and the clock and the distance are SEPARATE
+       facts. The first draft branched on points > 0 for both, which produced a
+       flat contradiction on the very first live board: grade "In the ballpark"
+       — a scoring band — beside "your distance landed outside the scoring
+       bands", because the clock had run out and the award was nought. A guess
+       can be close and score nothing; that is the game, and the sentence has to
+       be able to say so.
+       WHETHER THE DISTANCE SCORED IS ASKED OF THE LADDER, not of the points:
+       the zone the distance falls in carries its own multiplier. And the figure
+       is ROUNDED — pointsAt returns a real number and this printed
+       "1.5139999999999993 points available" to a player. */
+    var landed = null;
+    for (var zi = 0; zi < zones.length; zi++) {
+      if (away <= zones[zi].outerHalf) { landed = zones[zi]; break; }
+    }
+    var inBand = !!(landed && landed.scoring);
+    var offered = Math.max(0, Math.round(lockedWorth));
     $("rsWhy").innerHTML = '<b>The clock left ' + offered +
       (offered === 1 ? " point" : " points") + ' available.</b> ' +
-      (pts > 0
-        ? "Your distance landed in a scoring band, so you banked " +
-          (pts === offered ? "all of it." : pts + (pts === 1 ? " point." : " points."))
-        : "Your distance landed outside the scoring bands, so none of it was banked.");
+      (!inBand
+        ? "Your distance landed outside the scoring bands, so none of it was banked."
+        : pts > 0
+          ? "Your distance landed in a scoring band, so you banked " +
+            (pts === offered ? "all of it." : pts + (pts === 1 ? " point." : " points."))
+          : "Your distance landed in a scoring band, but the clock had nothing "
+            + "left to give.");
     $("result").hidden = false;
   }
 
