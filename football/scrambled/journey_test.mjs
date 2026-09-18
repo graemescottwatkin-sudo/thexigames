@@ -134,7 +134,18 @@ t("and it is the board that was asked for",
   /* The kicker is set in caps by the landing, the way the other two games
      set theirs. Compared case-insensitively so this asserts WHICH board is
      named rather than how the shell chooses to shout it. */
-  $("startKicker").textContent.toUpperCase() === "BOARD #1",
+  /* THE NUMBER IS THE CLAIM, NOT THE WORD IN FRONT OF IT. This demanded the
+     exact string "BOARD #1". The landing says "TODAY · #N" when the board it
+     was handed is today's and "BOARD #N" when it is not — so while the suite's
+     pinned board #1 was weeks in the past it read BOARD, and after the reset
+     of 18 September 2026, when board 1 IS today, it reads TODAY and the check
+     failed for the page labelling the board correctly.
+     What this assertion exists to prove is WHICH board was asked for, which is
+     the number; whether the shell calls it today's is a different statement
+     and is the next check's business. Both labels are accepted and the number
+     is pinned, so asking for the wrong board still fails. */
+  $("startKicker").textContent.trim().toUpperCase().endsWith("#1") &&
+  /^(TODAY|BOARD)/.test($("startKicker").textContent.trim().toUpperCase()),
   $("startKicker").textContent);
 t("and states the pool, so nobody is guessing at the whole of football",
   $("startPool").textContent === board.pool);

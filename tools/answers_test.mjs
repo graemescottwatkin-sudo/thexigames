@@ -90,10 +90,16 @@ console.log("\nThe seal is the family's one window");
     "HiLo's days and Scrambled's numbers are one window asked twice");
 }
 function require_day(no) {
-  /* The day a board number stands for, from the same arithmetic everything
-     else uses — not restated here. */
-  const d = new Date(Date.UTC(2026, 7, 26) + (no - 1) * 86400000);
-  return d.toISOString().slice(0, 10);
+  /* THE COMMENT WAS TRUE AND THE CODE WAS NOT. It said "from the same
+     arithmetic everything else uses — not restated here", and the next line
+     restated it: Date.UTC(2026, 7, 26), the epoch, written out by hand. So
+     when day one moved to 18 September 2026 this went on answering from
+     26 August, and every assertion built on it measured a calendar the site
+     no longer had — while epoch_test, which looks only at the crossword's two
+     constants, stayed green throughout.
+     It calls dailyDayKey now, the one place that arithmetic lives. A comment
+     claiming a single source is not a single source. */
+  return dailyDayKey(no);
 }
 
 console.log("\nA sealed board gives nothing away");
@@ -165,8 +171,17 @@ console.log("\nThe two that already had one are untouched");
      three of them would put the two that work at risk to tidy them. */
   const r = await call(crossword, []);
   t("the crossword's archive still answers", r.status === 200, String(r.status));
-  t("and still lists its published boards",
-    (r.text.match(/answers\/\d+/g) || []).length > 0);
+  /* OR SAYS IT HAS NONE YET. This demanded at least one published board, which
+     held while the crossword had weeks behind it; after the reset of
+     18 September 2026 the family is on day 1 and the seal is
+     ANSWERS_AFTER_DAYS, so for its first week the honest page is the empty one
+     — which this page already renders, the same state Scrambled's index has
+     and the block above asserts. Exactly one of the two, so a blank page
+     satisfies neither. */
+  const listed = (r.text.match(/answers\/\d+/g) || []).length > 0;
+  const isNew = /The game is new/.test(r.text);
+  t("and still lists its published boards", listed !== isNew,
+    listed ? "lists published boards" : "nothing past the seal yet, and says so");
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

@@ -18,7 +18,7 @@ import { onRequestPost as callPost } from "../../functions/api/hilo/call.js";
 import { onRequestGet as catalogGet } from "../../functions/api/hilo/catalog.js";
 import { onRequestGet as archiveGet } from "../../functions/api/hilo/archive.js";
 import { HL_SAMPLE_BOARDS, HL_SAMPLE_SCHEDULE } from "../../functions/_lib/hl-sample.js";
-import { todayKey } from "../../functions/_lib/hl-board.js";
+import { todayKey, readableQuote } from "../../functions/_lib/hl-board.js";
 
 let pass = 0, fail = 0;
 const t = (n, ok, d) => { ok ? pass++ : fail++; console.log(`${ok ? "  ok  " : "FAIL  "}${n}${d ? "  — " + d : ""}`); };
@@ -188,9 +188,26 @@ t("each settled row shows both values", (() => {
   return rows[0].querySelectorAll(".val")[1].textContent === String(board.chain[1].value) &&
     rows[9].querySelectorAll(".val")[1].textContent === String(board.chain[10].value);
 })());
+/* THE QUOTE IS SHOWN WHEN THERE IS ONE TO SHOW. This asserted the settled row
+   carried a slice of board.chain[1].source.quote, which held only because the
+   sample board it picked happened to cite prose. HiLo was re-imported for the
+   reset of 18 September 2026 and the new board cites the league's JSON feed;
+   readableQuote strips a slice of JSON on purpose, the server never sends it,
+   and the row correctly shows the labelled link instead — so the check failed
+   for the suppression rule working. A fixture's incidental content was again
+   standing in for a rule.
+   What the row owes is a source line, carrying the quote when the board's own
+   quote survives readableQuote and the publisher's link when it does not.
+   Both branches are asserted rather than the check being loosened to "a .src
+   exists", which an empty span would satisfy. */
+const srcEl = doc.querySelector("#sheet li.ok .src");
+const readable = readableQuote(board.chain[1].source && board.chain[1].source.quote);
 t("the answers list fills as calls settle, with the source quote",
-  doc.querySelectorAll("#sheet li.ok").length === 10 && !!doc.querySelector("#sheet li.ok .src") &&
-  doc.querySelector("#sheet li.ok .src").textContent.includes(board.chain[1].source.quote.slice(0, 12)));
+  doc.querySelectorAll("#sheet li.ok").length === 10 && !!srcEl &&
+  (readable
+    ? srcEl.textContent.includes(readable.slice(0, 12))
+    : srcEl.textContent.includes(board.chain[1].source.publisher)),
+  readable ? "quote shown" : "quote suppressed as JSON; publisher link shown");
 t("the live pair has moved on to the eleventh call", $("right").querySelector(".who").textContent === board.chain[11].name);
 t("the ladder shows ten filled and the eleventh current",
   doc.querySelectorAll("#ladder i.ok").length === 10 && doc.querySelectorAll("#ladder i.cur").length === 1);

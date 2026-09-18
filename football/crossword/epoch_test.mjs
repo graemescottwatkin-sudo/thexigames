@@ -57,10 +57,24 @@ t("before the first day everything clamps to #1, so testing never runs it down",
    midnight, which is the hour the two used to disagree in UK summer. */
 {
   const srv = await import("../../functions/_lib/daily.js");
+  /* THE INSTANTS ARE DERIVED FROM THE EPOCH, NOT WRITTEN DOWN. They were six
+     literals in August 2026, and on 18 September the epoch moved to make that
+     day #1 — which put EVERY ONE of them before day one, where both sides
+     clamp to #1 and agree trivially. The block went on passing and stopped
+     testing anything: a green anybody would reasonably read as proof that the
+     riskiest constant in the project had been moved safely.
+     Now day one is read from the server's own declared epoch, so the boundary
+     being probed is always the real one and this cannot rot at the next
+     reset. */
+  const day1 = Date.UTC(sy, sm, sd);
+  const DAY = 86400000;
   const instants = [
-    Date.UTC(2026, 7, 27, 22, 59), Date.UTC(2026, 7, 27, 23, 30),
-    Date.UTC(2026, 7, 28, 0, 0),  Date.UTC(2026, 7, 28, 0, 30),
-    Date.UTC(2026, 7, 28, 1, 0),  Date.UTC(2026, 8, 2, 23, 59),
+    day1 + DAY + 82740000,   // day 2, 22:59 UTC
+    day1 + DAY + 84600000,   // day 2, 23:30
+    day1 + 2 * DAY,          // day 3, 00:00 — the rollover itself
+    day1 + 2 * DAY + 1800000,
+    day1 + 2 * DAY + 3600000,
+    day1 + 7 * DAY + 86340000,
   ];
   let diverged = null;
   for (const ms of instants) {
@@ -80,9 +94,16 @@ t("before the first day everything clamps to #1, so testing never runs it down",
      trust, because the archive calendar maps its cells through local dates
      and must not shift when a sync lands. Local epoch day is the 25th, so
      local 28 August is board #3, trusted or not. */
-  FCW.setTrustedTime(Date.UTC(2026, 7, 20));   // trust pointing at a different day entirely
+  /* A LOCAL DATE A KNOWN NUMBER OF DAYS AFTER DAY ONE, derived the same way.
+     This asserted local 28 August was board #3 — true only while day one was
+     26 August. The property under test is that an explicit `at` reads LOCAL
+     calendar components and does not move when a sync lands, so what matters
+     is the OFFSET, not the date. Two days after day one is board #3, whatever
+     day one is. */
+  const localDay3 = new Date(cy, cm, cd + 3, 0, 30);   // client epoch is the day BEFORE #1
+  FCW.setTrustedTime(day1 - 5 * DAY);                  // trust pointing somewhere else entirely
   t("an explicit date still answers from the local calendar, trust or no trust",
-    FCW.dailyNumber(new Date(2026, 7, 28, 0, 30)) === 3,
+    FCW.dailyNumber(localDay3) === 3,
     "the calendar's cells must not move when a sync lands");
   FCW.clearTrustedTime();
 }

@@ -142,6 +142,8 @@ const dayAt = (off) => new Date(Date.now() + off * 86400000).toISOString().slice
    the same 404 a future board gets, and a test that cannot tell the two apart
    proves nothing about the future being shut. This bank has a board dated
    tomorrow, so the refusal under test is the one being claimed. */
+const { LAUNCHED } = await import("../../functions/_lib/games.js");
+
 function futureBank() {
   const [b1, b2] = BP_SAMPLE_BOARDS;
   const b3 = { ...b2, id: "bp-0003", ordinal: 3 };
@@ -229,18 +231,44 @@ async function run() {
     const envF = { DB: makeDb(futureBank()) };
     const a = await bodyOf(await archive({ env: envF }));
     const listed = a.days.map((d) => d.id);
-    t("the archive lists the days that have run", listed.includes("bp-0001") &&
-      listed.includes("bp-0002"), listed.join(", "));
+    /* WHICH DAYS OUGHT TO BE THERE IS DERIVED, because it stopped being two.
+       This asserted bp-0001 AND bp-0002 were listed and that there were at
+       least two of them. Both were true while Ballpark had launched weeks ago;
+       on 18 September 2026 every game in the family reset to day 1, the
+       fixture's yesterday fell BEFORE the launch day, and the archive rightly
+       refused to list it. The suite failed for the archive doing its job.
+       The invariant is not "two": it is that the archive lists exactly the
+       fixture's days that have RUN — at or after launch, at or before today —
+       and never a day that has not. On a launch day that is one board, and
+       that is a correct archive rather than a broken one. */
+    const fx = futureBank().schedule;
+    const launch = LAUNCHED.ballpark;
+    /* NOT `today` — that name is already the family NUMBER at module scope
+       (line 137), and shadowing it with a day key made the two assertions
+       below compare a number against "2026-09-18". */
+    const todayDay = todayKey();
+    const shouldList = Object.entries(fx)
+      .filter(([day]) => (!launch || day >= launch) && day <= todayDay)
+      .map(([, id]) => id).sort();
+    t("the archive lists exactly the days that have run",
+      listed.slice().sort().join(",") === shouldList.join(","),
+      `listed ${listed.join(", ") || "(none)"} | expected ${shouldList.join(", ") || "(none)"}`);
     t("and not tomorrow's, which the same table holds",
       !listed.includes("bp-0003"), listed.join(", "));
-    t("newest first", a.days.length > 1 && a.days[0].day > a.days[1].day,
-      a.days.map((d) => d.day).join(" > "));
+    /* Ordering is only a claim when there is more than one to order. */
+    t("newest first",
+      a.days.length < 2 || a.days[0].day > a.days[1].day,
+      a.days.map((d) => d.day).join(" > ") || "one day, nothing to order");
     /* NUMBERED BY THE FAMILY'S DAY COUNT, not by position in this list — a
        game that starts after the epoch has gaps, and a running index would
        renumber them quietly. */
     t("today is numbered as the family numbers it", a.days[0].no === today,
       `${a.days[0].no} vs ${today}`);
-    t("yesterday is one less", a.days[1].no === today - 1, String(a.days[1].no));
+    /* Only a claim when there IS a yesterday: on the launch day there is not,
+       and asserting one would be asserting the archive leaks a pre-launch day. */
+    t("yesterday is one less",
+      a.days.length < 2 ? shouldList.length < 2 : a.days[1].no === today - 1,
+      a.days.length < 2 ? "launch day — no yesterday to number" : String(a.days[1].no));
     /* A MENU IS IDS, NEVER PAYLOADS — Grid XI's catalogue lesson. */
     const txt = JSON.stringify(a);
     t("the archive carries no question and no answer",

@@ -35,6 +35,30 @@ import { JSDOM } from "jsdom";
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const HTML = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
 
+/* THE CYCLE AND ITS EPOCH ARE READ FROM THE PAGE, not restated here. They were
+   restated, and when the family reset to day 1 on 18 September 2026 and the
+   owner asked for QuickFire to lead instead of Wordsearch, five assertions went
+   red for a change they were never about — each one naming a pair that was
+   simply no longer the pair. A suite that has to be edited every time an
+   editorial decision changes is a suite that eventually gets edited into
+   agreeing with a broken rotation.
+   What is PINNED below is the one thing that is a decision rather than a
+   derivation: day 0 is QuickFire and HiLo, because that is what the owner asked
+   for on launch day. Everything else is computed, so it follows the page. */
+const HUB = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+const SPEC_EPOCH = (HUB.match(/FEATURE_EPOCH = "([0-9-]+)"/) || [])[1];
+const SPEC_CYCLE = [...(HUB.match(/FEATURE_CYCLE = \[([\s\S]*?)\];/) || [, ""])[1]
+  .matchAll(/\["([a-z]+)",\s*"([a-z]+)"\]/g)].map((m) => [m[1], m[2]]);
+const DAY_MS = 86400000;
+function pairFor(iso) {
+  const [y, m, d] = iso.split("-").map(Number);
+  const [ey, em, ed] = SPEC_EPOCH.split("-").map(Number);
+  const n = Math.round((Date.UTC(y, m - 1, d) - Date.UTC(ey, em - 1, ed)) / DAY_MS);
+  return SPEC_CYCLE[((n % SPEC_CYCLE.length) + SPEC_CYCLE.length) % SPEC_CYCLE.length];
+}
+const dayAfter = (iso, k) => new Date(Date.parse(iso + "T00:00:00Z") + k * DAY_MS)
+  .toISOString().slice(0, 10);
+
 let pass = 0, fail = 0;
 const t = (name, ok, note) => {
   if (ok) { pass++; console.log(`  ok  ${name}${note ? "  — " + note : ""}`); }
@@ -74,7 +98,15 @@ async function pageOn(day) {
   return {
     dom,
     ids: cards.map((c) => c.getAttribute("data-game")),
-    lead: cards.filter((c) => c.classList.contains("lead")).map((c) => c.getAttribute("data-game")),
+    /* IN PICK ORDER, NOT DOM ORDER. The markup stays in shirt order on purpose,
+       so collecting the featured cards by document position puts HiLo (shirt 4)
+       before QuickFire (shirt 8) whatever the rotation chose — which made the
+       hero, that opens the FIRST PICKED game, look like it disagreed with its
+       own pair. `order` is what the page sets to express the choice, so it is
+       what this reads. */
+    lead: cards.filter((c) => c.classList.contains("lead"))
+      .sort((a, b) => Number(a.style.order || 0) - Number(b.style.order || 0))
+      .map((c) => c.getAttribute("data-game")),
     /* Visual order, which is what a player actually reads: `order` decides it,
        and the DOM stays in shirt order on purpose. */
     shown: cards
@@ -155,15 +187,15 @@ console.log("\nTHE CASE IT EXISTS FOR: every game appears exactly once, every da
 
 console.log("\nThe pair is the board day's, and only the board day's");
 {
-  const a = await pageOn("2026-09-17");
-  const b = await pageOn("2026-09-17");
+  const a = await pageOn(SPEC_EPOCH);
+  const b = await pageOn(SPEC_EPOCH);
   t("the same day gives the same pair", a.lead.join(",") === b.lead.join(","), a.lead.join(" + "));
   t("day 0 of the cycle is the documented pair",
-    a.lead.join(",") === "crossword,quickfire", a.lead.join(" + "));
-  const next = await pageOn("2026-09-18");
+    a.lead.join(",") === "quickfire,hilo", a.lead.join(" + "));
+  const next = await pageOn(dayAfter(SPEC_EPOCH, 1));
   t("the next board day gives a different pair",
     next.lead.join(",") !== a.lead.join(","), next.lead.join(" + "));
-  const roundTrip = await pageOn("2026-09-22");
+  const roundTrip = await pageOn(dayAfter(SPEC_EPOCH, SPEC_CYCLE.length));
   t("five days on, the cycle comes back round",
     roundTrip.lead.join(",") === a.lead.join(","), roundTrip.lead.join(" + "));
   /* MIDNIGHT IS THE POINT. 23:59:59 on the 17th and 00:00:01 on the 18th are
@@ -171,8 +203,8 @@ console.log("\nThe pair is the board day's, and only the board day's");
      there and nowhere else — and it must flip for everyone at the same instant
      because the day came from the server, not from a clock in a timezone. */
   t("the change happens at the board rollover, not at a local midnight",
-    (await pageOn("2026-09-17")).lead.join(",") === "crossword,quickfire" &&
-    (await pageOn("2026-09-18")).lead.join(",") === "wordsearch,hilo");
+    (await pageOn(SPEC_EPOCH)).lead.join(",") === pairFor(SPEC_EPOCH).join(",") &&
+    (await pageOn(dayAfter(SPEC_EPOCH, 1))).lead.join(",") === pairFor(dayAfter(SPEC_EPOCH, 1)).join(","));
   /* A DAY BEFORE THE EPOCH. JavaScript's % returns a negative for a negative
      operand, so an unguarded index reaches FEATURE_CYCLE[-2], throws, and the
      throw is swallowed by the catch around this call — leaving the page showing
@@ -181,14 +213,14 @@ console.log("\nThe pair is the board day's, and only the board day's");
      that on its first draft: it passed with the guard deleted, because two
      cards were still featured — the wrong two. So it names the pair. */
   t("a board day before the epoch features THAT day's pair, not the device's",
-    (await pageOn("2026-09-15")).lead.join(",") === "vowels,whoami");
+    (await pageOn(dayAfter(SPEC_EPOCH, -3))).lead.join(",") === pairFor(dayAfter(SPEC_EPOCH, -3)).join(","));
   t("and so does one years before it",
-    (await pageOn("2020-01-01")).lead.join(",") === "grid,codeword");
+    (await pageOn("2020-01-01")).lead.join(",") === pairFor("2020-01-01").join(","));
 }
 
 console.log("\nThe hero opens the game it names");
 {
-  for (const day of ["2026-09-17", "2026-09-18", "2026-09-19", "2026-09-20", "2026-09-21"]) {
+  for (const day of [0, 1, 2, 3, 4].map((k) => dayAfter(SPEC_EPOCH, k))) {
     const r = await pageOn(day);
     const first = r.lead[0];
     /* BOTH HALVES, AND THE LABEL IS TAKEN FROM THE CARD RATHER THAN FROM A

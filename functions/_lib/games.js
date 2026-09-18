@@ -53,11 +53,11 @@ export const DEFAULT_GAME = "crossword";
  * banks are being audited for this week. The rule is stated instead; the list
  * is the data. */
 export const LAUNCHED = {
-  crossword: "2026-08-26",    // day one of the family, the epoch reset
-  wordsearch: "2026-08-27",   // the day after; board #2
-  scrambled: "2026-09-01",    // "takes the number 3 shirt: released"; board #7
-  hilo: "2026-09-03",         // and hl_schedule's own first day agrees
-  vowels: "2026-09-04",       // the fifth shirt; board #10
+  crossword: "2026-09-18",    // day one of the family, the epoch reset
+  wordsearch: "2026-09-18",   // the day after; board #2
+  scrambled: "2026-09-18",    // "takes the number 3 shirt: released"; board #7
+  hilo: "2026-09-18",         // and hl_schedule's own first day agrees
+  vowels: "2026-09-18",       // the fifth shirt; board #10
   /* QUICKFIRE WENT LIVE ON 14 SEPTEMBER 2026 AND BANKED NOTHING FOR HOURS.
      It was serving boards while absent from GAMES, so entryKey() returned null
      for it and every result a player produced was computed, returned and
@@ -67,11 +67,11 @@ export const LAUNCHED = {
      The date is the day it started serving, not the day this line was written,
      because LAUNCHED is what every list counts from and a later date would
      hide the boards it has already run. */
-  quickfire: "2026-09-14",
+  quickfire: "2026-09-18",
   /* Who Am I XI. Its first BOARD is 15 September, which is also the day it
      launched — unlike Codeword and QuickFire, whose boards began a day before
      they were released. The two questions are different and happen to agree. */
-  whoami: "2026-09-15",
+  whoami: "2026-09-18",
   /* THE DAY IT STARTED SERVING, AND IT IS THREE WEEKS BEFORE THE DAY THIS LINE
      WAS WRITTEN. Ballpark XI was reachable at its own address, with a working
      API and a calendar running from 26 August, from before 8 September — ten
@@ -86,13 +86,13 @@ export const LAUNCHED = {
      current gate before it did — 242 question rows over bp-0001..bp-0022, 231
      still in the bank and all 231 passing, the other 11 carrying a known and
      documented ambiguity about manager appointments rather than an error. */
-  ballpark: "2026-08-26",
+  ballpark: "2026-09-18",
   /* Codeword XI took the seventh shirt on 14 September 2026 — the next free
      number, which is what launching does. Its queue starts the same day, so
      the launch day and board one are the same day and nothing counts from
      before the game existed. */
-  codeword: "2026-09-14",
-  grid: "2026-09-07",       // the sixth shirt; board #13
+  codeword: "2026-09-18",
+  grid: "2026-09-18",       // the sixth shirt; board #13
 };
 
 /* ---- WHICH GAMES SHARE AN ENGINE -----------------------------------------

@@ -9,7 +9,8 @@ import { indexPage, treeRoute, themeRoute, clubPath } from "../../functions/_lib
 import { HL_SAMPLE_BOARDS } from "../../functions/_lib/hl-sample.js";
 import { clubOf, clubSlug, familyOf, loadBank, themeCatalog, archive } from "../../functions/_lib/hl-board.js";
 import { permalinkPath, keyLabel } from "../../functions/_lib/permalink.js";
-import { dailyNoForDay } from "../../functions/_lib/daily.js";
+import { dailyNoForDay, dailyDayKey } from "../../functions/_lib/daily.js";
+import { launchNumber } from "../../functions/_lib/games.js";
 
 let pass = 0, fail = 0;
 const t = (n, ok, d) => { ok ? pass++ : fail++; console.log(`${ok ? "  ok  " : "FAIL  "}${n}${d ? "  — " + d : ""}`); };
@@ -216,7 +217,18 @@ console.log("\n=== The themes: what a daily board ranks ===");
      (LAUNCHED.hilo), so "today" is pinned here and the days are placed either
      side of it deliberately — a suite must not decide for itself what day it
      is, so the reading is taken once and handed to the page. */
-  const NOW = Date.parse("2026-09-14T09:00:00Z");
+  /* THE DAYS ARE OFFSETS INTO HILO'S RUN, not dates. Every one of them was
+     written out — NOW was 2026-09-14 and the schedule ran 5 to 10 September —
+     which was correct while HiLo had launched on 2026-09-03. When the family
+     reset to day 1 on 18 September 2026 the whole fixture fell before the
+     epoch: no board had run, themeCatalog and archive were both empty, and ten
+     assertions failed describing a site that was behaving correctly.
+     D(n) is the nth day of HiLo's run, from LAUNCHED through the family's own
+     arithmetic, so the fixture re-dates itself with the game. The shape is
+     unchanged and deliberate: boards on either side of "today", a board whose
+     day has not come, and a category nothing recognises. */
+  const D = (n) => dailyDayKey(launchNumber("hilo") + n);
+  const NOW = Date.parse(D(11) + "T09:00:00Z");
   const mk = (id, category, subtitle) => ({ ...club, id, category, subtitle });
   const bank = [
     mk("d1", "England caps", "Most England caps"),
@@ -232,9 +244,11 @@ console.log("\n=== The themes: what a daily board ranks ===");
     mk("d6", "England caps", "A board that has not run yet"),
   ];
   const schedule = {
-    "2026-09-05": "d1", "2026-09-06": "d2", "2026-09-07": "d3",
-    "2026-09-09": "d5", "2026-09-10": "d7",
-    "2026-11-01": "d4", "2026-12-01": "d6",
+    [D(2)]: "d1", [D(3)]: "d2", [D(4)]: "d3",
+    [D(6)]: "d5", [D(7)]: "d7",
+    /* Well past NOW: d4 gives a real theme with nothing run yet, d6 a board on
+       a real schedule row whose day has simply not come. */
+    [D(60)]: "d4", [D(90)]: "d6",
   };
   const env = { DB: { prepare: (sql) => ({ all: async () => ({
     results: /hl_board/.test(sql)
@@ -265,7 +279,7 @@ console.log("\n=== The themes: what a daily board ranks ===");
      boards in miniature: d6 is a real board on a real schedule row, and the
      only thing keeping it off the site is that its day has not come. */
   t("a board scheduled for a future day is on no theme page",
-    !bank2.some((th) => th.boards.some((b) => b.id === "d6")), "d6 runs 2026-12-01");
+    !bank2.some((th) => th.boards.some((b) => b.id === "d6")), `d6 runs ${D(90)}`);
   t("and its subtitle appears nowhere on the index",
     !idx.includes("A board that has not run yet"));
 
@@ -288,14 +302,14 @@ console.log("\n=== The themes: what a daily board ranks ===");
      this silently flips is the day the top of every theme page becomes the
      oldest thing on it. */
   t("every board links to the address it already had, newest first",
-    hrefs.join(",") === ["2026-09-10", "2026-09-05"]
+    hrefs.join(",") === [D(7), D(2)]
       .map((d) => permalinkPath("hilo", dailyNoForDay(d))).join(","),
     hrefs.join(" "));
   t("and that address is a board number, not a date",
     hrefs.every((h) => /\/daily\/\d+$/.test(h)), hrefs.join(" "));
   t("the page says when the board ran",
-    html.includes(keyLabel("hilo", dailyNoForDay("2026-09-05"))),
-    keyLabel("hilo", dailyNoForDay("2026-09-05")));
+    html.includes(keyLabel("hilo", dailyNoForDay(D(2)))),
+    keyLabel("hilo", dailyNoForDay(D(2))));
   t("the rule behind the theme is stated on the page",
     /Players ranked by a career figure/.test(html));
 
@@ -311,7 +325,7 @@ console.log("\n=== The themes: what a daily board ranks ===");
     dupes.length === 2, dupes.map((d) => d.text).join(" | "));
   t("and each one is named by the day it ran, so they can be told apart",
     dupes.length === 2 && dupes[0].name !== dupes[1].name &&
-      dupes.every((d) => d.name.includes("2026")),
+      dupes.every((d) => d.name.includes(D(2).slice(0, 4))),
     dupes.map((d) => d.name).join(" | "));
 
   /* A theme with nothing in it is not an empty page. */

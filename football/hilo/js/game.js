@@ -10,7 +10,7 @@
  * more, 114 the ceiling. This file is the page: the landing the family
  * shares, the ladder of two rows, the clock, the answers list, the share.
  */
-var BUILD = "v002e";
+var BUILD = "v002f";
 
 (function () {
   "use strict";
@@ -26,6 +26,12 @@ var BUILD = "v002e";
 
   /* ---- state ---------------------------------------------------------- */
   var serverDay = null, todayBoard = null, catalog = null, archiveDays = null;
+  /* HAS THE DAILY FETCH ANSWERED AT ALL? `!todayBoard` is true both when there
+     is no board today and while the request is still in flight, and the button
+     could not tell those apart — so a slow load was told "No board today",
+     which is a wrong answer given at the exact moment a new player is deciding
+     whether the game works. */
+  var dailySettled = false;
   /* TODAY'S BOARD NUMBER, from the server. Every game counts the same number
      from the same day one since 6 September 2026, and it is the number in the
      board's address — so the hero says it, as the crossword's always has. Kept
@@ -878,10 +884,33 @@ var BUILD = "v002e";
     configureChallenge();
     if (window.XIChallenge) window.XIChallenge.arrive();
     syncAccount();
+    /* ONE START PER PRESS, AND THE GUARD IS HERE BECAUSE THE PROMISE IS SLOW.
+       playedToday() is a single cached promise fired at chrome init, and this
+       handler returned while it was still pending WITHOUT disabling the
+       button. So a second press — an impatient player, or the hub's
+       auto-start retry for ?play=1 — attached another .then, and when the
+       promise resolved EVERY callback ran: startToday() -> startRound() ->
+       playsStart(), each minting a fresh play id and an INSERT INTO plays, and
+       each POSTing /api/hilo/clock. Duplicate rounds from one board.
+
+       Traced by a review of the hub's ?play=1 mechanism on 18 Sep 2026, not
+       by anything failing. Ballpark's kickOff already did the right thing —
+       disable on accept — and this is that, done here. */
+    var starting = false;
     $("homeDaily").onclick = function () {
-      if (!todayBoard) { toast("No board today — try the clubs"); return; }
+      if (starting) return;
+      /* THE TOAST WAITS FOR AN ANSWER. `!todayBoard` is also true while the
+         daily fetch is in flight, so this said "No board today" during every
+         slow load — a wrong message shown at the one moment a player is
+         deciding whether the game works. It speaks only once the fetch has
+         settled and the answer is really "none". */
+      if (!todayBoard) {
+        if (dailySettled) toast("No board today — try the clubs");
+        return;
+      }
       var had = todayResult();
       if (had) { toast("Today's board is played — " + had.score + " pts"); return; }
+      starting = true;
       /* AND WHAT THE ACCOUNT SAYS, not only this device. todayResult() reads
          localStorage, which a device that has never synced does not have — so
          a player signed in on a phone and a laptop could start today's board
@@ -899,10 +928,11 @@ var BUILD = "v002e";
           if (a && a.games.indexOf("hilo") !== -1) {
             toast("Today's board is played", "You finished it on another device.");
             syncAccount();
+            starting = false;       // nothing began; let them press again
             return;
           }
           startToday();
-        });
+        }, function () { starting = false; });   // a refused lookup is not a start
         return;
       }
       startToday();
@@ -956,6 +986,7 @@ var BUILD = "v002e";
 
     api("daily").then(function (r) {
       serverDay = r.day; todayNo = r.todayNo; todayBoard = r.board;
+      dailySettled = true;
       renderLanding();
       /* ?b= is the door from a club page: the board on its card, the first
          clock waiting for Kick off. Only a released board answers. */
@@ -980,6 +1011,10 @@ var BUILD = "v002e";
         }
       }
     }, function () {
+      /* DELIBERATELY NOT `dailySettled = true`. A failed fetch does not tell us
+         there is no board today — it tells us we do not know — so the button
+         stays quiet rather than asserting an answer nobody has. The line below
+         is what the player reads instead, and it says the true thing. */
       $("startState").textContent = "Could not reach the server — check your connection.";
     });
     api("catalog").then(function (r) { catalog = r.clubs || []; renderFeatured(); }, function () {});

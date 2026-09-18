@@ -347,7 +347,7 @@ console.log("\nAnd it IS launched, which every one of these makes true");
     hasRoot("functions/football/whoami/daily/[[path]].js"));
 
   t("LAUNCHED records the day, which is what board numbers count from",
-    /whoami: "2026-09-15"/.test(games));
+    /whoami: "2026-09-18"/.test(games));
 
   /* AND THE THINGS THAT WERE ALREADY TRUE STAY TRUE, so this block cannot pass
      by the game quietly ceasing to exist. */

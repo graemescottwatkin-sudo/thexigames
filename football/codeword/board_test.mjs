@@ -138,20 +138,41 @@ console.log("\n=== Two numberings, and only one of them is an address ===");
      without anything failing. Found by asking keyLabel what
      /football/codeword/daily/1 would be called and being told a date three
      weeks before the game existed. */
+  /* THE OFFSET IS DERIVED, NOT WRITTEN DOWN. This pinned nineteen — family 20
+     was Codeword's board 1 — which was true while the family counted from
+     26 August and Codeword's queue started on 13 September. On 18 September
+     2026 every game in the estate reset to day 1 together, the gap closed to
+     nothing, and five assertions failed for a change they were never about.
+     The PROPERTY under test is that two numberings exist and only one is an
+     address; the size of the gap between them is not the property, and pinning
+     it meant the suite had to be edited the moment the gap moved. */
   const { dailyDayKey } = await import("../../functions/_lib/daily.js");
-  t("family number 20 is the day Codeword board 1 ran",
-    dailyDayKey(20) === "2026-09-14", dailyDayKey(20));
-  t("and family number 1 is three weeks before this game existed",
-    dailyDayKey(1) === "2026-08-26", dailyDayKey(1));
-  const rows = [{ no: 1, day: "2026-09-14" }, { no: 2, day: "2026-09-15" }];
-  const today = "2026-09-14";
+  const { LAUNCHED } = await import("../../functions/_lib/games.js");
+  const firstDay = LAUNCHED.codeword;
+  /* The family number that names Codeword's own board 1: walk forward until
+     the family calendar lands on the day the queue starts. */
+  let famOfBoard1 = 1;
+  while (famOfBoard1 < 400 && dailyDayKey(famOfBoard1) < firstDay) famOfBoard1++;
+  t("the family number for Codeword board 1 resolves to the day it ran",
+    dailyDayKey(famOfBoard1) === firstDay,
+    `family ${famOfBoard1} -> ${firstDay}`);
+  const rows = [{ no: 1, day: firstDay }, { no: 2, day: dailyDayKey(famOfBoard1 + 1) }];
+  const today = firstDay;
   t("asking by FAMILY number finds the board that ran that day",
-    (await boardByFamilyNo(db(rows), 20, today))?.no === 1, "family 20 -> board 1");
-  t("asking by family number 1 finds nothing, because nothing ran that day",
-    (await boardByFamilyNo(db(rows), 1, today)) === null,
-    "26 August is before the queue starts");
+    (await boardByFamilyNo(db(rows), famOfBoard1, today))?.no === 1,
+    `family ${famOfBoard1} -> board 1`);
+  /* A family number BEFORE the queue starts finds nothing. When the game
+     launched with the family this is family 0, which is not a number the site
+     issues — so the case is only reachable while the two differ, and it is
+     skipped rather than asserted falsely. */
+  if (famOfBoard1 > 1) {
+    t("asking by an earlier family number finds nothing, because nothing ran",
+      (await boardByFamilyNo(db(rows), famOfBoard1 - 1, today)) === null,
+      dailyDayKey(famOfBoard1 - 1) + " is before the queue starts");
+  }
   t("and TOMORROW's family number is refused",
-    (await boardByFamilyNo(db(rows), 21, today)) === null, "family 21 is 15 September");
+    (await boardByFamilyNo(db(rows), famOfBoard1 + 1, today)) === null,
+    `family ${famOfBoard1 + 1} is ${dailyDayKey(famOfBoard1 + 1)}`);
 
   /* THE NUMBER THAT GOES OUT MUST BE THE NUMBER THAT COMES BACK, and this is
      the assertion that was missing when the game shipped. The endpoint READ a

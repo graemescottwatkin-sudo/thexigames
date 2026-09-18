@@ -35,34 +35,59 @@ const t = (n, ok, d) => { ok ? pass++ : fail++; console.log(`${ok ? "  ok  " : "
    is the case that separates "lists 1..today" from "lists what exists". The
    two suites state it separately on purpose — a shared fixture would let one
    change quietly move what the other proves. */
+/* WHICH DAYS HAVE RUN IS DERIVED FROM LAUNCHED, not typed out.
+   Every entry here used to be a literal — ws_schedule ran 3, 1 and 30 August,
+   Grid 7 and 8 September, Ballpark 26 and 27 August, and so on. Each was
+   correct on the day it was written and each encoded a different launch date.
+   On 18 September 2026 the whole family reset to day 1, every one of those
+   days fell BEFORE its game's launch, boardKeys correctly returned nothing,
+   and six games reported "all 0 of its boards are linked". The suite went red
+   for the code being right, which is this project's pinned-literal fault.
+   A game's schedule now holds the days from ITS launch to today, from
+   LAUNCHED via dailyDayKey — so the fixture re-dates itself whenever the
+   family does and cannot drift out from under the check again.
+   THE HOLES ARE KEPT, because they are what this fixture is for: a schedule
+   with gaps separates "lists what exists" from "lists one to today". Once the
+   run is long enough to have a gap, every other day is dropped; on day one
+   there is one board and no gap to make, which is honest rather than
+   arranged, and the sitemap suite states its own fixture separately so the
+   two cannot move together. A day AFTER today is added to every table as
+   well: the stub returns rows regardless of the WHERE, so a future day proves
+   the filtering is done by the code under test rather than by the fixture. */
+const HORIZON = 10;                       // days past today the fixture covers
+const ranFor = (game) => {
+  const launch = LAUNCHED[game];
+  if (!launch) return [];
+  const from = launchNumber(game);
+  const days = [];
+  /* EVERY OTHER DAY, so the calendar has HOLES in it — the case that separates
+     "lists what exists" from "lists one to today", and the reason this fixture
+     exists at all. It runs past today to HORIZON so those holes are reachable:
+     on the family's first day the run is one board long, a gap cannot be
+     expressed inside it, and the hole check below quietly became unfalsifiable.
+     boardKeys takes `now`, so the check drives it forward rather than waiting a
+     week for the calendar to catch up. */
+  for (let no = from; no <= dailyNumber() + HORIZON; no++) {
+    if ((no - from) % 2 === 0) days.push(dailyDayKey(no));
+  }
+  return days.reverse();                    // newest first, as the query orders
+};
+/* The first board number at or after a game's launch that its fixture calendar
+   does NOT hold — an address in range with nothing behind it. */
+const holeNo = (game) => launchNumber(game) + 1;
 const RAN = {
-  ws_schedule: ["2026-09-03", "2026-09-01", "2026-08-30"],
-  hl_schedule: ["2026-09-03"],
-  /* Grid XI launched on 7 September 2026 and is scheduled like the other two:
-     a number the calendar does not hold is not a board. Two days, so the
-     fixture can tell "lists what exists" from "lists one to today". */
-  gd_schedule: ["2026-09-08", "2026-09-07"],
-  /* Ballpark XI, which launched on the family epoch — it had been serving from
-     26 August without a shirt, so its archive opens with every day since. */
-  bp_schedule: ["2026-08-27", "2026-08-26"],
-  /* Codeword XI launched 14 September 2026 and its queue starts the same day,
-     so on its launch day exactly one board has run. One is the honest number
-     here and it is also the number that catches a reader treating "in the
-     schedule" as "has run" — the queue holds 365 days and 364 of them are
-     still to come. */
-  cw_schedule: ["2026-09-14"],
-  /* QuickFire XI launched 15 September 2026 and its boards start on the 14th,
-     so on launch day two have run. AND ITS TABLE IS NOT A SCHEDULE: qf_daily is
-     the board table, keyed on play_date rather than day and carrying a status
-     that decides whether a row is served. Named here under its real name so the
-     stub exercises the same SQL the route builds — a fixture keyed on a column
-     the code does not ask for would answer nothing and read as "this game has
-     no boards", which is what it did before this entry existed. */
-  qf_daily: ["2026-09-15", "2026-09-14"],
-  /* Who Am I XI launched 15 September 2026 and its boards start the same day,
-     so on launch day exactly one has run. Its table is the BOARD table like
-     QuickFire's — keyed on play_date, carrying a status — not a schedule. */
-  wa_board: ["2026-09-15"],
+  ws_schedule: ranFor("wordsearch"),
+  hl_schedule: ranFor("hilo"),
+  gd_schedule: ranFor("grid"),
+  bp_schedule: ranFor("ballpark"),
+  cw_schedule: ranFor("codeword"),
+  /* NOT A SCHEDULE. qf_daily and wa_board are BOARD tables, keyed on play_date
+     and carrying a status that decides whether a row is served. Named under
+     their real names so the stub exercises the SQL the route actually builds —
+     a fixture keyed on a column the code never asks for answers nothing and
+     reads as "this game has no boards". */
+  qf_daily: ranFor("quickfire"),
+  wa_board: ranFor("whoami"),
 };
 const tableOf = (sql) => (/ws_schedule/.test(sql) ? "ws_schedule"
   : /hl_schedule/.test(sql) ? "hl_schedule"
@@ -165,15 +190,45 @@ console.log("\nAnd what it must never carry");
   t("tomorrow's board is not linked",
     Object.keys(PERMA_GAMES).every((g, i) => !pages[g].links.includes(future[i])),
     "the future is shut, and a page naming it leaks the schedule");
-  /* THE HOLE IN THE SCHEDULE. 2026-09-02 sits between two days the fixture DID
-     run, so it is a board number in range with nothing behind it. */
-  const hole = permalinkPath("wordsearch", String(dailyNoForDay("2026-09-02")));
+  /* THE HOLE IN THE SCHEDULE. This pinned 2026-09-02, a day sitting between two
+     the fixture DID run. After the reset that date is before the epoch,
+     dailyNoForDay answers for a day the family never had, and the address could
+     not appear in any list — so the check passed by being unanswerable rather
+     than by the future being shut. PROVED VACUOUS rather than assumed:
+     sabotaging boardKeys to drop its `ran.has(...)` test, so it listed every
+     day between launch and today, left this whole suite green.
+     It is asked of boardKeys at a FUTURE now instead. The fixture calendar runs
+     HORIZON days past today with every second day missing, so by then a real
+     gap exists; boardKeys already takes `now`, so nothing is faked and nobody
+     waits for the run to grow long enough to express one. */
+  const wsLater = await boardKeys(env, "wordsearch", Date.now() + HORIZON * 86400000);
   t("a day a scheduled game did not run is not linked",
-    !pages.wordsearch.links.includes(hole), hole);
-  /* AND THE BOARDS BEFORE A GAME LAUNCHED. HiLo's fixture runs one day only,
-     so boards 1 to 8 are days it had no board at all. */
+    wsLater.length > 1 && !wsLater.includes(String(holeNo("wordsearch"))),
+    `#${holeNo("wordsearch")} not in [${wsLater.join(", ")}]`);
+  /* AND THE BOARDS BEFORE A GAME LAUNCHED. This named HiLo and the numbers 1
+     to 8, because HiLo launched on board 9 and those eight were days it had no
+     board at all. It is asked of EVERY game now, against each game's OWN
+     launch, which is the claim the name always made.
+     SAY PLAINLY WHAT IT CANNOT REFUSE TODAY. Since the reset of 18 September
+     2026 every game launches on board 1, so there is no board before any game
+     began and this cannot currently fail: sabotaging boardKeys'
+     `const from = launchNumber(game)` to a literal 1 changes nothing, because
+     for every game it already IS 1. That is a property of the calendar, not a
+     hole in the check, and it regains its teeth the day a game launches after
+     the epoch — the case it was written for. Said out loud rather than left to
+     be rediscovered, and deliberately NOT dressed up with a fixture that
+     pretends otherwise: a check that quietly proves nothing is worse than one
+     that admits it. */
+  const early = Object.keys(PERMA_GAMES).flatMap((g) => {
+    const from = launchNumber(g);
+    return from > 1
+      ? Array.from({ length: from - 1 }, (_, i) => [g, permalinkPath(g, String(i + 1))])
+      : [];
+  });
   t("nor are the boards from before a scheduled game began",
-    ![1, 2, 3, 4, 5, 6, 7, 8].some((n) => pages.hilo.links.includes(permalinkPath("hilo", String(n)))));
+    early.every(([g, href]) => !pages[g].links.includes(href)),
+    early.length ? `${early.length} pre-launch address(es) checked`
+                 : "every game launched on board 1 — nothing before any to link");
   /* DERIVED, not written down — the fault chrome_test and sitemap_test both
      had on the same day. BUILT minus GAMES is exactly "built and not
      launched", so a new game cannot slip past by not being on a list. */
@@ -310,9 +365,22 @@ console.log("\nThe pages that link to it");
       tooNew.length ? `boards ${tooNew.join(", ")}` : `${named.length} board(s) named`);
   }
   const cw = await (await crosswordAnswers({ env })).text();
+  /* EITHER IT LISTS BOARDS OR IT SAYS THERE ARE NONE YET — and which of those
+     is right is not this suite's to assume. It demanded a /daily/N link
+     unconditionally, which held while the crossword had weeks of published
+     boards behind it; on 18 September 2026 the family reset to day 1 and the
+     seal is ANSWERS_AFTER_DAYS, so for its first week the honest page is the
+     empty one. The page already renders it — "The game is new" — the same
+     empty state Scrambled's index has and tools/answers_test asserts.
+     BOTH BRANCHES, and exactly one of them: loosening this to an `||` would
+     let a blank page satisfy it. An index with no boards must still carry the
+     way back to the archive; an index WITH boards must link them. A page that
+     is neither, or somehow both, is the failure. */
+  const cwLinked = /href="\/football\/crossword\/daily\/\d+"/.test(cw);
+  const cwEmpty = /The game is new/.test(cw);
   t("the crossword's own answers index does too",
-    /href="\/football\/crossword\/daily\/\d+"/.test(cw) &&
-    cw.includes('href="/football/crossword/archive/"'));
+    cwLinked !== cwEmpty && cw.includes('href="/football/crossword/archive/"'),
+    cwLinked ? "lists its published boards" : "no board past the seal yet, and says so");
   /* HILO'S TWO KEY SHAPES, asked of the module rather than through its route,
      and here is why: HiLo launched on board 9 and the seal is
      ANSWERS_AFTER_DAYS, so on 6 Sep 2026 it has nothing published — and after

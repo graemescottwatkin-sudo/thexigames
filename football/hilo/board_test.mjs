@@ -74,8 +74,22 @@ t("the token rides with it", pub.token === "hl:2026-09-03");
 console.log("\n=== The judge ===");
 const truth = (i) => (daily.chain[i].value > daily.chain[i - 1].value ? "higher" : "lower");
 const v1 = judge(daily, 1, truth(1));
+/* THE QUOTE IS NOT ASSERTED PRESENT, and that was the bug in this check. It
+   demanded `!!v1.source.quote`, which passed only because the sample board it
+   happened to pick had prose quotes. The board changed when HiLo was
+   re-imported for the reset of 18 September 2026, the new one cites the
+   league's JSON feed, and readableQuote SUPPRESSES a slice of JSON on purpose
+   — so the check failed for the rule working exactly as designed. A fixture's
+   incidental content was standing in for a rule.
+   What the judge owes is that the source comes back and the quote is whatever
+   readableQuote makes of that row's own quote, null included. The rule itself
+   is proved directly further down ("a slice of JSON is not shown to anybody"),
+   which is where it belongs — one statement of it, not two. */
 t("a right call is right, and brings the value and the source back",
-  !!v1 && v1.right === true && v1.value === daily.chain[1].value && !!v1.source.quote && !!v1.source.url);
+  !!v1 && v1.right === true && v1.value === daily.chain[1].value &&
+  !!v1.source.url && !!v1.source.publisher &&
+  v1.source.quote === readableQuote(daily.chain[1].source && daily.chain[1].source.quote),
+  v1 && `quote ${v1.source.quote === null ? "suppressed (JSON)" : "carried"}`);
 t("a wrong call is wrong", judge(daily, 1, truth(1) === "higher" ? "lower" : "higher").right === false);
 t("a call that ran out of clock is wrong and still reveals the value",
   judge(daily, 2, "none").right === false && judge(daily, 2, "none").value === daily.chain[2].value);
@@ -101,9 +115,20 @@ t("and a call that is not a call is refused", judge(daily, 1, "sideways") === nu
   t("a league-feed row brings its page note back with the verdict",
     !!v && v.source.page === feed.chain[1].source.page, v && v.source.page);
   /* And a row without one says null rather than undefined, so the page can ask
-     without guessing. */
-  const plain = judge(daily, 2, truth(2));
-  t("a row with no page note says so plainly", plain.source.page === null);
+     without guessing.
+     THE ROW IS BUILT, NOT PICKED. This read `judge(daily, 2, ...)` and relied
+     on the sample's third row happening to carry no page note. Every row of
+     the board imported for the reset of 18 September 2026 cites the league
+     feed and so every row HAS one, leaving the check with no example of the
+     thing it names — it was asserting null about a row that had a value. A
+     fixture that depends on which board the sample happens to hold is a
+     fixture that breaks on the next import, so the absent case is constructed
+     here the same way the present case above it is. */
+  const bare = JSON.parse(JSON.stringify(daily));
+  delete bare.chain[2].source.page;
+  const plain = judge(bare, 2, truth(2));
+  t("a row with no page note says so plainly", plain.source.page === null,
+    String(plain.source.page));
 }
 
 /* ---- A QUOTE IS EVIDENCE, AND NOT ALL EVIDENCE IS COPY ----

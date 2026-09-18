@@ -255,7 +255,7 @@ console.log("\nAnd it is NOT launched, which is the point of this gate");
     /codeword: "[0-9]{4}-[0-9]{2}-[0-9]{2}"/.test(games),
     "boardKeys, the archive index and the sitemap all start there");
   t("and its first board and its launch day are the same day",
-    /codeword: "2026-09-14"/.test(games),
+    /codeword: "2026-09-18"/.test(games),
     "nothing counts from before the queue starts");
 }
 {

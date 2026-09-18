@@ -36,7 +36,7 @@ import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { JSDOM } from "jsdom";
-import { dailyNumber as serverDailyNumber } from "../../functions/_lib/daily.js";
+import { dailyNumber as serverDailyNumber, dailyDayKey } from "../../functions/_lib/daily.js";
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 const require = createRequire(import.meta.url);
@@ -49,7 +49,24 @@ const t = (n, ok, d) => { ok ? pass++ : fail++; console.log(`${ok ? "  ok  " : "
    is the shipped file. */
 console.log("The hour when the device and the server disagree");
 {
-  const WINDOW = Date.parse("2026-09-05T23:53:00Z");   // 00:53 BST on the 6th
+  /* DERIVED FROM THE EPOCH, not pinned. This was 2026-09-05T23:53:00Z, which
+     was inside BST and a few boards into the run. On 18 September 2026 the
+     family reset to day 1 and that instant fell BEFORE the epoch, so both
+     clocks clamped to #1, `device !== server` was false and the suite went red
+     for the two numbers agreeing — the one thing this block is built to catch
+     being impossible to observe. A fixture instant that predates the epoch
+     cannot show a day boundary, because there are no days there.
+     So: take a day the run has actually reached (the third board, far enough
+     in that neither side clamps), and 23:53Z on it — which is 00:53 the next
+     morning in Europe/London, the hour set as this suite's TZ above. September
+     and October are BST, so the epoch can move a fortnight in either direction
+     before the offset that makes the two clocks differ goes away; if the
+     family is ever re-dated into GMT, the assertion below says so out loud
+     rather than quietly measuring nothing. */
+  const WINDOW = Date.parse(dailyDayKey(3) + "T23:53:00Z");
+  t("the fixture hour is one where a local day IS ahead of the UTC day",
+    new Date(WINDOW).getDate() !== new Date(WINDOW).getUTCDate(),
+    `${new Date(WINDOW).toString()} — needs a positive offset (BST), else nothing to prove`);
   const realNow = Date.now;
   Date.now = () => WINDOW;
   /* Loaded after the clock is faked: the module reads nothing at load time,

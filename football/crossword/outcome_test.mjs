@@ -6,6 +6,7 @@
  * own rather than through whatever happens to call it.
  */
 import fs from "node:fs";
+import { dailyDayKey } from "../../functions/_lib/daily.js";
 import path from "node:path";
 import vm from "node:vm";
 import { fileURLToPath } from "node:url";
@@ -206,7 +207,22 @@ console.log("\nWhat counts: a board's own day, and the day after");
      howto_test pins the sentence. Anything past midnight of the day after
      banks nothing: not the run, not the season. The Full Time card still
      scores a late play; it is a friendly against the past, not a matchday. */
-  const day = (n) => new Date(2026, 7, 25 + n).getTime();
+  /* BOARD n's OWN LOCAL MIDNIGHT, DERIVED. This read
+     `new Date(2026, 7, 25 + n)` — 25 August plus n — which was board n's day
+     only while #1 fell on 26 August 2026. The family reset to day 1 on
+     18 September 2026 and every instant this built then landed BEFORE the
+     epoch, where dailyNumber clamps to #1: `rec(3, …)` claimed to be board 3
+     played on board 3's day and was actually board 3 played three weeks before
+     the game existed, so the grace window it was measuring was not the one the
+     rule applies. The suite went red for the epoch having moved, which is the
+     pinned-literal fault this project keeps re-finding.
+     The day comes from dailyDayKey now, the one place that arithmetic lives,
+     and is turned into a LOCAL midnight because the grace rule reasons in
+     local days deliberately (see the engine's dailyNumber). */
+  const day = (n) => {
+    const [y, m, d] = dailyDayKey(n).split("-").map(Number);
+    return new Date(y, m - 1, d).getTime();
+  };
   const rec = (no, min) => ({ dailyNo: no, at: day(no) + min * 60000, complete: true });
   t("a board finished on its own day counts", FCW.onTimeResult(rec(3, 14 * 60)));
   t("yesterday's board finished this morning counts",
@@ -215,10 +231,13 @@ console.log("\nWhat counts: a board's own day, and the day after");
   t("and one minute past it does not", !FCW.onTimeResult(rec(3, 48 * 60 + 1)),
     "midnight is the line the page states");
   t("a deep-archive play never counts", !FCW.onTimeResult(rec(3, 96 * 60)));
+  /* The legacy shape carries a DATE string rather than an instant; the two
+     dates were typed out as board 3's day-after and the day after that, and
+     are derived from the same arithmetic for the same reason. */
   t("a legacy next-day date is within the grace",
-    FCW.onTimeResult({ dailyNo: 3, date: "2026-08-29" }));
+    FCW.onTimeResult({ dailyNo: 3, date: dailyDayKey(4) }), dailyDayKey(4));
   t("a legacy two-days-on date is not",
-    !FCW.onTimeResult({ dailyNo: 3, date: "2026-08-30" }));
+    !FCW.onTimeResult({ dailyNo: 3, date: dailyDayKey(5) }), dailyDayKey(5));
   t("the season consumes the same rule — late plays bank nothing", (() => {
     const st = FCW.seasonStats(
       [rec(1, 600), rec(2, 600), rec(3, 600), rec(1, 200 * 60), { dailyNo: 2, at: day(40) }], 3);

@@ -6,168 +6,263 @@
  * so committing the bank by accident would show in a diff. */
 export const HL_SAMPLE_BOARDS = [
  {
-  "id": "398",
-  "category": "Clubs by year formed",
-  "subtitle": "The year the club was founded, under whatever name it started with.",
+  "id": "1015",
+  "category": "Premier League players by age",
+  "subtitle": "Older or younger? The value is the year he was born, and the reveal shows his age today.",
   "unit": "year",
   "valueClass": "fixed-by-nature",
   "trueAsOf": "2026-09-02",
   "chain": [
    {
-    "name": "Wrexham",
-    "value": 1864,
-    "context": "Formed by Wrexham Cricket Club members at the Turf Hotel",
-    "source": {
-     "publisher": "Wrexham",
-     "url": "https://www.wrexhamafc.co.uk/the-club/history-and-honours",
-     "quote": "Wrexham AFC was founded in 1864, making it Wales' oldest professional Football Club and the third oldest in the world.",
-     "accessed": "2026-09-02",
-     "tier": "official"
-    }
-   },
-   {
-    "name": "Barnsley",
-    "value": 1887,
-    "context": "Reverend Tiverton Preedy's Barnsley St. Peter's",
-    "source": {
-     "publisher": "Barnsley",
-     "url": "https://www.barnsleyfc.co.uk/club/history/through-the-years",
-     "quote": "The club was founded in 1887 by Reverend Tiverton Preedy, initially named Barnsley St. Peter's.",
-     "accessed": "2026-09-02",
-     "tier": "official"
-    }
-   },
-   {
-    "name": "Southampton",
-    "value": 1885,
-    "context": "Formed by the St Mary's Church Young Men's Association",
-    "source": {
-     "publisher": "Southampton",
-     "url": "https://www.southamptonfc.com/en/st-marys-fc",
-     "quote": "The Saints were formed at a meeting of the St Mary's Church of England Young Men's Association sometime in November 1885.",
-     "accessed": "2026-09-02",
-     "tier": "official"
-    }
-   },
-   {
-    "name": "Bradford City",
-    "value": 1903,
-    "context": "Forerunner Manningham FC played rugby at Valley Parade",
-    "source": {
-     "publisher": "Bradford City",
-     "url": "https://www.bradfordcityafc.com/club/history/club-history",
-     "quote": "1903: Manningham FC convert to football from rugby, secure election to the Football League and recruit players for a new team - 'Bradford City AFC'",
-     "accessed": "2026-09-02",
-     "tier": "official"
-    }
-   },
-   {
-    "name": "Charlton Athletic",
-    "value": 1905,
-    "context": "Formed by teenagers who played in East Street",
-    "source": {
-     "publisher": "Charlton Athletic",
-     "url": "https://www.cafc.co.uk/history/mens-club-history/1905-1923-early-days",
-     "quote": "On June 9th, 1905, a group of teenagers who once kicked a ball around that very street decided to get together and form a fully-fledged football club that was to become Charlton Athletic.",
-     "accessed": "2026-09-02",
-     "tier": "official"
-    }
-   },
-   {
-    "name": "Brentford",
-    "value": 1889,
-    "context": "Formed at the Oxford and Cambridge Public House",
-    "source": {
-     "publisher": "Brentford",
-     "url": "https://www.brentfordfc.com/en/history",
-     "quote": "The formation of Brentford Football Club in 1889 is owed to the decision by the Brentford Local Board [a forerunner of today's councils] to open a new Recreation Ground in the town.",
-     "accessed": "2026-09-02",
-     "tier": "official"
-    }
-   },
-   {
-    "name": "Stockport County",
-    "value": 1883,
-    "context": "Heaton Norris Rovers, the Hatters of Edgeley Park",
-    "source": {
-     "publisher": "Stockport County",
-     "url": "https://www.stockportcounty.com/club/history/story",
-     "quote": "Established in 1883 as Heaton Norris Rovers, in 1890 the name was changed to Stockport County to reflect the town gaining County Borough status.",
-     "accessed": "2026-09-02",
-     "tier": "official"
-    }
-   },
-   {
-    "name": "West Bromwich Albion",
-    "value": 1878,
-    "context": "Began as West Bromwich Strollers",
-    "source": {
-     "publisher": "West Bromwich Albion",
-     "url": "https://www.wba.co.uk/club/history/club-history",
-     "quote": "The club that became West Bromwich Albion was formed in 1878 by a group of young workers at the George Salter Springs factory, appropriate for a club whose terrace celebration would more than a century later become \"boing boing\".",
-     "accessed": "2026-09-02",
-     "tier": "official"
-    }
-   },
-   {
-    "name": "West Ham United",
-    "value": 1895,
-    "context": "Began as Thames Ironworks, the shipyard's team",
-    "source": {
-     "publisher": "West Ham United",
-     "url": "https://www.whufc.com/en/the-club/history/club-history/1890s",
-     "quote": "In June 1895, the formation of the senior works football club was announced in the company's 'Thames Iron Works Gazette' newspaper and Taylor set about assembling a squad and arranging friendly matches for the 1895/96 season.",
-     "accessed": "2026-09-02",
-     "tier": "official"
-    }
-   },
-   {
-    "name": "Aston Villa",
-    "value": 1874,
-    "context": "Four men from the chapel Bible class, under a gas lamp",
-    "source": {
-     "publisher": "Aston Villa",
-     "url": "https://www.avfc.co.uk/history/timeline",
-     "quote": "Four gentlemen stood under a gas lamp in Heathfield Road in 1874 and engaged in a discussion which would create one of the greatest clubs in the world.",
-     "accessed": "2026-09-02",
-     "tier": "official"
-    }
-   },
-   {
-    "name": "Leicester City",
-    "value": 1884,
-    "context": "Known as Leicester Fosse until 1919",
-    "source": {
-     "publisher": "Leicester City",
-     "url": "https://www.lcfc.com/history",
-     "quote": "Formed in 1884, Leicester City Football Club, formerly known as Leicester Fosse until 1919, have won every major honour in English football.",
-     "accessed": "2026-09-02",
-     "tier": "official"
-    }
-   },
-   {
-    "name": "Colchester United",
-    "value": 1937,
-    "context": "Layer Road, then the JobServe Community Stadium",
-    "source": {
-     "publisher": "Secondary source",
-     "url": "https://en.wikipedia.org/wiki/Colchester_United_F.C.",
-     "quote": "Founded in 1937, the club spent its early years playing in the Southern Football League until they were elected to the Football League in 1950.",
-     "accessed": "2026-09-02",
-     "tier": "secondary",
-     "cached": "bank/sources/founding-colchester-united-secondary.html"
+    "name": "Ross Barkley",
+    "value": 1993,
+    "context": "English midfielder, 307 Premier League appearances",
+    "detail": {
+     "nameRaw": "Ross Barkley",
+     "born": "5 December 1993",
+     "birthDate": "1993-12-05",
+     "leaguePlayerId": "4115",
+     "appearances": 307
     },
-    "sourceNote": "the club's own site states no founding year; taken from the league's official club page"
+    "source": {
+     "publisher": "Premier League",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/appearances?comps=1&pageSize=100&page=1",
+     "page": "the league feed, one hundred rows a page; this row is rank 148 on page 2",
+     "quote": "\"label\":\"5 December 1993\"},\"country\":{\"isoCode\":\"GB-ENG\",\"country\":\"England\",\"demonym\":\"English\"},\"place\":\"Liverpool\"},\"age\":\"32 years 271 days\",\"name\":{\"display\":\"Ross Barkley\"",
+     "accessed": "2026-09-02",
+     "tier": "official"
+    }
+   },
+   {
+    "name": "Jamie Vardy",
+    "value": 1987,
+    "context": "English forward, 342 Premier League appearances",
+    "detail": {
+     "nameRaw": "Jamie Vardy",
+     "born": "11 January 1987",
+     "birthDate": "1987-01-11",
+     "leaguePlayerId": "8979",
+     "appearances": 342
+    },
+    "source": {
+     "publisher": "Premier League",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/appearances?comps=1&pageSize=100&page=0",
+     "page": "the league feed, one hundred rows a page; this row is rank 92 on page 1",
+     "quote": "\"label\":\"11 January 1987\"},\"country\":{\"isoCode\":\"GB-ENG\",\"country\":\"England\",\"demonym\":\"English\"},\"place\":\"Sheffield\"},\"age\":\"39 years 234 days\",\"name\":{\"display\":\"Jamie Vardy\"",
+     "accessed": "2026-09-02",
+     "tier": "official"
+    }
+   },
+   {
+    "name": "Rio Ferdinand",
+    "value": 1978,
+    "context": "English defender, 504 Premier League appearances",
+    "detail": {
+     "nameRaw": "Rio Ferdinand",
+     "born": "7 November 1978",
+     "birthDate": "1978-11-07",
+     "leaguePlayerId": "1111",
+     "appearances": 504
+    },
+    "source": {
+     "publisher": "Premier League",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/appearances?comps=1&pageSize=100&page=0",
+     "page": "the league feed, one hundred rows a page; this row is rank 11 on page 1",
+     "quote": "\"label\":\"7 November 1978\"},\"country\":{\"isoCode\":\"GB-ENG\",\"country\":\"England\",\"demonym\":\"English\"}},\"age\":\"47 years 299 days\",\"name\":{\"display\":\"Rio Ferdinand\"",
+     "accessed": "2026-09-02",
+     "tier": "official"
+    }
+   },
+   {
+    "name": "Stephen Carr",
+    "value": 1976,
+    "context": "Irish defender, 377 Premier League appearances",
+    "detail": {
+     "nameRaw": "Stephen Carr",
+     "born": "29 August 1976",
+     "birthDate": "1976-08-29",
+     "leaguePlayerId": "776",
+     "appearances": 377
+    },
+    "source": {
+     "publisher": "Premier League",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/appearances?comps=1&pageSize=100&page=0",
+     "page": "the league feed, one hundred rows a page; this row is rank 61 on page 1",
+     "quote": "\"label\":\"29 August 1976\"},\"country\":{\"isoCode\":\"IE\",\"country\":\"Ireland\",\"demonym\":\"Irish\"}},\"age\":\"50 years 4 days\",\"name\":{\"display\":\"Stephen Carr\"",
+     "accessed": "2026-09-02",
+     "tier": "official"
+    }
+   },
+   {
+    "name": "Richard Dunne",
+    "value": 1979,
+    "context": "Irish defender, 431 Premier League appearances",
+    "detail": {
+     "nameRaw": "Richard Dunne",
+     "born": "21 September 1979",
+     "birthDate": "1979-09-21",
+     "leaguePlayerId": "1184",
+     "appearances": 431
+    },
+    "source": {
+     "publisher": "Premier League",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/appearances?comps=1&pageSize=100&page=0",
+     "page": "the league feed, one hundred rows a page; this row is rank 32 on page 1",
+     "quote": "\"label\":\"21 September 1979\"},\"country\":{\"isoCode\":\"IE\",\"country\":\"Ireland\",\"demonym\":\"Irish\"}},\"age\":\"46 years 346 days\",\"name\":{\"display\":\"Richard Dunne\"",
+     "accessed": "2026-09-02",
+     "tier": "official"
+    }
+   },
+   {
+    "name": "John Arne Riise",
+    "value": 1980,
+    "context": "Norwegian defender, 321 Premier League appearances",
+    "detail": {
+     "nameRaw": "John Arne Riise",
+     "born": "24 September 1980",
+     "birthDate": "1980-09-24",
+     "leaguePlayerId": "2110",
+     "appearances": 321
+    },
+    "source": {
+     "publisher": "Premier League",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/appearances?comps=1&pageSize=100&page=1",
+     "page": "the league feed, one hundred rows a page; this row is rank 123 on page 2",
+     "quote": "\"label\":\"24 September 1980\"},\"country\":{\"isoCode\":\"NO\",\"country\":\"Norway\",\"demonym\":\"Norwegian\"},\"place\":\"Ålesund\"},\"age\":\"45 years 343 days\",\"name\":{\"display\":\"John Arne Riise\"",
+     "accessed": "2026-09-02",
+     "tier": "official"
+    }
+   },
+   {
+    "name": "Lukasz Fabianski",
+    "value": 1985,
+    "context": "Polish goalkeeper, 376 Premier League appearances",
+    "detail": {
+     "nameRaw": "Lukasz Fabianski",
+     "born": "18 April 1985",
+     "birthDate": "1985-04-18",
+     "leaguePlayerId": "3309",
+     "appearances": 376
+    },
+    "source": {
+     "publisher": "Premier League",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/appearances?comps=1&pageSize=100&page=0",
+     "page": "the league feed, one hundred rows a page; this row is rank 62 on page 1",
+     "quote": "\"label\":\"18 April 1985\"},\"country\":{\"isoCode\":\"PL\",\"country\":\"Poland\",\"demonym\":\"Polish\"},\"place\":\"Kostrzyn nad Odra\"},\"age\":\"41 years 137 days\",\"name\":{\"display\":\"Lukasz Fabianski\"",
+     "accessed": "2026-09-02",
+     "tier": "official"
+    }
+   },
+   {
+    "name": "Kevin Nolan",
+    "value": 1982,
+    "context": "English midfielder, 401 Premier League appearances",
+    "detail": {
+     "nameRaw": "Kevin Nolan",
+     "born": "24 June 1982",
+     "birthDate": "1982-06-24",
+     "leaguePlayerId": "2040",
+     "appearances": 401
+    },
+    "source": {
+     "publisher": "Premier League",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/appearances?comps=1&pageSize=100&page=0",
+     "page": "the league feed, one hundred rows a page; this row is rank 44 on page 1",
+     "quote": "\"label\":\"24 June 1982\"},\"country\":{\"isoCode\":\"GB-ENG\",\"country\":\"England\",\"demonym\":\"English\"}},\"age\":\"44 years 70 days\",\"name\":{\"display\":\"Kevin Nolan\"",
+     "accessed": "2026-09-02",
+     "tier": "official"
+    }
+   },
+   {
+    "name": "Danny Murphy",
+    "value": 1977,
+    "context": "English midfielder, 417 Premier League appearances",
+    "detail": {
+     "nameRaw": "Danny Murphy",
+     "born": "18 March 1977",
+     "birthDate": "1977-03-18",
+     "leaguePlayerId": "1423",
+     "appearances": 417
+    },
+    "source": {
+     "publisher": "Premier League",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/appearances?comps=1&pageSize=100&page=0",
+     "page": "the league feed, one hundred rows a page; this row is rank 37 on page 1",
+     "quote": "\"label\":\"18 March 1977\"},\"country\":{\"isoCode\":\"GB-ENG\",\"country\":\"England\",\"demonym\":\"English\"}},\"age\":\"49 years 168 days\",\"name\":{\"display\":\"Danny Murphy\"",
+     "accessed": "2026-09-02",
+     "tier": "official"
+    }
+   },
+   {
+    "name": "Roy Keane",
+    "value": 1971,
+    "context": "Irish midfielder, 366 Premier League appearances",
+    "detail": {
+     "nameRaw": "Roy Keane",
+     "born": "10 August 1971",
+     "birthDate": "1971-08-10",
+     "leaguePlayerId": "407",
+     "appearances": 366
+    },
+    "source": {
+     "publisher": "Premier League",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/appearances?comps=1&pageSize=100&page=0",
+     "page": "the league feed, one hundred rows a page; this row is rank 69 on page 1",
+     "quote": "\"label\":\"10 August 1971\"},\"country\":{\"isoCode\":\"IE\",\"country\":\"Ireland\",\"demonym\":\"Irish\"}},\"age\":\"55 years 23 days\",\"name\":{\"display\":\"Roy Keane\"",
+     "accessed": "2026-09-02",
+     "tier": "official"
+    }
+   },
+   {
+    "name": "Les Ferdinand",
+    "value": 1966,
+    "context": "English forward, 351 Premier League appearances",
+    "detail": {
+     "nameRaw": "Les Ferdinand",
+     "born": "8 December 1966",
+     "birthDate": "1966-12-08",
+     "leaguePlayerId": "462",
+     "appearances": 351
+    },
+    "source": {
+     "publisher": "Premier League",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/appearances?comps=1&pageSize=100&page=0",
+     "page": "the league feed, one hundred rows a page; this row is rank 83 on page 1",
+     "quote": "\"label\":\"8 December 1966\"},\"country\":{\"isoCode\":\"GB-ENG\",\"country\":\"England\",\"demonym\":\"English\"}},\"age\":\"59 years 268 days\",\"name\":{\"display\":\"Les Ferdinand\"",
+     "accessed": "2026-09-02",
+     "tier": "official"
+    }
+   },
+   {
+    "name": "Darren Anderton",
+    "value": 1972,
+    "context": "English midfielder, 319 Premier League appearances",
+    "detail": {
+     "nameRaw": "Darren Anderton",
+     "born": "3 March 1972",
+     "birthDate": "1972-03-03",
+     "leaguePlayerId": "566",
+     "appearances": 319
+    },
+    "source": {
+     "publisher": "Premier League",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/appearances?comps=1&pageSize=100&page=1",
+     "page": "the league feed, one hundred rows a page; this row is rank 126 on page 2",
+     "quote": "\"label\":\"3 March 1972\"},\"country\":{\"isoCode\":\"GB-ENG\",\"country\":\"England\",\"demonym\":\"English\"}},\"age\":\"54 years 183 days\",\"name\":{\"display\":\"Darren Anderton\"",
+     "accessed": "2026-09-02",
+     "tier": "official"
+    }
    }
   ],
   "direction": {
-   "higher": "Later",
-   "lower": "Earlier"
+   "higher": "Younger",
+   "lower": "Older"
   },
-  "sourceLine": "Source: each club's own official website, opened 2 September 2026. Leeds from the Premier League's club page."
+  "sourceLine": "Source: Premier League official player records (premierleague.com), read 2026-09-02.",
+  "maxCallFraction": 0.4
  },
  {
-  "id": "399",
+  "id": "1016",
   "category": "England caps",
   "subtitle": "Senior England appearances. Retired players only, so nothing moves.",
   "unit": "count",
@@ -175,24 +270,85 @@ export const HL_SAMPLE_BOARDS = [
   "trueAsOf": "2026-09-02",
   "chain": [
    {
-    "name": "Chris Woods",
-    "value": 43,
-    "context": "Goalkeeper, England debut 1985",
+    "name": "Tony Adams",
+    "value": 66,
+    "context": "Defender, England debut 1987",
     "retired": true,
     "detail": {
-     "nameRaw": "Chris Woods",
+     "nameRaw": "Tony Adams",
      "born": null,
-     "debutYear": 1985,
-     "caps": 43,
-     "goals": 0
+     "debutYear": 1987,
+     "caps": 66,
+     "goals": 5
     },
     "source": {
      "publisher": "Secondary source",
      "url": "https://en.wikipedia.org/wiki/List_of_England_international_footballers",
-     "quote": "Chris Woods GK 43 0 16 June 1985 United States 9 June 1993 United States [174][175]",
+     "quote": "Tony Adams DF 66 5 18 February 1987 Spain 7 October 2000 Germany [80][81]",
      "accessed": "2026-09-02",
      "tier": "secondary",
      "cached": "bank/sources/england-caps-secondary.html"
+    }
+   },
+   {
+    "name": "Michael Owen",
+    "value": 89,
+    "context": "Forward, England debut 1998",
+    "retired": true,
+    "detail": {
+     "nameRaw": "Michael Owen",
+     "born": null,
+     "debutYear": 1998,
+     "caps": 89,
+     "goals": 40
+    },
+    "source": {
+     "publisher": "Secondary source",
+     "url": "https://en.wikipedia.org/wiki/List_of_England_international_footballers",
+     "quote": "Michael Owen FW 89 40 11 February 1998 Chile 26 March 2008 France [40][41]",
+     "accessed": "2026-09-02",
+     "tier": "secondary",
+     "cached": "bank/sources/england-caps-secondary.html"
+    }
+   },
+   {
+    "name": "David Beckham",
+    "value": 115,
+    "context": "Midfielder, England debut 1996, born 1975",
+    "retired": true,
+    "detail": {
+     "nameRaw": "David Beckham",
+     "born": "02 May 1975",
+     "debutYear": 1996,
+     "caps": 115,
+     "goals": 17
+    },
+    "source": {
+     "publisher": "The FA (englandfootball.com)",
+     "url": "https://www.englandfootball.com/england/mens-senior-team/squad/Legends-profiles/David-Beckham",
+     "quote": "David Beckham won 115 caps for the England national team, making his debut in September 1996 against Moldova in the Three Lions' first game after Euro 96.",
+     "accessed": "2026-09-02",
+     "tier": "official"
+    }
+   },
+   {
+    "name": "Bryan Robson",
+    "value": 90,
+    "context": "Retired England international",
+    "retired": true,
+    "detail": {
+     "nameRaw": "Bryan Robson",
+     "born": null,
+     "debutYear": null,
+     "caps": 90,
+     "goals": null
+    },
+    "source": {
+     "publisher": "The FA (englandfootball.com)",
+     "url": "https://www.englandfootball.com/articles/2022/Aug/22/england-mens-senior-all-time-record-appearances-international-caps",
+     "quote": "12 - Bryan Robson - 90 appearances",
+     "accessed": "2026-09-02",
+     "tier": "official"
     }
    },
    {
@@ -217,105 +373,63 @@ export const HL_SAMPLE_BOARDS = [
     }
    },
    {
-    "name": "Sol Campbell",
-    "value": 73,
-    "context": "Defender, England debut 1996",
+    "name": "Peter Beardsley",
+    "value": 59,
+    "context": "Forward, England debut 1986",
     "retired": true,
     "detail": {
-     "nameRaw": "Sol Campbell",
+     "nameRaw": "Peter Beardsley",
      "born": null,
-     "debutYear": 1996,
-     "caps": 73,
-     "goals": 1
+     "debutYear": 1986,
+     "caps": 59,
+     "goals": 9
     },
     "source": {
      "publisher": "Secondary source",
      "url": "https://en.wikipedia.org/wiki/List_of_England_international_footballers",
-     "quote": "Sol Campbell DF 73 1 18 May 1996 Hungary 21 November 2007 Croatia [74][75]",
+     "quote": "Peter Beardsley FW 59 9 29 January 1986 Egypt 23 May 1996 China [108][109]",
      "accessed": "2026-09-02",
      "tier": "secondary",
      "cached": "bank/sources/england-caps-secondary.html"
     }
    },
    {
-    "name": "Emile Heskey",
-    "value": 62,
-    "context": "Forward, England debut 1999",
+    "name": "Paul Scholes",
+    "value": 66,
+    "context": "Midfielder, England debut 1997",
     "retired": true,
     "detail": {
-     "nameRaw": "Emile Heskey",
+     "nameRaw": "Paul Scholes",
      "born": null,
-     "debutYear": 1999,
-     "caps": 62,
-     "goals": 7
+     "debutYear": 1997,
+     "caps": 66,
+     "goals": 14
     },
     "source": {
      "publisher": "Secondary source",
      "url": "https://en.wikipedia.org/wiki/List_of_England_international_footballers",
-     "quote": "Emile Heskey FW 62 7 28 April 1999 Hungary 27 June 2010 Germany [100][101]",
+     "quote": "Paul Scholes MF 66 14 24 May 1997 South Africa 24 June 2004 Portugal [82][83]",
      "accessed": "2026-09-02",
      "tier": "secondary",
      "cached": "bank/sources/england-caps-secondary.html"
     }
    },
    {
-    "name": "James Milner",
-    "value": 61,
-    "context": "Midfielder / Defender, England debut 2009",
+    "name": "Teddy Sheringham",
+    "value": 51,
+    "context": "Forward, England debut 1993",
     "retired": true,
     "detail": {
-     "nameRaw": "James Milner",
+     "nameRaw": "Teddy Sheringham",
      "born": null,
-     "debutYear": 2009,
-     "caps": 61,
-     "goals": 1
+     "debutYear": 1993,
+     "caps": 51,
+     "goals": 11
     },
     "source": {
      "publisher": "Secondary source",
      "url": "https://en.wikipedia.org/wiki/List_of_England_international_footballers",
-     "quote": "James Milner MF / DF 61 1 12 August 2009 Netherlands 11 June 2016 Russia [104][105]",
-     "accessed": "2026-09-02",
-     "tier": "secondary",
-     "cached": "bank/sources/england-caps-secondary.html"
-    }
-   },
-   {
-    "name": "John Terry",
-    "value": 78,
-    "context": "Defender, England debut 2003",
-    "retired": true,
-    "detail": {
-     "nameRaw": "John Terry",
-     "born": null,
-     "debutYear": 2003,
-     "caps": 78,
-     "goals": 6
-    },
-    "source": {
-     "publisher": "Secondary source",
-     "url": "https://en.wikipedia.org/wiki/List_of_England_international_footballers",
-     "quote": "John Terry DF 78 6 3 June 2003 Serbia and Montenegro 7 September 2012 Moldova [60][61]",
-     "accessed": "2026-09-02",
-     "tier": "secondary",
-     "cached": "bank/sources/england-caps-secondary.html"
-    }
-   },
-   {
-    "name": "Phil Jagielka",
-    "value": 40,
-    "context": "Defender, England debut 2008",
-    "retired": true,
-    "detail": {
-     "nameRaw": "Phil Jagielka",
-     "born": null,
-     "debutYear": 2008,
-     "caps": 40,
-     "goals": 3
-    },
-    "source": {
-     "publisher": "Secondary source",
-     "url": "https://en.wikipedia.org/wiki/List_of_England_international_footballers",
-     "quote": "Phil Jagielka DF 40 3 1 June 2008 Trinidad and Tobago 15 November 2016 Spain [198][199]",
+     "quote": "Teddy Sheringham FW 51 11 29 May 1993 Poland 21 June 2002 Brazil [146][147]",
      "accessed": "2026-09-02",
      "tier": "secondary",
      "cached": "bank/sources/england-caps-secondary.html"
@@ -343,21 +457,21 @@ export const HL_SAMPLE_BOARDS = [
     }
    },
    {
-    "name": "Tony Adams",
-    "value": 66,
-    "context": "Defender, England debut 1987",
+    "name": "Mark Wright",
+    "value": 45,
+    "context": "Defender, England debut 1984",
     "retired": true,
     "detail": {
-     "nameRaw": "Tony Adams",
+     "nameRaw": "Mark Wright",
      "born": null,
-     "debutYear": 1987,
-     "caps": 66,
-     "goals": 5
+     "debutYear": 1984,
+     "caps": 45,
+     "goals": 1
     },
     "source": {
      "publisher": "Secondary source",
      "url": "https://en.wikipedia.org/wiki/List_of_England_international_footballers",
-     "quote": "Tony Adams DF 66 5 18 February 1987 Spain 7 October 2000 Germany [80][81]",
+     "quote": "Mark Wright DF 45 1 2 May 1984 Wales 18 May 1996 Hungary [170][171]",
      "accessed": "2026-09-02",
      "tier": "secondary",
      "cached": "bank/sources/england-caps-secondary.html"
@@ -385,48 +499,30 @@ export const HL_SAMPLE_BOARDS = [
     }
    },
    {
-    "name": "Paul Robinson",
-    "value": 41,
-    "context": "Goalkeeper, England debut 2003",
+    "name": "Emile Heskey",
+    "value": 62,
+    "context": "Forward, England debut 1999",
     "retired": true,
     "detail": {
-     "nameRaw": "Paul Robinson",
+     "nameRaw": "Emile Heskey",
      "born": null,
-     "debutYear": 2003,
-     "caps": 41,
-     "goals": 0
+     "debutYear": 1999,
+     "caps": 62,
+     "goals": 7
     },
     "source": {
      "publisher": "Secondary source",
      "url": "https://en.wikipedia.org/wiki/List_of_England_international_footballers",
-     "quote": "Paul Robinson GK 41 0 12 February 2003 Australia 17 October 2007 Russia [196][197]",
+     "quote": "Emile Heskey FW 62 7 28 April 1999 Hungary 27 June 2010 Germany [100][101]",
      "accessed": "2026-09-02",
      "tier": "secondary",
      "cached": "bank/sources/england-caps-secondary.html"
     }
-   },
-   {
-    "name": "Wayne Rooney",
-    "value": 120,
-    "context": "Forward, England debut 2003, born 1985",
-    "retired": true,
-    "detail": {
-     "nameRaw": "Wayne Rooney",
-     "born": "24 October 1985",
-     "debutYear": 2003,
-     "caps": 120,
-     "goals": 53
-    },
-    "source": {
-     "publisher": "The FA (englandfootball.com)",
-     "url": "https://www.englandfootball.com/england/mens-senior-team/squad/Legends-profiles/wayne-rooney",
-     "quote": "Wayne Rooney won 120 caps for England between 2003 and 2018, a record for an outfield player in the history of the English national team.",
-     "accessed": "2026-09-02",
-     "tier": "official"
-    }
    }
   ],
-  "sourceLine": "Source: The FA's official England legend profiles (englandfootball.com), opened 2 September 2026."
+  "sourceLine": "Source: The FA's official England legend profiles (englandfootball.com), opened 2 September 2026.",
+  "nearTieMax": 0,
+  "maxCallFraction": 0.4
  },
  {
   "id": "1000",
@@ -738,6 +834,6 @@ export const HL_SAMPLE_BOARDS = [
  }
 ];
 export const HL_SAMPLE_SCHEDULE = {
- "2026-09-03": "398",
- "2026-09-04": "399"
+ "2026-09-18": "1015",
+ "2026-09-19": "1016"
 };

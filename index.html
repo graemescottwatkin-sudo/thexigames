@@ -288,7 +288,12 @@ a.shirt{padding:4px;gap:0}
   font-size:21px;line-height:1.05;letter-spacing:.01em}
 .gcard-title{color:var(--ed-ink);text-decoration:none}
 .gcard-title:hover,.gcard-title:focus-visible{color:var(--ed-gold)}
-.gcard-say p{margin:6px 0 0;font-size:13px;line-height:1.5;color:var(--ed-soft)}
+/* TWO LINES ALWAYS, EVEN WHEN ONE WILL DO. "Find the XI. Discover the bonus."
+   wraps to one line and "Eleven questions, four answers, one clock." to two, so
+   the row below them — the rule, Play, Past puzzles — sat at a different height
+   on every card. Reserving the space costs nothing on the long ones and lines
+   the whole grid up. In em so it follows the featured cards' larger type. */
+.gcard-say p{margin:6px 0 0;font-size:13px;line-height:1.5;color:var(--ed-soft);min-height:3em}
 .gcard-acts{margin:10px 0 0;padding-top:9px;border-top:1px solid var(--ed-rule);
   display:flex;align-items:baseline;justify-content:space-between;gap:10px}
 .gcard-play{font-family:var(--body);font-weight:600;font-size:13px;
@@ -900,13 +905,17 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
      game is still live — so the only thing this table can be wrong about is
      taste.
 
-     THE EPOCH IS FIXED AND WRITTEN HERE. 17 September 2026 is day 0, which is
-     the day the design was approved and the pairing its reference shows. Move
-     this and every day in history re-pairs; it is not a value to tune. */
-  var FEATURE_EPOCH = "2026-09-17";
+     THE EPOCH IS FIXED AND WRITTEN HERE. 18 September 2026 is day 0 — the day
+     the whole family reset to day 1 for the first public post, so the rotation
+     and the board numbering start together rather than a day apart. Move this
+     and every day in history re-pairs; it is not a value to tune.
+     THE ORDER OF THE PAIRS IS EDITORIAL. QuickFire leads day one at the
+     owner's request, in place of Wordsearch; every game still appears exactly
+     once per cycle, which is the property the suite actually enforces. */
+  var FEATURE_EPOCH = "2026-09-18";
   var FEATURE_CYCLE = [
-    ["crossword", "quickfire"],
-    ["wordsearch", "hilo"],
+    ["quickfire", "hilo"],
+    ["crossword", "wordsearch"],
     ["scrambled", "ballpark"],
     ["vowels", "whoami"],
     ["grid", "codeword"]

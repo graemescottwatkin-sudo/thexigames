@@ -20,7 +20,7 @@ import {
   mayOpenArchive, archiveRefusal,
 } from "../functions/_lib/archive.js";
 import { ANSWERS_AFTER_DAYS, dailyNumber, utcDay } from "../functions/_lib/daily.js";
-import { launchNumber } from "../functions/_lib/games.js";
+import { launchNumber, LAUNCHED } from "../functions/_lib/games.js";
 import { onRequestGet as crosswordDaily } from "../functions/api/daily.js";
 import { onRequestGet as scrambledDaily } from "../functions/api/scrambled/daily.js";
 import { onRequestGet as hiloDaily } from "../functions/api/hilo/daily.js";
@@ -126,14 +126,34 @@ console.log("\nDays back, from a board number");
       backForBoard(g, from, today) === today - from,
       "#" + from + " -> " + backForBoard(g, from, today));
   }
+  /* THIS NAMED GRID AND QUICKFIRE, which were unlaunched when it was written
+     and are not now — both went live, LAUNCHED gave them a day, and the two
+     calls started answering with a number, so the suite went red for the games
+     having shipped. Naming a game here is naming a fact that expires.
+     It is derived instead, and from two independent sources of "has not
+     launched", because as of the reset there is no unlaunched game to point
+     at: a game with a null LAUNCHED if one exists, and a game the server does
+     not list at all, which is a case that cannot stop existing. */
+  const unlaunched = Object.keys(LAUNCHED).filter((g) => !LAUNCHED[g]);
   t("a game that has not launched has no back issues at all",
-    backForBoard("grid", 5, today) === null && backForBoard("quickfire", 5, today) === null,
-    "null must not be read as day one");
+    unlaunched.every((g) => backForBoard(g, 5, today) === null) &&
+    backForBoard("tiddlywinks", 5, today) === null,
+    unlaunched.length
+      ? `null must not be read as day one — ${unlaunched.join(", ")}, and an unknown game`
+      : "every game has launched; asked of an unknown game, which always holds");
   /* AND THE ANSWER FEEDS THE GATE UNCHANGED: null is not gated, which is the
-     line above about a board with no day. */
+     line above about a board with no day.
+     THE BOARD IS DERIVED, not pinned to #1. It read `backForBoard("scrambled",
+     1, ...)` under the detail "#1 is nine days before Scrambled launched" —
+     true while Scrambled launched on board 10. After the reset it launched on
+     board 1, that board has a real age, and the check was asserting the gate
+     lets through a board that is in fact gateable. One BELOW the launch is the
+     board with no age, whatever the launch happens to be. */
+  const noAge = launchNumber("scrambled") - 1;
   t("and a board with no age passes the gate",
-    !beyondFreeArchive(backForBoard("scrambled", 1, today)),
-    "#1 is nine days before Scrambled launched");
+    backForBoard("scrambled", noAge, today) === null &&
+    !beyondFreeArchive(backForBoard("scrambled", noAge, today)),
+    `#${noAge} is before Scrambled launched (#${launchNumber("scrambled")})`);
 }
 
 console.log("\nWhen the gate is up at all");

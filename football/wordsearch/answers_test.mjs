@@ -24,7 +24,26 @@ function t(name, ok, note) {
 
 /* Today, as the handler will compute it. The suite must not hardcode a date
    the way the schedule bug hardcoded a midnight. */
-const TODAY = new Date().toISOString().slice(0, 10);
+/* THE CLOCK IS PINNED FAR ENOUGH INTO THE RUN THAT A BOARD CAN BE PUBLISHED.
+   This suite is about what the answers page does with a board past its seal,
+   and it built one with dayAgo(ANSWERS_AFTER_DAYS + 3) against the real clock.
+   That worked while the word search had months behind it. After the family
+   reset to day 1 on 18 September 2026 the two conditions a publishable board
+   must meet became impossible to hold at once: it has to be at or after the
+   game's launch AND more than ANSWERS_AFTER_DAYS old, and on launch day
+   nothing can be both. Every assertion about a published board failed, not
+   because the page was wrong but because the fixture was asking for something
+   the calendar could not yet contain.
+   So the reading is taken once, from the launch plus the window, and handed to
+   both the fixture and the code — CLAUDE.md's rule about a suite not deciding
+   for itself what day it is. The window stays relative to ANSWERS_AFTER_DAYS
+   so widening or closing it still moves both sides together. Restored at the
+   end so nothing downstream inherits a fake clock. */
+const REAL_NOW = Date.now;
+const PINNED = Date.parse(LAUNCHED.wordsearch + "T12:00:00Z")
+  + (ANSWERS_AFTER_DAYS + 3) * 86400000;
+Date.now = () => PINNED;
+const TODAY = new Date(PINNED).toISOString().slice(0, 10);
 const dayAgo = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
 
 /* A board old enough to publish, one inside the window, one never scheduled. */
@@ -207,4 +226,5 @@ console.log("\nA day before the game launched is not a day it ran");
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
+Date.now = REAL_NOW;
 process.exit(fail ? 1 : 0);

@@ -99,7 +99,30 @@ console.log("\n=== The catalogue and the archive ===");
   t("the catalogue lists the club, identity only", c.body.clubs.length === 1 && c.body.clubs[0].boards[0].id === "C1" &&
     !JSON.stringify(c.body).includes("chain"));
   const a = await json(await archive({ env }));
-  t("the archive is yesterday and nothing after", a.body.days.length === 1 && a.body.days[0].day === shift(-1) && a.body.today === today);
+  /* WHICH DAYS OUGHT TO BE THERE IS DERIVED. This asserted exactly one day and
+     that it was yesterday, which held while HiLo had launched weeks earlier.
+     On 18 September 2026 the family reset to day 1, the fixture's yesterday
+     fell BEFORE HiLo's launch, and the archive correctly refused to list it —
+     so the suite went red for the archive doing its job. The invariant is not
+     "one": it is that the archive lists exactly those fixture days that have
+     RUN, meaning at or after launch and strictly before today, and never a day
+     that has not. On a launch day that is none, and an empty archive is the
+     right answer rather than a broken one. */
+  const launch = LAUNCHED.hilo;
+  const shouldList = sched
+    .map((row) => row.day)
+    .filter((day) => (!launch || day >= launch) && day < today)
+    .sort();
+  const listed = a.body.days.map((d) => d.day).slice().sort();
+  t("the archive is the days that have run, and nothing after",
+    listed.join(",") === shouldList.join(",") && a.body.today === today,
+    `listed ${listed.join(", ") || "(none)"} | expected ${shouldList.join(", ") || "(none)"}`);
+  /* AND THE HALF THAT CARRIES THE RULE, stated positively so an archive that
+     simply returns nothing cannot satisfy it: today and tomorrow are in the
+     fixture and neither may ever appear. */
+  t("and never today's board or tomorrow's",
+    !listed.includes(today) && !listed.includes(shift(1)),
+    "an archive naming tomorrow leaks the schedule");
   t("and names no board of tomorrow", !JSON.stringify(a.body).includes("Secret"));
   /* NOR A DAY FROM BEFORE THE GAME LAUNCHED. HiLo's real schedule begins on
      the day it launched, so this costs nothing today — and that is exactly

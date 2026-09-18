@@ -310,7 +310,7 @@ console.log("\nAnd it IS launched, which every one of these makes true");
   t("and permalink.js knows the game, or both of those 404",
     /ballpark:\s*\{\s*name:/.test(perma) && /ballpark:\s*"bp_schedule"/.test(perma));
 
-  t("LAUNCHED records the day it began SERVING", /ballpark:\s*"2026-08-26"/.test(games),
+  t("LAUNCHED records the day it began SERVING", /ballpark:\s*"2026-09-18"/.test(games),
     "not the day the line was added — a later date hides boards already run");
   t("it is in the server's game list", /"ballpark"/.test(games.slice(0, games.indexOf("];"))),
     "GAMES is whose rows the account system may write");

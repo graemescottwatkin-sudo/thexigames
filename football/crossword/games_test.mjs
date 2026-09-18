@@ -13,6 +13,7 @@
  */
 import { GAMES, DEFAULT_GAME, validGame, entryKey, detailOf, playedOn }
   from "../../functions/_lib/games.js";
+import { dailyDayKey } from "../../functions/_lib/daily.js";
 import { csrfOk, CSRF_HEADER } from "../../functions/_lib/auth.js";
 import fs from "node:fs";
 
@@ -91,9 +92,26 @@ t("every released game can produce a day from its own record shape",
   playedOn("scrambled", { no: 1 }) !== null);
 /* A Scrambled row carries a number and no date; its day is the number's,
    from the one epoch, so the account's history sorts it with the others. */
+/* THE TWO DATES WERE TYPED OUT, and that is the fault this project keeps
+   finding: a pinned literal defends the drift instead of catching it. These
+   read "2026-08-26" and "2026-09-02"; when the family reset to day 1 on
+   18 September 2026 the epoch moved, playedOn started answering correctly from
+   the new one, and this went red for the code being right.
+   What is actually being claimed is TWO things, and neither of them is a date:
+   board one's day is the family's first day, and a board seven numbers later
+   is seven days later — so an account's history sorts a numbered game beside a
+   dated one. The anchor comes from dailyDayKey, which is where that arithmetic
+   lives; the SPACING is computed here with real date arithmetic rather than by
+   asking the same function twice, so a broken epoch cannot satisfy both sides.
+   The epoch's actual value is pinned in football/crossword/epoch_test.mjs,
+   which is the one place a deliberate change to it should be argued with. */
+const scDay1 = playedOn("scrambled", { no: 1 });
+const scDay8 = playedOn("scrambled", { no: 8 });
 t("a Scrambled row's day is its board number's day",
-  playedOn("scrambled", { no: 1 }) === "2026-08-26" && playedOn("scrambled", { no: 8 }) === "2026-09-02" &&
-  playedOn("scrambled", {}) === null);
+  scDay1 === dailyDayKey(1) &&
+  (Date.parse(scDay8 + "T00:00:00Z") - Date.parse(scDay1 + "T00:00:00Z")) === 7 * 86400000 &&
+  playedOn("scrambled", {}) === null,
+  `#1 -> ${scDay1}, #8 -> ${scDay8}`);
 
 console.log("\nGame-specific facts go in detail, not in columns");t("the crossword adds no detail — its fields are already columns",
   detailOf("crossword", { dailyNo: 1 }) === null);
