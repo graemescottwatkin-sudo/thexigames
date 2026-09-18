@@ -254,7 +254,18 @@ await section("What My Season counts", async (ctx) => {
      rows are on time whenever this runs. */
   const { today, rows } = await probe.evaluate(() => {
     const n = window.FCW.dailyNumber();
-    const days = [n - 3, n - 2, n - 1].filter((d) => d >= 1);
+    /* THE RUN ENDS AT TODAY, and on the family's first day today is the only
+       board there is. This took the three days BEFORE today, which gave three
+       rows while the run was weeks old and gave NOTHING on 18 September 2026,
+       when the family reset to day 1: every one of n-3, n-2, n-1 was below 1
+       and the filter emptied the fixture. The suite then seeded no results,
+       read "Your pre-season record" off the sheet and failed — and the check
+       below it passed while proving nothing, agreeing that a run of zero was
+       zero. An empty fixture is not a small fixture; it is no test at all.
+       Counting back FROM today keeps at least one row on any day the site can
+       be opened, and today's own board is as on-time as yesterday's — the
+       grace rule admits both. */
+    const days = [n - 2, n - 1, n].filter((d) => d >= 1);
     return {
       today: n,
       rows: days.map((d) => ({
