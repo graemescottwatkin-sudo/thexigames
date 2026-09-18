@@ -402,6 +402,16 @@ server.listen(0, "127.0.0.1", async () => {
       ft2 && ft2.textContent.replace(/\s+/g, " ").slice(0, 80));
     /* AND THE BOARD IS STILL THERE. This restores a record, not a round: the
        grid stays playable and the server decides whether a replay scores. */
+    /* AND IT CAN BE SENT. The restore drew the community line and no share
+       row, so a finished board gave you something to read and no way to share
+       it — the one thing a finished board is most wanted for. Asked of the
+       FILLED row, not the container: mount() adds .xis and a button, and the
+       empty div is written by the same string either way. */
+    const shareRow2 = d2.querySelector("#gdFullTime #shareRow");
+    t("and the restored card can be shared",
+      !!shareRow2 && shareRow2.classList.contains("xis") &&
+      !!shareRow2.querySelector("button"),
+      shareRow2 ? "row is " + (shareRow2.className || "(unfilled)") : "no share row");
     t("with the grid still playable underneath",
       d2.querySelectorAll("#gdBoard .gd-cell.on").length > 0,
       d2.querySelectorAll("#gdBoard .gd-cell.on").length + " cells");

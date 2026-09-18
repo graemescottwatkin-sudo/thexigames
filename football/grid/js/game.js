@@ -32,7 +32,7 @@
 
   var R = window.XIGR_RULES;
   var $ = function (id) { return document.getElementById(id); };
-  var BUILD = "v002f";
+  var BUILD = "v002g";
 
   var S = {
     board: null,          // the PUBLIC board: shape, lengths, crossings. No letters.
@@ -639,8 +639,29 @@
       rec.misses + (rec.misses === 1 ? " miss" : " misses") + "</p>" +
       "<p>You played this board. The grid below is still here if you want" +
       " another go — a replay is not recorded.</p>" +
+      '<div id="shareRow"></div>' +
       '<div class="xic-community"></div>';
     if (window.XIChrome && window.XIChrome.community) window.XIChrome.community(el);
+    /* AND IT IS SHAREABLE, like the card a live full time draws. The restore
+       had the community line and no share row, so coming back to a board you
+       had finished gave you something to read and no way to send it — the one
+       thing a finished board is most likely to be wanted for. The text is the
+       RECORD's, because that is all this path has. */
+    if (window.XIShare && $("shareRow")) {
+      window.XIShare.mount($("shareRow"), {
+        text: function () {
+          return [
+            "GRID XI",
+            rec.no != null ? "No. " + rec.no : "Free play",
+            "",
+            rec.score + "/" + R.MAX_SCORE,
+            rec.solved + "/" + R.ENTRIES + " solved",
+            rec.misses + (rec.misses === 1 ? " miss" : " misses")
+          ].join(String.fromCharCode(10));
+        },
+        url: function () { return location.href; }
+      });
+    }
   }
 
   function boot() {
