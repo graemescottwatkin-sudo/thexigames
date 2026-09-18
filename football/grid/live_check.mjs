@@ -42,7 +42,11 @@ const w = (n, d) => { warn++; console.log(`  ??  ${n}${d ? "  — " + d : ""}`);
    legitimately skip. Reviewed when assertions are added — a floor set to the
    exact count flaps on a legitimate skip, and a floor left alone for five
    releases stops being able to refuse anything. */
-const MIN_ASSERTIONS = 18;
+/* 18 -> 19 for the breaks offsets check, which cannot skip on its own: it runs
+   under the same condition as the key-list check above it, so leaving the floor
+   where it was would have widened the gap by one and quietly cost this net a
+   little of its power. Raised by exactly one, and by one only. */
+const MIN_ASSERTIONS = 19;
 
 const get = (url) => fetch(url, { headers: { accept: "application/json" } });
 
@@ -85,10 +89,31 @@ t("the title travels, because the title IS the clue",
    trip that no offline suite performs. */
 const text = JSON.stringify(daily);
 t("no entry carries an answer or a member name", (() => {
-  const allowed = ["n", "dir", "r", "c", "len", "cells"];
+  /* `breaks` is on this list on purpose. publicBoard is a whitelist, so a field
+     added to the stored board reaches nobody until it is widened deliberately —
+     which is what has kept every letter of every answer on the server side. It
+     holds the zero-based offsets at which a new WORD starts: LEWISSKELLY is
+     eleven letters with nothing to say the name is Lewis-Skelly, which the
+     owner hit playing day one.
+     THE LIST IS RESTATED HERE RATHER THAN IMPORTED, and that is deliberate.
+     A whitelist assertion that asks the code what it allows agrees with the
+     code by construction and proves nothing; this file's job is to state
+     independently what production may return. */
+  const allowed = ["n", "dir", "r", "c", "len", "cells", "breaks"];
   return !!daily.board &&
     daily.board.entries.every((e) => Object.keys(e).every((k) => allowed.includes(k)));
 })(), daily.board ? Object.keys(daily.board.entries[0]).join(", ") : "");
+/* AND WHAT breaks MAY HOLD, on production, after the database and the JSON
+   round trip that no offline suite performs — which is this whole file's
+   reason to exist. Integers, inside the entry's own length, in order. A string
+   here would be the leak the projection exists to prevent wearing a numeric
+   name, and the capitals sweep below strips the field NAME, not its contents. */
+t("and breaks carry offsets, never letters", (() => {
+  return !!daily.board && daily.board.entries.every((e) =>
+    Array.isArray(e.breaks) &&
+    e.breaks.every((k) => Number.isInteger(k) && k > 0 && k < e.len) &&
+    e.breaks.every((k, i) => i === 0 || k > e.breaks[i - 1]));
+})(), daily.board ? JSON.stringify(daily.board.entries.map((e) => e.breaks)) : "");
 t("and no run of capitals survives anywhere in the response", (() => {
   const stripped = text
     .replace(/"(token|id|title|dir|cell|entries|crossings|rows|cols|len|n|r|c|no|day|today|board|source|freeArchiveDays)"/g, "")
