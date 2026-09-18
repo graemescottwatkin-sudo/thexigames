@@ -94,9 +94,30 @@ t("the clock reached half time",
   "minute " + $("clockValue").textContent);
 
 const owed = board.slots.filter((s) => slotHint(board, s.id)).length;
-t("every hint the board has is now on the pitch",
-  doc.querySelectorAll(".slot .hint").length === owed,
-  doc.querySelectorAll(".slot .hint").length + " shown, " + owed + " owed");
+/* GIVEN FOR THE WHOLE XI, SHOWN FOR ONE. This counted rendered .hint spans and
+   required one per owed slot — the display before 18 September 2026, when a
+   career drew under every tile at once and the pitch became eleven blocks of
+   club lists. Half time still hands over every hint the board has; what
+   changed is that only the tile you are on draws its own.
+   So the gift is proved by ASKING FOR EACH ONE, through the door a player
+   uses, and the display rule is asserted separately below. The old check
+   conflated the two and could not tell a change of layout from the manager
+   having gone quiet. */
+let seen = 0;
+for (const s of board.slots) {
+  if (!slotHint(board, s.id)) continue;
+  const el = doc.querySelector(`.slot[data-slot="${s.id}"]`);
+  if (!el || el.classList.contains("solved")) { seen++; continue; }
+  el.dispatchEvent(new window.Event("click"));
+  await settle(4);
+  const h = doc.querySelector(`.slot[data-slot="${s.id}"] .hint`);
+  if (h && h.textContent === slotHint(board, s.id)) seen++;
+}
+t("every hint the board has is now on the pitch", seen === owed,
+  seen + " of " + owed + " came up when their tile was picked");
+t("but only the tile in front draws one",
+  doc.querySelectorAll(".slot .hint").length === 1,
+  doc.querySelectorAll(".slot .hint").length + " drawn at once");
 t("and that is the whole XI, or this proves nothing", owed > 1, owed + " slots");
 t("the manager said so", /half time/i.test($("feedback").textContent),
   $("feedback").textContent);

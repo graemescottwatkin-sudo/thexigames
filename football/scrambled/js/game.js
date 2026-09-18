@@ -15,7 +15,7 @@
  *   - no practice. There is now an archive picker and a finals catalogue; what
  *     is still missing is a practice mode, which this game may never want.
  */
-var BUILD = "v002u";
+var BUILD = "v002v";
 
 (function () {
   "use strict";
@@ -917,9 +917,18 @@ var BUILD = "v002u";
         el.appendChild(en);
       }
 
-      if (state.hints[slot.id] && !got) {
+      /* ONE CAREER AT A TIME, HERE TOO. The bench sells the whole XI at once —
+         that is the deal and it has not changed — but every tile then drew its
+         career underneath, so a bought hint turned the pitch into eleven blocks
+         of club lists and the one you were actually on was distinguishable only
+         by being gold. The hint is still OWNED for all eleven; it is SHOWN for
+         the tile you are on, and clicking another brings that one up.
+         The same rule the reveal follows, and the reason it is `picked` here
+         and `reading` there: during play the tile you are on is the one you can
+         still buy for, which is exactly what picked means. */
+      if (state.hints[slot.id] && !got && slot.id === state.picked) {
         var h = document.createElement("span");
-        h.className = "hint" + (slot.id === state.picked ? " focus" : "");
+        h.className = "hint focus";
         h.textContent = state.hints[slot.id];
         el.appendChild(h);
       }
@@ -1031,6 +1040,20 @@ var BUILD = "v002u";
     state.picked = slotId;
     syncBench();
     drawPitch();
+    /* AND THE BOX TAKES THE KEYS AGAIN. Clicking a tile moved focus to the
+       tile, so the next thing typed went nowhere — the player selected a
+       player, started typing and watched nothing happen. Selecting is how you
+       say which one you are answering, so it has to hand typing back. */
+    focusAnswer();
+  }
+
+  /* One place, because three things want it: picking a tile, the game opening,
+     and a key pressed anywhere on the page. preventScroll so selecting a tile
+     near the foot of a phone screen does not jump the pitch. */
+  function focusAnswer() {
+    var box = $("answer");
+    if (!box || box.disabled) return;
+    try { box.focus({ preventScroll: true }); } catch (e) { box.focus(); }
   }
 
   /* THE BENCH IS REDRAWN AFTER EVERY PURCHASE, NOT ONLY WHEN A TILE IS PICKED.
@@ -1926,6 +1949,32 @@ var BUILD = "v002u";
   }
 
   $("submit").addEventListener("click", submit);
+  /* TYPE ANYWHERE AND THE ANSWER BOX FILLS. There was no key handler outside
+     the box itself, so the moment focus was anywhere else — a tile, a button,
+     the page after a scroll — typing did nothing at all and the game looked
+     frozen. A player should not have to find the input; the whole page is the
+     input.
+     WHAT IS NOT STOLEN: a key pressed while a real field has focus, anything
+     with a modifier (so copy, paste and the browser's own shortcuts still
+     work), and anything that is not a single printable character — Tab, the
+     arrows and Escape belong to the page. The character is appended by hand
+     because focusing an element during a keydown does not deliver THAT key to
+     it; without this the first letter typed would be the one that is lost. */
+  document.addEventListener("keydown", function (e) {
+    if (e.ctrlKey || e.metaKey || e.altKey) return;
+    if (e.key == null || e.key.length !== 1) return;
+    var box = $("answer");
+    if (!box || box.disabled) return;
+    var t = e.target, tag = t && t.tagName;
+    if (t === box) return;                       // already where it should be
+    if (tag === "INPUT" || tag === "TEXTAREA" || (t && t.isContentEditable)) return;
+    if ($("screenGame") && $("screenGame").hidden) return;   // not on the board
+    focusAnswer();
+    box.value = box.value + e.key;
+    box.dispatchEvent(new Event("input", { bubbles: true }));
+    e.preventDefault();
+  });
+
   $("answer").addEventListener("keydown", function (e) {
     if (e.key === "Enter") { e.preventDefault(); submit(); }
   });

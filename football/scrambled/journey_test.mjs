@@ -490,14 +490,77 @@ await settle(12);
    file never gets one, and asserting eleven would fail on honest data. */
 const solvedNow = new Set([...doc.querySelectorAll(".slot.solved")].map((el) => el.dataset.slot));
 const owed = board.slots.filter((sl) => !solvedNow.has(sl.id) && slotHint(board, sl.id)).length;
-t("the whole XI is revealed, not the one tile",
-  doc.querySelectorAll(".slot .hint").length === owed,
-  doc.querySelectorAll(".slot .hint").length + " tiles carry a career, " + owed + " owed");
+/* BOUGHT FOR THE WHOLE XI, SHOWN FOR ONE. This counted the rendered .hint
+   spans and required one per owed tile — which was the display before
+   18 September 2026, when a bought career drew under every tile at once and
+   turned the pitch into eleven blocks of club lists. The purchase is unchanged
+   and is still the whole board: what changed is that only the tile you are on
+   draws its career.
+   So OWNERSHIP is asserted against the state, and DISPLAY against the DOM. The
+   old check conflated them, which is why it could not tell a change of layout
+   from a change of what the bench sells. */
+/* OWNERSHIP IS PROVED BY ASKING FOR EACH ONE, not by reading internal state —
+   this game exposes no state seam and one would not be added to a shipped file
+   to suit a suite. Every owed tile is picked in turn and must show ITS career:
+   that is the whole XI having been bought, demonstrated through the door a
+   player uses. */
+let careersSeen = 0;
+for (const sl of board.slots) {
+  if (solvedNow.has(sl.id) || !slotHint(board, sl.id)) continue;
+  doc.querySelector(`.slot[data-slot="${sl.id}"]`).dispatchEvent(new window.Event("click"));
+  await settle(4);
+  const h = doc.querySelector(`.slot[data-slot="${sl.id}"] .hint`);
+  if (h && h.textContent === slotHint(board, sl.id)) careersSeen++;
+}
+t("the whole XI is revealed, not the one tile", careersSeen === owed,
+  careersSeen + " of " + owed + " owed careers came up when their tile was picked");
+/* Put the original tile back in front, so what follows reads as it did. */
+tile().dispatchEvent(new window.Event("click"));
+await settle(4);
 t("and it is more than the tile that was picked, or this proves nothing",
   owed > 1, owed + " unsolved tiles have a career");
-t("exactly one of them is the one in front",
-  doc.querySelectorAll(".slot .hint.focus").length === 1);
+/* ---- typing works wherever you are ------------------------------------
+   THE COMPLAINT: "no matter where i select i should be able to type and the
+   type any name starts filling". There was no key handler outside the answer
+   box, so the moment focus was anywhere else — a tile just clicked, a button,
+   the page after a scroll — typing did nothing and the game looked frozen. The
+   player selects a player, starts typing, and watches nothing happen.
+   Driven through the DOM the way a keyboard reaches it: a keydown dispatched
+   at the TILE, which is exactly where focus lands after a pick. */
+{
+  const box = $("answer");
+  box.value = "";
+  box.blur();
+  tile().dispatchEvent(new window.KeyboardEvent("keydown",
+    { key: "R", bubbles: true, cancelable: true }));
+  await settle(4);
+  t("a key pressed on the pitch reaches the answer box",
+    box.value === "R", JSON.stringify(box.value));
+  t("and the box has the keyboard, so the next letter needs no help",
+    doc.activeElement === box,
+    doc.activeElement ? doc.activeElement.id || doc.activeElement.tagName : "nothing focused");
+  /* WHAT MUST NOT BE STOLEN. A shortcut belongs to the browser, and a key with
+     a modifier is never somebody spelling a name. Without this, Ctrl+C on the
+     pitch would type a C into the answer. */
+  box.value = "";
+  tile().dispatchEvent(new window.KeyboardEvent("keydown",
+    { key: "c", ctrlKey: true, bubbles: true, cancelable: true }));
+  await settle(2);
+  t("but a shortcut is left alone", box.value === "", JSON.stringify(box.value));
+  /* Nor is a key that is not a character: Tab, the arrows and Escape are the
+     page's. */
+  tile().dispatchEvent(new window.KeyboardEvent("keydown",
+    { key: "ArrowLeft", bubbles: true, cancelable: true }));
+  await settle(2);
+  t("and so is a key that is not a letter", box.value === "", JSON.stringify(box.value));
+  box.value = "";
+}
+
+t("but only one career is on the pitch",
+  doc.querySelectorAll(".slot .hint").length === 1,
+  doc.querySelectorAll(".slot .hint").length + " drawn");
 t("and it is the tile the player picked",
+  !!tile().querySelector(".hint") &&
   tile().querySelector(".hint").classList.contains("focus"));
 t("the bench repeats that one where it can be read",
   !$("benchHint").hidden && $("benchHint").textContent === slotHint(board, pickedSlot.id));
