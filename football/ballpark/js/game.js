@@ -5,7 +5,7 @@
      it is yesterday's code. aligned_test asserts the two agree, and until
      this game launched it had no BUILD at all — three of its assets were on
      three different tags, which is the same fault with nobody checking. */
-  var BUILD = "v001n";
+  var BUILD = "v001o";
   if (window.XIPlays && document.documentElement) {
     document.documentElement.setAttribute("data-build", BUILD);
   }
@@ -859,6 +859,21 @@
 
   function startRound(data) {
     board = data.board; token = board.token; no = data.no; day = data.day || null;
+    /* THE CARD, NOT ANOTHER ROUND. A daily already finished on this device
+       comes back to what it came to rather than reopening as if it had never
+       been played.
+       CHECKED HERE, NOT ON THE LANDING BUTTON, and the first attempt was on the
+       button — where it did nothing at all. `day` is set on THIS line, when the
+       board arrives; on the landing it is still null, so the lookup asked
+       "which of my results is for day null" and always answered none. Verified
+       by playing a board through to full time on the live site and pressing
+       Kick off again: a fresh Question 1 of 11. The gates and a reading of the
+       code both passed it.
+       Here the day is known, it is the server's, and every route into a round
+       comes through this function. What is restored is the RECORD — the eleven
+       sliders are not stored and are not replayed. */
+    var had = bankedToday();
+    if (had) { showBanked(had); return; }
     step = 0; results = []; points = []; answersSeen = []; bangOns = 0;
     guesses = []; grades = [];
     subsUsed = 0; scoreNow = 0; over = false;
@@ -876,21 +891,12 @@
     show();
   }
 
-  $("homeDaily").addEventListener("click", function () {
-    /* THE CARD, NOT ANOTHER ROUND. A daily already finished on this device
-       should come back to what it came to, rather than reopening as if it had
-       never been played. What is restored is the RECORD — the score, the
-       result, how many landed — because that is what was banked; the eleven
-       sliders are not replayed. */
-    var had = bankedToday();
-    if (had) { showBanked(had); return; }
-    kickOff(null);
-  });
+  $("homeDaily").addEventListener("click", function () { kickOff(null); });
 
   /* Today's banked result, if this device has one. Keyed on the DAY, which is
      what recordResult writes and what every other game in the family keys on. */
   function bankedToday() {
-    if (!day) return null;
+    if (!day) return null;      // no day, nothing to match a record against
     var list = readResults();
     for (var i = 0; i < list.length; i++) {
       if (list[i] && list[i].day === day) return list[i];
@@ -913,6 +919,15 @@
         url: function () { return location.href; },
       });
     }
+    /* THE CARD LIVES INSIDE THE GAME SCREEN, so that screen has to be up or the
+       overlay is unhidden and nought pixels tall — which is exactly what
+       happened the first time: no round started, and no card appeared either.
+       Measured in a browser rather than reasoned about.
+       The board underneath is the one just loaded and never begun; the card is
+       modal and its only way out is Back to the menu, so nobody lands in a
+       half-started round. */
+    $("screenStart").hidden = true;
+    $("screenGame").hidden = false;
     $("ft").hidden = false;
   }
 
