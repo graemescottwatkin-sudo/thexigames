@@ -28,6 +28,8 @@ import { fileURLToPath } from "node:url";
 import { LAUNCHED } from "../../functions/_lib/games.js";
 
 const LAUNCH_DAY = LAUNCHED.wordsearch;
+/* The server's own day, so this file never decides for itself what day it is. */
+let todayIs = new Date().toISOString().slice(0, 10);
 
 const BASE = "https://www.thexigames.com";
 const expectArg = process.argv.indexOf("--expect");
@@ -219,8 +221,19 @@ const c = cat.status === 200 ? await cat.json() : null;
    node --check proves parsing, not execution. A live catalog with zero
    released boards is a failure, not a pass, so the count is asserted. */
 const releasedCount = c && c.boards ? c.boards.length : 0;
-t("the catalog answers", cat.status === 200 && releasedCount > 0,
-  releasedCount + " released boards");
+/* EMPTY IS RIGHT ON DAY ONE, AND ONLY ON DAY ONE. A board joins free play once
+   its first scheduled day has PASSED, so on the day the game's calendar starts
+   there is nothing behind us and the catalogue is legitimately bare. Demanding
+   boards unconditionally refused a correct production on 18 September 2026 and
+   blocked post_deploy for all ten games.
+   The emptiness is allowed ONLY while today is the launch day. From tomorrow a
+   bare catalogue is a fault again, which is what this check was written for:
+   it once read 0 in green on a live site holding 239 boards. */
+const catalogMayBeEmpty = todayIs <= LAUNCH_DAY;
+t("the catalog answers",
+  cat.status === 200 && (releasedCount > 0 || catalogMayBeEmpty),
+  releasedCount + " released boards" +
+    (releasedCount === 0 ? " — day one, nothing has run yet" : ""));
 /* v001r: this sampled boards[0] and generalised to all 239 — a name broader
    than its behaviour, the same fault as the wrong key one line above it, only
    quieter. Every entry is scanned now, and a failure names the id and the key
@@ -231,9 +244,12 @@ for (const b of (c && c.boards) || []) {
   const bad = LEAK_KEYS.filter((k) => k in b);
   if (bad.length) leaks.push(b.id + ": " + bad.join("+"));
 }
+/* The no-leak guard keeps its positive half — it must never pass by having
+   scanned nothing — except on the one day there is nothing to scan. */
 t("the catalog carries no grids and no answers",
-  releasedCount > 0 && leaks.length === 0,
-  leaks.length ? leaks.slice(0, 5).join(", ") : releasedCount + " entries scanned");
+  leaks.length === 0 && (releasedCount > 0 || catalogMayBeEmpty),
+  leaks.length ? leaks.slice(0, 5).join(", ")
+               : releasedCount + " entries scanned");
 
 /* ---- the unscheduled tripwire (D1; HTTP cannot see the schedule) --------- */
 /* released() treats a board with no schedule row as released — "an unscheduled
@@ -358,7 +374,9 @@ if (d && d.puzzle) {
   const published = new Set(listed);
   const candidates = ids.filter((id) => !published.has(id) &&
     !(d && d.puzzle && id === d.puzzle.id)).slice(0, 6);
-  t("the free-play catalogue is served", ids.length > 0, ids.length + " boards");
+  t("the free-play catalogue is served",
+    ids.length > 0 || catalogMayBeEmpty,
+    ids.length + " boards" + (ids.length === 0 ? " — day one" : ""));
   if (candidates.length) {
     const codes = [];
     for (const id of candidates) codes.push((await get("/api/wordsearch/puzzle?id=" + id)).status);
@@ -366,7 +384,12 @@ if (d && d.puzzle) {
       codes.every((c) => c === 200),
       candidates.map((id, i) => id + " -> " + codes[i]).join(", "));
   } else {
-    t("there is a catalogue board to try", false, "every board is published or today's");
+    /* Nothing to open is a failure once boards exist, and simply the truth on
+       the launch day, when none has run. */
+    t("there is a catalogue board to try", catalogMayBeEmpty,
+      ids.length
+        ? "every board is published or today's"
+        : "day one: no board has run, so free play is empty by design");
   }
 }
 
@@ -380,7 +403,13 @@ t("the themes index is served", themesIndex.status === 200, "HTTP " + themesInde
 t("and it is indexable",
   themesIndex.status === 200 && !/noindex/.test(themesText) && !themesIndex.headers.get("x-robots-tag"));
 const firstGroup = (themesText.match(/href="\/football\/wordsearch\/theme\/([a-z0-9-]+)\/"/) || [])[1];
-t("it links a category page", !!firstGroup, firstGroup);
+/* The themes pages are rendered FROM the catalogue, so on the launch day there
+   is no category to link — the same emptiness as free play, one page further
+   on. The index must still be served and indexable, which is asserted above
+   and is the half that would catch a broken page; only the link is excused,
+   and only today. */
+t("it links a category page", !!firstGroup || catalogMayBeEmpty,
+  firstGroup || "day one: no board has run, so there is no category yet");
 if (firstGroup) {
   const groupPage = await get("/football/wordsearch/theme/" + firstGroup + "/");
   const groupText = groupPage.status === 200 ? await groupPage.text() : "";
@@ -497,9 +526,26 @@ for (const [path, wants] of [["/api/account/results?game=wordsearch", 401],
    catch nothing that happens late. */
 /* The floor, for a block that goes quiet without crashing. */
 const ran = pass + fail + warn;
-if (ran < MIN_ASSERTIONS) {
+/* THE FLOOR BEFORE THE GAME HAS A HISTORY.
+   58 is the honest floor for a running game and stays the floor. It cannot be
+   met in the first week of a fresh calendar, and not because anything is
+   quiet: whole blocks here need a board that has ALREADY RUN — a published
+   answers page to open, a sealed board to be refused, a released board to try
+   from free play — and until one exists those branches have nothing to refuse.
+   On 18 September 2026 the run made 55 against a floor of 58 and refused a
+   correct production, which blocked post_deploy for all ten games.
+   SO THE FLOOR MOVES WITH WHAT EXISTS, NOT WITH THE DATE. It is keyed on
+   whether any board has passed the answers seal — `listed` is the published
+   index this file already read — rather than on "is it launch day", which
+   would go wrong on day two and every day until the seal opens. The moment
+   the first board publishes, the full floor applies again by itself. The gap
+   below the real count is the same either way: 58 against a run of 60, 53
+   against a run of 55. */
+const FLOOR = listed.length ? MIN_ASSERTIONS : MIN_ASSERTIONS - 5;
+if (ran < FLOOR) {
   fail++;
-  console.log(`FAIL  the run is short — ${ran} assertion(s) ran, floor is ${MIN_ASSERTIONS}`);
+  console.log(`FAIL  the run is short — ${ran} assertion(s) ran, floor is ${FLOOR}` +
+    (listed.length ? "" : " (no board has published yet, so the floor is reduced)"));
 }
 reachedEnd = true;
 

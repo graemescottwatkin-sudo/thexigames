@@ -164,10 +164,18 @@
   function pagesHere() {
     var m = /^\/football\/([a-z]+)\//.exec(location.pathname || "");
     var own = (m && GAME_PAGES[m[1]]) || GAME_PAGES.crossword;
+    /* THE SUBREDDIT, on every page of every game rather than written into any
+       one of them — the same reason the rest of this footer is built here. It
+       is the only OUTSIDE link the chrome carries, so it is marked as one and
+       the builder gives it target and rel; an external link opened in place
+       takes the player out of a game they may be halfway through. */
     return own.map(function (p) { return { name: p[0], href: p[1] }; })
-      .concat([{ name: "Privacy", href: PRIVACY_HREF }]);
+      .concat([{ name: "Privacy", href: PRIVACY_HREF },
+               { name: "r/FootballQuizzes", href: COMMUNITY_HREF, external: true }]);
   }
   var PRIVACY = "/football/crossword/privacy";
+  /* Where players talk about the games. One place, so a move is one edit. */
+  var COMMUNITY_HREF = "https://www.reddit.com/r/FootballQuizzes";
 
   /* xic-xi, not xi. The chrome owns its markup and every class in it lives in
      the xic- namespace, because a bare .xi is a class any game may already
@@ -807,6 +815,12 @@
       var li = document.createElement("li");
       var a = el("a", null, p.name);
       a.href = p.href;
+      if (p.external) {
+        /* A new tab, and noopener with it: without it the page opened gets a
+           handle on this one through window.opener. */
+        a.target = "_blank";
+        a.rel = "noopener";
+      }
       li.appendChild(a);
       ml.appendChild(li);
     });
