@@ -411,5 +411,63 @@ console.log("\n=== Opening a door ===");
     `${ok.worthNow} at ${ok.minute}'`);
 }
 
+console.log("\n=== A day before the game began is not a past board ===");
+{
+  /* THE FAULT THIS EXISTS FOR, found live on 18 September 2026.
+     Who Am I was re-dated so its day one is today. LAUNCHED moved; the
+     published rows behind it did not. Every query bounded only by
+     `play_date <= today`, so 15, 16 and 17 September were still "published and
+     not in the future" — three boards from before the game existed, listed by
+     /api/whoami/archive AND accepted by playableDay, which is the only thing
+     /api/whoami/play asks before opening a real, scored, banked sitting.
+     Verified against production: all three served a full board.
+     A day before the game began has not "already run" — it never ran. The
+     bound belongs at BOTH ends, and in the query rather than in a filter after
+     it: the same lesson as the word search's 233 published boards.
+     THE STUB RE-APPLIES THE SQL rather than rubber-stamping it. It reads
+     whether the statement carries a lower bound and filters accordingly, so a
+     dropped bound changes what comes back instead of being agreed with. */
+  const { LAUNCHED } = await import("../../functions/_lib/games.js");
+  const { archive, playableDay, lastPlayableDay } =
+    await import("../../functions/_lib/wa-board.js");
+  const launch = LAUNCHED.whoami;
+  const back = (d, n) =>
+    new Date(Date.parse(d + "T00:00:00Z") - n * 86400000).toISOString().slice(0, 10);
+  const ROWS = [launch, back(launch, 1), back(launch, 2), back(launch, 3)];
+  const LOWER = new RegExp("play_date >= " + String.fromCharCode(63));
+  const EQ = new RegExp("play_date = " + String.fromCharCode(63));
+  const env = { DB: { prepare(sql) { return { bind(...a) {
+    const eq = EQ.test(sql);
+    const hi = eq ? a[1] : a[0];
+    const lo = LOWER.test(sql) ? (eq ? a[2] : a[1]) : null;
+    const pick = (rows) => rows.filter((d) => d <= hi && (lo === null || d >= lo));
+    return {
+      async all() {
+        return { results: pick(ROWS).sort().reverse().map((d) => ({ play_date: d })) };
+      },
+      async first() {
+        if (sql.indexOf("MAX(play_date)") >= 0) {
+          const got = pick(ROWS).sort();
+          return { d: got.length ? got[got.length - 1] : null };
+        }
+        const want = String(a[0]);
+        return ROWS.indexOf(want) >= 0 && pick([want]).length ? { play_date: want } : null;
+      },
+    }; } }; } } };
+  const listed = (await archive(env)).map((x) => x.day);
+  t("the archive lists no day from before the game launched",
+    listed.every((d) => d >= launch), listed.join(", ") || "(none)");
+  t("and it does list the launch day, or the bound has swallowed the game",
+    listed.indexOf(launch) >= 0, listed.join(", ") || "(none)");
+  for (const d of [back(launch, 1), back(launch, 2), back(launch, 3)]) {
+    t(d + " is not playable, because it is before day one",
+      (await playableDay(env, d)) === false);
+  }
+  t("the launch day itself IS playable",
+    (await playableDay(env, launch)) === true);
+  t("and the last playable day is never a pre-launch one",
+    (await lastPlayableDay(env)) === launch, String(await lastPlayableDay(env)));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

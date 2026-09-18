@@ -18,6 +18,11 @@
  * days; today is one of them and the other 364 are not all past.
  */
 import { dailyDayKey, dailyNoForDay } from "./daily.js";
+/* WHEN THIS GAME LAUNCHED, from the one place it is written. Every query below
+   is bounded at BOTH ends by it: `<= today` alone let three boards from before
+   day one stay listed and playable. */
+import { LAUNCHED } from "./games.js";
+const FROM = () => LAUNCHED.whoami || "0000-01-01";
 import { hasDB, getBoard, today } from "./wadata.js";
 
 export function boardNoOf(day) {
@@ -44,9 +49,20 @@ export async function boardByFamilyNo(env, familyNo, now) {
    cannot answer it. */
 export async function playableDay(env, day) {
   if (!hasDB(env) || !day) return false;
+  /* BOUNDED AT BOTH ENDS. This asked only that the day had arrived, which was
+     enough while the board table began on the day the game did. When Who Am I
+     was re-dated to day one on 18 September 2026 its LAUNCHED moved and the
+     published rows behind it did not, so 15, 16 and 17 September were still
+     "published and not in the future" — three boards from before the game
+     existed, listed in the archive AND playable, scored and banked like any
+     other sitting because this function is the only thing play.js asks.
+     A day before the game began is not a past board, it is a board that never
+     ran. The bound is in the QUERY rather than in a filter after it, for the
+     reason the archive below states. */
   const row = await env.DB.prepare(
-    "SELECT play_date FROM wa_board WHERE play_date = ? AND status = 'published' AND play_date <= ?"
-  ).bind(String(day), today()).first();
+    "SELECT play_date FROM wa_board WHERE play_date = ? AND status = 'published' " +
+    "AND play_date <= ? AND play_date >= ?"
+  ).bind(String(day), today(), FROM()).first();
   return !!row;
 }
 
@@ -58,9 +74,9 @@ export async function playableDay(env, day) {
 export async function archive(env, limit = 400) {
   if (!hasDB(env)) return [];
   const { results } = await env.DB.prepare(
-    "SELECT play_date FROM wa_board WHERE status = 'published' AND play_date <= ? " +
-    "ORDER BY play_date DESC LIMIT ?"
-  ).bind(today(), Math.max(1, Math.min(1000, Number(limit) || 400))).all();
+    "SELECT play_date FROM wa_board WHERE status = 'published' " +
+    "AND play_date <= ? AND play_date >= ? ORDER BY play_date DESC LIMIT ?"
+  ).bind(today(), FROM(), Math.max(1, Math.min(1000, Number(limit) || 400))).all();
   return (results || []).map((r) => ({ day: r.play_date, no: boardNoOf(r.play_date) }));
 }
 
@@ -70,7 +86,8 @@ export async function archive(env, limit = 400) {
 export async function lastPlayableDay(env) {
   if (!hasDB(env)) return null;
   const row = await env.DB.prepare(
-    "SELECT MAX(play_date) AS d FROM wa_board WHERE status = 'published' AND play_date <= ?"
-  ).bind(today()).first();
+    "SELECT MAX(play_date) AS d FROM wa_board WHERE status = 'published' " +
+    "AND play_date <= ? AND play_date >= ?"
+  ).bind(today(), FROM()).first();
   return row && row.d ? String(row.d) : null;
 }
