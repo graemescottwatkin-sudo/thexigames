@@ -3,7 +3,7 @@
   /* THE BUILD, PAIRED WITH THE ?v= ON THIS FILE'S OWN SCRIPT TAG. A stale
      cached script is otherwise invisible: the page loads, the game runs, and
      it is yesterday's code. aligned_test asserts the two agree. */
-  var BUILD = "v001i";
+  var BUILD = "v001j";
   if (window.XIPlays && document.documentElement) {
     document.documentElement.setAttribute("data-build", BUILD);
   }
@@ -712,7 +712,19 @@ function boot(BOARD){
   function openRound(){
     if (SOLUTION || round || opening) return;
     opening = true;
-    if (window.XIPlays) XIPlays.start({ game: "codeword", mode: "daily" });
+    /* boardKey, without which every row lands with board_key null and the
+       funnel — which reads per board — cannot group, attribute or count the
+       attempt against the board it was of. The same omission Ballpark shipped
+       with, found the same day. `cw:` + the day is the key entryKey() composes
+       server-side: the DAY and not either board number, for the reason written
+       there. BOARD_DAY is already known here (the body below sends it), so
+       unlike Ballpark this needs no reordering — only the field it omitted. */
+    if (window.XIPlays) {
+      XIPlays.start({
+        game: "codeword", mode: "daily",
+        boardKey: BOARD_DAY ? "cw:" + BOARD_DAY : null, total: 11,
+      });
+    }
     fetch(API + "play", {
       method: "POST", headers: {"Content-Type": "application/json", "X-XI-Games": "1"},
       /* WHETHER THIS DEVICE HAS FINISHED THIS BOARD BEFORE. The server has no

@@ -240,8 +240,20 @@ console.log("\nOwner attempts are siloed");
   const admin = fs.readFileSync(path.join(DIR, "../../functions/api/admin/[[route]].js"), "utf8");
   t("the funnel leaves owner attempts out of the per-board figures",
     /if \(r\.by_owner\) \{[\s\S]{0,140}continue;/.test(admin));
+  /* Matched on the fields being returned, not on their order in the literal.
+     This read `ownerPlays, ownerFinished, days` out of the source and so
+     failed the moment the bot's counts were added between them — a passing
+     test broken by a change that made the thing it guards more correct. */
   t("and reports them separately rather than hiding them",
-    /ownerPlays, ownerFinished, days/.test(admin));
+    /ownerPlays/.test(admin) && /ownerFinished/.test(admin));
+  /* The same rule for the bot, which is the other kind of non-visitor. It
+     spent weeks in the visitor column for want of anywhere else to go. */
+  t("the bot is excluded from the figures too",
+    /if \(r\.by_bot\) \{[\s\S]{0,140}continue;/.test(admin));
+  t("and is likewise reported rather than silently dropped",
+    /botPlays/.test(admin) && /botFinished/.test(admin));
+  t("a bot flag cannot be set by the browser",
+    /isBot\(request, env\)/.test(src) && !/body\.(isBot|bot|byBot)/.test(src));
   const mig = fs.readFileSync(path.join(DIR, "../../data/migrations/008-plays-theme.sql"), "utf8");
   t("the column is added by the same migration",
     /ALTER TABLE plays ADD COLUMN by_owner INTEGER DEFAULT 0/.test(mig));

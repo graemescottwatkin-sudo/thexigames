@@ -203,6 +203,23 @@ export async function isAdmin(request, env) {
   }
 }
 
+/* Is this request the play bot? The same shape as isAdmin above and for the
+   same reason: read from the row every time, never from anything the request
+   carries. A bot flag the client could set would let anyone remove anyone
+   from the figures, which is precisely what by_owner was careful to avoid.
+
+   Kept separate from isAdmin deliberately. The owner's attempts are real play
+   and worth reading back; the bot's are synthetic. One flag for both would
+   lose that distinction permanently. */
+export async function isBot(request, env) {
+  try {
+    const u = await currentUser(request, env);
+    return !!(u && u.is_bot);
+  } catch (e) {
+    return false;
+  }
+}
+
 export function publicUser(u) {
   if (!u) return null;
   return {

@@ -286,7 +286,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v003k";
+  var BUILD = "v003l";
   try {
     window.CROSSWORDXI_BUILD = BUILD;
     console.log("Crossword XI build " + BUILD);
@@ -3226,6 +3226,15 @@
           (d.ownerPlays === 1 ? "" : "s") + ", " + d.ownerFinished + " finished " +
           "(kept out of the figures above)"
         : "";
+      /* Reported, not merely removed. The bot ran for weeks counted as a
+         visitor, and a figure that silently drops rows is how that happens a
+         second time without anyone noticing. Seeing its nightly count is also
+         the cheapest signal that the bot is still running at all. */
+      var bot = d.botPlays
+        ? "\n\nPlay bot: " + d.botPlays + " attempt" +
+          (d.botPlays === 1 ? "" : "s") + ", " + d.botFinished + " finished " +
+          "(kept out of the figures above)"
+        : "";
       /* Say the period. "50 finished" with no window is a number nobody can
          act on — it could be today's post or a month of drift. */
       var window = d.hours
@@ -3234,12 +3243,12 @@
            : "last " + d.hours + " hours")
         : "recent plays";
       if (!d.days.length) {
-        adminMsg("No visitors have played in the " + window + "." + mine);
+        adminMsg("No visitors have played in the " + window + "." + mine + bot);
         return;
       }
       $("adminReportList").innerHTML = "";
       adminMsg("How far players got \u2014 " + window +
-        ". The CSV covers everything." + mine);
+        ". The CSV covers everything." + mine + bot);
       var lines = d.days.slice(0, 20).map(function (x) {
         /* Themed boards read as their own name and number, because that is how
            they are shared and how they will be talked about. "man-united-3"
@@ -3274,7 +3283,7 @@
         }
         return out;
       });
-      adminMsg(lines.join("\n") + mine);
+      adminMsg(lines.join("\n") + mine + bot);
     }).catch(function (err) { adminMsg(String(err.message || err)); });
   });
 

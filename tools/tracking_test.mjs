@@ -78,6 +78,26 @@ for (const game of BUILT) {
     fail(`${game}: nothing calls XIPlays.end — a finish would never be recorded`);
   } else pass(`${game}: ends a play`);
 
+  /* AND IT NAMES THE BOARD. Starting a play without a boardKey is not a
+     smaller version of starting one: board_key lands null, and the funnel,
+     the per-board standings and the CSV all read per board — so the attempt
+     cannot be grouped, attributed, or counted against the board it was of.
+     Nothing in the response says so, which is why it keeps happening. Five
+     games have now shipped a variant of this (the comments in games.js record
+     Scrambled, QuickFire, Grid and Codeword losing rows to the missing server
+     branch; Ballpark and Codeword lost them to the missing client field), and
+     it has never once been caught by anything other than somebody reading the
+     table afterwards.
+     Deliberately weak: this asks only that the game MENTIONS boardKey, not
+     that the value is right. A game computing the key at runtime cannot be
+     checked statically, and a gate that demanded a literal would punish the
+     better-written games. It catches the fault that actually occurs, which is
+     the field being absent entirely. */
+  if (!/boardKey/.test(js)) {
+    fail(`${game}: calls XIPlays.start but never mentions boardKey — ` +
+         `every row would land with board_key null`);
+  } else pass(`${game}: names the board it is a play of`);
+
   if (!validPlayGame(game)) {
     fail(`${game}: the server would refuse its plays (validPlayGame says no)`);
   } else pass(`${game}: the server accepts its plays`);

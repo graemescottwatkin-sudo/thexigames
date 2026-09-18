@@ -196,7 +196,7 @@ export async function onRequest({ request, env, params }) {
     if (gameAsked && !game) return json({ error: "Unknown game." }, 400);
     const rows = await env.DB.prepare(
       `SELECT game, board_key, mode, daily_no, phase, solved, total, completed, elapsed_secs,
-              ended_at, theme_key, by_owner
+              ended_at, theme_key, by_owner, by_bot
          FROM plays
         WHERE started_at > datetime('now', ?) AND (? IS NULL OR game = ?)
         ORDER BY started_at DESC LIMIT 5000`).bind("-" + hours + " hours", game, game).all();
@@ -205,8 +205,15 @@ export async function onRequest({ request, env, params }) {
        is not twenty people, and while the site is being built most rows are
        his — so the headline is visitors and his are reported alongside rather
        than deleted, since they are still the only record of what was tried. */
-    let ownerPlays = 0, ownerFinished = 0;
+    /* And the bot's, which are neither. play_bot.mjs plays every game nightly;
+       left in, it was the largest single contributor to the visitor figure. */
+    let ownerPlays = 0, ownerFinished = 0, botPlays = 0, botFinished = 0;
     for (const r of rows.results || []) {
+      if (r.by_bot) {
+        botPlays++;
+        if (r.completed) botFinished++;
+        continue;
+      }
       if (r.by_owner) {
         ownerPlays++;
         if (r.completed) ownerFinished++;
@@ -254,7 +261,7 @@ export async function onRequest({ request, env, params }) {
     })).sort((a, b) => (b.dailyNo || 0) - (a.dailyNo || 0));
     /* The window is reported, not implied. A panel showing "50 finished" with
        no period is a number nobody can act on. */
-    return json({ ownerPlays, ownerFinished, days, hours });
+    return json({ ownerPlays, ownerFinished, botPlays, botFinished, days, hours });
   }
 
   /* ---- Clear my own record ----
@@ -386,7 +393,7 @@ export async function onRequest({ request, env, params }) {
               SUM(total) AS answers,
               AVG(elapsed_secs) AS avg_secs
          FROM plays
-        WHERE by_owner = 0 AND (? IS NULL OR game = ?)
+        WHERE by_owner = 0 AND by_bot = 0 AND (? IS NULL OR game = ?)
         GROUP BY source, campaign, community
         ORDER BY started DESC
         LIMIT 200`).bind(game, game).all();
@@ -481,7 +488,7 @@ export async function onRequest({ request, env, params }) {
          floating to the top; they fall back to the old figure. */
         `SELECT srv_score AS score,
                 COALESCE(srv_elapsed_secs, elapsed_secs) AS secs, started_at,
-                solved, total, completed, by_owner,
+                solved, total, completed, by_owner, by_bot,
                 srv_checks, srv_check_alls,
                 srv_reveal_letters, srv_reveal_answers
            FROM plays
@@ -489,7 +496,10 @@ export async function onRequest({ request, env, params }) {
           ORDER BY completed DESC, srv_score DESC, COALESCE(srv_elapsed_secs, elapsed_secs) ASC
           LIMIT 200`).bind(key).all();
 
-      const all = rows.results || [];
+      /* The bot is dropped outright rather than reported alongside: a board's
+         standings are about who played it, and a synthetic finish at a fixed
+         clock would sit in the middle of a real median. */
+      const all = (rows.results || []).filter((r) => !r.by_bot);
       const done = all.filter((r) => r.completed && !r.by_owner);
       return json({
         theme, no,
@@ -597,13 +607,13 @@ export async function onRequest({ request, env, params }) {
                  which is the conservative reading. */
               COALESCE(srv_reveal_letters, reveals, 0) AS reveal_letters,
               COALESCE(srv_reveal_answers, 0) AS reveal_answers,
-              by_owner, utm_source, utm_medium, utm_campaign, utm_content,
+              by_owner, by_bot, utm_source, utm_medium, utm_campaign, utm_content,
               utm_term, referrer
          FROM plays WHERE (? IS NULL OR game = ?) ORDER BY started_at DESC LIMIT 20000`).bind(game, game).all();
     const esc = (v) => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
     const head = ["Started", "Ended", "Game", "Board key", "Mode", "Board", "Reference", "Solved",
                   "Of", "Finished", "Seconds", "Checks",
-                  "Reveal letters", "Reveal answers", "Owner test",
+                  "Reveal letters", "Reveal answers", "Owner test", "Bot",
                   "Source", "Medium", "Campaign", "Content", "Term", "Referrer"];
     const lines = [head.map(esc).join(",")];
     for (const r of rows.results || []) {
@@ -615,6 +625,7 @@ export async function onRequest({ request, env, params }) {
         r.solved, r.total, r.completed ? "yes" : "no",
         r.elapsed_secs, r.checks, r.reveal_letters, r.reveal_answers,
         r.by_owner ? "yes" : "",
+        r.by_bot ? "yes" : "",
         r.utm_source || "", r.utm_medium || "", r.utm_campaign || "",
         r.utm_content || "", r.utm_term || "", r.referrer || "",
       ].map(esc).join(","));

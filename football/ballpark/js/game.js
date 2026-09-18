@@ -5,7 +5,7 @@
      it is yesterday's code. aligned_test asserts the two agree, and until
      this game launched it had no BUILD at all — three of its assets were on
      three different tags, which is the same fault with nobody checking. */
-  var BUILD = "v001o";
+  var BUILD = "v001p";
   if (window.XIPlays && document.documentElement) {
     document.documentElement.setAttribute("data-build", BUILD);
   }
@@ -937,35 +937,24 @@
      past the free window. */
   function kickOff(no) {
     $("homeDaily").disabled = true;
-    /* THE PLAY ID, AND WHY THIS GAME MINTS ITS OWN FOR NOW.
-       /api/play refuses a game that is not in GAMES, and this one is not: it is
-       in testing, like QuickFire XI, and an unreleased game must not be a value
-       that can reach the results tables. But a round still has to be identified
-       to be scored, and bp_round/bp_answer are this game's own tables — nothing
-       here writes `results`, `plays` or the season, so a round scored under a
-       locally minted id counts for this board and for nothing else. That is the
-       correct behaviour for a game in testing anyway: it should not be able to
-       move a streak or a season it has not launched into.
-       On the day it launches this asks /api/play like every other game, and the
-       fallback stays for the request that fails. */
+    /* THE PLAY ID. A round has to be identified to be scored, and the mint
+       below is the fallback for a request that cannot reach the referee: a
+       board that cannot be banked is better played than refused. */
     playId = "bp-" + Date.now().toString(36) + "-" +
       Math.random().toString(36).slice(2, 10);
-    /* THROUGH XIPlays NOW, rather than posting to the endpoint by hand. The
-       helper is what tells the family a play started and ended, and this page
-       was already calling XIPlays.end() at full time — guarded — into a helper
-       that was never loaded. It had been ending plays nobody had started.
-       The locally minted id above stays as the fallback for a request that
-       fails: a board that cannot reach the referee is better played than
-       refused, and a round still needs an id to be scored. */
-    (window.XIPlays
-      ? XIPlays.start({ game: "ballpark", mode: "daily" })
-      : Promise.resolve({}))
-      .catch(function () { return {}; })
-      .then(function (p) {
-        if (p && p.playId) playId = p.playId;
-        return fetch("/api/ballpark/daily" + (no ? "?no=" + no : ""))
-          .then(function (r) { return r.json(); });
-      })
+    /* THE BOARD IS FETCHED FIRST, AND THAT ORDER IS THE POINT.
+       This started the play before asking which board it was, so it had
+       nothing to name one with and every Ballpark row landed with board_key
+       null — ten of them before anyone looked. A null key is not a smaller
+       version of a key: the funnel reads per board, so those attempts could
+       not be grouped, attributed or counted against the board they were of,
+       and nothing about the response said so.
+       The day is what addresses a Ballpark daily — `bp:` + the day, the same
+       key entryKey() composes server-side — and the day is only known once
+       the endpoint has answered. So the fetch comes first and the play is
+       started against a board that exists. */
+    fetch("/api/ballpark/daily" + (no ? "?no=" + no : ""))
+      .then(function (r) { return r.json(); })
       .then(function (data) {
         if (!data || !data.board) {
           $("startState").textContent = data && data.error
@@ -973,7 +962,27 @@
           $("homeDaily").disabled = false;
           return;
         }
-        startRound(data);
+        /* THROUGH XIPlays, rather than posting to the endpoint by hand. The
+           helper is what tells the family a play started and ended, and this
+           page was already calling XIPlays.end() at full time — guarded —
+           into a helper that was never loaded. It had been ending plays
+           nobody had started. */
+        return (window.XIPlays
+          ? XIPlays.start({
+              game: "ballpark", mode: "daily",
+              boardKey: "bp:" + data.day, total: 11,
+            })
+          : Promise.resolve(null))
+          .catch(function () { return null; })
+          .then(function () {
+            /* current(), not the resolved value: start() resolves to the play
+               NUMBER, so the `p.playId` this used to read was undefined every
+               time and the shared id was never adopted. Ballpark is in GAMES
+               now, so the round and the play should carry the same id. */
+            var cur = window.XIPlays && XIPlays.current();
+            if (cur && cur.playId) playId = cur.playId;
+            startRound(data);
+          });
       })
       .catch(function () { $("homeDaily").disabled = false; });
   }

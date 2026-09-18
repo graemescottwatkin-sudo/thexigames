@@ -15,7 +15,7 @@
  */
 import { json, bad } from "../_lib/puzzle.js";
 import { hasDB } from "../_lib/db.js";
-import { newId, isAdmin} from "../_lib/auth.js";
+import { newId, isAdmin, isBot } from "../_lib/auth.js";
 import { limited } from "../_lib/limit.js";
 import { validPlayGame, validMode, DEFAULT_GAME } from "../_lib/games.js";
 import { dailyKey, utcDay } from "../_lib/daily.js";
@@ -113,6 +113,15 @@ export async function onRequestPost({ request, env }) {
      is made of. */
   let byOwner = 0;
   try { byOwner = (await isAdmin(request, env)) ? 1 : 0; } catch (e) { byOwner = 0; }
+  /* And whether it was the play bot, which is neither the owner nor a
+     visitor. play_bot.mjs runs nightly against production and its rows were
+     landing in the visitor column — ten a night, and on the day the table was
+     reset for launch, most of the data in it. Read from the account for the
+     same reason by_owner is, and failing closed to 0: a bot wrongly counted
+     as a visitor overstates the figures, which is the safer direction to be
+     wrong in than silently deleting a real player from them. */
+  let byBot = 0;
+  try { byBot = (await isBot(request, env)) ? 1 : 0; } catch (e) { byBot = 0; }
 
   /* THE SEASON'S OWN RECORD. Null for everyone who is not signed in, and for
      them nothing is written at all: their season is their device's. */
@@ -154,14 +163,14 @@ export async function onRequestPost({ request, env }) {
 
     await env.DB.prepare(
       `INSERT INTO plays (id, play_id, game, board_key, mode, daily_no, phase, total, theme_key,
-                          by_owner, play_no,
+                          by_owner, by_bot, play_no,
                           utm_source, utm_medium, utm_campaign, utm_content,
                           utm_term, referrer, attribution_scope)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
       .bind(newId(), playId, game, boardKey, mode,
             body.dailyNo ? int(body.dailyNo, 100000) : null,
             body.phase === "season" ? "season" : "preseason",
-            int(body.total, 50), themeKey, byOwner, playNo,
+            int(body.total, 50), themeKey, byOwner, byBot, playNo,
             slug(attr.utm_source), slug(attr.utm_medium), slug(attr.utm_campaign),
             slug(attr.utm_content), slug(attr.utm_term), slug(attr.referrer),
             "session").run();
