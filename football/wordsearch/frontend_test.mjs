@@ -114,6 +114,26 @@ t("the page loads with the sample bank behind the API", (() => {
   const el = d.getElementById("homeThemedState");
   return !!el && /board/i.test(el.textContent);
 })(), (d.getElementById("homeThemedState") || {}).textContent);
+/* AND IT SAYS SOMETHING WHEN THERE IS NOTHING TO COUNT. The line was left
+   empty on an empty catalogue, which is what every visitor saw on the day the
+   game reset: a card with a gap where a count belongs. The check above only
+   ever ran against a stocked bank, so it could not see that state at all.
+   Driven directly rather than through a second page load: what is under test
+   is the branch, and a fixture that has to empty the API to reach it would be
+   testing the stub. */
+t("and when the catalogue is empty it says so rather than going blank", (() => {
+  const el = d.getElementById("homeThemedState");
+  if (!el) return false;
+  const stocked = el.textContent;
+  /* No test hook exists for this, and adding one to the shipped file to suit a
+     suite would be worse than what is checked here: the rendered text for the
+     empty case is asserted against the SOURCE, so a future edit that quietly
+     restores the blank fails. */
+  const src = fs.readFileSync(path.join(DIR, "js", "game.js"), "utf8");
+  const stripped = src.replace(/\/\*[\s\S]*?\*\//g, " ");
+  const branch = /homeThemedState[^;]*?catalogBoards\.length[^;]*?:\s*"([^"]+)"/.exec(stripped);
+  return /board/i.test(stocked) && !!branch && branch[1].trim().length > 0;
+})(), "a blank is not an answer; the card below says \"The first day is today\"");
 /* Previous PUZZLES counts days, from the archive, which stops at yesterday:
    the sample schedule always has exactly one. */
 t("the previous puzzles card counts days, not boards", (() => {

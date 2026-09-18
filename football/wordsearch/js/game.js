@@ -15,7 +15,7 @@
      the family more time than any layout question: the footer line, the
      console, and the named window variable. If this is not the build just
      deployed, the deploy has not landed — do not start debugging the game. */
-  var BUILD = "v002s";
+  var BUILD = "v002t";
   window.WORDSEARCHXI_BUILD = BUILD;
   try { console.log("Wordsearch XI build " + BUILD); } catch (e) {}
 
@@ -1371,8 +1371,20 @@
       $("homeFeaturedName").textContent = f.theme;
       $("homeFeaturedState").textContent = f.category;
     }
+    /* AND IT SAYS SO WHEN THERE ARE NONE YET. This left the line EMPTY on an
+       empty catalogue, which is every visitor's first sight of the card on the
+       day the game resets: a heading, a description, and a gap where a count
+       belongs, leading to an index with nothing in it. A blank is not an
+       answer, and the card directly below already knew that — Previous
+       Puzzles says "The first day is today" in exactly this situation.
+       IT IS NOT A BUG BEING PAPERED OVER. A board joins free play once its
+       first scheduled day has PASSED, so on day one there is genuinely nothing
+       behind us and the index gains one a day. The sentence states that rule
+       rather than the count, so it is true on day one and true again on any
+       later day the catalogue is empty for a reason nobody has thought of. */
     $("homeThemedState").textContent = catalogBoards.length
-      ? catalogBoards.length + " boards available" : "";
+      ? catalogBoards.length + " boards available"
+      : "Each board opens here the day after it runs";
     /* Days, not boards: the card is Previous PUZZLES, and a day is what you
        missed. Counted from the archive, which stops at yesterday. */
     $("homePreviousCount").textContent = archiveDays
