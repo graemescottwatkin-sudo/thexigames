@@ -44,8 +44,8 @@ const has = (p) => fs.existsSync(path.join(ROOT, p));
    this refuses, from the very first commit, which is the half of the law that
    carries it. post_deploy will write both from the live page after the first
    deploy, exactly as it does for the other four. */
-const LAST_SHIPPED = "v001o";
-const LAST_SHIPPED_ASSETS = "6b2cc5b13c22accf";
+const LAST_SHIPPED = "v001p";
+const LAST_SHIPPED_ASSETS = "88db4d01c74f9e2a";
 
 let pass = 0, fail = 0;
 function t(name, ok, note) {
