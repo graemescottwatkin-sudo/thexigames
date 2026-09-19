@@ -279,7 +279,17 @@ t("shared assets carry their own plain vN lifecycle",
   const here = path.dirname(fileURLToPath(import.meta.url));
   const localJs = fs.readFileSync(path.join(here, "js/game.js"), "utf8");
   const localTag = (localJs.match(/BUILD\s*=\s*"(v\d+[a-z]?)"/) || [])[1] || "";
-  const sum = (s) => crypto.createHash("sha256").update(s).digest("hex").slice(0, 16);
+  /* CRLF TO LF, LIKE EVERY OTHER HASH OF SHIPPED BYTES. What ships is what is
+     in git; a Windows checkout writes CRLF, so hashing the working tree raw
+     answers a different question on each machine. This one did not normalise
+     and went red on 19 Sep 2026 against a byte-perfect v003m deploy: local
+     65296b4a37643178 against live b65ca01a089f0957, which is the SAME FILE
+     through 7,745 carriage returns. It had been green all day and turned red
+     on nothing but a git checkout of that file restoring it with CRLF.
+     A check that fails on a good deploy teaches you to ignore its colour. */
+  const CR = String.fromCharCode(13), LF = String.fromCharCode(10);
+  const lf = (s) => String(s).split(CR + LF).join(LF);
+  const sum = (s) => crypto.createHash("sha256").update(lf(s)).digest("hex").slice(0, 16);
   if (!tag || !localTag || tag !== localTag) {
     w("the deployed game.js is the file in this checkout",
       `not comparable — live ${tag || "?"}, this checkout ${localTag || "?"}`);
