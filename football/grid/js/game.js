@@ -32,7 +32,7 @@
 
   var R = window.XIGR_RULES;
   var $ = function (id) { return document.getElementById(id); };
-  var BUILD = "v002g";
+  var BUILD = "v002h";
 
   var S = {
     board: null,          // the PUBLIC board: shape, lengths, crossings. No letters.
@@ -43,6 +43,8 @@
     confirmed: {},        // "r,c" -> letter, SERVER-CONFIRMED only
     solved: {},           // entry n -> true
     turns: null, misses: 0, over: false, score: null,
+    /* When the board opened. For the plays row only — nothing scores on it. */
+    startedAt: null,
     answers: null,        // arrives at full time, from the server, never before
     busy: false,
   };
@@ -567,6 +569,22 @@
     el.scrollIntoView({ block: "nearest" });
   }
 
+  /* HOW FAR THEY GOT. Counted off the live state rather than off S.score,
+     which is null until the server calls full time — an abandoned board is
+     exactly the case this has to describe, and it is the one with no score. */
+  function playsProgress() {
+    return {
+      solved: Object.keys(S.solved).length,
+      elapsed: S.startedAt ? Math.round((Date.now() - S.startedAt) / 1000) : 0,
+      detail: {
+        misses: S.misses,
+        turnsLeft: typeof S.turns === "number" ? S.turns : null,
+        hints: S.hints ? Object.keys(S.hints).length : 0,
+        score: S.score ? S.score.total : null,
+      },
+    };
+  }
+
   /* ---- input ------------------------------------------------------------- */
 
   function wire() {
@@ -679,11 +697,16 @@
       syncAccount();
       if (window.XIPlays && window.XIPlays.start) {
         /* boardKey and dailyNo are the field names xi-plays.js reads; `key`
-           was invented here and would have been dropped in silence. */
+           was invented here and would have been dropped in silence.
+           playsProgress is the SECOND argument, and leaving it out was the
+           same class of silent loss: every field xi-plays.js reads at the end
+           of a play defaulted to 0, so a finished board wrote solved=0 and
+           elapsed_secs=0 beside completed=1. Found 19 Sep 2026. */
+        S.startedAt = Date.now();
         window.XIPlays.start({
           game: "grid", mode: "daily",
           boardKey: "gd:" + r.no, dailyNo: r.no, total: R.ENTRIES,
-        });
+        }, playsProgress);
       }
       /* ---- A FINISHED BOARD STAYS FINISHED ---------------------------
        * Grid banks its result in xigd.results and NOTHING ON BOOT EVER READ

@@ -3,7 +3,7 @@
   /* THE BUILD, PAIRED WITH THE ?v= ON THIS FILE'S OWN SCRIPT TAG. A stale
      cached script is otherwise invisible: the page loads, the game runs, and
      it is yesterday's code. aligned_test asserts the two agree. */
-  var BUILD = "v001j";
+  var BUILD = "v001k";
   if (window.XIPlays && document.documentElement) {
     document.documentElement.setAttribute("data-build", BUILD);
   }
@@ -190,6 +190,7 @@ function boot(BOARD){
           if (guess[n] !== LETTER[n]) bad.push(Number(n));
         });
         extraMinutes += COST.check;
+        checksUsed++;
         then(bad);
       },
       reveal: function(n, then){
@@ -238,6 +239,7 @@ function boot(BOARD){
           // The server's minute count is the one that decides, so the page
           // takes spentMinutes rather than adding COST.check itself.
           if (typeof d.spentMinutes === "number") extraMinutes = d.spentMinutes;
+          checksUsed++;
           then(d.wrong || []);
         });
       },
@@ -275,6 +277,11 @@ function boot(BOARD){
   var guess = {}, pencil = {}, locked = {}, wrongMark = {}, solvedWords = {};
   var selected = null, selCell = null, selWord = null, pencilMode = false;
   var subsUsed = 0, extraMinutes = 0, startedAt = null, over = false, timer = null, secondsPerMinute = 3;
+  /* HOW MANY TIMES THE REFEREE WAS ASKED. The cost of a check was tracked as
+     minutes and never as a count, so the one number that says whether a player
+     leaned on it could not be reported. The minutes remain the server's; this
+     is only a tally, and nothing scores on it. */
+  var checksUsed = 0;
 
   GIVEN_N.forEach(function(g){ guess[g.n] = g.letter; locked[g.n] = "given"; });
 
@@ -723,7 +730,7 @@ function boot(BOARD){
       XIPlays.start({
         game: "codeword", mode: "daily",
         boardKey: BOARD_DAY ? "cw:" + BOARD_DAY : null, total: 11,
-      });
+      }, playsProgress);
     }
     fetch(API + "play", {
       method: "POST", headers: {"Content-Type": "application/json", "X-XI-Games": "1"},
@@ -757,6 +764,29 @@ function boot(BOARD){
   // has already bottomed out at 36 by then (scoreAt returns the floor from 90
   // on), so playing past the whistle costs nothing further -- it just means a
   // draw rather than a win.
+  /* HOW FAR THEY GOT, read at the end of the play. Without this second
+     argument every field defaulted to 0 and a finished board wrote solved=0
+     and elapsed_secs=0 beside completed=1. Found 19 Sep 2026 alongside
+     Ballpark's and Grid's; three games, not the two first reported.
+     `elapsed` is real seconds, not match minutes: the minute is a scoring
+     device that runs three times fast and takes the cost of every check on
+     top, so it answers a different question from "how long were they here". */
+  function playsProgress(){
+    var solved = Object.keys(solvedWords).length;
+    var total = WORDS.length || 11;
+    return {
+      solved: solved,
+      elapsed: startedAt ? Math.round((Date.now() - startedAt) / 1000) : 0,
+      checks: checksUsed,
+      reveals: subsUsed,
+      detail: {
+        minute: matchMinute(),
+        score: outcome(matchMinute(), solved, total).score,
+        of: total,
+      },
+    };
+  }
+
   function matchMinute(){ if (!startedAt) return 0; var real = (Date.now() - startedAt) / 1000; return Math.floor(real / secondsPerMinute) + extraMinutes; }
   function minuteText(m){ return m > 90 ? "90+" + (m - 90) : String(m); }
 

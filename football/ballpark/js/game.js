@@ -5,7 +5,7 @@
      it is yesterday's code. aligned_test asserts the two agree, and until
      this game launched it had no BUILD at all — three of its assets were on
      three different tags, which is the same fault with nobody checking. */
-  var BUILD = "v001p";
+  var BUILD = "v001q";
   if (window.XIPlays && document.documentElement) {
     document.documentElement.setAttribute("data-build", BUILD);
   }
@@ -47,6 +47,14 @@
   var clockMs = 0, skew = 0, clockLen = R.CLOCK, narrowedSecs = 0;
   var results = [], points = [], bangOns = 0, subsUsed = 0, lockedSecs = 0,
       lockedWorth = 0;
+  /* WHEN THE ROUND OPENED, for the plays row and for nothing else.
+     The header above says this page does not time itself, and that stands: the
+     clock that decides a SCORE is the server's, per question, and this number
+     never reaches it. It is wall clock from the first question to the whistle,
+     which is the only thing that answers "did they bounce in ten seconds or
+     grind for five minutes" — and until 19 Sep 2026 the answer was zero,
+     because no progress function was handed to XIPlays.start at all. */
+  var playStartedAt = 0;
   /* WHAT THE PLAYER GUESSED AND WHAT THEY WERE TOLD, kept per question because
      neither survives anywhere else. `results` is a boolean and `bangOns` is a
      count; the guess was sent to the server and discarded here, and the grade
@@ -857,6 +865,22 @@
 
   /* ---- kick off ----------------------------------------------------------- */
 
+  /* HOW FAR THEY GOT, read at the end of the play by xi-plays.js. Without it
+     every field it sends defaults to 0, so the row said completed=1, solved=0,
+     elapsed_secs=0 — the finish recorded and nothing about the finishing.
+     `solved` is counted the same way the banked record counts inBallpark: one
+     rule, and the two must not be able to disagree. */
+  function playsProgress() {
+    return {
+      solved: results.filter(function (x) { return x === true; }).length,
+      elapsed: playStartedAt ? Math.round((Date.now() - playStartedAt) / 1000) : 0,
+      detail: {
+        score: scoreNow, bangOns: bangOns, subs: subsUsed,
+        answered: results.length, step: step,
+      },
+    };
+  }
+
   function startRound(data) {
     board = data.board; token = board.token; no = data.no; day = data.day || null;
     /* THE CARD, NOT ANOTHER ROUND. A daily already finished on this device
@@ -877,6 +901,7 @@
     step = 0; results = []; points = []; answersSeen = []; bangOns = 0;
     guesses = []; grades = [];
     subsUsed = 0; scoreNow = 0; over = false;
+    playStartedAt = Date.now();
 
     ladder.innerHTML = ""; sheet.innerHTML = "";
     board.questions.forEach(function (q, i) {
@@ -971,7 +996,7 @@
           ? XIPlays.start({
               game: "ballpark", mode: "daily",
               boardKey: "bp:" + data.day, total: 11,
-            })
+            }, playsProgress)
           : Promise.resolve(null))
           .catch(function () { return null; })
           .then(function () {

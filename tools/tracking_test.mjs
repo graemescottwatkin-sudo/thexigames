@@ -19,6 +19,7 @@
  * The rule: a game on BUILT loads the helper, starts a play and ends one, and
  * every mode any game names is a mode the server will accept.
  */
+import * as acorn from "acorn";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -28,6 +29,42 @@ import { gameDir } from "../functions/_lib/permalink.js";
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const read = (f) => fs.readFileSync(path.join(ROOT, f), "utf8");
 const exists = (f) => fs.existsSync(path.join(ROOT, f));
+
+/* Every script a game ships, by name. The joined text is what the older
+   checks read; the parsed check needs them one at a time, because a syntax
+   error in one would otherwise be reported against all of them. */
+const jsFilesOf = (game) => {
+  const jsDir = path.join(ROOT, gameDir(game), "js");
+  return fs.existsSync(jsDir)
+    ? fs.readdirSync(jsDir).filter((f) => f.endsWith(".js"))
+    : [];
+};
+
+/* Every XIPlays.start() call in a parse tree, however it is reached: the games
+   write it as XIPlays.start and as window.XIPlays.start, so the callee is
+   matched on its last two links rather than on a whole expression. */
+function startCalls(ast) {
+  const out = [];
+  (function walk(node) {
+    if (!node || typeof node !== "object") return;
+    if (Array.isArray(node)) { node.forEach(walk); return; }
+    if (node.type === "CallExpression") {
+      const c = node.callee;
+      if (c && c.type === "MemberExpression" && !c.computed &&
+          c.property && c.property.name === "start" &&
+          c.object && ((c.object.type === "Identifier" && c.object.name === "XIPlays") ||
+                       (c.object.type === "MemberExpression" && !c.object.computed &&
+                        c.object.property && c.object.property.name === "XIPlays"))) {
+        out.push(node);
+      }
+    }
+    for (const k of Object.keys(node)) {
+      if (k === "type" || k === "start" || k === "end" || k === "loc") continue;
+      walk(node[k]);
+    }
+  })(ast);
+  return out;
+}
 
 let failed = 0;
 const fail = (msg) => { console.log("FAIL  " + msg); failed++; };
@@ -97,6 +134,45 @@ for (const game of BUILT) {
     fail(`${game}: calls XIPlays.start but never mentions boardKey — ` +
          `every row would land with board_key null`);
   } else pass(`${game}: names the board it is a play of`);
+
+  /* AND IT SAYS HOW FAR THEY GOT.
+     xi-plays.js reads the SECOND argument of start() at the end of a play, for
+     solved, elapsed, checks, reveals and detail. Leave it out and all five
+     default to 0 — so the row says completed=1, solved=0, elapsed_secs=0: the
+     finish recorded and nothing about the finishing. It is the same shape as
+     the missing boardKey above and just as silent, because a play with no
+     progress function is indistinguishable at the call site from one with a
+     board nobody finished.
+     THREE GAMES HAD SHIPPED THIS: Ballpark, Grid and Codeword, found on
+     19 Sep 2026 by reading the plays table, which is exactly how the boardKey
+     fault kept being found. This gate ran on all three the whole time and
+     passed them, because the three checks above are satisfied by a start, an
+     end and the word boardKey — none of which the missing argument touches.
+
+     PARSED, NOT MATCHED. The argument is an identifier after an object literal
+     that runs over several lines and contains braces of its own; a regex can
+     neither count arguments nor find the end of that object, and one that
+     tried would report whatever the last brace happened to be. acorn is
+     already a dependency of the suites and names_test.mjs uses it the same
+     way. */
+  for (const f of jsFilesOf(game)) {
+    const src = read(`${gameDir(game)}/js/${f}`);
+    let ast;
+    try {
+      ast = acorn.parse(src, { ecmaVersion: 2022, sourceType: "script" });
+    } catch (e) {
+      fail(`${game}: ${f} does not parse (${String(e).split(String.fromCharCode(10))[0]})`);
+      continue;
+    }
+    for (const call of startCalls(ast)) {
+      if (call.arguments.length >= 2) {
+        pass(`${game}: says how far the play got`);
+      } else {
+        fail(`${game}: XIPlays.start in ${f} passes no progress function — ` +
+             `solved, elapsed, checks and reveals would all be written as 0`);
+      }
+    }
+  }
 
   if (!validPlayGame(game)) {
     fail(`${game}: the server would refuse its plays (validPlayGame says no)`);

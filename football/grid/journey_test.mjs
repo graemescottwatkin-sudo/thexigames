@@ -79,11 +79,21 @@ const DB = makeDb();
 const TYPES = { ".html": "text/html; charset=utf-8", ".css": "text/css",
   ".js": "text/javascript", ".json": "application/json" };
 
+/* EVERY BODY THE PAGE SENDS TO /api/play, kept so the END row can be read.
+   The gate can see that a progress function is PASSED; only a played board can
+   show what it returns, and a function returning nothing useful would satisfy
+   the gate exactly as well as this one does. */
+const playPosts = [];
+
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://x");
   if (url.pathname === "/api/play" || url.pathname.startsWith("/api/grid/")) {
     const chunks = [];
     for await (const c of req) chunks.push(c);
+    if (url.pathname === "/api/play" && chunks.length) {
+      try { playPosts.push(JSON.parse(Buffer.concat(chunks).toString("utf8"))); }
+      catch (e) { /* a body that is not JSON is not a play row */ }
+    }
     const request = new Request("https://www.thexigames.com" + req.url, {
       method: req.method,
       headers: { "Content-Type": "application/json", "X-XI-Games": "1" },
@@ -291,6 +301,24 @@ server.listen(0, "127.0.0.1", async () => {
     t("and full time is on screen without the turns running out",
       d.getElementById("gdFullTime").hidden === false && st.turns > 0,
       "turns left " + st.turns);
+    /* HOW FAR THE PLAY GOT, as the plays table will hold it.
+       Grid passed no progress function to XIPlays.start until 19 Sep 2026, so
+       every field xi-plays.js reads at the end defaulted to 0 and a finished
+       board wrote solved=0 and elapsed_secs=0 beside completed=1 — the
+       finish recorded and nothing about the finishing. Read off the request
+       the page actually sent rather than off the page's own state, because the
+       fault was entirely in what was SENT.
+       `elapsed` is asserted only to be a number and not negative: jsdom plays
+       a board in well under a second, so demanding it be positive would be a
+       check that fails on a fast machine and passes on a slow one. */
+    const ended = playPosts.filter((r) => r && r.event === "end");
+    const last = ended[ended.length - 1] || null;
+    t("the play's end says how far it got", !!last && last.solved === RULES.ENTRIES,
+      last ? "solved " + last.solved + " of " + RULES.ENTRIES : "no end row was sent");
+    t("and carries an elapsed time and the board's misses",
+      !!last && typeof last.elapsed === "number" && last.elapsed >= 0 &&
+      !!last.detail && last.detail.misses === st.misses,
+      last ? "elapsed " + last.elapsed + "s, detail " + JSON.stringify(last.detail) : "none");
     /* NOT THE MAXIMUM, AND SAYING SO. Written as "the full score for a clean
        board" first, and it failed at 113: this run is not clean — a block above
        deliberately guesses wrong to prove a miss is marked, so the efficiency
