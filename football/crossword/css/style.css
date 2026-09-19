@@ -679,6 +679,24 @@ button.tb-label{
    bank box is a second view of a square. */
 .bank-cell{cursor:pointer;-webkit-user-select:none;user-select:none;
   -webkit-tap-highlight-color:transparent}
+
+/* A SECOND TAP IN THE SAME PLACE IS A SECOND TAP, NOT A ZOOM.
+   iOS reads two quick taps near the same point as double-tap-to-zoom, and
+   every control here is one a player taps twice in a row on purpose: the clue
+   card's halves to step through clues, a letter box to move along a word, the
+   plus to zoom in twice. Reported on a phone — tapping the clue card a few
+   times blew the page up to a corner of the keyboard.
+   The grid has carried touch-action:manipulation for exactly this reason; what
+   it does NOT cover is everything that has become a tap target around it. It
+   keeps panning and pinch-zoom and drops only the double-tap gesture, which is
+   why the board's own frame can keep touch-action:none for its script-driven
+   pan and pinch and this changes nothing there.
+   The on-screen keyboard is NOT in this list and has the same exposure — two
+   quick taps on the same key is how a double letter is typed. Its keys are in
+   shared/xi-keys.css, so that is a change to the shared layer and to every
+   game that loads it, not to this one. */
+.now-clue,.nc-arrow,.nc-meta,.bank-cell,
+.tbar-btn,.fx-zoom button,.fx-fit{ touch-action:manipulation; }
 .bank-gap{width:9px}
 .nc-arrow{min-height:44px;min-width:44px;
   background:none;border:1px solid var(--line);border-radius:var(--r-sm);
