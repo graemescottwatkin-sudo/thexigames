@@ -2365,6 +2365,29 @@ body.flex-layout .tbar > .tb-readouts{
   overflow:hidden;
 }
 body.flex-layout .tbar > .tb-readouts .live-chip{white-space:nowrap}
+/* ONE ROW OF BOXES, ALL THE SAME HEIGHT. The clock put its elapsed line under
+   the minute, so its box stood taller than every button beside it and the row
+   read as a tall thing with short things next to it. In this row the sub goes
+   inline instead and every box takes the height of a control — 44px, the
+   same number the buttons are held to — so the row lines up whatever is in
+   it. The minute keeps its place; it is the figure the scoring moves on. */
+body.flex-layout .tbar > .tb-readouts{ align-items:center; }
+body.flex-layout .tbar > .tb-readouts > *{
+  height:44px;box-sizing:border-box;display:flex;align-items:center;
+}
+body.flex-layout .tbar > .tb-readouts .match-clock{
+  gap:7px;font-size:22px;padding:0 10px;min-width:0;
+}
+body.flex-layout .tbar > .tb-readouts .match-clock small{
+  display:inline;margin-top:0;
+}
+/* The score was the one reading in the row without a face, which read as a
+   number that had escaped from somewhere rather than the third of three.
+   Same border, same radius, same background as the clock and the count. */
+body.flex-layout .tbar > .tb-readouts .live-score{
+  border:1px solid var(--line);border-radius:var(--r-sm);background:var(--card);
+  padding:0 10px;gap:4px;
+}
 /* WHAT THE ROW CAN AFFORD, measured at 375px: the readings came to 200px and
    Check, Reveal and the cog to 183, which with the row's own padding is 399
    against 375 — the cog went off the edge, and at 320 the row wrapped to
@@ -2374,7 +2397,13 @@ body.flex-layout .tbar > .tb-readouts .live-chip{white-space:nowrap}
 @media (max-width:560px){
   body.flex-layout .tbar > .tb-readouts #elapsedLine,
   body.flex-layout .tbar > .tb-readouts .live-chip small{ display:none; }
-  body.flex-layout .tbar > .tb-readouts{ gap:7px; }
+  body.flex-layout .tbar > .tb-readouts{ gap:5px; }
+  /* The box the score gained costs 20px of padding the row did not have at
+     375: it came to 378 against 375. Taken back here rather than by dropping
+     the face again — the boxes matching is the point. */
+  body.flex-layout .tbar > .tb-readouts .match-clock{ padding:0 8px; }
+  body.flex-layout .tbar > .tb-readouts .live-score{ padding:0 7px; }
+  body.flex-layout .tbar > .tb-readouts .live-chip{ padding:5px 7px; }
 }
 /* Smaller still and the buttons give up their padding before anything is
    dropped, because a control you cannot read is worse than a tight one. */
