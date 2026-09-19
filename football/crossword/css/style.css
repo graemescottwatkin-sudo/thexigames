@@ -509,6 +509,10 @@ button.tb-label{
   flex:1;min-width:0;display:flex;flex-wrap:nowrap;align-items:center;
   gap:5px 14px;                       /* row gap, column gap */
   max-height:100%;overflow:hidden;
+  /* Clear of the chevrons at both edges. They sit 8px in and draw about 14px
+     wide, so without this a long clue's last line ran underneath the one on
+     the right — the mark got bigger and so did the collision. */
+  padding:0 22px;
 }
 /* Number and clue share the space the slots do not take. */
 .nc-clue{
@@ -581,7 +585,10 @@ button.tb-label{
      border — and even when it fitted, the boxes shifted about as the clock
      passed a digit. Stated tracks cannot do either: the boxes wrap inside their
      own column and the readings stay where they are. */
-  display:grid;grid-template-columns:2fr 1fr;align-items:center;
+  /* ONE TRACK NOW. The second held the clock and the score, which have moved
+     to the action row above the board — the strip is the letter boxes and
+     nothing else, which is what it was named for. */
+  display:grid;grid-template-columns:minmax(0,1fr);align-items:center;
   gap:8px 12px;overflow:hidden;
   background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);
   padding:6px 9px;margin:0 auto 8px;box-sizing:border-box;
@@ -1983,12 +1990,20 @@ body.rotate-needed .rotate-prompt{
      The zone is unchanged — still half the card each, still the whole height,
      so the target is as big as it ever was. Only the mark is back, at the
      OUTER edge of each half where a next/previous control is looked for. */
-  color:var(--ink-faint);font-size:22px;line-height:1;opacity:.5;
+  /* Bigger and heavier than the 22px/.5 they were. The mark is the only thing
+     saying the card is a control, and a chevron that quiet is one you meet by
+     accident. It is still a chevron at the card edge, not a button. */
+  color:var(--ink-faint);font:700 26px/1 var(--body);opacity:.62;
   display:flex;align-items:center;
 }
 .nc-arrow:hover,.nc-arrow:focus-visible{opacity:1}
 #prevClue{left:0;justify-content:flex-start}
 #nextClue{right:0;justify-content:flex-end}
+/* WHERE ONE HALF ENDS AND THE OTHER BEGINS. The two zones meet at the middle
+   of the card and nothing said so, which made a card-wide tap target something
+   you had to be told about. A dotted hairline on the inner edge of the left
+   half is the join, drawn faintly enough to read as part of the card. */
+#prevClue{border-right:1px dotted var(--line)}
 /* A hint of where the halves are, for a pointer only — a touch screen has no
    hover and gains nothing from it. */
 .nc-arrow:hover{background:var(--sel-word)}
@@ -2270,18 +2285,45 @@ body.flex-layout .grid{
 /* Board controls, bottom left of the frame. */
 .fx-zoom{position:absolute;left:8px;bottom:8px;z-index:6;display:none;gap:5px}
 body.flex-layout .fx-zoom{display:flex}
+/* THEY SIT ON THE BOARD, THEY DO NOT TAKE FROM IT.
+   fitFlex sizes the board to the whole frame and these float over it, so the
+   space they occupy is not space the board loses. What they did do is read as
+   two solid black slabs on a pale pitch — on a 375px phone the pair of them
+   plus the pill spanned most of the frame's bottom edge, which is why they
+   were reported as eating the board.
+   So the footprint stays 44px, because that is what a control has to be and
+   what render_test measures, and the chip painted inside it gets SMALLER —
+   34px centred in a 44px target, and the pill loses its padding.
+   IT DOES NOT GET FAINTER, and that was tried first: dropping the fill to 34%
+   black put white glyphs at about 2.7:1 against the pale pitch behind them,
+   under the 4.5:1 a label needs, and the minus and plus visibly washed out. A
+   control nobody can read is worse than one that is merely large. Smaller and
+   solid, not the same size and translucent. */
 .fx-zoom button{
-  width:44px;height:44px;border:0;border-radius:var(--r-md);
-  background:rgba(0,0,0,.5);color:#fff;font:600 17px var(--body);line-height:1;
+  width:44px;height:44px;border:0;background:none;padding:0;
+  color:#fff;font:600 17px var(--body);line-height:1;
+  display:flex;align-items:center;justify-content:center;position:relative;
 }
-.fx-zoom button:disabled{opacity:.35}
+.fx-zoom button::before{
+  /* BEHIND THE GLYPH. A positioned ::before paints after the element's own
+     text, so at first the chip covered the minus and the plus and they read as
+     faint grey through 55% black. z-index:-1 puts it back where a background
+     belongs; the button sets z-index:0 below, which gives it a stacking
+     context so the -1 cannot fall behind the pitch as well. */
+  content:"";position:absolute;left:5px;right:5px;top:5px;bottom:5px;z-index:-1;
+  border-radius:var(--r-md);background:rgba(0,0,0,.55);
+}
+.fx-zoom button > *,.fx-zoom button{z-index:0}
+.fx-zoom button:active::before{background:rgba(0,0,0,.72)}
+.fx-zoom button:disabled{opacity:.3}
 .fx-fit{
   position:absolute;right:8px;bottom:8px;z-index:6;display:none;
   min-height:44px;
-  border:0;border-radius:var(--r-pill);background:rgba(0,0,0,.5);color:#fff;
-  font:600 11px var(--body);text-transform:uppercase;letter-spacing:.06em;
-  padding:7px 12px;
+  border:0;border-radius:var(--r-pill);background:rgba(0,0,0,.55);color:#fff;
+  font:600 11px var(--body);text-transform:uppercase;letter-spacing:.04em;
+  padding:7px 10px;
 }
+.fx-fit:active{background:rgba(0,0,0,.72)}
 body.flex-layout .fx-fit{display:block}
 
 /* ============ FOCUS THE ACTIVE ANSWER ============
@@ -2314,6 +2356,37 @@ body.flex-layout.focus-word .cell{transition:opacity var(--t-fast) var(--ease-in
 body.flex-layout .tbar{
   flex:none;display:flex;align-items:center;gap:6px;
   padding:5px 8px;border-bottom:1px solid var(--line);background:var(--paper);
+}
+/* The readings take the left of the row and the controls keep the right. They
+   shrink before the buttons do: a clipped Check is a control you cannot use,
+   a clipped clock is a number you can still read most of. */
+body.flex-layout .tbar > .tb-readouts{
+  display:flex;align-items:baseline;gap:9px;min-width:0;flex:0 1 auto;
+  overflow:hidden;
+}
+body.flex-layout .tbar > .tb-readouts .live-chip{white-space:nowrap}
+/* WHAT THE ROW CAN AFFORD, measured at 375px: the readings came to 200px and
+   Check, Reveal and the cog to 183, which with the row's own padding is 399
+   against 375 — the cog went off the edge, and at 320 the row wrapped to
+   three. The numbers stay and the words go: "0:02 elapsed" under the minute
+   was 38px and "solved" beside the count 39px, and neither says anything the
+   figure beside it does not. */
+@media (max-width:560px){
+  body.flex-layout .tbar > .tb-readouts #elapsedLine,
+  body.flex-layout .tbar > .tb-readouts .live-chip small{ display:none; }
+  body.flex-layout .tbar > .tb-readouts{ gap:7px; }
+}
+/* Smaller still and the buttons give up their padding before anything is
+   dropped, because a control you cannot read is worse than a tight one. */
+@media (max-width:360px){
+  body.flex-layout .tbar{ gap:4px;padding:5px 6px; }
+  body.flex-layout .tbar .tbar-btn{ padding:6px 7px; }
+  /* And on the smallest phone the count goes as well. Measured at 320: with
+     the padding given up the row still ran to 362px against 320 and put the
+     cog off the edge. The clock and the score stay because one says how the
+     scoring is moving and the other is the score; how many of the eleven are
+     done is the one of the three the board itself already shows. */
+  body.flex-layout .tbar > .tb-readouts .live-chip{ display:none; }
 }
 body.flex-layout .tbar-right{margin-left:auto;display:flex;gap:6px;align-items:center}
 .tbar-menu{position:relative}

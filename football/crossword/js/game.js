@@ -286,7 +286,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v003o";
+  var BUILD = "v003p";
   try {
     window.CROSSWORDXI_BUILD = BUILD;
     console.log("Crossword XI build " + BUILD);
@@ -2270,7 +2270,13 @@
        a match minute and a points total, which is exactly where "0/11" on its
        own could be any of the three. The row has the width: the readouts end
        well short of the edge on a 375px phone. */
-    $("progressChip").textContent = solved + "/" + puzzle.entries.length + " solved";
+    /* The word is wrapped so a phone can drop it and keep the numbers: the
+       chip now sits in the action row beside Check and Reveal, where "solved"
+       is 39px that the buttons need more. Numbers by textContent, word by
+       markup — neither is player input. */
+    $("progressChip").textContent = solved + "/" + puzzle.entries.length;
+    $("progressChip").appendChild(document.createElement("small"))
+      .textContent = " solved";
   }
   function updateNudge() {
     if (!puzzle) return;

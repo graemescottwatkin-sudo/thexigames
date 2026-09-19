@@ -120,7 +120,7 @@
 <!-- The theme, stamped before first paint: light unless the player chose
      dark, decided in one shared place for every page of the family. -->
 <script src="/shared/xi-theme.js?v=v48"></script>
-<link rel="stylesheet" href="css/style.css?v=v003o">
+<link rel="stylesheet" href="css/style.css?v=v003p">
 </head>
 <body>
 <!-- The page's only H1, first thing in the body.
@@ -352,6 +352,22 @@
        one place — a second implementation of "reveal a letter" is two things
        that have to agree forever. -->
   <div class="tbar" id="tbar">
+    <!-- THE CLOCK AND THE SCORE LIVE IN THE ACTION ROW, not in a band of their
+         own. They sat to the right of the letter boxes, which cost the board a
+         second row below it for two numbers that are glanced at rather than
+         read. This row already exists and had space to the left of Check and
+         Reveal, so the readings take it and the strip below the board shrinks
+         to the letters it is named for. -->
+    <div class="tb-readouts" aria-label="Match state">
+      <div class="match-clock" id="matchClock" aria-label="Match clock">0'<small id="elapsedLine">0:00</small></div>
+      <div class="live-chip" id="progressChip" title="Answers solved">0 / 0</div>
+      <!-- The running score. It used to be read off the league table, and a
+           chip repeating it there was saying the same thing twice — but the
+           flex layout has no room for the table, so hiding it took the score
+           with it. Here it is the only place the number appears. -->
+      <div class="live-score" id="liveScoreChip" title="Points, falling as the clock runs">
+        <span id="liveScoreVal">114</span><small>pts</small></div>
+    </div>
     <div class="tbar-menu">
       <!-- Leaving is not a way of starting something, so it is not in the menu
            of things that start something. It was "Back to menu", third item
@@ -456,21 +472,6 @@
          is sized for words alone and the boxes for boxes alone. -->
     <div class="bank-strip">
       <div class="bank" id="letterBank"></div>
-      <!-- The clock and the count, on the right of the same strip. The boxes
-           only ever fill part of its width — eleven letters at most, usually
-           fewer — and the two readings are the things glanced at while solving,
-           so they belong beside the thing being solved rather than in a row of
-           controls below the board. -->
-      <div class="tb-readouts" aria-label="Match state">
-        <div class="match-clock" id="matchClock" aria-label="Match clock">0'<small id="elapsedLine">0:00</small></div>
-        <div class="live-chip" id="progressChip" title="Answers solved">0 / 0</div>
-        <!-- The running score. It used to be read off the league table, and a
-             chip repeating it there was saying the same thing twice — but the
-             flex layout has no room for the table, so hiding it took the score
-             with it. Here it is the only place the number appears. -->
-        <div class="live-score" id="liveScoreChip" title="Points, falling as the clock runs">
-          <span id="liveScoreVal">114</span><small>pts</small></div>
-      </div>
     </div>
 
     <div class="grid-wrap">
@@ -1105,7 +1106,7 @@
 
 <footer>
   <button id="statsBtn">My Season</button> &middot; <span id="streakLine"></span><br>
-  Crossword <span class="xi">XI</span> by The <span class="xi">XI</span> Games &middot; unofficial word puzzle &middot; <span id="buildTag">v003o</span> &middot;
+  Crossword <span class="xi">XI</span> by The <span class="xi">XI</span> Games &middot; unofficial word puzzle &middot; <span id="buildTag">v003p</span> &middot;
   <a href="privacy.html">privacy</a> &middot;
   <button id="skipToggle">skip filled: off</button> &middot;
   <button id="bankToggle">letter bank: on</button> &middot;
@@ -1134,7 +1135,7 @@
 <script src="/shared/xi-seasons.js?v=v48"></script>
 <script src="/shared/xi-clubs.js?v=v48"></script>
 <script src="/shared/xi-table.js?v=v48"></script>
-<script src="js/engine.js?v=v003o"></script>
-<script src="js/game.js?v=v003o"></script>
+<script src="js/engine.js?v=v003p"></script>
+<script src="js/game.js?v=v003p"></script>
 </body>
 </html>

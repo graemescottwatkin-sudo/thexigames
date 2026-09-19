@@ -260,24 +260,40 @@ t("and that strip is only as tall as the boxes need",
 t("the sentence now has the whole clue card",
   /\.grid-panel > \.now-clue \.nc-clue\{flex:1 1 100%\}/.test(flatCss));
 
-/* The boxes are as wide as the answer needs and no wider, so the right of the
-   strip was empty on every clue. The clock and the count now sit there —
-   beside the thing being solved rather than in a row of controls below the
-   board. */
-t("the answer boxes and the readings share the strip, boxes first", (() => {
+/* THE READINGS LEFT THE STRIP ON 19 SEP 2026, and the two checks that pinned
+   them here were rewritten rather than removed — the arrangement they
+   described is not the arrangement any more, and a check describing the old
+   one would have had to be deleted the next time somebody read it.
+   They shared the strip because the boxes never filled it and the right of it
+   was empty on every clue. What that cost was a band of its own below the
+   board for two numbers that are glanced at: on a 375px phone the strip was
+   86px and the board frame 235. In the action row above the board — which
+   already existed, for Check and Reveal — the readings cost nothing and the
+   strip falls to the 40px of boxes it is named for. */
+t("the strip is the answer boxes and nothing else", (() => {
   const html = fs.readFileSync(path.join(DIR, "index.html"), "utf8");
   const strip = html.slice(html.indexOf('class="bank-strip"'),
                            html.indexOf('class="grid-wrap"'));
   return strip.indexOf('id="letterBank"') > -1 &&
-    strip.indexOf('id="matchClock"') > strip.indexOf('id="letterBank"') &&
-    strip.indexOf('id="progressChip"') > -1;
+    strip.indexOf('id="matchClock"') === -1 &&
+    strip.indexOf('id="progressChip"') === -1;
 })());
-/* Two stated columns, two thirds and one third. Letting the two negotiate a
-   shared row meant a long answer took the space and pushed the readings outside
-   the rounded border — and even when it fitted, the boxes shifted about as the
-   clock passed a digit. A grid track cannot do either. */
-t("the strip is two stated columns, two thirds and one third",
-  /\.bank-strip\{[^}]*grid-template-columns:2fr 1fr/.test(flatCss));
+t("and the readings are in the action row, ahead of the controls", (() => {
+  const html = fs.readFileSync(path.join(DIR, "index.html"), "utf8");
+  const bar = html.slice(html.indexOf('class="tbar" id="tbar"'),
+                         html.indexOf('class="grid-panel"'));
+  return bar.indexOf('id="matchClock"') > -1 &&
+    bar.indexOf('id="progressChip"') > -1 &&
+    bar.indexOf('id="liveScoreVal"') > -1 &&
+    bar.indexOf('id="matchClock"') < bar.indexOf('class="tbar-right"');
+})());
+/* One stated column now the readings have gone. It was two — two thirds and
+   one third — because letting the boxes and the readings negotiate a shared
+   row meant a long answer took the space and pushed the readings outside the
+   rounded border, and even when it fitted the boxes shifted about as the clock
+   passed a digit. With nothing to negotiate against, the track is the strip. */
+t("the strip is one stated column",
+  /\.bank-strip\{[^}]*grid-template-columns:minmax\(0,1fr\)/.test(flatCss));
 t("the boxes wrap inside their column rather than widening it", (() => {
   /* Without min-width:0 a grid track grows to fit its contents, and a long
      answer would take the readings' third back. */
