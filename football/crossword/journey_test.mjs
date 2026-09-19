@@ -252,7 +252,7 @@ await section("What My Season counts", async (ctx) => {
      "0 played" beside three visible results is what an expired fixture looks
      like from the outside. Asked of dailyDate and localDateKey now, so the
      rows are on time whenever this runs. */
-  const { today, rows } = await probe.evaluate(() => {
+  const { today, rows, otherPhaseDay } = await probe.evaluate(() => {
     const n = window.FCW.dailyNumber();
     /* THE RUN ENDS AT TODAY, and on the family's first day today is the only
        board there is. This took the three days BEFORE today, which gave three
@@ -265,10 +265,36 @@ await section("What My Season counts", async (ctx) => {
        Counting back FROM today keeps at least one row on any day the site can
        be opened, and today's own board is as on-time as yesterday's — the
        grace rule admits both. */
-    const days = [n - 2, n - 1, n].filter((d) => d >= 1);
+    /* AND THE WINDOW MUST NOT STRADDLE THE PRE-SEASON LINE.
+       My Season shows ONE bucket: renderStats splits the results by phase and
+       counts the side today is on, which is right - a friendly is not a
+       matchday. Three days back from today does not respect that line. On
+       19 September 2026 today was #2, PRESEASON_DAYS is 1, so the window was
+       [1, 2]: one friendly and one matchday, seeded as two and correctly
+       counted as one. Red on the 19th and the 20th, green again on the 21st
+       once the window cleared the line - a suite that fails on the calendar
+       rather than on the code, which is the same fault the paragraph above
+       was written for and not a different one.
+
+       So the window is filtered to the phase today is in. It is short for the
+       first days of a season and that is honest: there genuinely are not three
+       matchdays yet. */
+    const inSeason = (d) => window.FCW.dailyPhase(d).phase !== "preseason";
+    const here = inSeason(n);
+    const days = [n - 2, n - 1, n].filter((d) => d >= 1)
+                                  .filter((d) => inSeason(d) === here);
+    /* A board from the OTHER side of the line, seeded alongside them. The
+       counts below are of today's bucket, so this row must change nothing -
+       and if the split ever stopped being applied it would change all of
+       them. Day 1 is a friendly whenever there is a pre-season at all, so
+       this keeps proving the split long after the window stops touching it. */
+    let other = null;
+    for (let d = n; d >= 1; d--) if (inSeason(d) !== here) { other = d; break; }
+    const seeded = other === null ? days : days.concat([other]);
     return {
       today: n,
-      rows: days.map((d) => ({
+      otherPhaseDay: other,
+      rows: seeded.map((d) => ({
         date: window.FCW.localDateKey(window.FCW.dailyDate(d)),
         dailyNo: d,
         phase: window.FCW.dailyPhase(d).phase,
@@ -280,7 +306,10 @@ await section("What My Season counts", async (ctx) => {
   });
   await probe.close();
 
-  const days = rows;
+  /* What the sheet should say: the rows in TODAY's bucket. `rows` may carry
+     one more from the other side of the pre-season line, seeded precisely so
+     that it is not counted. */
+  const days = rows.filter((r) => r.dailyNo !== otherPhaseDay);
   const results = JSON.stringify(rows);
   /* Opened from the landing nav, not from the footer. #statsBtn lives in the
      footer, which is display:none once a board is on screen — and on a phone
@@ -291,7 +320,18 @@ await section("What My Season counts", async (ctx) => {
   await page.waitForTimeout(500);
   const sub = ((await page.textContent("#statsSub")) || "").trim();
   t("My Season counts every board that was played",
-    sub.indexOf(String(days.length)) === 0, `${days.length} seeded — "${sub}"`);
+    sub.indexOf(String(days.length)) === 0,
+    `${days.length} in this phase of ${rows.length} seeded — "${sub}"`);
+  /* The same number, read as the statement it is: the friendly seeded beside
+     them was not added in. Said out loud when there is no such board to seed,
+     rather than passing quietly on a fixture that could not fail. */
+  if (otherPhaseDay === null) {
+    console.log("      note: no board on the other side of the pre-season line to seed; the split is not exercised");
+  } else {
+    t("a board from the other side of the pre-season line is not counted",
+      sub.indexOf(String(days.length)) === 0,
+      `daily #${otherPhaseDay} seeded too; the sheet should still say ${days.length} — "${sub}"`);
+  }
 
   await page.click("#statsClose", { timeout: 5000 }).catch(() => {});
   /* Read out of the sheet rather than off the footer line, for the same
