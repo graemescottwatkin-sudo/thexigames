@@ -76,6 +76,15 @@ body.touch .osk { display: block; }
      letters smaller on a phone than they were before, while fixing the tablet. */
   font-size: clamp(16px, calc(var(--osk-key) * .42), 26px);
   color: var(--ink);
+  /* TWO QUICK TAPS ON ONE KEY IS A DOUBLE LETTER, NOT A ZOOM.
+     iOS reads two taps near the same point as double-tap-to-zoom, and on this
+     keyboard that gesture IS a legitimate one: SKELLY, BRENTFORD, every word
+     with a repeated letter. Without this a player typing one had the page
+     blow up instead — reported on a phone against the crossword, whose own
+     controls were fixed in v003r while these keys, being shared, were not.
+     `manipulation` drops only the double-tap; panning and pinch-zoom on the
+     page are untouched. */
+  touch-action: manipulation;
 }
 .osk-key:active { background: var(--sel); }
 .osk-key.wide {

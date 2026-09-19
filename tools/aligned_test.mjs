@@ -977,8 +977,8 @@ t("and no game writes the link itself", (() => {
   return guilty.length === 0;
 })(), "the href lives once, in shared/xi-chrome.js");
 
-const SHARED_TAG = "v48";
-const SHARED_HASH = "842a089aaa437ea9";
+const SHARED_TAG = "v49";
+const SHARED_HASH = "ba6ba7c0c124e0d9";
 /* EVERY PAGE THAT LINKS THE SHARED LAYER, not the games alone. The hub, the
    two static pages and the unlaunched game all carry the chrome now, and the
    server-rendered shell writes the tag from a constant of its own — so a tag
