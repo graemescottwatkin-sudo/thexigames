@@ -286,7 +286,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v003n";
+  var BUILD = "v003o";
   try {
     window.CROSSWORDXI_BUILD = BUILD;
     console.log("Crossword XI build " + BUILD);
@@ -1253,6 +1253,12 @@
       : (board.kind === "theme" && themeLabel
           ? "Club or theme &middot; " + escapeHtml(themeLabel)
           : "Training");
+    /* The bar's copy, taken from the strap rather than rebuilt: on a phone the
+       strap is not on screen and this is the only thing naming the board. Text
+       only, so the answers link does not go with it — a link in the bar
+       would be a second route to a page the strap already offers wherever the
+       strap is visible. */
+    if ($("barBoard")) $("barBoard").textContent = $("strapText").textContent;
     $("dailyBtn").style.display = board.kind === "daily" ? "none" : "";
     document.title = board.kind === "daily"
       ? FCW.dailyPhase(board.no).label + " \u00B7 Crossword XI"

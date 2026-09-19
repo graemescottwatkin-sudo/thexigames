@@ -120,7 +120,7 @@
 <!-- The theme, stamped before first paint: light unless the player chose
      dark, decided in one shared place for every page of the family. -->
 <script src="/shared/xi-theme.js?v=v48"></script>
-<link rel="stylesheet" href="css/style.css?v=v003n">
+<link rel="stylesheet" href="css/style.css?v=v003o">
 </head>
 <body>
 <!-- The page's only H1, first thing in the body.
@@ -281,7 +281,14 @@
      it. The burger and the wordmark are inserted by shared/xi-chrome.js, so
      this bar and the word search's are the same bar rather than two that look
      alike. -->
-<header class="xic-bar"></header>
+<header class="xic-bar">
+  <!-- WHICH BOARD IS ON SCREEN, on phones only. The masthead block below is
+       hidden in-game at phone widths to give its 55px to the board, and the
+       strap inside it is the one thing on the page that says which board this
+       is. Rather than lose it, it is repeated here, WRITTEN FROM THE STRAP so
+       the two cannot disagree. Empty and hidden until a board is dealt. -->
+  <span class="cw-bartitle" id="barBoard"></span>
+</header>
 
 <header>
   <div class="masthead">Crossword <span class="xi">XI</span></div>
@@ -1098,7 +1105,7 @@
 
 <footer>
   <button id="statsBtn">My Season</button> &middot; <span id="streakLine"></span><br>
-  Crossword <span class="xi">XI</span> by The <span class="xi">XI</span> Games &middot; unofficial word puzzle &middot; <span id="buildTag">v003n</span> &middot;
+  Crossword <span class="xi">XI</span> by The <span class="xi">XI</span> Games &middot; unofficial word puzzle &middot; <span id="buildTag">v003o</span> &middot;
   <a href="privacy.html">privacy</a> &middot;
   <button id="skipToggle">skip filled: off</button> &middot;
   <button id="bankToggle">letter bank: on</button> &middot;
@@ -1127,7 +1134,7 @@
 <script src="/shared/xi-seasons.js?v=v48"></script>
 <script src="/shared/xi-clubs.js?v=v48"></script>
 <script src="/shared/xi-table.js?v=v48"></script>
-<script src="js/engine.js?v=v003n"></script>
-<script src="js/game.js?v=v003n"></script>
+<script src="js/engine.js?v=v003o"></script>
+<script src="js/game.js?v=v003o"></script>
 </body>
 </html>

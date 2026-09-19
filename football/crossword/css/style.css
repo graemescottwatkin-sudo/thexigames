@@ -71,6 +71,57 @@ header .masthead{font-size:clamp(19px,3.4vw,26px);letter-spacing:.1em}
 @media (max-height: 580px) {
   header{ display:none; }
 }
+
+/* PHONES GIVE THE BOARD THE SAME HEIGHT, AT ANY VIEWPORT HEIGHT.
+   The two rules above are the same argument as this one and they were keyed on
+   HEIGHT, which is why they never fired for the player who reported it: a 390
+   x 844 iPhone is not a short screen. What squeezes the board there is not the
+   viewport, it is everything stacked in it — bar, masthead, toolbar, letter
+   strip, clue card and keyboard — and that stack is the same however tall
+   the phone is. Measured on a 390x714 sheet before this block: the board frame
+   had 229px of 714, under a third of the screen.
+   So the same things go on a phone by WIDTH, and each one goes because it is
+   already somewhere else on screen, not to make room by taking something away:
+     - the masthead repeats the wordmark in the bar one row up;
+     - the strap moves INTO that bar (#barBoard), so nothing is lost;
+     - the house button repeats the bar's wordmark, which goes home;
+     - Daily repeats the landing the wordmark leads to;
+     - Log in repeats the bar's own Sign in / Account.
+   The clue card keeps its place and loses only slack. */
+@media (max-width: 560px) {
+  body.flex-layout:not(.home-showing) > header:not(.xic-bar){ display:none; }
+  body.flex-layout:not(.home-showing) #tbHome,
+  body.flex-layout:not(.home-showing) #tbMode,
+  body.flex-layout:not(.home-showing) #tbSignIn{ display:none; }
+  /* THE CLUE CARD LOSES ONLY SLACK, AND THE FLOOR IS MEASURED.
+     The first attempt took it to 76px and added overflow-y:auto, which
+     viewport_test refused — rightly, and it names the reason: a clue readable
+     only by scrolling inside a small card is one nobody discovers, and that
+     had already shipped once. A clue cut off mid-word is unsolvable rather
+     than untidy, so the height is set by the WORST clue.
+     Measured at 390x714 with a 152-character clue at the xxlong step: it draws
+     three lines and needs 69px inside the card. 88px held it, 80px clipped.
+     104 leaves room for a fourth line, which is the step xxlong exists for.
+     Saving 14px rather than the 42 first tried is the honest number. */
+  body.flex-layout:not(.home-showing) .now-clue{ height:104px; }
+}
+/* The bar's copy of the strap. Hidden wherever the strap itself is on screen,
+   so the board is named once and only once. */
+.cw-bartitle{ display:none; }
+@media (max-width: 560px) {
+  body.flex-layout:not(.home-showing) .cw-bartitle{
+    display:block;
+    /* Tracking is what costs the room here. At .16em "Today's puzzle · Sat
+       19 Sept" measured 155px and truncated to "SAT 19 SE…" beside a signed-in
+       name — losing the end of the date, which is the half that identifies
+       the board. Tightened until it fits; it is a label in a bar, not a strap
+       across a masthead, so it does not need the same air. */
+    font-family:var(--disp);font-weight:600;letter-spacing:.06em;
+    font-size:10px;text-transform:uppercase;color:var(--pitch);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    flex:0 1 auto;min-width:0;
+  }
+}
 .masthead{
   font-family:var(--disp);font-weight:700;letter-spacing:.12em;
   font-size:clamp(24px,4vw,34px);text-transform:uppercase;
