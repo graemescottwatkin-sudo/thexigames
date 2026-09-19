@@ -609,6 +609,18 @@ button.tb-label{
 .bank-cell.gold{background:var(--gold);color:var(--gold-ink);border-color:var(--gold)}
 .bank-cell.gold-ans{background:var(--revealed-bg);color:var(--gold-ink);border-color:var(--revealed-bg)}
 .bank-cell.here{box-shadow:inset 0 0 0 2px var(--pitch)}
+/* Tapping a box moves the caret to that letter, so it takes a press cleanly:
+   no text selection on a double tap, no grey flash from the platform.
+   NOT ENLARGED TO 44px, and that was tried and undone. Making the element the
+   tap size the control rule asks for grew the strip from 86px to 104px and
+   took all eighteen off the board frame — which is the FIRST thing the
+   player who asked for this complained about ("only that little slit to
+   operate in"). It is the same trade the on-screen keys are exempted for, and
+   it comes out the same way. The board's own squares are the precedent and
+   they are 19px on this phone: a square is small, labelled, and tapped, and a
+   bank box is a second view of a square. */
+.bank-cell{cursor:pointer;-webkit-user-select:none;user-select:none;
+  -webkit-tap-highlight-color:transparent}
 .bank-gap{width:9px}
 .nc-arrow{min-height:44px;min-width:44px;
   background:none;border:1px solid var(--line);border-radius:var(--r-sm);

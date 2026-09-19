@@ -286,7 +286,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v003m";
+  var BUILD = "v003n";
   try {
     window.CROSSWORDXI_BUILD = BUILD;
     console.log("Crossword XI build " + BUILD);
@@ -2518,6 +2518,20 @@
      played a crossword before expects a letter to go where the cursor is. */
   var skipFilled = false;
   try { skipFilled = localStorage.getItem("fcw.skip") === "on"; } catch (e) {}
+  /* Move the caret to one letter of the entry the bank is showing. Guarded on
+     the same things renderBank is: with no board, or before kick off, the boxes
+     are not there to tap, and a stale handler must not move a caret into a
+     puzzle that has gone. */
+  function bankJump(i, ev) {
+    if (!puzzle || !started || paused) return;
+    var e = puzzle.entries[cur.entry];
+    if (!e || i < 0 || i >= e.cells.length) return;
+    cur.cell = i;
+    skipExempt = cur.entry;
+    updateSelection(); startTimer();
+    if (ev && ev.preventDefault) ev.preventDefault();
+  }
+
   function renderBank(e) {
     var el = $("letterBank");
     el.innerHTML = "";
@@ -2540,6 +2554,30 @@
         (revealedCells[k] ? " gold" : (revealAnswerCells[k] ? " gold-ans" : "")) +
         (i === cur.cell ? " here" : "");
       d.textContent = ch;
+      /* AND IT IS A WAY IN, not only a read-out.
+         A player who mistypes one letter of a ten-letter answer could see the
+         wrong letter sitting here and had no way to reach it: the only route
+         to a square was the square itself, and on a phone the board is small
+         enough that finding it is the hard part. Reported 19 Sep 2026 by a
+         player on an iPhone — "if I write Real Madrid and put an o instead
+         of an i in Madrid, I can't just click the o box, I have to try find it
+         on the tiny crossword or start from R."
+         Tapping a box moves the caret to that letter of the SAME entry, which
+         is the only thing the bank shows. Direction cannot change here and no
+         other entry is reachable, so this is a strictly smaller act than
+         tapping a square, and it borrows that act's rule: a deliberate tap
+         means the next letter typed overwrites rather than skips. */
+      /* LABELLED LIKE A SQUARE, NOT MARKED UP AS A BUTTON. The board's own
+         squares are plain divs carrying an aria-label inside a role="grid",
+         and they are 19px on a phone — a bank box is a second view of one
+         of those squares and is described the same way. role="button" would
+         also pull them into render_test's 44px control rule, which they cannot
+         meet without taking that height off the board. */
+      d.setAttribute("aria-label", "Letter " + (i + 1) + " of " + e.cells.length +
+        (ch ? ", " + ch : ", empty"));
+      (function (idx) {
+        d.addEventListener("mousedown", function (ev) { bankJump(idx, ev); });
+      })(i);
       word.appendChild(d);
       if (brk[i]) {          // mirror the enumeration's word boundaries
         word = document.createElement("div");

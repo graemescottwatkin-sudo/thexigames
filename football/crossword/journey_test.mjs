@@ -198,6 +198,61 @@ await section("Playing a puzzle through to Full Time", async (ctx) => {
     `${phase}: ${note.slice(0, 70) || "(no note)"}`);
 });
 
+/* ---------- 1b. The letter bank is a way in, not only a read-out ---------- */
+await section("Fixing one letter without hunting for the square", async (ctx) => {
+  const page = await openGame(ctx);
+  await kickOff(page);
+  await page.waitForTimeout(600);
+
+  /* THE COMPLAINT THIS ANSWERS, from a player on an iPhone, 19 Sep 2026:
+     "if I write Real Madrid and put an o instead of an i in Madrid, I can't
+     just click the o box, I have to try find it on the tiny crossword or start
+     from R." The bank showed the wrong letter and could not be used to reach
+     it; the only route to a square was the square, and on a phone the squares
+     are 19px. */
+  const n = await page.locator(".bank-cell").count();
+  t("the bank shows a box for every letter of the clue", n > 2, `${n} boxes`);
+
+  /* Type into the answer so there is a letter to go back to, then reach the
+     third one by tapping its box rather than by finding the square. */
+  const word = "ABCDE".slice(0, Math.min(5, n)).split("");
+  for (const ch of word) {
+    await page.evaluate((c) => document.dispatchEvent(
+      new KeyboardEvent("keydown", { key: c, bubbles: true })), ch);
+  }
+  await page.waitForTimeout(300);
+  const before = await page.evaluate(() =>
+    [...document.querySelectorAll(".bank-cell")].map((c) => c.textContent || ".").join(""));
+
+  await page.locator(".bank-cell").nth(2).dispatchEvent("mousedown");
+  await page.waitForTimeout(300);
+  const here = await page.evaluate(() =>
+    [...document.querySelectorAll(".bank-cell")].findIndex((c) => c.classList.contains("here")));
+  t("tapping a box moves the caret to that letter", here === 2, `caret at ${here}`);
+
+  await page.evaluate(() => document.dispatchEvent(
+    new KeyboardEvent("keydown", { key: "Z", bubbles: true })));
+  await page.waitForTimeout(300);
+  const after = await page.evaluate(() =>
+    [...document.querySelectorAll(".bank-cell")].map((c) => c.textContent || ".").join(""));
+  t("and the next letter typed lands there, not back at the start",
+    after[2] === "Z" && after[0] === before[0],
+    `"${before}" then Z at the tapped box gave "${after}"`);
+
+  /* AND IT COSTS THE BOARD NOTHING. The first thing the same player said was
+     that the board was "that little slit to operate in", so a fix that made
+     the boxes bigger and took the height off the frame would have answered the
+     smaller half of their message by worsening the larger. Asserted here
+     rather than trusted: the boxes stay the size the strip was built for. */
+  const m = await page.evaluate(() => {
+    const c = document.querySelector(".bank-cell").getBoundingClientRect();
+    return { cell: Math.round(c.height),
+             strip: Math.round(document.querySelector(".bank-strip").getBoundingClientRect().height) };
+  });
+  t("and the strip did not grow to pay for it", m.strip <= 92,
+    `box ${m.cell}px in a ${m.strip}px strip`);
+});
+
 /* ---------- 2. A failed action must cost nothing ---------- */
 await section("Losing the connection mid-game", async (ctx) => {
   const page = await openGame(ctx);
