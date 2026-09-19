@@ -695,8 +695,20 @@ button.tb-label{
    quick taps on the same key is how a double letter is typed. Its keys are in
    shared/xi-keys.css, so that is a change to the shared layer and to every
    game that loads it, not to this one. */
-.now-clue,.nc-arrow,.nc-meta,.bank-cell,
-.tbar-btn,.fx-zoom button,.fx-fit{ touch-action:manipulation; }
+/* THE SURFACE, NOT A LIST OF CONTROLS. This named the clue card, the arrows,
+   the letter boxes, the toolbar buttons and the zoom controls — and a tap
+   that landed BETWEEN any of them, on the panel behind the card or the gap
+   above the keyboard, was still an uncovered double-tap. It was reported again
+   on v003s for exactly that reason: the list was right about every element on
+   it and the page is not a list of elements.
+   On the body it covers the whole class at once and the rules below it can go.
+   `manipulation` disables double-tap-to-zoom and NOTHING else — pinch-zoom
+   is explicitly preserved by the spec, which is the line this stops at: a
+   player who needs to magnify a 15px clue still can. The board frame keeps its
+   own touch-action:none, which is more restrictive and so still wins there,
+   and it earns that by implementing pan and pinch itself. */
+body{ touch-action:manipulation; }
+
 .bank-gap{width:9px}
 .nc-arrow{min-height:44px;min-width:44px;
   background:none;border:1px solid var(--line);border-radius:var(--r-sm);
@@ -2809,3 +2821,18 @@ body.home-showing .tbar{visibility:hidden}
 /* A DAY BEHIND THE FREE WINDOW. Shown rather than hidden: what is behind the
    lock is the reason to register, and a day that vanished from the grid would
    say nothing at all. */
+
+
+/* iOS ZOOMS ANY FIELD IT FOCUSES BELOW 16px, AND DOES NOT ZOOM BACK OUT.
+   #chName was already 17px. #flagNote was 15 and .ch-make input 14, and the
+   flag is reachable mid-solve from the clue card — so reporting a bad clue
+   left the player zoomed into a dialog with no way back but pinching.
+
+   LAST IN THE FILE ON PURPOSE. Written as input[type="text"] up where the
+   touch rules are, it lost: `.ch-make input` and `.acct-field input` are the
+   same specificity and come later, so the 14px and 15px won and the fields
+   still measured 14 and 15 in the browser. Specificity ties are settled by
+   order, so the floor goes where nothing can follow it.
+   Player-facing fields only. The admin panel's 13px is denser on purpose and
+   nobody but the owner ever focuses it. */
+#flagNote,.ch-make input,.acct-field input{ font-size:16px; }
