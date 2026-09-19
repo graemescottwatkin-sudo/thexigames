@@ -31,7 +31,7 @@ const readRoot = (p) => fs.readFileSync(path.join(ROOT, p), "utf8");
 
 /* WHAT IS LIVE. Not a sentinel — a constant nothing moves is a comparison
    against nothing. Set on the first deploy after launch and never backwards. */
-const LAST_SHIPPED = "v001q";
+const LAST_SHIPPED = "v001r";
 /* THE HALF THAT CARRIES THE LAW. A version number can only refuse a tag that
    goes BACKWARDS; it cannot see changed bytes under a tag that has not moved,
    which is the common case and the dangerous one.
@@ -41,7 +41,7 @@ const LAST_SHIPPED = "v001q";
    shape tools/post_deploy.mjs recognises and overwrites with the real hash of
    the bytes it has just confirmed live, and until then the tag comparison
    above carries the law on its own because the tree is ahead of live. */
-const LAST_SHIPPED_ASSETS = "7302a03d0d087b9c";
+const LAST_SHIPPED_ASSETS = "805bd9a14dbf25fe";
 
 console.log("Ballpark XI — gate\n");
 
