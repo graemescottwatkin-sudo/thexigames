@@ -90,6 +90,10 @@ const VIEWPORTS = [
    deducts points for a wrong check are worse than mis-taps elsewhere. */
 const MIN_TAP = 44;
 
+/* The smallest cell a player can read a letter and a clue number in on glass.
+   Deliberately a separate number from MIN_TAP: a cell is read, not tapped. */
+const MIN_CELL = 32;
+
 let failures = [];
 const check = (name, ok, detail) => {
   if (ok) return;
@@ -216,6 +220,14 @@ const MEASURE = `() => {
     toolbarBottom: toolbar ? Math.round(toolbar.bottom) : null,
     clueTop:    clueCard ? Math.round(clueCard.top)    : null,
     clueBottom: clueCard ? Math.round(clueCard.bottom) : null,
+
+    /* Which board mode a page with no saved preference opened on, and whether
+       this is a finger or a mouse. Read from the page rather than assumed from
+       the viewport name, because the game decides from the cell it actually
+       drew and from the pointer, not from a width. */
+    focusWord: document.body.classList.contains("focus-word"),
+    savedMode: (function () { try { return localStorage.getItem("fcw.fxmode"); } catch (e) { return "unreadable"; } })(),
+    coarsePointer: !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches),
 
     cellW: cellBox ? +cellBox.width.toFixed(1)  : null,
     cellH: cellBox ? +cellBox.height.toFixed(1) : null,
@@ -484,6 +496,40 @@ const run = async () => {
         check(`${label} grid starts on screen`, m.gridTop >= -1, `top=${m.gridTop}`);
         check(`${label} grid ends within viewport`, m.gridBottom <= h + 2,
               `bottom=${m.gridBottom} vs ${h}`);
+      }
+
+      /* THE BOARD A FRESH PLAYER IS SHOWN IS LEGIBLE.
+         Thirty-two pixels is this file's own floor, stated here rather than
+         read out of game.js: a test that imported the threshold it is checking
+         would agree with any value the game happened to hold, including a
+         broken one. It is the same kind of claim as MIN_TAP above — what a
+         letter and a clue number need on glass — and the two must be reviewed
+         together if either moves.
+
+         Measured with the switch disabled, it fails on SIX of the sixteen
+         viewports: phone 390x844 at 20px, phone-393 at 20.5, phone-360 at
+         16.4, phone-small 320x568 at 11.6, and the two touch landscape tablets
+         at 21.1 and 25.5. Six and not nine — the three landscape PHONES draw
+         2.7 to 3.4px and never reach here, because a landscape phone shows the
+         rotate prompt instead of a board and `started` stays false. Counted by
+         running the sabotage rather than by reading the viewport list, which
+         would have said nine.
+
+         Only where there is no saved preference. A player who has chosen a
+         mode keeps it, so a run that somehow carried one would be measuring
+         the preference rather than the default. */
+      if (started && m.flexLayout && m.cellW !== null && !m.savedMode) {
+        if (m.coarsePointer) {
+          check(`${label} a touch board opens legible`, m.cellW >= MIN_CELL,
+                `${m.cellW}px on a coarse pointer and still on Fit board`);
+        } else {
+          /* AND IT STAYS OFF DESKTOPS. The first cut of this measured the cell
+             alone, which moved 1366x768 and 1280x720 laptops — 30.7px and
+             27.5px, both under the floor — to one word at a time. Nothing
+             asked for that. A mouse keeps the whole board whatever the cell. */
+          check(`${label} a mouse keeps the whole board`, !m.focusWord,
+                `defaulted to Follow word at ${m.cellW}px with a fine pointer`);
+        }
       }
 
       if (m.cellW !== null) {

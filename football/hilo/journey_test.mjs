@@ -155,23 +155,72 @@ t("a play was started under this game's name", plays.length === 1 && plays[0].ev
    is still caught; what it no longer does is invent a number out of two that
    happen to be adjacent. The ladder is left out because its text IS the
    numbers 1 to 11 and nothing else — a board whose value is 7 would otherwise
-   be reported by the rung. */
+   be reported by the rung.
+
+   THE ANSWER SHEET IS LEFT OUT FOR THE SAME REASON, found 19 Sep 2026 while
+   chasing a different false positive on this line. Before a single call it is
+   a skeleton of eleven rows reading "1" to "11" and nothing else, exactly like
+   the ladder, and it was being scanned - so any board with a value of 2 to 11
+   would have been reported as leaking it. Caps and goals do not reach down
+   there, which is the only reason this had never fired; a category counting
+   titles or trophies would have. Nothing is lost by excluding it, because the
+   check below asserts the sheet is that skeleton and nothing more, which is a
+   stronger statement than scanning it for digits. */
 const numbersOnPage = () => {
   const found = new Set();
   const ladder = $("ladder");
+  const sheet = $("sheet");
   const walk = doc.createTreeWalker(doc.body, window.NodeFilter.SHOW_TEXT);
   for (let n = walk.nextNode(); n; n = walk.nextNode()) {
     if (ladder && ladder.contains(n)) continue;
+    if (sheet && sheet.contains(n)) continue;
     (String(n.nodeValue).match(/\d+/g) || []).forEach((d) => found.add(d));
   }
   return found;
 };
+/* A NUMBER CANNOT BE ATTRIBUTED TO A PLAYER, AND A CHAIN MAY REPEAT ONE.
+   Board 1016 opens on Tony Adams with 66 caps and reaches Paul Scholes, who
+   also has 66. The reference IS meant to be on the page — it is printed on the
+   left, in the question and on both buttons — so scanning for the digits and
+   blaming the later rung reported a leak on a board that had leaked nothing.
+   It went red on 19 Sep 2026 and had been green the day before on board 1015,
+   which happens to have no repeat: a suite that passes or fails on which
+   board the calendar hands it is not measuring the code.
+
+   So a value equal to the reference is exempt, and that is a REAL loss of
+   cover, stated rather than hidden: if Scholes's 66 genuinely leaked, this
+   could not see it, because 66 is already on the page legitimately and the two
+   are the same two characters.
+
+   A name-beside-a-number scan does not rescue it and was not written. The
+   question reads "Paul Scholes — lower or higher than 66?", so the subject's
+   name and the leaked digits sit in the same element on a repeat board by
+   design — it would fail on 1016 for the same reason this did.
+
+   What covers the exempted case is attribution BY SLOT rather than by digits,
+   which a repeat cannot confuse: the right-hand value is a question mark, and
+   nothing has settled yet, asserted below. A value can only be read off this
+   page from a slot that belongs to a rung, and those slots are empty. */
 {
   const onPage = numbersOnPage();
-  const leaked = board.chain.slice(1).filter((r) => onPage.has(String(r.value)));
+  const reference = String(board.chain[0].value);
+  const leaked = board.chain.slice(1)
+    .filter((r) => String(r.value) !== reference)
+    .filter((r) => onPage.has(String(r.value)));
   t("no value beyond the first is anywhere on the page",
     leaked.length === 0,
     leaked.map((r) => r.name + "=" + r.value).join(", ") || "none of the ten");
+  /* The companion the exemption leans on. Digits can be repeated; a slot
+     cannot — nothing has been called, so no rung owns a value on screen. */
+  const rows = Array.from(doc.querySelectorAll("#sheet li"));
+  const bare = rows.length === 11 &&
+    rows.every((li, i) => li.textContent.trim() === String(i + 1));
+  t("and no rung owns a value on screen yet",
+    doc.querySelectorAll(".duel.settled").length === 0 &&
+    bare && $("right").querySelector(".val").textContent === "?",
+    doc.querySelectorAll(".duel.settled").length + " settled, sheet " +
+    JSON.stringify(rows.map((li) => li.textContent.trim()).join("|")) +
+    ", right=" + JSON.stringify($("right").querySelector(".val").textContent));
 }
 
 console.log("\n=== The calls ===");

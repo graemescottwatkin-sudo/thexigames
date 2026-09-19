@@ -286,7 +286,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v003l";
+  var BUILD = "v003m";
   try {
     window.CROSSWORDXI_BUILD = BUILD;
     console.log("Crossword XI build " + BUILD);
@@ -1845,6 +1845,15 @@
      A first-run default, not a rule — whatever was last chosen still wins. */
   var fxMode = "board";
   var FX_WORD_K = 1.6;               // magnification held in word board.kind
+  /* THE CELL BELOW WHICH A WHOLE BOARD IS NOT WORTH SHOWING. One number, used
+     twice: it decides the first-run default below and it is the same size at
+     which the Follow word tip used to be offered — offering a mode that is
+     already on would be a tip about nothing. */
+  var FX_SMALL_CELL = 32;
+  /* Whether the player has ever expressed a preference. A saved mode always
+     wins; the automatic choice is only for somebody who has never chosen. */
+  var fxModeSaved = false;
+  var fxAutoDone = false;
 
   function fxWordBox() {
     var e = puzzle && puzzle.entries[cur.entry];
@@ -1955,6 +1964,56 @@
        silently revert to fitted after every clue change. */
     if (fxMode === "word") { fxDoFit("whole"); fxFollow(); }
     else fxDoFit(fxMode === "manual" ? "width" : "whole");
+    maybeDefaultToWord();
+  }
+
+  /* FOLLOW WORD IS THE DEFAULT WHERE THE BOARD IS TOO SMALL TO READ.
+   *
+   * The reasoning above for starting on the whole board still stands and is
+   * not being overturned: a first screen showing one word does not tell
+   * somebody they have a crossword, so they are shown the thing and left to
+   * narrow it. That argument is about a board they can SEE. On a phone the
+   * fitted cell is around 20px and on the smallest ones under 12, and a board
+   * nobody can read tells them nothing either — the choice there is between
+   * one legible word and eleven illegible ones.
+   *
+   * WHAT THIS DOES NOT DO. It never overrides a saved preference: anybody who
+   * has ever pressed Fit board or Follow word keeps what they chose, on every
+   * screen. It runs once per page rather than on every relayout, so rotating a
+   * phone or opening the keyboard cannot flip the board out from under a
+   * player mid-answer. And it is measured from the cell as actually DRAWN —
+   * FX_BASE through the fitted scale — not from a viewport width, because the
+   * question is whether the letters are legible rather than which device this
+   * is.
+   *
+   * AND IT IS FOR FINGERS, NOT FOR SMALL CELLS ANYWHERE. The drawn cell alone
+   * was not the right rule and the viewport matrix said so: a 1366x768 laptop
+   * fits a 30.7px cell and a 1280x720 one a 27.5px cell, both under the
+   * threshold, so legibility on its own moved every short laptop to one word
+   * at a time. Nobody asked for that and nobody complained about it — the
+   * complaint was a phone. What actually separates the two is not size but
+   * whether the board is panned with a finger or a mouse, so a coarse pointer
+   * is required as well. Measured across the sixteen viewports render_test
+   * uses: false on every desktop and laptop, true on every phone and tablet
+   * including landscape, which is exactly the line wanted.
+   */
+  function maybeDefaultToWord() {
+    if (fxAutoDone || fxModeSaved || fxMode !== "board" || !flexOn || !puzzle) return;
+    /* NOT UNTIL THE FRAME HAS BEEN MEASURED. fitFlex guards on the puzzle but
+       not on the frame, so it can fit against a wrap that reports zero, where
+       the scale is still 1 and the cell reads 34px — comfortably above the
+       threshold. Latching a once-per-page decision there would answer the
+       question against a board that had not been drawn yet and never look
+       again. Measured at 390x844 the first call already has the frame, so this
+       has not been seen to fire; it is not the fix for anything observed. */
+    var wrap = document.querySelector(".grid-wrap");
+    if (!wrap || !wrap.clientWidth || !wrap.clientHeight) return;
+    fxAutoDone = true;
+    var coarse = !!(window.matchMedia && window.matchMedia("(pointer: coarse)").matches);
+    if (!coarse) return;
+    if (FX_BASE * fxScale >= FX_SMALL_CELL) return;
+    fxMode = "word";
+    applyFxMode();
   }
 
   function fitCells() {
@@ -6700,7 +6759,7 @@
      anything runs it. */
   try {
     var fm = localStorage.getItem("fcw.fxmode");
-    if (fm === "word" || fm === "manual" || fm === "board") fxMode = fm;
+    if (fm === "word" || fm === "manual" || fm === "board") { fxMode = fm; fxModeSaved = true; }
   } catch (e) {}
   applyFxModeQuiet();
   setLayout();
