@@ -332,15 +332,47 @@ export const THEME_OF = {
   crossword: "football", wordsearch: "football", scrambled: "football",
   hilo: "football", vowels: "football", quickfire: "football", grid: "football",
   codeword: "football", whoami: "football", ballpark: "football",
+  /* THE FIRST GAME OF THE SECOND THEME. Its id is not `crossword` because that
+     one is football's and an id maps to exactly one theme; its SLUG is, so the
+     address reads /friends/crossword/. Nothing is served from it until the
+     game is built and launched — an entry here builds a path, it does not
+     make a game. */
+  crossword_fr: "friends",
 };
 export const themeOf = (game) => THEME_OF[game] || "football";
-export const gamePath = (game) => `/${themeOf(game)}/${game}/`;
+
+/* THE ID AND THE ADDRESS ARE TWO FACTS, and they were one until 20 Sep 2026.
+ *
+ * A game id has to be unique across the family: it keys results and plays
+ * rows, the storage prefix, THEME_OF, the GAMES list. The URL segment wants
+ * the opposite — /friends/crossword/ should read like /football/crossword/,
+ * because to a player they are both "the crossword" and the theme in front of
+ * it is what distinguishes them.
+ *
+ * Those two wants collide the moment a second theme has a crossword: one id
+ * cannot be `crossword` twice, and an id of `frcrossword` would put
+ * /friends/frcrossword/ on the page, saying friends in the address twice.
+ *
+ * So the id stays unique and the SLUG is what goes in the path. A game with no
+ * entry here is its own slug, which is every football game — so this is a
+ * no-op for the ten that were live when it was written, and the proof of that
+ * is permalink_test asserting their paths byte for byte.
+ *
+ * NOT A SECOND SOURCE OF TRUTH ABOUT WHERE A GAME LIVES. themeOf still answers
+ * the theme, this answers the segment, and gamePath is still the only thing
+ * that puts them together. */
+export const SLUG_OF = {
+  crossword_fr: "crossword",
+};
+export const slugOf = (game) => SLUG_OF[game] || game;
+
+export const gamePath = (game) => `/${themeOf(game)}/${slugOf(game)}/`;
 /* The same fact as a FILE path, for the gates and suites that read a game's
    own files off the repository. They built those paths dynamically —
    `${game}/index.html` — which no search-and-replace can see, so the move left
    a dozen of them reading a directory that no longer existed. Asked for here
    so the next move is one function again. */
-export const gameDir = (game) => `${themeOf(game)}/${game}`;
+export const gameDir = (game) => `${themeOf(game)}/${slugOf(game)}`;
 export const permalinkPath = (game, key) => `${gamePath(game)}daily/${key}`;
 
 /* The page a permalink serves is the GAME'S OWN PAGE, fetched from the static

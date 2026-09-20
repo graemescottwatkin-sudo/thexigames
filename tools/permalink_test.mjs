@@ -367,6 +367,50 @@ console.log("\n=== A board whose day the game never ran ===");
   t("a numbered game reads no schedule to serve a board", asked === 0, asked + " queries");
 }
 
+/* ---- THE ID AND THE ADDRESS ARE TWO FACTS ------------------------------
+   A game id must be unique across the family; a URL segment wants to read the
+   same in two themes. /friends/crossword/ and /football/crossword/ are both
+   "the crossword" to a player, and the theme in front is what tells them
+   apart — so the id carries the difference and the SLUG carries the address.
+
+   THE HALF THAT MATTERS IS THAT NOTHING MOVED. A game with no slug entry is
+   its own slug, so every football path is what it was. Pinned literally here
+   rather than derived from slugOf, because a check that asks the function
+   under test what it thinks agrees with it however wrong it is. */
+{
+  const { GAMES } = await import("../functions/_lib/games.js");
+  const { slugOf, themeOf, SLUG_OF } = await import("../functions/_lib/permalink.js");
+  const moved = GAMES.filter((g) =>
+    gamePath(g) !== "/football/" + g + "/" || gameDir(g) !== "football/" + g);
+  t("introducing slugs moved no football path",
+    moved.length === 0,
+    moved.length ? moved.map((g) => g + " -> " + gamePath(g)).join(", ")
+                 : GAMES.length + " games, each still /football/<id>/");
+  t("and a game with no slug entry is its own slug",
+    GAMES.every((g) => slugOf(g) === g));
+
+  /* AND THE HALF THAT IS NEW. crossword_fr is the Friends crossword: a
+     distinct id, because THEME_OF maps one id to one theme and `crossword` is
+     football's, and the slug `crossword` so the address does not say friends
+     twice. An entry here builds a path; it does not make a game, and nothing
+     is served from it until one is built. */
+  t("a slugged game takes its slug in the path, not its id",
+    gamePath("crossword_fr") === "/friends/crossword/", gamePath("crossword_fr"));
+  t("and in the directory it is read from",
+    gameDir("crossword_fr") === "friends/crossword", gameDir("crossword_fr"));
+  t("its theme is the segment in front",
+    themeOf("crossword_fr") === "friends", themeOf("crossword_fr"));
+  /* The id itself must never appear in an address. This is the failure the
+     slug exists to prevent, so it is asserted rather than assumed. */
+  t("the id never appears in the address",
+    gamePath("crossword_fr").indexOf("crossword_fr") === -1 &&
+    gameDir("crossword_fr").indexOf("crossword_fr") === -1,
+    gamePath("crossword_fr") + " " + gameDir("crossword_fr"));
+  t("and no football game has been given a slug",
+    Object.keys(SLUG_OF).every((g) => themeOf(g) !== "football"),
+    Object.keys(SLUG_OF).join(", ") || "none");
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 Date.now = REAL_NOW;
 process.exit(fail ? 1 : 0);
