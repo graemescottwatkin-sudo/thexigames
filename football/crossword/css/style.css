@@ -2023,9 +2023,19 @@ body.rotate-needed .rotate-prompt{
   /* Bigger and heavier than the 22px/.5 they were. The mark is the only thing
      saying the card is a control, and a chevron that quiet is one you meet by
      accident. It is still a chevron at the card edge, not a button. */
-  color:var(--ink-faint);font:700 26px/1 var(--body);opacity:.62;
+  color:var(--ink-soft);font:700 30px/1 var(--body);opacity:.9;
   display:flex;align-items:center;
 }
+/* AND THE RIGHT ONE HAD THE FLAG ON TOP OF IT. #nextClue is the right half of
+   the card, so its chevron is drawn at the card's right edge — and the flag
+   is the last thing in the sentence row, which put it at 343 to 369px of a
+   375px card, in the same few pixels. Faint, the two blurred together; made
+   bolder they read as one glyph, so making the arrow more visible on its own
+   made the pair worse. The flag moves in far enough for the chevron to have
+   its own air.
+   Moved rather than the sentence padded: widening .nc-main to push the flag
+   along cost a line of wrapping, and the card is a fixed height on a phone. */
+#flagClue{margin-right:16px}
 .nc-arrow:hover,.nc-arrow:focus-visible{opacity:1}
 #prevClue{left:0;justify-content:flex-start}
 #nextClue{right:0;justify-content:flex-end}
