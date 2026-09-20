@@ -25,30 +25,20 @@
 <meta name="description" content="Eleven daily football puzzles, one for every shirt. Crossword XI, Wordsearch XI, Scrambled XI, HiLo XI, Vowels XI, Grid XI, Codeword XI, QuickFire XI and Who Am I XI are out now — a new board every day.">
 <link rel="canonical" href="https://www.thexigames.com/">
 
-<!-- SEARCH CONSOLE VERIFICATION GOES HERE, ON THE HUB, and nowhere else.
+<!-- VERIFIED BY DNS, so there is no verification tag on this page and there
+     should not be one. thexigames.com is a Search Console DOMAIN property,
+     proved by a TXT record in Cloudflare, which covers the apex and www and
+     every path at once and survives this file being rebuilt.
 
-     PREFER DNS. A TXT record in Cloudflare verifies the whole domain in one
-     go — apex and www, every path, and it keeps working if this file is
-     ever rebuilt. Google calls it a Domain property, and it is the only kind
-     that covers thexigames.com and www.thexigames.com together. Nothing in
-     this repository needs to change for it, which is the point.
+     The meta-tag method verifies ONE url prefix and has to live on the exact
+     address entered as the property. It sat in football/crossword/index.html
+     for a while, where it verified nothing at all, then waited here as a
+     commented placeholder until DNS made it unnecessary. Both are gone.
 
-     THE TAG BELOW IS THE FALLBACK, for the URL-prefix method. It must sit on
-     the URL being verified, which is this page: an earlier attempt left it on
-     football/crossword/index.html, where it verified nothing, because Google
-     looks for it at the address you typed into the property. That copy has
-     been removed so there is one place and not two.
-
-     To use it: replace PASTE_TOKEN_HERE with the content value Google gives,
-     uncomment the line, deploy, then press Verify. The tag can stay
-     afterwards — removing it un-verifies the property.
-
-     Then submit https://www.thexigames.com/sitemap.xml, which is generated
-     rather than kept by hand, so it does not need resubmitting as boards
-     appear. Bing Webmaster Tools takes the same sitemap and feeds other
-     answer engines; it is worth the five minutes while you are there.
-<meta name="google-site-verification" content="PASTE_TOKEN_HERE">
--->
+     If the property is ever rebuilt, do it by DNS again rather than putting a
+     tag back. Sitemap, for whoever needs it: submit the FULL url,
+     https://www.thexigames.com/sitemap.xml — a domain property spans two
+     hosts, so it rejects a relative "sitemap.xml" as an invalid address. -->
 <script type="application/ld+json">
 {
   "@context": "https://schema.org",
