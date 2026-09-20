@@ -58,7 +58,7 @@ let pass = 0, fail = 0, warn = 0;
    them are inside the "is today's board sealed" branch, which legitimately
    skips when /api/daily cannot be read — so 49 leaves the skip room and one
    spare, and no more. */
-const MIN_ASSERTIONS = 49;
+const MIN_ASSERTIONS = 53;
 let reachedEnd = false, announced = false;
 function incomplete() {
   if (announced) return;
@@ -327,6 +327,39 @@ for (const p of ["/api/daily", "/football/crossword/answers/"]) {
     "the _headers rule never reached a Function response before the middleware");
 }
 
+/* ---- CASE IS NOT PART OF THE ADDRESS ------------------------------------
+   Paths are case-sensitive in the spec and Pages honours it, so
+   /Football/Crossword/ 404d until 20 Sep 2026 while the lowercase form
+   served. The middleware folds the PATH of a GET or HEAD and redirects.
+   Proved on production rather than locally: this is middleware, and the
+   HEAD block above exists because middleware behaved differently deployed
+   than it did in a dev server. */
+{
+  const r = await fetch(HUB + "/Football/Crossword/", { redirect: "manual" });
+  const to = r.headers.get("location") || "";
+  t("a capitalised path redirects rather than 404ing",
+    r.status === 301, "HTTP " + r.status);
+  t("and it points at the lowercase form",
+    to.endsWith("/football/crossword/"), to || "(no location)");
+}
+{
+  /* THE QUERY IS NOT FOLDED WITH IT. The word search's board ids are
+     upper case — XIWS-0001 — and they travel in the query string. Folding
+     the whole URL would have turned every shared word search link into a
+     board that does not exist. */
+  const r = await fetch(HUB + "/Football/Wordsearch/?b=XIWS-0001",
+    { redirect: "manual" });
+  const to = r.headers.get("location") || "";
+  t("the query survives the fold with its capitals",
+    r.status === 301 && to.indexOf("b=XIWS-0001") > -1, to || "(no location)");
+}
+{
+  /* AND A PATH THAT IS ALREADY LOWERCASE IS LEFT ALONE, which is what stops
+     this being a redirect loop. */
+  const r = await fetch(HUB + "/football/crossword/", { redirect: "manual" });
+  t("an already-lowercase path is served, not redirected",
+    r.status === 200, "HTTP " + r.status);
+}
 
 /* ---- caching ---- */
 const cc = home.res.headers.get("cache-control") || "";

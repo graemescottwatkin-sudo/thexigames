@@ -24,6 +24,49 @@
 export async function onRequest(context) {
   const { request, next } = context;
 
+  /* CASE IS NOT PART OF THE ADDRESS, and until 20 Sep 2026 it was.
+   *
+   * URL paths are case-sensitive in the spec and Cloudflare Pages honours
+   * that, so /Football/Crossword/ 404d while /football/crossword/ served.
+   * Nobody types a URL carefully and nobody writing a link gets the case
+   * right, so the visitor who capitalises the way the site capitalises its
+   * own headings — FOOTBALL / CROSSWORD — met a 404. The sites that appear
+   * not to care are either on Windows, where the filesystem is
+   * case-insensitive, or are doing exactly this.
+   *
+   * WHAT IS SAFE TO LOWERCASE, having checked rather than assumed: every
+   * segment this site puts in a path is already lowercase. Game and theme ids
+   * come from validGame, which lowercases before it matches, so an id with a
+   * capital in it could never resolve anyway. Board keys are numbers and day
+   * keys. The one identifier that carries capitals — the word search's
+   * XIWS-0001 — travels in the QUERY STRING, and the query is not touched
+   * here: only url.pathname is folded, and to.search carries through
+   * untouched.
+   *
+   * 301 RATHER THAN 302, which is the opposite of the call made for
+   * /football/ and for the same reason read the other way. That redirect is
+   * temporary because its target changes the day a second theme lands. This
+   * one's target is the lowercase form of the address, which cannot change:
+   * it is idempotent, the destination is the canonical URL, and a permanent
+   * answer is what stops Google holding two URLs for one page.
+   *
+   * GET AND HEAD ONLY. A 301 is allowed to turn a POST into a GET and would
+   * drop its body; nothing posts to a mixed-case path, and leaving other
+   * methods alone means this cannot quietly break a write. */
+  {
+    const url = new URL(request.url);
+    const lower = url.pathname.toLowerCase();
+    if ((request.method === "GET" || request.method === "HEAD") &&
+        url.pathname !== lower) {
+      const to = new URL(url);
+      to.pathname = lower;
+      return new Response(null, {
+        status: 301,
+        headers: { Location: to.toString() },
+      });
+    }
+  }
+
   /* HEAD: routing chose the handler chain by method BEFORE this middleware
      ran, so for HEAD there is no onRequestGet in the chain and next() — even
      handed a rewritten GET request — falls through to the static handler and
