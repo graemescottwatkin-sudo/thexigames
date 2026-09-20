@@ -1,0 +1,207 @@
+/* friends/crossword/css/style.css — the Friends crossword's own rules.
+ *
+ * TOKENS ONLY, AND NO .xic- RULES. The palette lives in shared/xi-tokens.css
+ * and the chrome in shared/xi-chrome.css; a game that restates a colour has
+ * made a second answer about what the family looks like, and a game that
+ * reaches into .xic- has made the shared bar its own to break. Both gates
+ * check for this, which is why neither appears below.
+ *
+ * THE BOARD AND THE KEYBOARD ARE ALMOST THE WHOLE SCREEN ON A PHONE. That is
+ * not a preference, it is a bug report: a real player on an iPhone could not
+ * reach the football crossword's board for furniture — "a little slit" — and
+ * v003s rebuilt that page around the board. This one starts where that ended
+ * rather than repeating the lesson.
+ */
+
+.fx-wrap {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 0 16px 24px;
+}
+
+.sr-only {
+  position: absolute; width: 1px; height: 1px;
+  padding: 0; margin: -1px; overflow: hidden;
+  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+}
+
+/* ---- identity ----------------------------------------------------------- */
+
+.fx-ident { margin: 12px 0 10px; }
+
+.fx-kicker {
+  margin: 0;
+  font-family: var(--disp);
+  font-weight: 700;
+  font-size: 0.8rem;
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.fx-sub {
+  margin: 2px 0 0;
+  font-size: 0.95rem;
+  color: var(--ink-soft);
+}
+
+/* ---- the board ---------------------------------------------------------- */
+
+.fx-boardwrap {
+  display: flex;
+  justify-content: center;
+}
+
+/* The grid sizes itself from the number of columns the server sent, capped so
+   a wide board on a narrow phone shrinks rather than overflowing. --cols and
+   --rows are written by js/game.js from the board, never guessed here. */
+.fx-board {
+  display: grid;
+  grid-template-columns: repeat(var(--cols, 12), 1fr);
+  gap: 1px;
+  width: min(100%, calc(var(--cols, 12) * 2.2rem));
+  aspect-ratio: var(--cols, 12) / var(--rows, 12);
+  background: var(--grid-line);
+  border: 2px solid var(--grid-block);
+  touch-action: manipulation;   /* kills double-tap zoom, keeps pinch */
+}
+
+.fx-cell {
+  position: relative;
+  background: var(--grid-cell);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-family: var(--body);
+  font-weight: 600;
+  font-size: clamp(0.7rem, 3.2vw, 1.1rem);
+  line-height: 1;
+  color: var(--ink);
+  user-select: none;
+  cursor: pointer;
+}
+.fx-block { background: var(--grid-block); cursor: default; }
+
+/* NOT --ink-faint, WHICH FAILS. Measured in the browser rather than guessed:
+   at 0.5em the number renders 8.8px, and --ink-faint (#8A968D) on a lit cell
+   (--sel-word, #CBE7E5) is 2.4:1 — under 3:1, at a size where 4.5:1 is what is
+   actually wanted. --ink-soft takes the same pairing to 4.55:1. This is the
+   football crossword's faint zoom controls again, which shipped at about
+   2.7:1 and had to be redone; a number a player cannot read is the one piece of
+   furniture a crossword cannot do without. */
+.fx-num {
+  position: absolute;
+  top: 1px; left: 2px;
+  font-size: 0.55em;
+  font-weight: 600;
+  color: var(--ink-soft);
+  pointer-events: none;
+}
+
+.fx-lit { background: var(--sel-word); }
+.fx-cursor { background: var(--sel); }
+
+/* RIGHT AND WRONG ARE NOT COLOUR ALONE. A cell that says only "green" says
+   nothing to a player who cannot separate it from red, so the verdict also
+   changes the weight and draws a rule under the wrong ones. */
+.fx-right { background: var(--correct); color: var(--correct-ink); }
+.fx-wrong {
+  background: var(--wrong-bg);
+  color: var(--wrong-ink);
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 2px;
+}
+
+/* ---- the clue card ------------------------------------------------------ */
+
+.fx-cluecard {
+  display: grid;
+  grid-template-columns: 2.4rem 1fr 2.4rem;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0;
+  padding: 8px 4px;
+  border-top: 1px solid var(--line);
+  border-bottom: 1px solid var(--line);
+}
+
+/* Bolder than a default button and still out of the text's way — the football
+   crossword's arrows were raised twice for the same reason. */
+.fx-arrow {
+  appearance: none;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--ink);
+  font-size: 1.5rem;
+  font-weight: 700;
+  line-height: 1;
+  padding: 6px 0;
+  cursor: pointer;
+}
+.fx-arrow:active { background: var(--tint); }
+
+.fx-clue { min-width: 0; text-align: center; }
+.fx-clue-ref {
+  margin: 0;
+  font-family: var(--disp);
+  font-weight: 600;
+  font-size: 0.75rem;
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+.fx-clue-text {
+  margin: 2px 0 0;
+  font-size: 1rem;
+  color: var(--ink);
+}
+
+/* ---- full time ---------------------------------------------------------- */
+
+.fx-ft { margin: 14px 0; text-align: center; }
+.fx-ft-score {
+  margin: 0;
+  font-family: var(--disp);
+  font-weight: 700;
+  font-size: 3rem;
+  line-height: 1;
+  color: var(--ink);
+}
+.fx-ft-score span { font-size: 1.1rem; color: var(--ink-faint); }
+.fx-ft-line { margin: 4px 0 0; color: var(--ink-soft); }
+
+/* ---- how to play -------------------------------------------------------- */
+
+.how { margin-top: 28px; color: var(--ink-soft); }
+.how h2 {
+  font-family: var(--disp);
+  font-size: 1.2rem;
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  color: var(--ink);
+}
+.how ol { padding-left: 1.1rem; line-height: 1.6; }
+
+/* ---- the phone ---------------------------------------------------------- */
+
+/* On a touch device the drawn keyboard is present and the page must fit around
+   it. Everything that is not the board, the clue or the keys gets out of the
+   way — the how-to is still on the page for a crawler and a reader, just below
+   the fold rather than between the player and the grid. */
+@media (max-width: 560px) {
+  .fx-wrap { padding: 0 12px 12px; }
+  .fx-ident { margin: 6px 0; }
+  .fx-sub { font-size: 0.85rem; }
+  .fx-cluecard { margin: 8px 0; }
+  .fx-board { width: 100%; }
+}
+
+body.touch .fx-keys { margin-top: 6px; }
+body:not(.touch) .fx-keys { display: none; }
+
+/* `hidden` must actually hide. A display rule elsewhere in this file beats the
+   attribute's default UA style, and .fx-board sets display:grid — so without
+   this the board would stay on screen with hidden="" set and nothing would
+   look wrong in the markup. */
+[hidden] { display: none !important; }

@@ -1,0 +1,120 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
+<meta name="theme-color" content="#F4F5F2">
+
+<!-- NOINDEX UNTIL IT LAUNCHES, AND THE GATE ENFORCES BOTH HALVES. The page is
+     served because this family builds its games in the open — /football/scrambled/
+     and /football/quickfire/ were both playable before they launched — but an
+     unreleased game must not be findable, and nothing else links here, so a
+     crawler would only ever arrive by accident. deploy_check refuses this line
+     being absent while LAUNCHED.crossword_fr is null, AND refuses it being
+     present once it is not: a noindex nobody remembers to remove is a launched
+     game that never appears in a search result. -->
+<meta name="robots" content="noindex">
+
+<title>Crossword &mdash; Friends | The XI Games</title>
+<meta name="description" content="Eleven clues about Friends, crossing in one grid. A new crossword every day from The XI Games.">
+<link rel="canonical" href="https://www.thexigames.com/friends/crossword/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://www.thexigames.com/friends/crossword/">
+<meta property="og:title" content="Crossword &mdash; Friends">
+<meta property="og:description" content="Eleven clues about Friends, crossing in one grid.">
+<meta property="og:site_name" content="The XI Games">
+<!-- `summary`, NOT `summary_large_image`, BECAUSE THERE IS NO IMAGE. This page
+     has no og-image.png of its own and there is no og:image tag, so asking for
+     the large-image card would render a shared link with an empty picture box —
+     worse than the small card, and worse than not asking. Owner's call,
+     20 September 2026. If a Friends og-image is ever drawn, this goes back to
+     summary_large_image and an og:image tag goes in beside it; football's page
+     is the shape to copy. -->
+<meta name="twitter:card" content="summary">
+<meta name="twitter:title" content="Crossword &mdash; Friends">
+<meta name="twitter:description" content="Eleven clues about Friends, crossing in one grid.">
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/shared/xi-tokens.css?v=v49">
+<link rel="stylesheet" href="/shared/xi-landing.css?v=v49">
+<link rel="stylesheet" href="/shared/xi-chrome.css?v=v49">
+<link rel="stylesheet" href="/shared/xi-keys.css?v=v49">
+<link rel="stylesheet" href="/shared/xi-share.css?v=v49">
+<script src="/shared/xi-theme.js?v=v49"></script>
+<link rel="stylesheet" href="css/style.css?v=v001a">
+</head>
+<body>
+
+<!-- The shared bar. The burger and the wordmark are inserted by
+     shared/xi-chrome.js; only this game's own control is written here. -->
+<header class="xic-bar">
+  <div class="xic-right">
+    <a class="xic-ghost" href="#how" data-optional>How to play</a>
+  </div>
+</header>
+
+<main class="fx-wrap">
+
+  <!-- ONE H1, first in the body. The masthead is furniture; this is the
+       heading a screen reader reads. -->
+  <h1 class="sr-only">Crossword &mdash; Friends</h1>
+
+  <section class="fx-ident">
+    <p class="fx-kicker" id="fxKicker">TODAY</p>
+    <p class="fx-sub" id="fxSub">Eleven clues. Tap a square and type.</p>
+  </section>
+
+  <!-- THE BOARD. Built by js/game.js from what the server sends, which is the
+       shape and the clues and never a letter. -->
+  <section class="fx-boardwrap">
+    <div class="fx-board" id="fxBoard" role="application"
+         aria-label="Crossword grid"></div>
+  </section>
+
+  <!-- THE CLUE CARD, one clue at a time, with the two arrows that walk the
+       entries. Mirrors the football crossword's phone layout, which was
+       rebuilt in v003s after a player could not reach the board for furniture. -->
+  <section class="fx-cluecard" id="fxClueCard">
+    <button class="fx-arrow" id="fxPrev" type="button" aria-label="Previous clue">&#8249;</button>
+    <div class="fx-clue">
+      <p class="fx-clue-ref" id="fxClueRef">&mdash;</p>
+      <p class="fx-clue-text" id="fxClueText">&mdash;</p>
+    </div>
+    <button class="fx-arrow" id="fxNext" type="button" aria-label="Next clue">&#8250;</button>
+  </section>
+
+  <!-- The shared on-screen keyboard, filled by shared/xi-keys.js. -->
+  <div class="fx-keys" id="fxKeys"></div>
+
+  <section class="fx-ft" id="fxFullTime" hidden></section>
+
+  <section class="how" id="how">
+    <h2>How to play</h2>
+    <ol>
+      <li>Eleven clues about <em>Friends</em>, crossing in one grid.</li>
+      <li>Tap a square and type. Tap it again to switch between across and down.</li>
+      <li>Every clue is scored out of 100 for the board &mdash; finish it and you
+          keep the day.</li>
+      <li>A new crossword every day. Play every day to build a streak.</li>
+    </ol>
+  </section>
+
+</main>
+
+<!-- THE SHARED FOOTER, AT TOP LEVEL. It carries the family disclaimer. -->
+<footer class="xic-foot"></footer>
+
+<!-- NO xi-season.js, AND THAT IS THE DECISION RATHER THAN AN OMISSION. The
+     season counts DAYS across the football family and Friends is not in it:
+     the owner's ruling is a genuine streak, +1 a day, and a score out of 100
+     with no season attached. Loading the season file would give this page a
+     record it must not write. -->
+<script src="/shared/xi-chrome.js?v=v49"></script>
+<script src="/shared/xi-keys.js?v=v49"></script>
+<script src="/shared/xi-share.js?v=v49"></script>
+<script src="/shared/xi-plays.js?v=v49"></script>
+<script src="js/game.js?v=v001a"></script>
+</body>
+</html>

@@ -18,6 +18,22 @@
  * leaves this function.
  */
 
+/* THE ONE PLACE THAT TURNS AN ENTRY'S CELL INTO A KEY OF THE CELL MAP, and
+   it exists because the two are NOT the same shape. `puzzle.cells` is an object
+   keyed by the string "x,y" — engine.js key(x, y) — while `entry.cells` is an
+   array of { x, y } OBJECTS. So `puzzle.cells[entry.cells[i]]` is always
+   undefined, and it is undefined QUIETLY: the lookup yields no letter rather
+   than throwing, so a marker reads every answer as blank and a leak scan
+   searches for nothing and reports itself clean.
+
+   That is exactly what happened on 20 Sep 2026. The Friends route, its marking
+   endpoint and its client all indexed the map with the object, and all three of
+   their fixtures hand-built string-keyed entry cells — so the fixtures agreed
+   with the bug and every suite passed. It was caught by a POSITIVE CONTROL
+   asking whether the scan could see an answer at all: it had extracted 0 of
+   1,320. Anything walking an entry's cells uses this. */
+export const cellKey = (c) => (c && typeof c === "object" ? c.x + "," + c.y : String(c));
+
 export function normalise(s) {
   return String(s || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 }

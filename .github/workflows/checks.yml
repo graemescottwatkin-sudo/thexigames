@@ -286,6 +286,42 @@ jobs:
           # repeated PLAYER on a board is legitimate and a repeated CLUB is not,
           # and a fold that strips accents deletes O-slash rather than folding it.
           node tools/import_whoami_test.mjs
+          # And the Friends crossword's importer — the first tool of the second
+          # theme. Fixtures in a temp directory for the usual reason, and `--out`
+          # passed explicitly because this one resolves its output from its own
+          # location rather than the CWD, so a temp directory alone would not
+          # protect the real fr-production.sql.
+          # ITS CENTRAL CASE IS A REGRESSION. The leak scan first paired each
+          # answer with pub.entries[i], which is wrong because the engine returns
+          # entries in GRID order, not the order it was handed the rows — it
+          # reordered 20 of 20 boards measured. That refused eight good boards,
+          # and, sabotaged back in, this suite shows the worse half: two cases
+          # that plant an answer in a served field go from red to GREEN, because
+          # a mispaired scan cannot see the leak it exists to find.
+          node tools/import_friendscrossword_test.mjs
+          # And what /api/crossword_fr/daily will and will not send. The route is
+          # run for real against a stubbed D1 — which cannot prove the QUERY, so
+          # the clause is the live_check's job — but does prove the binds, the
+          # refusals, and that publicPuzzle's allowlist is what stands between
+          # the stored grid and the player.
+          # TWO OF ITS CASES ARE BUGS THIS FILE ALREADY HAD. The last-chance
+          # scan first read the clues too, which would have 500'd on the three
+          # bank rows whose answer sits inside a longer word in their own clue
+          # ("Harmonica", "Chandler"); and the launched-path fixture first
+          # launched the game ON the family epoch, where launch-relative and
+          # family-wide board numbers agree — so replacing one with the other
+          # left the suite green. It now asserts the two disagree before
+          # relying on the difference.
+          node friends/crossword/daily_test.mjs
+          # And the /100 rule with the marking endpoint that applies it. The
+          # arithmetic case is the point: eleven entries do not divide into 100,
+          # so a score summed from per-entry rounding tops out at 99 and tells a
+          # player who solved everything that they got 99. Every line of that
+          # bug looks right on its own, which is why it is pinned here.
+          # The endpoint half holds the only side that HAS the answers to
+          # per-entry booleans and no letters — a wrong entry is never told what
+          # it should have been, because that would be a reveal nobody paid for.
+          node friends/crossword/score_test.mjs
           # And what leaves the server when a door is opened. Who Am I is the
           # hardest secrecy problem in this family so far, and the reason is
           # arithmetic: only ONE door is played per person per day and the other

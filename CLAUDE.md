@@ -162,10 +162,28 @@ and diagnose before anything ships. Never push past a red gate.
 - `results`/`plays` sanity via wrangler if relevant:
   `npx wrangler d1 execute crosswordxi --remote --command="..."`.
   **Never run a migration that is already applied** — `ALTER TABLE` is not
-  idempotent. Migration state: **001–041 all applied** — 035 (QuickFire text
+  idempotent. Migration state: **001–043 all applied** — 035 (QuickFire text
   ids), 036 and 038 (Codeword and its rounds), 037 and 039 (QuickFire rounds
   and the wrong-pick penalty), 040 and 041 (Who Am I and its score) all landed
   between 13 and 15 Sep 2026 and this line still read "001–034" afterwards.
+
+  **042 IS THE PROOF THAT THIS KEEPS HAPPENING.** On 20 Sep 2026 this line read
+  "001–041" while 042 (`bot-plays`) was already live — verified that day against
+  production: `users.is_bot`, `plays.by_bot` and `idx_plays_by_bot` all present.
+  042 is the dangerous kind, two bare `ALTER TABLE ... ADD COLUMN` with no
+  guard, so a reader trusting the number would have re-run it straight into an
+  error on two live tables. It was found only because somebody applying 043
+  stopped to check what the previous number actually was. CHECK PRODUCTION, DO
+  NOT TRUST THIS SENTENCE — the query is three lines and is in this bullet.
+
+  043 (Friends crossword: `fr_puzzles` plus the unique index
+  `fr_puzzles_daily` on `(mode, daily_no)`) applied 20 Sep 2026 and verified
+  from production the same minute: both objects present, seven columns,
+  `pragma_index_list` reporting `unique: 1`, zero rows. It is one
+  `CREATE TABLE IF NOT EXISTS` and one `CREATE INDEX IF NOT EXISTS` and nothing
+  else, so it is safe to re-run. The unique index is not decoration: the
+  importer re-emits every board every run, and without it `INSERT OR REPLACE`
+  would insert a second copy of board 1 rather than replacing it.
   A STALE MIGRATION NUMBER IS THE MOST DANGEROUS FIGURE IN THIS FILE, because
   the sentence immediately before it tells you never to re-run an applied one
   and `ALTER TABLE` is not idempotent — so a reader trusting "034" could
