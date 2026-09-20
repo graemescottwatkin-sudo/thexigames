@@ -42,61 +42,102 @@
      game in testing gets a route in and keeps its silence, and the rule the
      gates enforce is unchanged — an unreleased game is named nowhere.
      Order is the shirt number. */
-  var SQUAD = [
-    { n: 1,  name: "Crossword XI",   href: "/football/crossword/" },
-    { n: 2,  name: "Wordsearch XI",  href: "/football/wordsearch/" },
-    { n: 3,  name: "Scrambled XI",   href: "/football/scrambled/" },
-    { n: 4,  name: "HiLo XI",        href: "/football/hilo/" },
-    /* Vowels XI launched on 4 Sep 2026 and took the next free number, which
-       is what launching does. QuickFire was sitting at 5 while in testing and
-       moves down: a game that is not out does not hold a shirt, and the rule
-       says so — "only a launched game holds a number ... and moves down when a
-       game ships past it". */
-    { n: 5,  name: "Vowels XI",      href: "/football/vowels/" },
-    /* Grid XI launched on 7 Sep 2026 and took the next free number, which is
-       what launching does. QuickFire moves from 6 to 7 for the same reason it
-       moved from 5 to 6 when Vowels went out: a game in testing does not hold
-       a shirt, and it moves down when a game ships past it. */
-    { n: 6,  name: "Grid XI",        href: "/football/grid/" },
-    /* A GAME IN TESTING DOES NOT HOLD A SHIRT. Where one sits in this list
-       while it is unreleased is the OWNER'S ORDERING of what comes next, not a
-       number it owns — it says a status and nothing else, and its name stays
-       off every served page until the day it launches. The link is for whoever
-       is testing it. */
-    /* Codeword XI launched on 14 September 2026 and took the next free number,
-       which is what launching does. Ballpark was sitting on the seven as the
-       owner's ORDERING of what came next and moves down: that was never a
-       shirt, and the comment above says so. */
-    { n: 7,  name: "Codeword XI",   href: "/football/codeword/" },
-    /* QUICKFIRE XI LAUNCHED ON 15 SEPTEMBER 2026 and takes the eight, the next
-       free number. It had sat on the eleven as the owner's ordering since
-       9 September; Ballpark moves from eight to nine for the same reason
-       QuickFire itself moved from five to six and six to seven while it was in
-       testing. The tail drops one and the squad loses an unsigned slot rather
-       than growing a twelfth.
-       WHAT ACTUALLY CHANGED ON THE DAY, because "in testing" had stopped
-       describing it: the game served the ANSWER to every question in its
-       payload — eleven a day, in plain text — because the page was a typing
-       game that revealed letters out of the answer string. It became a
-       four-option picker with the marking, the clock and the score on the
-       server, and it banked its first result ever; until then a finished round
-       reached neither the account nor the season. LAUNCHED in games.js reads
-       2026-09-14 and stays there: that is the day its first BOARD ran, which is
-       what board numbering counts from, and it is not the same question as
-       which day the game was released. */
-    { n: 8,  name: "QuickFire XI",  href: "/football/quickfire/" },
-    /* WHO AM I XI LAUNCHED ON 15 SEPTEMBER 2026 and takes the nine, the next
-       free number. Ballpark moves from nine to ten — its third move in three
-       days, having been on the seven until Codeword took it and the eight until
-       QuickFire did. That is the rule working rather than churn: a game that is
-       not out does not hold a shirt and moves when one ships past it, and the
-       kit goes with the GAME rather than the number.
-       Eleven shirts, so the tail loses its last unsigned slot rather than the
-       squad growing a twelfth. */
-    { n: 9,  name: "Who Am I XI",   href: "/football/whoami/" },
-    { n: 10, name: "Ballpark XI",   href: "/football/ballpark/" },
-    { n: 11, status: "In build" }
-  ];
+  /* ONE SQUAD PER THEME, since the Friends crossword launched on 21 September
+     2026. Football keeps its eleven and Friends starts a new one at 1 — the
+     owner's ruling, and the only one of the three options that scales. A single
+     list would have spent football's LAST unsigned slot on a game that is not a
+     football game, and the metaphor is eleven PLAYERS, which is per team.
+
+     WHAT IS PER THEME AND WHAT IS NOT, because getting this backwards is the
+     bug. The drawer and the footer show the squad of the theme the reader is
+     IN: a Friends player has no use for a football team sheet. LOOKUPS are not
+     per theme — pathOfGame is asked where some game lives and the asker may be
+     on any page, so it searches every squad. Reading this page's own squad
+     there would break the aged-board banner the first time somebody followed a
+     football permalink from a Friends page. */
+  var SQUADS = {
+    football: [
+      { n: 1,  name: "Crossword XI",   href: "/football/crossword/" },
+      { n: 2,  name: "Wordsearch XI",  href: "/football/wordsearch/" },
+      { n: 3,  name: "Scrambled XI",   href: "/football/scrambled/" },
+      { n: 4,  name: "HiLo XI",        href: "/football/hilo/" },
+      /* Vowels XI launched on 4 Sep 2026 and took the next free number, which
+         is what launching does. QuickFire was sitting at 5 while in testing and
+         moves down: a game that is not out does not hold a shirt, and the rule
+         says so — "only a launched game holds a number ... and moves down when a
+         game ships past it". */
+      { n: 5,  name: "Vowels XI",      href: "/football/vowels/" },
+      /* Grid XI launched on 7 Sep 2026 and took the next free number, which is
+         what launching does. QuickFire moves from 6 to 7 for the same reason it
+         moved from 5 to 6 when Vowels went out: a game in testing does not hold
+         a shirt, and it moves down when a game ships past it. */
+      { n: 6,  name: "Grid XI",        href: "/football/grid/" },
+      /* A GAME IN TESTING DOES NOT HOLD A SHIRT. Where one sits in this list
+         while it is unreleased is the OWNER'S ORDERING of what comes next, not a
+         number it owns — it says a status and nothing else, and its name stays
+         off every served page until the day it launches. The link is for whoever
+         is testing it. */
+      /* Codeword XI launched on 14 September 2026 and took the next free number,
+         which is what launching does. Ballpark was sitting on the seven as the
+         owner's ORDERING of what came next and moves down: that was never a
+         shirt, and the comment above says so. */
+      { n: 7,  name: "Codeword XI",   href: "/football/codeword/" },
+      /* QUICKFIRE XI LAUNCHED ON 15 SEPTEMBER 2026 and takes the eight, the next
+         free number. It had sat on the eleven as the owner's ordering since
+         9 September; Ballpark moves from eight to nine for the same reason
+         QuickFire itself moved from five to six and six to seven while it was in
+         testing. The tail drops one and the squad loses an unsigned slot rather
+         than growing a twelfth.
+         WHAT ACTUALLY CHANGED ON THE DAY, because "in testing" had stopped
+         describing it: the game served the ANSWER to every question in its
+         payload — eleven a day, in plain text — because the page was a typing
+         game that revealed letters out of the answer string. It became a
+         four-option picker with the marking, the clock and the score on the
+         server, and it banked its first result ever; until then a finished round
+         reached neither the account nor the season. LAUNCHED in games.js reads
+         2026-09-14 and stays there: that is the day its first BOARD ran, which is
+         what board numbering counts from, and it is not the same question as
+         which day the game was released. */
+      { n: 8,  name: "QuickFire XI",  href: "/football/quickfire/" },
+      /* WHO AM I XI LAUNCHED ON 15 SEPTEMBER 2026 and takes the nine, the next
+         free number. Ballpark moves from nine to ten — its third move in three
+         days, having been on the seven until Codeword took it and the eight until
+         QuickFire did. That is the rule working rather than churn: a game that is
+         not out does not hold a shirt and moves when one ships past it, and the
+         kit goes with the GAME rather than the number.
+         Eleven shirts, so the tail loses its last unsigned slot rather than the
+         squad growing a twelfth. */
+      { n: 9,  name: "Who Am I XI",   href: "/football/whoami/" },
+      { n: 10, name: "Ballpark XI",   href: "/football/ballpark/" },
+      { n: 11, status: "In build" }
+    ],
+
+    /* Friends. Its own eleven, and its number 1 is BUILT, NOT LAUNCHED — so it
+       carries an href and NO NAME, which is the middle state described above:
+       a way in for whoever is testing it, and silence everywhere else. The
+       name goes in on the launch day, not before. */
+    friends: [
+      { n: 1,  href: "/friends/crossword/" },
+    ],
+  };
+
+  /* WHICH THEME THIS PAGE IS IN, read from the first path segment — which is
+     where the theme lives, by the rule permalink.js states on the server.
+     Anything unrecognised is football: the hub is, and so is every legacy path
+     that 301s into one. */
+  function themeHere() {
+    var seg = (location.pathname.split("/")[1] || "").toLowerCase();
+    return SQUADS[seg] ? seg : "football";
+  }
+
+  var SQUAD = SQUADS[themeHere()];
+
+  /* EVERY SLOT IN EVERY THEME, for the questions that are not about this page.
+     Built from the map rather than written out again, so a third theme is one
+     entry above and nothing else. */
+  var ALL_SLOTS = Object.keys(SQUADS).reduce(function (acc, k) {
+    return acc.concat(SQUADS[k]);
+  }, []);
 
   /* WHERE A GAME LIVES, read off the squad rather than assembled from its id.
      The two were the same word until the theme move — "/" + game + "/" — and
@@ -104,8 +145,11 @@
      statement of a game's address on the client side; this is how the rest of
      the chrome asks for it. */
   function pathOfGame(game) {
-    for (var i = 0; i < SQUAD.length; i++) {
-      var h = SQUAD[i].href;
+    /* ALL_SLOTS, not SQUAD: the game asked about need not belong to the theme
+       the reader is in. A football permalink followed from a Friends page is
+       exactly the case that breaks if this reads the page's own squad. */
+    for (var i = 0; i < ALL_SLOTS.length; i++) {
+      var h = ALL_SLOTS[i].href;
       if (h && h.slice(-(game.length + 2)) === "/" + game + "/") return h;
     }
     return "/" + game + "/";
@@ -1293,7 +1337,8 @@
      cannot see it: it proves a file parses, not that it runs. That is the third
      time today a name has been removed from one place and left referenced in
      another, and the second time it would have taken the whole site down. */
-  window.XIChrome = { init: init, squad: SQUAD, pages: pagesHere, close: close,
+  window.XIChrome = { init: init, squad: SQUAD, squads: SQUADS,
+                      theme: themeHere, pages: pagesHere, close: close,
     formChips: formChips, formBand: band, FORM_LENGTH: FORM_LENGTH,
     playedToday: playedToday, playedTodaySync: playedTodaySync,
     playedTodayHas: playedTodayHas,

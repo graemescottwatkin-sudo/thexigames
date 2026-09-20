@@ -97,6 +97,12 @@ const GAMES = [
   { id: "quickfire",  dir: "football/quickfire", name: "QuickFire XI",  prefix: "qfx"  },
   { id: "whoami",     dir: "football/whoami",    name: "Who Am I XI",   prefix: "xiwa" },
   { id: "ballpark",   dir: "football/ballpark",  name: "Ballpark XI",   prefix: "xibp" },
+  /* crossword_fr joins this table ON ITS LAUNCH DAY. Its failures here are the
+     integration checklist — a live_check of its own, a _headers cache block,
+     and one name used identically in the title, og:title, JSON-LD, h1 and on
+     the team sheet. Adding the row early only turns CI red on things that are
+     not true yet; friends/crossword/deploy_check.mjs asserts the absence so
+     the gap is visible rather than forgotten. */
 ];
 
 const workflow = read(".github/workflows/checks.yml");
@@ -977,8 +983,13 @@ t("and no game writes the link itself", (() => {
   return guilty.length === 0;
 })(), "the href lives once, in shared/xi-chrome.js");
 
-const SHARED_TAG = "v49";
-const SHARED_HASH = "ba6ba7c0c124e0d9";
+const SHARED_TAG = "v50";
+/* The bytes that ship AS v50. The tag does not move again for this change:
+   v50 has not shipped, so it is still the version being prepared, and a tag
+   bumped once per edit before release would burn a letter a minute. What
+   must not happen is shared bytes changing under a tag that IS live — which
+   is the pairing this constant exists for. */
+const SHARED_HASH = "b53fe4b86669c901";
 /* EVERY PAGE THAT LINKS THE SHARED LAYER, not the games alone. The hub, the
    two static pages and the unlaunched game all carry the chrome now, and the
    server-rendered shell writes the tag from a constant of its own — so a tag

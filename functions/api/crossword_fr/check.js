@@ -23,6 +23,7 @@
 import { json, bad, cellKey } from "../../_lib/puzzle.js";
 import { csrfOk } from "../../_lib/auth.js";
 import { boardScore, keptTheDay, ENTRIES } from "../../_lib/fr-score.js";
+import { storedNo } from "../../_lib/fr-board.js";
 
 const norm = (s) => String(s == null ? "" : s).toUpperCase().replace(/[^A-Z0-9]/g, "");
 
@@ -55,9 +56,13 @@ export async function onRequestPost({ request, env }) {
     ? sent.revealed.slice(0, ENTRIES).map((v) => String(v).slice(0, 40))
     : [];
 
-  const row = await env.DB.prepare(
+  /* THE SAME CONVERSION THE DAILY ROUTE MAKES, from the same place. Marking a
+     grid against the wrong board would tell a player every answer was wrong,
+     which is the loudest possible way to be off by the launch offset. */
+  const board = storedNo(no);
+  const row = board === null ? null : await env.DB.prepare(
     "SELECT payload FROM fr_puzzles WHERE mode = 'daily' AND daily_no = ?1"
-  ).bind(no).first();
+  ).bind(board).first();
   if (!row) return bad("No such board.", 404);
 
   let puzzle;

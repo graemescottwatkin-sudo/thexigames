@@ -283,7 +283,16 @@ console.log("\nAnd it is NOT launched, which is the point of this gate");
      an unreleased game carries a status and no name, wherever it sits. Checked
      for every slot above this game's, which is where a launch pushes things. */
   t("and every slot is either a launched name or a status, never both", (() => {
-    const rows = [...squad.matchAll(/\{\s*n:\s*(\d+),([^}]*)\}/g)];
+    /* FOOTBALL'S ELEVEN, not every slot in the file. The squad became one list
+       PER THEME when the Friends crossword launched on 21 September 2026, and
+       this counted every "n:" row in xi-chrome.js -- so the twelfth it refused
+       was Friends' number 1, which is a different team's shirt. The rule is
+       eleven shirts PER SQUAD, and scoping the read is what makes that the thing
+       being checked rather than a total across every theme. */
+    const fFrom = squad.indexOf("football: [");
+    const fTo = squad.indexOf("friends: [", fFrom);
+    const football = fFrom > -1 && fTo > fFrom ? squad.slice(fFrom, fTo) : "";
+    const rows = [...football.matchAll(/\{\s*n:\s*(\d+),([^}]*)\}/g)];
     if (rows.length !== 11) return false;      // eleven shirts, never a twelfth
     return rows.every(([, , body]) => /name:/.test(body) !== /status:/.test(body));
   })(), "a game in testing does not hold a shirt, and is named nowhere until it launches");

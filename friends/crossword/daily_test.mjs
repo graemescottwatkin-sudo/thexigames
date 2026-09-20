@@ -26,7 +26,7 @@
  */
 
 import { onRequestGet, onRequestHead } from "../../functions/api/crossword_fr/daily.js";
-import { LAUNCHED } from "../../functions/_lib/games.js";
+import { LAUNCHED, launchNumber } from "../../functions/_lib/games.js";
 import { dailyDayKey, dailyNumber } from "../../functions/_lib/daily.js";
 import { makeBoard, answersOf, title } from "./fixture.mjs";
 
@@ -243,32 +243,67 @@ console.log("\n=== HEAD ===");
 
 console.log("\n=== Once it launches ===");
 {
-  /* THE LAUNCH DAY IS CHOSEN SO THE TWO NUMBERINGS DISAGREE, and that is the
-     whole point of this block. The family's board number and this game's own
-     differ only for a game that launched after the epoch — so a fixture that
-     launches ON the epoch makes every assertion here true under either rule.
-     It was written that way first: with the launch two days back it read board
-     3 both ways, and replacing the launch-relative arithmetic with a bare
-     dailyNumber() left the suite fully green. */
+  /* THE PUBLIC NUMBER IS THE FAMILY'S, and this block exists because this file
+     asserted the opposite and was wrong. It pinned "today is board 2, counted
+     from ITS launch and not the family epoch" — which is exactly the bug:
+     boardKeys() advertises launchNumber(game)..today, so the sitemap would have
+     linked /friends/crossword/daily/N while the route read N as the bank's Nth
+     board and served the wrong puzzle. Vowels launched on board TEN for this
+     reason; a game's first board is not board 1 here.
+     fr-board.js owns the conversion, and these cases hold the route to it. */
   const famToday = dailyNumber(Date.now());
-  LAUNCHED.crossword_fr = dailyDayKey(famToday - 1);        // launched yesterday
+  const launchDay = dailyDayKey(famToday - 1);            // launched yesterday
+  LAUNCHED.crossword_fr = launchDay;
   try {
-    const rows = rowsFor(BOARD, [1, 2, 3]);
+    const from = launchNumber("crossword_fr");
+    t("PRECONDITION: the launch is NOT the family epoch", from > 1,
+      `launchNumber ${from} — at 1 the two numberings coincide and every ` +
+      `assertion below would hold under either rule, which is how the old ` +
+      `version of this block passed while the route was wrong`);
+
+    /* Stored rows are the bank's 1..120, which is NOT what the URL carries. */
+    const rows = [1, 2, 3].map((no) => ({ no, payload: JSON.stringify({ puzzle: BOARD }) }));
 
     const r = await get(rows);
     const b = await body(r);
-    t("a bare request now serves today's board", r.status === 200 && b.board !== null,
+    t("a bare request serves today's board", r.status === 200 && b.board !== null,
       String(r.status));
-    t("PRECONDITION: the two numberings really do disagree", b.today !== famToday,
-      `this game ${b.today}, the family ${famToday} — equal would make the next ` +
-      `assertion true under either rule`);
-    t("and today is board 2, counted from ITS launch and not the family epoch",
-      b.today === 2 && b.no === 2, JSON.stringify({ no: b.no, today: b.today }));
+    t("and today's number is the FAMILY's, not one counted from the launch",
+      b.today === famToday && b.no === famToday,
+      JSON.stringify({ no: b.no, today: b.today, family: famToday }));
     t("which is the day it says it is", b.day === dailyDayKey(famToday), b.day);
 
-    t("yesterday's board is still open", (await get(rows, "?no=1")).status === 200);
-    t("tomorrow's is not", (await get(rows, "?no=3")).status === 403);
-    t("nor is one far in the future", (await get(rows, "?no=400")).status === 403);
+    /* THE CASE THE BUG WOULD HAVE BROKEN: the launch day's public number must
+       reach the bank's FIRST board, not its `from`-th. The stub answers only
+       stored rows 1..3, so asking for the launch day and getting a board at all
+       proves the offset was applied. */
+    const opening = await get(rows, "?no=" + from);
+    t("the launch day's public number reaches the bank's first board",
+      opening.status === 200 && (await opening.clone().json()).board !== null,
+      `?no=${from} -> ${opening.status}`);
+
+    /* And the mirror: the number the OLD code would have used for the opening
+       board must NOT be today's board. With the launch one day back, board 1 of
+       the bank is yesterday, so a naive 1 addresses a day before the game
+       existed and there is nothing there. */
+    const naive = await get(rows, "?no=1");
+    const nb = await body(naive);
+    t("and a bare 1 is a day before the game existed, so no board",
+      naive.status === 200 && nb.board === null,
+      `?no=1 -> ${naive.status}, board ${nb && nb.board === null ? "null" : "SERVED"}`);
+
+    t("tomorrow is refused", (await get(rows, "?no=" + (famToday + 1))).status === 403);
+    t("and so is a number far in the future",
+      (await get(rows, "?no=" + (famToday + 400))).status === 403);
+
+    /* RUNWAY. The bank holds 120 boards; the day after the last of them is a
+       day the calendar has reached and the bank has not. It answers with no
+       board rather than wrapping round to board 1, which would hand a player a
+       puzzle they have already had. */
+    t("the route reports where the bank runs out", typeof nb.lastBoardNo === "number",
+      "lastBoardNo " + nb.lastBoardNo);
+    t("and that is the launch number plus the bank, less one",
+      nb.lastBoardNo === from + 120 - 1, String(nb.lastBoardNo));
   } finally {
     delete LAUNCHED.crossword_fr;
   }

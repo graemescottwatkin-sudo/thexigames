@@ -287,7 +287,16 @@ console.log("\nAnd it IS launched, which every one of these makes true");
   t("it wears the ninth shirt", /n: 9,[^}]*name: "Who Am I XI"/.test(chrome),
     "a launched game takes the next free number");
   t("and every slot is a launched name or a status, never both", (() => {
-    const rows = [...chrome.matchAll(/\{\s*n:\s*(\d+),([^}]*)\}/g)];
+    /* FOOTBALL'S ELEVEN, not every slot in the file. The squad became one list
+       PER THEME when the Friends crossword launched on 21 September 2026, and
+       this counted every "n:" row in xi-chrome.js -- so the twelfth it refused
+       was Friends' number 1, which is a different team's shirt. The rule is
+       eleven shirts PER SQUAD, and scoping the read is what makes that the thing
+       being checked rather than a total across every theme. */
+    const fFrom = chrome.indexOf("football: [");
+    const fTo = chrome.indexOf("friends: [", fFrom);
+    const football = fFrom > -1 && fTo > fFrom ? chrome.slice(fFrom, fTo) : "";
+    const rows = [...football.matchAll(/\{\s*n:\s*(\d+),([^}]*)\}/g)];
     if (rows.length !== 11) return false;      // eleven shirts, never a twelfth
     return rows.every(([, , body]) => /name:/.test(body) !== /status:/.test(body));
   })(), "an unreleased game is named nowhere until it launches");

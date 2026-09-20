@@ -112,6 +112,12 @@ const UNRELEASED = [...BUILT_NOT_RELEASED,
                     "Player Chain", "Link XI", "Odd One Out"];
 for (const [label, file] of [
   ["the crossword page", "football/crossword/index.html"],
+  /* THE SECOND THEME, from 21 September 2026. This list was football-only, so
+     nothing here could see /friends/ at all: the rule that an unreleased game is
+     named nowhere in served markup was simply not enforced on that page. A list
+     of paths cannot notice a directory nobody added to it — the same shape as
+     the roster walk that silently narrowed to tools/ after the theme move. */
+  ["the Friends crossword page", "friends/crossword/index.html"],
   ["the word search page", "football/wordsearch/index.html"],
   ["how-to-play", "football/crossword/how-to-play.html"],
   ["privacy", "football/crossword/privacy.html"],

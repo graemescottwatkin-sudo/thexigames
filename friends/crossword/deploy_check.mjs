@@ -142,7 +142,13 @@ t("nothing here assembles a path by hand",
 
 console.log("\nNot launched, and it cannot go live by drift");
 
-t("LAUNCHED says so", !launched,
+/* WRITTEN AS A PROHIBITION FIRST, which made it fail for ever the moment the
+   game launched: it asserted !launched, so the very state it describes became a
+   permanent red. A check must say something true on BOTH sides of the event it
+   guards -- before launch that the date is absent, after it that the date is a
+   real one. */
+t(launched ? "LAUNCHED carries a real launch date" : "LAUNCHED says it is not out yet",
+  launched ? /^\d{4}-\d{2}-\d{2}$/.test(String(LAUNCHED[GAME])) : !launched,
   launched ? `LAUNCHED.${GAME} = ${LAUNCHED[GAME]}` : "null, which is not day one");
 
 /* Each of these flips on the day it launches. Together they are the checklist:
@@ -153,16 +159,31 @@ t(launched ? "it is in GAMES now, so its results can be written"
   launched ? GAMES.indexOf(GAME) > -1 : GAMES.indexOf(GAME) === -1,
   launched ? "results and board state may be stored against it"
            : "a row written for a game nobody can play is a row nobody will ever read");
-t("it is not in PERMA_GAMES, so it is not in the sitemap", (() => {
-  const perma = read("functions/_lib/permalink.js");
+/* COMMENTS STRIPPED, AND A KEY RATHER THAN THE WORD. This read the raw block
+   and asked whether the game's id appeared in it — so the comment explaining
+   that crossword_fr goes here ON its launch day counted as the entry itself,
+   and the gate failed on its own explanation. The same fault this file already
+   fixed for its own markup, arriving in the files it reads about others. */
+t(launched ? "it is in PERMA_GAMES now, so the sitemap advertises it"
+           : "it is not in PERMA_GAMES yet, so the sitemap does not offer it", (() => {
+  const perma = noComments(read("functions/_lib/permalink.js"));
   const block = (perma.match(/PERMA_GAMES\s*=\s*\{[\s\S]*?\n\}/) || [""])[0];
-  return launched ? block.includes(GAME) : !block.includes(GAME);
+  const entry = new RegExp("\\b" + GAME + "\\s*:").test(block);
+  return launched ? entry : !entry;
 })());
-t("it is not in the squad list, so it is not named in served markup", (() => {
+/* WHAT IS FORBIDDEN IS A NAME, NOT THE THEME'S EXISTENCE. This asked whether
+   the word "friends" appeared in xi-chrome.js at all, which stopped being a
+   sensible question the moment the squad became one list per theme: the key
+   `friends:` is the structure, not a disclosure. The rule is that an unreleased
+   game is NAMED nowhere, so what this looks for is a slot carrying both an href
+   into this game and a name — which is precisely the launched state. */
+t(launched ? "it has a named slot in its theme's squad"
+           : "its squad slot carries a way in and no name", (() => {
   const chrome = noComments(read("shared/xi-chrome.js"));
-  return launched ? /crossword.{0,40}friends/i.test(chrome)
-                  : !/friends/i.test(chrome);
-})(), "an unreleased game appears only as a shirt number and a status");
+  const slot = (chrome.match(/\{[^{}]*href:\s*"\/friends\/crossword\/"[^{}]*\}/) || [""])[0];
+  if (!slot) return false;                     // no slot at all is not the middle state
+  return launched ? /name:/.test(slot) : !/name:/.test(slot);
+})(), "the middle state is a href and no name — a way in for whoever is testing it");
 t("it is not among the sitemap's static pages", (() => {
   const sm = read("functions/sitemap.xml.js");
   const block = (sm.match(/const STATIC\s*=\s*\[[\s\S]*?\n\]/) || [""])[0];
@@ -199,19 +220,21 @@ t(launched ? "the noindex is gone now that it has launched"
    down. */
 console.log("\nWhat is watching this game, and what is not yet");
 {
-  const aligned = read("tools/aligned_test.mjs");
+  const aligned = noComments(read("tools/aligned_test.mjs"));
   t(launched ? "aligned_test now carries a row for it"
              : "aligned_test does not carry it yet, and that is the gap",
     launched ? aligned.includes(GAME) : !aligned.includes(GAME),
     launched ? "the cross-game contract applies"
              : "its failures are the launch checklist — add the row ON the day");
 
-  const chrome = read("football/crossword/chrome_test.mjs");
-  t(launched ? "chrome_test now renders this page too"
-             : "chrome_test cannot see this page yet, and that is the gap",
-    launched ? chrome.includes(DIR) : !chrome.includes(DIR),
-    launched ? "the unreleased-name rule is enforced here"
-             : "it reads a fixed list of football/ pages");
+  /* NO LONGER A GAP, AND NOT CONDITIONAL. chrome_test read a fixed list of
+     football/ pages, so the rule that an unreleased game is named nowhere was
+     not enforced on this one at all — which matters MOST before launch, not
+     after. The page is in that list now, so this asserts coverage in both
+     states rather than describing an absence. */
+  const chrome = noComments(read("football/crossword/chrome_test.mjs"));
+  t("chrome_test renders this page, so the naming rule is enforced on it",
+    chrome.includes(DIR), DIR);
 }
 
 /* ---- the answers -------------------------------------------------------- */

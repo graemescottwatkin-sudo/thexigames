@@ -25,47 +25,35 @@
 import { json, bad, publicPuzzle, cellKey } from "../../_lib/puzzle.js";
 import { dailyNumber, dailyDayKey, ANSWERS_AFTER_DAYS } from "../../_lib/daily.js";
 import { launchNumber } from "../../_lib/games.js";
+import { storedNo, lastPublicNo } from "../../_lib/fr-board.js";
 import {
   mayOpenArchive, archiveRefusal, daysBack, FREE_ARCHIVE_DAYS,
 } from "../../_lib/archive.js";
 
 const GAME = "crossword_fr";
 
-/* WHICH BOARD IS TODAY'S, counted from this game's own launch rather than the
-   family's epoch. The family's dailyNumber starts at 2026-09-18 for everybody;
-   a game that launches later must still open on its board 1, which is the
-   mistake three pages made before LAUNCHED existed.
+/* WHICH BOARD IS TODAY'S: THE FAMILY'S DAILY NUMBER, exactly as every other
+   game in this family counts. boardKeys() advertises launchNumber(game)..today
+   and Vowels launched on board TEN because of it — a game's first board is not
+   board 1 here.
 
-   NULL MEANS NOT LAUNCHED AND MUST NOT BE READ AS DAY ONE. games.js says so
-   where launchNumber is defined, and this returns null rather than 1 so the
-   caller has to decide what that means instead of being handed a wrong number
-   that looks right. */
+   THIS FILE HAD IT THE OTHER WAY and it was wrong in a way nothing could catch
+   until the game entered PERMA_GAMES. It returned dailyNumber - launched + 1,
+   so it called the opening board 1 while the sitemap called the same board 4.
+   A player following /friends/crossword/daily/4 would have been served the
+   bank's FOURTH puzzle instead of the first — silently, because board 4 exists.
+   The suites stub D1 and never ask what the site advertises, so they agreed
+   with it. fr-board.js now owns the one conversion between this number and the
+   row the bank stored. */
 function todayNo(now) {
-  const launched = launchNumber(GAME);
-  if (!launched) return null;
-  return dailyNumber(now) - launched + 1;
+  return launchNumber(GAME) ? dailyNumber(now) : null;
 }
 
-/* The calendar day a board number falls on, in the family's terms, so the
-   archive rule can be asked the same question it is asked for every other
-   game. Built from launchNumber and dailyDayKey rather than from a second
-   epoch, because a second epoch is a second answer about what a Tuesday was.
-
-   AND NOT archive.js's backForBoard(), WHICH LOOKS LIKE EXACTLY THIS AND IS
-   NOT. That helper does `today - no` with both numbers in the FAMILY's terms,
-   where a game's board 1 is its launchNumber — which works because every game
-   launched so far launched on the epoch, so family-wide and launch-relative
-   numbering have never yet disagreed. Friends is the first game that launches
-   later, and migration 043 stores daily_no 1..120 counted from ITS first
-   board, deliberately: keeping the day out of the table is what lets the run-in
-   be re-based without rewriting a board. Passing a launch-relative number to
-   backForBoard would read board 5 as the fifth day of the family and hand back
-   a `back` of several months, refusing today's board to anyone without an
-   account. The two conventions are named here rather than quietly mixed. */
+/* The calendar day a public board number falls on. It IS the family's day key
+   now that the number is the family's, so there is no arithmetic left to get
+   wrong — which is the point of having moved. */
 function dayForNo(no) {
-  const launched = launchNumber(GAME);
-  if (!launched) return null;
-  return dailyDayKey(launched + no - 1);
+  return launchNumber(GAME) ? dailyDayKey(no) : null;
 }
 
 export async function onRequestGet({ request, env }) {
@@ -104,15 +92,22 @@ export async function onRequestGet({ request, env }) {
     }
   }
 
-  const row = await env.DB.prepare(
+  /* THE STORED ROW, WHICH IS NOT THE NUMBER IN THE URL. fr_puzzles.daily_no
+     runs 1..120 as the bank numbered its manifest; the number here is the
+     family's. Null means this day has no board of ours — before the launch, or
+     past the end of the bank — and both are answered the same way below,
+     because a board that is not there is not an error. */
+  const board = storedNo(no);
+  const row = board === null ? null : await env.DB.prepare(
     "SELECT payload FROM fr_puzzles WHERE mode = 'daily' AND daily_no = ?1"
-  ).bind(no).first();
+  ).bind(board).first();
 
   /* NO ROW IS NOT AN ERROR. The bank holds a finite run of boards and the
      calendar will reach the end of it; saying so plainly lets the page degrade
      rather than break, which is the shape grid and HiLo both answer with. */
   if (!row) {
     return json({ no, day, today, board: null, launched: today !== null,
+                  lastBoardNo: lastPublicNo(),
                   answersAfterDays: ANSWERS_AFTER_DAYS,
                   freeArchiveDays: FREE_ARCHIVE_DAYS });
   }

@@ -24,7 +24,16 @@ function t(name, ok, note) {
 }
 
 console.log("The list of games");
-t("every game id is lower case and plain", GAMES.every((g) => /^[a-z]+$/.test(g)));
+/* LOWER CASE, AND NOTHING THAT COULD BE A PATH OR A CASE TRAP. The underscore
+   joined the class when crossword_fr launched on 21 September 2026: an id is
+   used as a storage key, a results column value and an /api/ segment, and
+   "_" is safe in all three. What the rule is actually keeping out is upper
+   case, dots, slashes and spaces -- so those stay refused, and the case below
+   still proves "../etc" and "CROSSWORD" are not ids. Widening the class is
+   not the same as dropping the check. */
+t("every game id is lower case and plain", GAMES.every((g) => /^[a-z_]+$/.test(g)));
+t("and none of them could be mistaken for a path or a case",
+  GAMES.every((g) => !/[.\/\\ ]/.test(g) && g === g.toLowerCase()));
 t("the default is one of them", GAMES.indexOf(DEFAULT_GAME) > -1);
 t("an unknown id is refused, not coerced", validGame("wordsearchxi") === null &&
   validGame("../etc") === null && validGame("CROSSWORD") === "crossword");

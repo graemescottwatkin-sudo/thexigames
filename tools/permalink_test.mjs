@@ -380,14 +380,28 @@ console.log("\n=== A board whose day the game never ran ===");
 {
   const { GAMES } = await import("../functions/_lib/games.js");
   const { slugOf, themeOf, SLUG_OF } = await import("../functions/_lib/permalink.js");
-  const moved = GAMES.filter((g) =>
+  /* FOOTBALL'S GAMES, not every game. These two assertions say a game lives at
+     /football/<id>/ and is its own slug — true of everything in GAMES until
+     crossword_fr joined it on 21 September 2026, and that game exists precisely
+     to be neither. Left unscoped they refuse the second theme for being a
+     second theme. The football half of the rule is the half worth keeping, and
+     it is kept whole rather than softened. */
+  const footballGames = GAMES.filter((g) => themeOf(g) === "football");
+  const moved = footballGames.filter((g) =>
     gamePath(g) !== "/football/" + g + "/" || gameDir(g) !== "football/" + g);
   t("introducing slugs moved no football path",
     moved.length === 0,
     moved.length ? moved.map((g) => g + " -> " + gamePath(g)).join(", ")
                  : GAMES.length + " games, each still /football/<id>/");
-  t("and a game with no slug entry is its own slug",
-    GAMES.every((g) => slugOf(g) === g));
+  t("and a football game with no slug entry is its own slug",
+    footballGames.every((g) => slugOf(g) === g));
+  /* THE POSITIVE HALF, so scoping the line above cannot quietly become an
+     exemption: every game that DOES carry a slug entry must be a themed one.
+     A football game appearing in SLUG_OF would mean a football path had moved
+     after all, which is the thing the assertion above stopped watching for. */
+  t("and every game that has a slug entry is themed, never football",
+    Object.keys(SLUG_OF).every((g) => themeOf(g) !== "football"),
+    Object.keys(SLUG_OF).join(", ") || "none");
 
   /* AND THE HALF THAT IS NEW. crossword_fr is the Friends crossword: a
      distinct id, because THEME_OF maps one id to one theme and `crossword` is

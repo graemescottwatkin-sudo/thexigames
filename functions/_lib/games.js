@@ -87,6 +87,11 @@ export const LAUNCHED = {
      still in the bank and all 231 passing, the other 11 carrying a known and
      documented ambiguity about manager appointments rather than an error. */
   ballpark: "2026-09-18",
+  /* crossword_fr is BUILT AND NOT LAUNCHED. When it is, the date goes here
+     and its PUBLIC board numbers start at launchNumber("crossword_fr"),
+     not at 1 — boardKeys advertises launchNumber..today for every game,
+     which is why Vowels launched on board ten. fr-board.js converts, and
+     friends/crossword/deploy_check.mjs lists everything else the day needs. */
   /* Codeword XI took the seventh shirt on 14 September 2026 — the next free
      number, which is what launching does. Its queue starts the same day, so
      the launch day and board one are the same day and nothing counts from
