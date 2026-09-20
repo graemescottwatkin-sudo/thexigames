@@ -444,7 +444,22 @@ body{margin:0;font-family:var(--body)}
   .wa-ed .commit .kick{width:100%}
 }
 @media (max-width:420px){
-  .wa-ed .doors{grid-template-columns:1fr}
+  /* TWO ACROSS ON A PHONE, NOT ONE. This dropped to a single column here, and
+     the comment on .doors says why that is the wrong shape: "a grid rather than
+     a list, because eleven doors is a team sheet and the player is looking for
+     their own club rather than reading them in order." One column makes it the
+     list again, and a list of eleven is two screens of scrolling before you
+     have seen every club you could pick.
+     Measured at 375x667 on the live board: 1195px of doors became 631px, and
+     the whole choice plus the Play button now sits in about one screen instead
+     of two. No club name wraps at the 167px this gives them — Nottingham
+     Forest, Sheffield United, Newcastle United and AFC Bournemouth are the long
+     ones and all four still fit on one line.
+     The eleventh takes the full width rather than sitting half-width beside a
+     gap, so the odd one out reads as deliberate. Eleven is odd every day, so
+     this is the shape every day. */
+  .wa-ed .doors{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .wa-ed .door:last-child{grid-column:1 / -1}
   .wa-ed .door{min-height:0}
   .wa-ed .door .d-year{font-size:28px}
   .wa-ed .pf-nums{gap:24px}
