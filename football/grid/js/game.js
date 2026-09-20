@@ -32,7 +32,7 @@
 
   var R = window.XIGR_RULES;
   var $ = function (id) { return document.getElementById(id); };
-  var BUILD = "v002i";
+  var BUILD = "v002j";
 
   var S = {
     board: null,          // the PUBLIC board: shape, lengths, crossings. No letters.
@@ -286,11 +286,16 @@
        break in one says nothing about the other. A crossing cell can carry both
        classes, each drawn on the edge belonging to its own direction, so
        neither is wrong.
-       DRAWN ON THE EMPTY GRID, not held back until letters appear. Showing it
-       only once the answer is filled would put the hint after the moment it is
-       needed: the owner wanted to know he was looking for two words WHILE
-       guessing, which is the whole of the request. It is a real hint, and it is
-       the one that was asked for. */
+       HELD BACK UNTIL THE CELL HAS A LETTER. This drew on the empty grid, and
+       the comment here argued for that: the hint is wanted WHILE guessing
+       rather than after. Owner's call, 20 Sep 2026, reversing it — an empty
+       grid ruled into words tells you the shape of every answer before you
+       have played a stroke, which is a different game from the one that ships.
+       It is still a hint while guessing rather than after, because it appears
+       per CELL as that cell fills: type into LEWISSKELLY and the rule shows up
+       at the S as you reach it, so you learn the name is two words mid-answer
+       and not at full time. What is gone is being told it for free, on eleven
+       answers at once, before the first guess. */
     var brk = {};
     b.entries.forEach(function (x) {
       (x.breaks || []).forEach(function (k) {
@@ -316,7 +321,6 @@
         var cell = r + "," + c;
         if (!inGrid[cell]) { html += '<div class="gd-cell"></div>'; continue; }
         var cls = ["gd-cell", "on"], ch = "";
-        if (brk[cell]) cls.push(brk[cell].trim());
         var inSel = cell in selIdx, i = selIdx[cell];
 
         if (S.confirmed[cell]) { cls.push("conf"); ch = S.confirmed[cell]; }
@@ -335,6 +339,12 @@
           if (cls.indexOf("lane") === -1) cls.push("ring");
           if (i === cur) cls.push("cursor");
         }
+        /* AFTER the branches, because it is `ch` that decides it and `ch` is
+           what they set. A cell with a letter carries its break; an empty one
+           does not. At full time the branch above fills every cell in, so the
+           finished board shows every divider — which is right: the answer is
+           on screen and the rule is part of reading it. */
+        if (ch && brk[cell]) cls.push(brk[cell].trim());
         html += '<div class="' + cls.join(" ") + '" data-cell="' + cell + '" tabindex="0">' +
           (startsAt[cell] ? '<span class="n">' + startsAt[cell] + "</span>" : "") + ch + "</div>";
       }
