@@ -67,7 +67,13 @@ const w = (n, d) => { warn++; console.log(`  ??  ${n}${d ? "  — " + d : ""}`);
    the run makes 60 and several sit inside branches that legitimately skip
    (no sealed board to refuse, no published board to open), so 58 still leaves
    the skip room and now counts the new one. */
-const MIN_ASSERTIONS = 58;
+/* 60 since 20 Sep 2026, REVIEWED rather than raised by reflex. Two assertions
+   were added and both are unconditional -- they sit in the `d && d.puzzle`
+   block, which runs for every daily -- so the real count rose by exactly two
+   and the headroom this floor deliberately keeps is unchanged. The floor sits
+   BELOW the run's real count on purpose, by the number of assertions that can
+   legitimately skip; one set to the exact count flaps the first time one does. */
+const MIN_ASSERTIONS = 60;
 let reachedEnd = false, announced = false;
 function incomplete() {
   if (announced) return;
@@ -89,6 +95,23 @@ function t(name, ok, note) {
   else { fail++; console.log(`FAIL  ${name}${note ? "  — " + note : ""}`); }
 }
 const get = (path, opts) => fetch(BASE + path, { redirect: "manual", ...opts });
+
+/* THE CANONICAL ANSWERS URL IS LOWER CASE, and that is a fact about the site
+   rather than a convenience for this file. Since the case-fold 301 shipped,
+   _middleware.js redirects any path carrying an upper-case letter to its lower
+   case form -- so a board id, written XIWS-0003 everywhere else in this
+   codebase and in the API, addresses a page at .../answers/xiws-0003.
+
+   The ROUTE is indifferent: it does String(parts[0]).toUpperCase() before
+   matching, so both forms reach the same board. The SEAL is not. A sealed board
+   must answer one identical 404 with no-store, and for an upper-case id that
+   refusal is now preceded by a 301 which is permanent and carries no
+   Cache-Control at all.
+
+   So both questions are asked rather than the passing one being substituted:
+   the redirect is pinned as behaviour below, and the seal is asserted on the
+   canonical URL, which is where it is actually meant to hold. */
+const answersUrl = (id) => ("/football/wordsearch/answers/" + id).toLowerCase();
 
 console.log(BASE + "/wordsearch");
 
@@ -345,16 +368,34 @@ t("it lists published boards", !!firstAnswered !== ansSaysNew,
     `${listed.length} listed, ${ceiling} days since ${launch}`);
 }
 if (firstAnswered) {
-  const one = await get("/football/wordsearch/answers/" + firstAnswered);
-  t("a published board's answers are served", one.status === 200);
+  /* The canonical form, for the reason beside answersUrl. This block is skipped
+     while nothing is published, so the same fault here would have surfaced on
+     the day the first answers page appeared rather than today -- found only
+     because the sealed block below shares it. */
+  const one = await get(answersUrl(firstAnswered));
+  t("a published board's answers are served", one.status === 200,
+    firstAnswered + " -> " + one.status);
   t("and cacheable — a published answer never changes",
     /max-age/.test(one.headers.get("cache-control") || ""));
 }
 /* Today's board must be sealed: it was first scheduled at most today. */
 if (d && d.puzzle) {
-  const todays = await get("/football/wordsearch/answers/" + d.puzzle.id);
+  /* THE REDIRECT ITSELF, ASSERTED RATHER THAN WORKED AROUND. This check went
+     red when the case-fold 301 shipped, and the cheap repair would have been to
+     request the lower-case URL and move on -- which is exactly how a guard
+     quietly stops covering what it was written for. Pinning the redirect makes
+     the site's case-insensitivity tested behaviour, so a change that drops it,
+     or points it somewhere else, fails here. */
+  const upper = await get("/football/wordsearch/answers/" + d.puzzle.id);
+  t("an upper-case board id is redirected to the canonical lower-case one",
+    upper.status === 301, d.puzzle.id + " -> " + upper.status);
+  t("and the redirect names that exact board, not merely a lower-case path",
+    (upper.headers.get("location") || "").endsWith(answersUrl(d.puzzle.id)),
+    upper.headers.get("location") || "(no Location)");
+
+  const todays = await get(answersUrl(d.puzzle.id));
   t("today's board's answers are refused", todays.status === 404,
-    d.puzzle.id + " -> " + todays.status);
+    answersUrl(d.puzzle.id) + " -> " + todays.status);
   t("and the refusal is not cacheable",
     /no-store/.test(todays.headers.get("cache-control") || ""));
   const refText = await todays.text();
