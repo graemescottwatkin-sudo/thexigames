@@ -98,10 +98,11 @@
   })();
 </script>
 
-<!-- Search Console verification for the new property. Paste the token
-     Google gives you and deploy; the tag can stay afterwards.
-<meta name="google-site-verification" content="PASTE_TOKEN_HERE">
--->
+<!-- Search Console verification is NOT here. It was, and it verified nothing:
+     the URL-prefix method looks for the tag at the address you enter as the
+     property, which is the site root rather than this game. It now lives in
+     the hub's index.html, with the note that a Cloudflare DNS TXT record is
+     the better route because it covers apex and www at once. -->
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%231E6B45'/%3E%3Crect x='6' y='6' width='8' height='8' fill='%23fff'/%3E%3Crect x='18' y='6' width='8' height='8' fill='%23fff' opacity='.45'/%3E%3Crect x='6' y='18' width='8' height='8' fill='%23fff' opacity='.45'/%3E%3Crect x='18' y='18' width='8' height='8' fill='%23fff'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -120,7 +121,7 @@
 <!-- The theme, stamped before first paint: light unless the player chose
      dark, decided in one shared place for every page of the family. -->
 <script src="/shared/xi-theme.js?v=v49"></script>
-<link rel="stylesheet" href="css/style.css?v=v003u">
+<link rel="stylesheet" href="css/style.css?v=v003v">
 </head>
 <body>
 <!-- The page's only H1, first thing in the body.
@@ -1106,7 +1107,7 @@
 
 <footer>
   <button id="statsBtn">My Season</button> &middot; <span id="streakLine"></span><br>
-  Crossword <span class="xi">XI</span> by The <span class="xi">XI</span> Games &middot; unofficial word puzzle &middot; <span id="buildTag">v003u</span> &middot;
+  Crossword <span class="xi">XI</span> by The <span class="xi">XI</span> Games &middot; unofficial word puzzle &middot; <span id="buildTag">v003v</span> &middot;
   <a href="privacy.html">privacy</a> &middot;
   <button id="skipToggle">skip filled: off</button> &middot;
   <button id="bankToggle">letter bank: on</button> &middot;
@@ -1135,7 +1136,7 @@
 <script src="/shared/xi-seasons.js?v=v49"></script>
 <script src="/shared/xi-clubs.js?v=v49"></script>
 <script src="/shared/xi-table.js?v=v49"></script>
-<script src="js/engine.js?v=v003u"></script>
-<script src="js/game.js?v=v003u"></script>
+<script src="js/engine.js?v=v003v"></script>
+<script src="js/game.js?v=v003v"></script>
 </body>
 </html>
