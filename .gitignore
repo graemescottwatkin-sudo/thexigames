@@ -26,6 +26,22 @@ data/*.rewritten.sql
 # The importers should be fixed to anchor on ROOT; until then this catches it.
 **/data/*-production*.sql
 **/data/*.rewritten.sql
+# AND THE SAME FILES WITH SOMETHING AFTER THE .sql. Every pattern above needs
+# the name to END in .sql, so a backup taken beside one is not covered: on
+# 20 Sep 2026 data/sc-production.sql.before-20260920 — eight megabytes of the
+# Scrambled bank — sat untracked and stageable in the tree, put there by a
+# session taking a safety copy before an import. Nothing committed it, and
+# only because staging is done by name here; one `git add -A` would have.
+# The suffix is the whole fault: the file was the bank, named like the bank,
+# and invisible to rules that all end in .sql.
+data/*-production*.sql.*
+**/data/*-production*.sql.*
+# A CAPTURE IS STILL NOT COVERED BY ANY OF THIS, and cannot usefully be — a
+# read-only JSON export of served boards matches none of these shapes and
+# naming one to match would be guesswork about the next tool. The defence for
+# those is where they are written, not what they are called: captures belong
+# OUTSIDE the repository, beside it in ..\<game>xi-source\, which is where
+# the Ballpark one of 20 Sep went.
 # Grid XI's boards. The grid starts EMPTY, so every letter in one is an
 # answer and a board committed here is a board solved. D1 is the only copy.
 data/gd-production.sql
