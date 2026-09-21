@@ -27,13 +27,16 @@
  * across a midnight — the rule the clock-sensitive suites in this repo already
  * follow.
  */
+/* The football hub moved to football/index.html on 21 Sep 2026, when the
+   root became the theme picker. Asked, never assembled: see permalink.js. */
+import { themeHubFile } from "../functions/_lib/permalink.js";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { JSDOM } from "jsdom";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
-const HTML = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+const HTML = fs.readFileSync(path.join(ROOT, themeHubFile("football")), "utf8");
 
 /* THE CYCLE AND ITS EPOCH ARE READ FROM THE PAGE, not restated here. They were
    restated, and when the family reset to day 1 on 18 September 2026 and the
@@ -45,7 +48,7 @@ const HTML = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
    What is PINNED below is the one thing that is a decision rather than a
    derivation: day 0 is QuickFire and HiLo, because that is what the owner asked
    for on launch day. Everything else is computed, so it follows the page. */
-const HUB = fs.readFileSync(path.join(ROOT, "index.html"), "utf8");
+const HUB = fs.readFileSync(path.join(ROOT, themeHubFile("football")), "utf8");
 const SPEC_EPOCH = (HUB.match(/FEATURE_EPOCH = "([0-9-]+)"/) || [])[1];
 const SPEC_CYCLE = [...(HUB.match(/FEATURE_CYCLE = \[([\s\S]*?)\];/) || [, ""])[1]
   .matchAll(/\["([a-z]+)",\s*"([a-z]+)"\]/g)].map((m) => [m[1], m[2]]);

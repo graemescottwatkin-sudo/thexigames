@@ -25,6 +25,9 @@
  *
  *   node tools/attempt_test.mjs        (from the repo root)
  */
+/* The football hub moved to football/index.html on 21 Sep 2026, when the
+   root became the theme picker. Asked, never assembled: see permalink.js. */
+import { themeHubFile } from "../functions/_lib/permalink.js";
 import { onRequestPost as finish } from "../functions/api/finish.js";
 import { onRequestPost as reveal } from "../functions/api/reveal.js";
 import { onRequestPost as verify } from "../functions/api/verify.js";
@@ -391,7 +394,7 @@ console.log("\nThe hub is told which day it is, rather than asking the device");
     /^[0-9]{4}-[0-9]{2}-[0-9]{2}$/.test(String(j.day || "")), JSON.stringify(j.day));
   t("and it is the day that number stands for",
     j.day === dailyDayKey(j.dailyNo), j.day + " vs " + dailyDayKey(j.dailyNo));
-  const hub = fs.readFileSync("index.html", "utf8");
+  const hub = fs.readFileSync(themeHubFile("football"), "utf8");
   t("and the hub takes its date from there",
     /fetch\("\/api\/daily"/.test(hub) && /fromServerDay/.test(hub),
     "the device's date is drawn first so the line is never empty, then replaced");

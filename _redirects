@@ -53,18 +53,26 @@
 /vowels         /football/vowels/             301
 /quickfire      /football/quickfire/          301
 
-# THE THEME'S OWN PAGE, AND WHY THIS ONE IS A 302.
+# THE THEME'S OWN PAGE — THE 302 THAT USED TO BE HERE IS GONE, 21 Sep 2026.
 #
-# The hub is at / and there is one theme, so /football/ has nothing of its own
-# to say yet and points home. That will change the day a second theme lands: /
-# becomes the picker and /football/ becomes the football hub, and this line is
-# deleted.
+# It read `/football/ / 302`, because the hub was at / and football had nothing
+# of its own to say. The second theme landed, the hub moved to
+# football/index.html, and /football/ now serves it as a static file. The root
+# is functions/index.js: the theme picker, which shows the single listed
+# theme's hub while there is one.
 #
-# A redirect known to be temporary must not be permanent. It is on /football/
-# rather than on / for the same reason: almost nobody has /football/ cached,
-# and everybody has /. Putting the reversible redirect on the apex would have
-# meant un-caching a 301 from the most-linked URL on the site.
-/football/      /                             302
+# NOTHING WAS FLIPPED TO POINT THE OTHER WAY, and that is deliberate rather
+# than an omission. Browsers have been served `/football/ -> /` as a 302 for
+# weeks, and a 302 is cached by the client for the session. A new rule sending
+# / to /football/ would give anyone holding the old one
+#
+#     / -> /football/ -> / -> /football/ -> ...
+#
+# a redirect loop, on the most-linked URL on the site, hitting precisely the
+# visitors who have been here before and sparing anyone testing it in a fresh
+# browser. So BOTH addresses serve real content and neither redirects. A stale
+# cached `/football/ -> /` now lands on a root that answers properly, which is
+# the whole reason that redirect was a 302 in the first place.
 
 # WHAT PAGES SERVES THAT NOBODY MEANT IT TO — AND WHY THERE IS NO RULE HERE.
 #

@@ -26,7 +26,13 @@ const path = require("path");
 const ROOT = path.join(__dirname, "..");
 const read = (f) => fs.readFileSync(path.join(ROOT, f), "utf8");
 
-let html = read("index.html");
+/* THE FOOTBALL HUB, which moved to football/index.html on 21 Sep 2026 when the
+   root became the theme picker. Written as a literal here and not read from
+   permalink.js, unlike everywhere else: this file is CommonJS and predates the
+   move, and requiring an ES module from it is a change with no upside in a tool
+   that does not run in CI. If this drifts, the preview is what breaks, and the
+   preview refuses loudly when it has nothing to build from. */
+let html = read("football/index.html");
 const build = (html.match(/\?v=([^"]+)"/) || [, "dev"])[1];
 
 /* The sample puzzles are an ES module; take the object literal out of it. */

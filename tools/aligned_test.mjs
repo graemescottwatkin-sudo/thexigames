@@ -15,6 +15,9 @@
  * contract applies to it. A check that must be copied per game would itself
  * be the fault this suite exists to end.
  */
+/* The football hub moved to football/index.html on 21 Sep 2026, when the
+   root became the theme picker. Asked, never assembled: see permalink.js. */
+import { themeHubFile } from "../functions/_lib/permalink.js";
 import fs from "node:fs";
 import { createHash } from "node:crypto";
 
@@ -1054,7 +1057,7 @@ t("every share card a page names is a file that exists", (() => {
 
 const SHARED_PAGES = [
   ...GAMES.map((g) => `${g.dir}/index.html`),
-  "index.html", "football/crossword/privacy.html", "football/crossword/how-to-play.html", "football/quickfire/index.html",
+  themeHubFile("football"), "football/crossword/privacy.html", "football/crossword/how-to-play.html", "football/quickfire/index.html",
 ];
 const sharedRefsOf = (page) => page.split("shared/xi-").slice(1)
   .map((chunk) => chunk.split(String.fromCharCode(34))[0])
@@ -1452,8 +1455,8 @@ console.log("\n=== The hub judges every live game ===");
      somebody rebuilt it there rather than reading the shared one, which is
      the exact drift this move was made to stop. */
   t("and the hub no longer keeps one of its own",
-    !/api:\s*"\/api\//.test(read("index.html")),
-    "index.html reads XIPlayed.list() instead");
+    !/api:\s*"\/api\//.test(read(themeHubFile("football"))),
+    "the football hub reads XIPlayed.list() instead");
 
   const unjudged = GAMES.filter((g) =>
     !rows.some((r) => r.id === g.id && r.key.indexOf(g.prefix + ".") === 0));

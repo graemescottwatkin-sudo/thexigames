@@ -28,6 +28,9 @@
  * QuickFire is, which is why this file also refuses the things a launch would
  * have to change deliberately rather than by drift.
  */
+/* The football hub moved to football/index.html on 21 Sep 2026, when the
+   root became the theme picker. Asked, never assembled: see permalink.js. */
+import { themeHubFile } from "../../functions/_lib/permalink.js";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -295,7 +298,7 @@ t("and no game in testing sits on a shirt at or below Grid's", (() => {
 })(), "a game that is not out does not hold a shirt, and moves when one ships past it");
 t("its own page still says its name", /Grid XI/.test(html));
 t("and the hub says it too, now that it is out", (() => {
-  const hub = read("index.html");
+  const hub = read(themeHubFile("football"));
   return /Grid XI/.test(hub) && /id="shirt6"/.test(hub);
 })(), "the front door is where a launch is visible");
 

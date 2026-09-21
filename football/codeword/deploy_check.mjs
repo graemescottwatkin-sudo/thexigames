@@ -18,6 +18,9 @@
  * page reads a board file whole and this server does not serve one, which is a
  * change on their side and not a patch on ours.
  */
+/* The football hub moved to football/index.html on 21 Sep 2026, when the
+   root became the theme picker. Asked, never assembled: see permalink.js. */
+import { themeHubFile } from "../../functions/_lib/permalink.js";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -301,12 +304,12 @@ console.log("\nAnd it is NOT launched, which is the point of this gate");
   /* NAMED NOWHERE IN SERVED MARKUP. The family rule, and the one that has to
      survive a sweep: an unreleased game appears as a number and a status and
      nothing else. HTML comments are exempt; this reads the files as served. */
-  const pages = ["index.html", "404.html"];
+  const pages = [themeHubFile("football"), "404.html"];
   const named = pages.filter((p) => has(p) &&
     read(p).replace(/<!--[\s\S]*?-->/g, " ").includes("Codeword"));
   /* IT MAY BE NAMED NOW. The rule forbids naming an UNRELEASED game; this one
      is out, so the hub names it and so does its own page. */
-  t("the hub names it, now that it is out", named.includes("index.html"),
+  t("the hub names it, now that it is out", named.includes(themeHubFile("football")),
     named.join(", ") || "named nowhere");
   const map = read("functions/sitemap.xml.js");
   t("and it is in the sitemap, offered to a crawler", /football\/codeword/.test(map));

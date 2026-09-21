@@ -24,7 +24,8 @@
  * day — and this calls it rather than keeping a second copy that would drift
  * the first time either changed.
  */
-import { PERMA_GAMES, boardKeys, permalinkPath, gamePath } from "./_lib/permalink.js";
+import { PERMA_GAMES, boardKeys, permalinkPath, gamePath, themeOf, themeHubPath }
+  from "./_lib/permalink.js";
 import { isListed } from "./_lib/games.js";
 
 /* THE GAMES THIS FILE MAY ADVERTISE. PERMA_GAMES is every game that has
@@ -35,6 +36,25 @@ import { isListed } from "./_lib/games.js";
    not the other advertises every board of a game whose front page is a
    secret, which is the worse half. */
 const LISTED_GAMES = () => Object.keys(PERMA_GAMES).filter(isListed);
+
+/* THE THEME HUBS, AND WHY THEY ARE CONDITIONAL. Since 21 Sep 2026 the football
+   hub lives at /football/ and the root serves it, because the root is the theme
+   picker and there is one listed theme. TWO ADDRESSES, IDENTICAL BYTES: the
+   page's canonical says "/", so the root is the indexable one and /football/
+   points at it.
+   Listing both would hand a crawler the duplicate as well as the original, for
+   no gain. So a theme hub joins the sitemap only once the root has stopped
+   being that hub -- which is the moment a SECOND theme is listed and the picker
+   becomes a real choice. Derived, so nobody has to remember: the day an
+   announcement makes two themes listed, the hubs appear here and the canonical
+   gate in football/crossword/deploy_check.mjs refuses the page whose canonical
+   has not moved with them. */
+const THEME_HUBS = () => {
+  const themes = [...new Set(LISTED_GAMES().map(themeOf))];
+  return themes.length > 1
+    ? themes.map((t) => [themeHubPath(t), "daily", "0.9"])
+    : [];
+};
 
 const SITE = "https://www.thexigames.com";
 
@@ -94,7 +114,7 @@ const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replac
 
 export async function onRequestGet({ env }) {
   const rows = [
-    ...[...STATIC, ...ARCHIVES()].map(([path, freq, pri]) =>
+    ...[...STATIC, ...THEME_HUBS(), ...ARCHIVES()].map(([path, freq, pri]) =>
       `  <url><loc>${esc(SITE + path)}</loc><changefreq>${freq}</changefreq><priority>${pri}</priority></url>`),
     /* A board never changes once it has run — that is the entire promise of a
        permalink — so a crawler is told not to come back for it. */

@@ -4,6 +4,10 @@ import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
+/* The football hub moved to football/index.html on 21 Sep 2026, when the
+   root became the theme picker. Asked, never assembled: see permalink.js. */
+import { themeHubFile, themeHubPath, themeOf } from "../../functions/_lib/permalink.js";
+import { GAMES as GAMES_ALL, isListed } from "../../functions/_lib/games.js";
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
 let pass = 0, fail = 0;
@@ -29,7 +33,65 @@ const hasRoot = (f) => fs.existsSync(path.join(ROOT, f));
 
 t("the game has its own index.html", has("index.html"));
 t("functions/ is at the repository root, shared", hasRoot("functions/api/daily.js"));
-t("the hub is at the repository root", hasRoot("index.html"));
+/* THE HUB MOVED OUT OF THE ROOT on 21 September 2026. The root is the theme
+   picker, a Function; football's hub is a static file at its own address. Three
+   facts, and the third is the one that would go wrong quietly: a stray
+   index.html left at the root would still be served at /index.html, a second
+   copy of a page that is supposed to have one home, and the two would drift
+   exactly as every duplicated fact in this project's history has. */
+t("the football hub is at its own address", hasRoot(themeHubFile("football")));
+t("and the root is the theme picker, a Function", hasRoot("functions/index.js"));
+t("and no stale hub is left at the root to be served beside it",
+  !hasRoot("index.html"),
+  "two copies of one page is the fault this repository has the most scar tissue about");
+
+/* THE CANONICAL AND THE PICKER MUST MOVE TOGETHER, and this exists because they
+   will not be changed in the same edit unless something refuses.
+
+   ONE listed theme: the root SERVES the football hub, so the hub's canonical is
+   "/" and /football/ is the duplicate pointing at it. That is correct and is
+   what ships today.
+
+   TWO OR MORE: the root becomes a real picker, a different page, and the
+   football hub exists only at /football/. A canonical still reading "/" would
+   then tell every crawler that the football hub IS the picker -- so the hub
+   drops out of the index and the picker ranks for searches meant for it. Silent,
+   gradual, and attributable to nothing.
+
+   The sitemap already derives this (THEME_HUBS in functions/sitemap.xml.js).
+   This is the half that cannot be derived, because the canonical is a literal
+   in a static file, so it is gated instead. */
+{
+  const hub = readRoot(themeHubFile("football"));
+  const canonical = (hub.match(/rel="canonical"\s+href="([^"]+)"/) || [])[1] || "";
+  const og = (hub.match(/property="og:url"\s+content="([^"]+)"/) || [])[1] || "";
+  t("PRECONDITION: the football hub states a canonical and an og:url",
+    !!canonical && !!og, `${canonical} / ${og}`);
+
+  const themes = [...new Set(GAMES_ALL.filter(isListed).map(themeOf))];
+  const wantRoot = themes.length <= 1;
+  const want = wantRoot ? "https://www.thexigames.com/"
+                        : "https://www.thexigames.com" + themeHubPath("football");
+  /* EVERY LISTED THEME MUST HAVE A PAGE ITS CARD CAN POINT AT. A theme with one
+     game is linked straight to the game and needs no hub; a theme with several
+     is linked at its hub, and that hub is a FILE which may simply not exist.
+     Football's does. Friends' does not, and the picker's first version linked
+     every card at the theme hub regardless -- a card pointing at /friends/,
+     which is a 404, and it would have gone live on the day of the announcement
+     and not a moment before. */
+  for (const th of themes) {
+    const n = GAMES_ALL.filter((g) => isListed(g) && themeOf(g) === th).length;
+    if (n < 2) continue;                 // linked at its only game, no hub needed
+    t(`the ${th} theme has a hub for its card to point at`,
+      hasRoot(themeHubFile(th)), `${n} listed games, needs ${themeHubFile(th)}`);
+  }
+
+  t(wantRoot
+      ? "and while the root IS the football hub, that hub is canonical at the root"
+      : "and now the root is a picker, the football hub is canonical at its own address",
+    canonical === want && og === want,
+    `${themes.length} listed theme(s), want ${want}, have ${canonical}`);
+}
 t("css and js are present", has("css/style.css") && has("js/game.js") && has("js/engine.js"));
 
 const html = read("index.html");

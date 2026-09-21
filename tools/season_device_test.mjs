@@ -25,6 +25,9 @@
  *
  *   node tools/season_device_test.mjs        (from the repo root)
  */
+/* The football hub moved to football/index.html on 21 Sep 2026, when the
+   root became the theme picker. Asked, never assembled: see permalink.js. */
+import { themeHubFile } from "../functions/_lib/permalink.js";
 import fs from "node:fs";
 import vm from "node:vm";
 import { season as serverSeason, dayResult as serverDayResult } from "../functions/_lib/season.js";
@@ -262,7 +265,7 @@ console.log("\nThe hub reads whichever branch it is on");
 {
   /* THE HUB'S OWN SCRIPT, read as text: it must call /api/season, must take
      `today` from that answer, and must never build a date of its own. */
-  const hub = fs.readFileSync("index.html", "utf8");
+  const hub = fs.readFileSync(themeHubFile("football"), "utf8");
   /* CODE, NOT PROSE. The first draft of these three looked for "/api/season"
      and "shared/xi-season.js" anywhere in the file — and the block above them
      is a long comment that says both. Deleting the script tag and pointing the
@@ -303,7 +306,7 @@ console.log("\nAnd the hub's own block, run rather than read");
      put the wrong number in it would pass every grep in this file and reach a
      player — which is the fault this project keeps finding, so it is the one
      worth spending a fake DOM on. */
-  const hub = fs.readFileSync("index.html", "utf8");
+  const hub = fs.readFileSync(themeHubFile("football"), "utf8");
   const from = hub.indexOf("  (function () {\n    var box = document.getElementById(\"season\");");
   /* Up to the block's OWN close, not the page script's. Slicing to
      "})();</script>" took one brace too few and the sandbox refused to compile

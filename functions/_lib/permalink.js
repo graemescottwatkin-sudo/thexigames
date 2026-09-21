@@ -347,6 +347,25 @@ export const THEME_OF = {
 };
 export const themeOf = (game) => THEME_OF[game] || "football";
 
+/* ---- WHERE A THEME'S HUB LIVES, which is ONE fact and now has ONE place ----
+ *
+ * Every theme has a front page listing its games. Football's was the site root
+ * for as long as football was the only theme, and `/football/` 302'd to it.
+ * On 21 September 2026 the file moved to its real address and the redirect was
+ * deleted.
+ *
+ * ASKED, NEVER ASSEMBLED, for exactly the reason gamePath() exists: the theme
+ * move rewrote a hundred literal paths across ninety files and every one was a
+ * place the theme could later be wrong. A hub is the same fact one level up,
+ * and roughly a dozen suites read the football hub by the literal "index.html".
+ * They ask here now, so the next theme's hub is an entry and not a sweep. */
+export const themeHubPath = (theme) => "/" + theme + "/";
+export const themeHubFile = (theme) => theme + "/index.html";
+
+/* EVERY THEME THAT HAS A GAME, derived from THEME_OF rather than listed again.
+   Order is first-seen, which is launch order, so football stays first. */
+export const THEMES = [...new Set(Object.values(THEME_OF))];
+
 /* THE ID AND THE ADDRESS ARE TWO FACTS, and they were one until 20 Sep 2026.
  *
  * A game id has to be unique across the family: it keys results and plays

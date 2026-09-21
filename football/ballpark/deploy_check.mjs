@@ -14,6 +14,9 @@
  * is 2026-08-26 — the day it began serving — and not the day the line was
  * added. The rule is games.js's own: a later date hides boards already run.
  */
+/* The football hub moved to football/index.html on 21 Sep 2026, when the
+   root became the theme picker. Asked, never assembled: see permalink.js. */
+import { themeHubFile } from "../../functions/_lib/permalink.js";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -241,7 +244,7 @@ console.log("\nIt counts plays and banks results, like every built game");
 console.log("\nAnd it IS launched, which every one of these makes true");
 {
   const chrome = readRoot("shared/xi-chrome.js");
-  const hub = readRoot("index.html");
+  const hub = readRoot(themeHubFile("football"));
   const sitemap = readRoot("functions/sitemap.xml.js");
   const games = readRoot("functions/_lib/games.js");
   const perma = readRoot("functions/_lib/permalink.js");

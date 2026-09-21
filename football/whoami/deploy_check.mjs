@@ -17,6 +17,9 @@
  * a section of it, and they are about the CAREER as much as the name: a club
  * history is the answer written out.
  */
+/* The football hub moved to football/index.html on 21 Sep 2026, when the
+   root became the theme picker. Asked, never assembled: see permalink.js. */
+import { themeHubFile } from "../../functions/_lib/permalink.js";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -280,7 +283,7 @@ console.log("\nAnd it IS launched, which every one of these makes true");
    * on the hub, absent from the sitemap — is a game nobody can find twice.
    */
   const chrome = readRoot("shared/xi-chrome.js");
-  const hub = readRoot("index.html");
+  const hub = readRoot(themeHubFile("football"));
   const sitemap = readRoot("functions/sitemap.xml.js");
   const games = readRoot("functions/_lib/games.js");
 
