@@ -62,6 +62,13 @@
     { id: "ballpark",   key: "xibp.results", api: "/api/ballpark/daily",
       today: function (d) { return d.day; },
       done: function (r, t) { return r.day === t; } },
+    /* THE SECOND THEME. Keyed on the board NUMBER, which for this game is the
+       family's daily number — the same quantity football's crossword uses, and
+       the reason functions/_lib/games.js keys it "fr:<no>". Its own prefix, so a
+       player who has done one crossword has not done the other. */
+    { id: "crossword_fr", key: "xifc.results", api: "/api/crossword_fr/daily",
+      today: function (d) { return d.no; },
+      done: function (r, t) { return r.no === t; } },
   ];
 
   var byId = {};

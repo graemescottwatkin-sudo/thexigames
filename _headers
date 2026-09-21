@@ -57,6 +57,21 @@
 /football/crossword/js/*
   Cache-Control: public, max-age=31536000, immutable
 
+# CROSSWORD XI: FRIENDS — the second theme, same three rules as every game.
+# The page is never stored, so a player is never pinned to an old build; the
+# assets are immutable because their ?v= changes when their bytes do.
+/friends/crossword/
+  Cache-Control: no-store
+
+/friends/crossword/index.html
+  Cache-Control: no-store
+
+/friends/crossword/css/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/friends/crossword/js/*
+  Cache-Control: public, max-age=31536000, immutable
+
 # XI Word Search — same three rules as the crossword, one pair per game.
 /football/wordsearch/
   Cache-Control: no-store

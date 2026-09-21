@@ -83,9 +83,9 @@
      own — the team sheet and the kit colours. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="shared/xi-tokens.css?v=v51">
-<link rel="stylesheet" href="shared/xi-chrome.css?v=v51">
-<script src="shared/xi-theme.js?v=v51"></script>
+<link rel="stylesheet" href="shared/xi-tokens.css?v=v52">
+<link rel="stylesheet" href="shared/xi-chrome.css?v=v52">
+<script src="shared/xi-theme.js?v=v52"></script>
 <style>
 :root{
 
@@ -899,12 +899,12 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
      and the one page list, so the front door's footer and every game's are
      the same footer. -->
 <footer class="xic-foot"></footer>
-<script src="shared/xi-season.js?v=v51"></script>
-<script src="shared/xi-chrome.js?v=v51"></script>
+<script src="shared/xi-season.js?v=v52"></script>
+<script src="shared/xi-chrome.js?v=v52"></script>
 <!-- AFTER xi-chrome.js, because xi-played.js joins its probe to the squad and
      the squad is declared there. Before the inline script below, which calls
      XIPlayed.list() while it builds the shirts. -->
-<script src="shared/xi-played.js?v=v51"></script>
+<script src="shared/xi-played.js?v=v52"></script>
 
 <script>
 /* Progressive enhancement only: everything above renders complete without
@@ -1371,7 +1371,7 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
       if (ladderLibs) return ladderLibs;
       ladderLibs = new Promise(function (done) {
         var left = 2, ok = true;
-        ["shared/xi-seasons.js?v=v51", "shared/xi-table.js?v=v51"].forEach(function (src) {
+        ["shared/xi-seasons.js?v=v52", "shared/xi-table.js?v=v52"].forEach(function (src) {
           var el = document.createElement("script");
           el.src = src;
           el.onload = function () { if (!--left) done(ok); };

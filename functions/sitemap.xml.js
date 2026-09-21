@@ -25,6 +25,16 @@
  * the first time either changed.
  */
 import { PERMA_GAMES, boardKeys, permalinkPath, gamePath } from "./_lib/permalink.js";
+import { isListed } from "./_lib/games.js";
+
+/* THE GAMES THIS FILE MAY ADVERTISE. PERMA_GAMES is every game that has
+   permanent addresses, which is not the same question: an UNLISTED game has
+   real board URLs that resolve for anyone holding one, and this file is the
+   place that would hand them to a crawler. Filtered ONCE, here, and used for
+   both the archive indexes and the boards themselves — filtering one and
+   not the other advertises every board of a game whose front page is a
+   secret, which is the worse half. */
+const LISTED_GAMES = () => Object.keys(PERMA_GAMES).filter(isListed);
 
 const SITE = "https://www.thexigames.com";
 
@@ -65,7 +75,7 @@ const STATIC = [
    asked for, not remembered: the list above already went a whole game out of
    date once, and the sitemap was the file that had to be fixed. Daily,
    because a board joins each of these every morning. */
-const ARCHIVES = Object.keys(PERMA_GAMES).map((g) => [gamePath(g) + "archive/", "daily", "0.7"]);
+const ARCHIVES = () => LISTED_GAMES().map((g) => [gamePath(g) + "archive/", "daily", "0.7"]);
 
 /* A board's own address for every game, in one place — and that place is
    permalink.js, which is also where the route decides whether it will serve
@@ -74,7 +84,7 @@ const ARCHIVES = Object.keys(PERMA_GAMES).map((g) => [gamePath(g) + "archive/", 
    exist" is three answers the first time a game changes how it schedules. */
 async function boardPaths(env) {
   const out = [];
-  for (const game of Object.keys(PERMA_GAMES)) {
+  for (const game of LISTED_GAMES()) {
     for (const key of await boardKeys(env, game)) out.push(permalinkPath(game, key));
   }
   return out;
@@ -84,7 +94,7 @@ const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replac
 
 export async function onRequestGet({ env }) {
   const rows = [
-    ...[...STATIC, ...ARCHIVES].map(([path, freq, pri]) =>
+    ...[...STATIC, ...ARCHIVES()].map(([path, freq, pri]) =>
       `  <url><loc>${esc(SITE + path)}</loc><changefreq>${freq}</changefreq><priority>${pri}</priority></url>`),
     /* A board never changes once it has run — that is the entire promise of a
        permalink — so a crawler is told not to come back for it. */

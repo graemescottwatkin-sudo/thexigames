@@ -322,6 +322,11 @@ jobs:
           # per-entry booleans and no letters — a wrong entry is never told what
           # it should have been, because that would be a reveal nobody paid for.
           node friends/crossword/score_test.mjs
+          # Named here and never run in CI, exactly as the crossword's is: it
+          # reads the DEPLOYED site, so on a pull request it would report the
+          # build that is live rather than the one being proposed. Run it by
+          # hand after a deploy.
+          #   ->  node friends/crossword/live_check.mjs --expect v001a
           # And what leaves the server when a door is opened. Who Am I is the
           # hardest secrecy problem in this family so far, and the reason is
           # arithmetic: only ONE door is played per person per day and the other
@@ -555,6 +560,15 @@ jobs:
           # proves by EXECUTION that a served board carries none of the filled
           # grid, the answers or the cipher.
           node football/codeword/deploy_check.mjs
+          # CROSSWORD XI: FRIENDS, the first game of the second theme. Its gate
+          # is the one that refuses the things a LAUNCH has to change -- absence
+          # from GAMES, from the squad, from the sitemap, the noindex still on
+          # the page -- so the game cannot go live, or half go live, by drift.
+          # It also proves by EXECUTION that a served board carries no answer,
+          # no grid, no aliases and no sourceQuote: the bank verifies every
+          # answer against the sentence it was read from, so a row served whole
+          # would arrive solved.
+          node friends/crossword/deploy_check.mjs
 
   render:
     name: Sixteen viewports, real browser

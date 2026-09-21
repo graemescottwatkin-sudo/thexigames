@@ -112,10 +112,15 @@
       { n: 11, status: "In build" }
     ],
 
-    /* Friends. Its own eleven, and its number 1 is BUILT, NOT LAUNCHED — so it
-       carries an href and NO NAME, which is the middle state described above:
-       a way in for whoever is testing it, and silence everywhere else. The
-       name goes in on the launch day, not before. */
+    /* Friends. Its own eleven, and its number 1 — LAUNCHED on 21 September
+       2026 and UNLISTED, so it carries an href and NO NAME. That is not the
+       pre-launch state wearing the same clothes: the game is live, it serves
+       boards and it banks results, and this slot is the whole reason it is not
+       offered to anybody. shared/xi-played.js suggestNext() requires g.name, so
+       a nameless slot is never suggested at full time — which is the
+       behaviour wanted, arrived at without a second flag.
+       The name goes in when functions/_lib/games.js stops calling it UNLISTED,
+       and the gate refuses these two disagreeing. */
     friends: [
       { n: 1,  href: "/friends/crossword/" },
     ],
@@ -1153,7 +1158,13 @@
      existing, and the next family-level PREFERENCE fails a suite until somebody
      classifies it. A list that forgets should forget in the safe direction. */
   var RECORD_PREFIXES = ["fcw.", "xiws.", "xisc.", "xihl.", "xivw.",
-                         "xigd.", "qfx.", "xicw.", "xiwa.", "xibp.", "xi."];
+                         "xigd.", "qfx.", "xicw.", "xiwa.", "xibp.",
+                         /* The second theme, from 21 September 2026. A list like
+                            this is the thing a new game is forgotten in — which
+                            is why aligned_test walks GAMES and fails when one of
+                            them is missing here, rather than trusting anyone to
+                            remember. */
+                         "xifc.", "xi."];
   var RECORD_KEEP = [
     /* Identity. Wiping this would cut the player off from results already
        synced to their account, which clearing local history has no business

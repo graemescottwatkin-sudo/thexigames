@@ -29,7 +29,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { publicPuzzle } from "../../functions/_lib/puzzle.js";
-import { LAUNCHED, GAMES } from "../../functions/_lib/games.js";
+import { LAUNCHED, GAMES, isListed } from "../../functions/_lib/games.js";
 import { THEME_OF, SLUG_OF, gamePath, gameDir } from "../../functions/_lib/permalink.js";
 import { makeBoard, answersOf } from "./fixture.mjs";
 
@@ -58,6 +58,13 @@ const html = read(DIR + "/index.html");
 const js = read(DIR + "/js/game.js");
 const css = read(DIR + "/css/style.css");
 const launched = !!LAUNCHED[GAME];
+/* LAUNCHED AND ADVERTISED ARE TWO QUESTIONS, since 21 September 2026. This
+   game went live UNLISTED: it serves boards, banks results and counts a
+   streak, and nothing on the site says it exists. The three checks below
+   that are about being FOUND key off this; the ones about being PLAYABLE
+   still key off `launched`, and conflating them is how an unlisted game
+   ends up either unplayable or on the front page. */
+const listed = isListed(GAME);
 
 /* EVERY GREP ABOUT WHAT THE PAGE LOADS READS `markup`, NOT `html`. A comment is
    not markup a browser acts on, and letting one answer a question about script
@@ -177,18 +184,39 @@ t(launched ? "it is in PERMA_GAMES now, so the sitemap advertises it"
    `friends:` is the structure, not a disclosure. The rule is that an unreleased
    game is NAMED nowhere, so what this looks for is a slot carrying both an href
    into this game and a name — which is precisely the launched state. */
-t(launched ? "it has a named slot in its theme's squad"
-           : "its squad slot carries a way in and no name", (() => {
+t(listed ? "it has a named slot in its theme's squad"
+         : "its squad slot carries a way in and no name", (() => {
   const chrome = noComments(read("shared/xi-chrome.js"));
   const slot = (chrome.match(/\{[^{}]*href:\s*"\/friends\/crossword\/"[^{}]*\}/) || [""])[0];
   if (!slot) return false;                     // no slot at all is not the middle state
-  return launched ? /name:/.test(slot) : !/name:/.test(slot);
-})(), "the middle state is a href and no name — a way in for whoever is testing it");
-t("it is not among the sitemap's static pages", (() => {
+  return listed ? /name:/.test(slot) : !/name:/.test(slot);
+})(), "a href and no name is the state a game is in before it is announced — " +
+      "whether it has launched or not, because being playable and being " +
+      "advertised are different facts");
+t(listed ? "its front page is among the sitemap's static pages"
+         : "its front page is not among the sitemap's static pages", (() => {
   const sm = read("functions/sitemap.xml.js");
   const block = (sm.match(/const STATIC\s*=\s*\[[\s\S]*?\n\]/) || [""])[0];
-  return launched ? block.includes("/friends/") : !block.includes("/friends/");
+  return listed ? block.includes("/friends/") : !block.includes("/friends/");
 })());
+/* AND ITS BOARDS, WHICH ARE THE BIGGER HALF AND THE EASIER ONE TO MISS. The
+   static block is one line; the board loop and the archive index are derived
+   from PERMA_GAMES, and this game MUST stay in PERMA_GAMES or its permalinks
+   stop resolving for the people who have been given the address. So the filter
+   cannot be "is it in PERMA_GAMES" — the sitemap has to ask separately, and a
+   tree where it asks for one and not the other advertises every board of a
+   game whose front page is a secret. Proved from the generator's source rather
+   than from a rendered sitemap, because rendering it needs a database. */
+t("and the sitemap filters its derived lists by what is LISTED, not by what has permanent addresses", (() => {
+  const sm = noComments(read("functions/sitemap.xml.js"));
+  const filtered = /Object\.keys\(PERMA_GAMES\)\.filter\(isListed\)/.test(sm);
+  /* EVERY enumeration, not merely one. The filtered helper must itself walk
+     PERMA_GAMES, so the test is not "no raw walk exists" — it is that no
+     UNFILTERED walk does. Both derived lists go through the helper; either one
+     left keyed straight on PERMA_GAMES advertises an unlisted game's boards. */
+  const unfiltered = (sm.match(/Object\.keys\(PERMA_GAMES\)(?!\.filter\(isListed\))/g) || []).length;
+  return filtered && unfiltered === 0;
+})(), "an unlisted game keeps its permalinks and loses its listings");
 
 /* THE NOINDEX, AND BOTH HALVES OF IT. Present while unlaunched, because an
    unreleased game must not be findable. ABSENT once it launches, because a
@@ -196,9 +224,11 @@ t("it is not among the sitemap's static pages", (() => {
    search result — and that failure is silent, which is why it is gated rather
    than remembered. */
 const noindex = /<meta\s+name="robots"\s+content="noindex">/.test(markup);
-t(launched ? "the noindex is gone now that it has launched"
-           : "the page says noindex while it is unreleased",
-  launched ? !noindex : noindex);
+t(listed ? "the noindex is gone now that it is announced"
+         : "the page says noindex while it is not announced",
+  listed ? !noindex : noindex,
+  listed ? "a noindex nobody removes is a live game no search ever returns"
+         : `LAUNCHED ${LAUNCHED[GAME]}, and UNLISTED — playable, not findable`);
 
 /* WHAT IS NOT YET WATCHING THIS GAME, SAID OUT LOUD. aligned_test is the
    cross-game contract and chrome_test is what enforces "an unreleased game is

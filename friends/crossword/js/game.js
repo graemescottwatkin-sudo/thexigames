@@ -62,16 +62,29 @@
 
   /* EVERY KEY UNDER THIS GAME'S OWN PREFIX. Reading another game's is fine and
      is how the hub knows what was played today; writing one is not. */
+  /* ONE SAVE PER BOARD, AND THE KEY IS BUILT RATHER THAN INLINE. The board
+     number is a runtime value, so `P + "board." + boardNo` written at the call
+     site resolves to nothing when read statically — and aligned_test reads every
+     setItem key statically to prove a game writes only under its own prefix. Its
+     own comment records the same fault biting Scrambled, which builds its key
+     for the same reason and was failed for having no writes at all.
+     The no-board branch is a real fallback AND the resolvable one: a save before
+     the board number is known would otherwise land under "xifc.board.undefined". */
+  function boardKey() {
+    if (!boardNo) return P + "board.0";
+    return P + "board." + boardNo;
+  }
+
   function save() {
     try {
-      localStorage.setItem(P + "board." + boardNo, JSON.stringify({
+      localStorage.setItem(boardKey(), JSON.stringify({
         filled: filled, marks: marks, finished: finished,
       }));
     } catch (e) { /* a full or blocked store is not a reason to stop playing */ }
   }
   function load() {
     try {
-      var raw = localStorage.getItem(P + "board." + boardNo);
+      var raw = localStorage.getItem(boardKey());
       if (!raw) return;
       var v = JSON.parse(raw);
       filled = (v && v.filled) || {};
@@ -98,6 +111,31 @@
   }
   function streak() {
     try { return Number(localStorage.getItem(P + "streak.n")) || 0; } catch (e) { return 0; }
+  }
+
+  /* THE RESULT ROW, WHICH IS WHAT EVERY OTHER GAME BANKS. Without one this game
+     had a streak and a saved board and no record: nothing for the hub to read,
+     nothing for shared/xi-played.js to judge "played today" against, and
+     nothing to push to an account. A game that cannot say what it scored is a
+     game whose history does not exist.
+
+     THE SHAPE IS THE FAMILY'S. `no` is the PUBLIC board number — the family's
+     daily number, which functions/_lib/games.js keys as "fr:<no>" and dates
+     through playedOn. A row without it cannot be filed, so it is not written.
+
+     FIRST RESULT BANKED WINS, the family's merge rule. A board already recorded
+     is left exactly as it was: reopening a finished board must not overwrite the
+     score that was earned on it. */
+  function recordResult(v) {
+    if (!boardNo || !v) return;
+    try {
+      var all = JSON.parse(localStorage.getItem(P + "results") || "[]");
+      if (!Array.isArray(all)) all = [];
+      if (all.some(function (r) { return r && r.no === boardNo; })) return;
+      all.push({ no: boardNo, score: v.score, correct: v.correct,
+                 kept: !!v.kept, at: Date.now() });
+      localStorage.setItem(P + "results", JSON.stringify(all.slice(-400)));
+    } catch (e) { /* a full or blocked store is not a reason to lose the game */ }
   }
 
   /* ---- the grid --------------------------------------------------------- */
@@ -257,6 +295,7 @@
       if (v.kept) {
         finished = true;
         keepDay(board && board.day);
+        recordResult(v);
         if (window.XIPlays) XIPlays.end(true);
       }
       save();
@@ -265,19 +304,42 @@
     }).catch(function () { /* a failed check is not a failed game */ });
   }
 
+  /* FULL TIME. Only the SCORE LINE is written here — the share row, the
+     suggestion and the community box are the family's and are filled by the
+     shared modules. The first version replaced the whole panel's innerHTML,
+     which would have destroyed all three every time it ran. */
   function fullTime(v) {
-    var ft = $("fxFullTime");
-    if (!ft || !v) return;
+    var ft = $("fxFullTime"), body = $("fxFtBody");
+    if (!ft || !body || !v) return;
+    ft.hidden = false;
+
     if (!v.kept) {
-      ft.hidden = false;
-      ft.innerHTML = "<p class='fx-ft-line'>" +
+      body.innerHTML = "<p class='fx-ft-line'>" +
         v.correct + " of " + v.entries.length + " right. Keep going.</p>";
       return;
     }
-    ft.hidden = false;
-    ft.innerHTML =
+    body.innerHTML =
       "<p class='fx-ft-score'>" + v.score + "<span>/100</span></p>" +
       "<p class='fx-ft-line'>Solved. Streak: " + streak() + "</p>";
+
+    /* THE SHARE ROW, THE FAMILY'S. This game hands over its own sentence and the
+       address of the board it was scored on; shared/xi-share.js owns the
+       buttons, the platforms and the copy fallback, so every game offers the
+       same way out. No challenge: this game has no table to challenge into. */
+    if (window.XIShare && $("shareRow")) {
+      window.XIShare.mount($("shareRow"), {
+        text: function () {
+          return "Crossword XI: Friends #" + boardNo + " — " + v.score + "/100";
+        },
+        url: function () {
+          return "https://www.thexigames.com/friends/crossword/daily/" + boardNo;
+        },
+        challenge: false,
+      });
+    }
+    if (window.XIFullTime && $("nextUpRow")) {
+      window.XIFullTime.nextUp($("nextUpRow"), { game: GAME });
+    }
   }
 
   /* ---- input ------------------------------------------------------------ */

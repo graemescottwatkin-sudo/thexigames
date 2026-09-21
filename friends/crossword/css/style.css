@@ -19,10 +19,20 @@
   padding: 0 16px 24px;
 }
 
-.sr-only {
-  position: absolute; width: 1px; height: 1px;
-  padding: 0; margin: -1px; overflow: hidden;
-  clip: rect(0 0 0 0); white-space: nowrap; border: 0;
+/* NO .sr-only HERE. The shared layer defines it and a game redefining any part
+   of the shared vocabulary is a second definition that will drift — aligned_test
+   refuses it by name. This file had a copy, which agreed today and would not
+   have agreed for ever. */
+
+/* THE BODY, RESET AND GIVEN THE FAMILY'S FONT. Without the margin reset the
+   page sits in the browser's default gutter while every other game does not,
+   and without the font it inherits the browser's serif — which looks like a
+   stylesheet that failed to load rather than a design. */
+body {
+  margin: 0;
+  font-family: var(--body);
+  background: var(--paper);
+  color: var(--ink);
 }
 
 /* ---- identity ----------------------------------------------------------- */

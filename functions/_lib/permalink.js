@@ -67,11 +67,12 @@ import { launchNumber } from "./games.js";
    must be asked whether it ran on the day that number stands for. */
 export const PERMA_GAMES = {
   crossword: { name: "Crossword XI", schedule: "ring" },
-  /* crossword_fr goes here ON ITS LAUNCH DAY and not before: this map is what
-     the sitemap advertises, and a game listed here is a game the site claims
-     exists. It will be a RING — every number from its launch to today
-     resolves by arithmetic, with fr-board.js converting the public number to
-     the bank row — and the bank is finite at 120 boards, so it does not wrap. */
+  /* The Friends crossword, launched 21 September 2026. A RING: every number
+     from its launch to today resolves by arithmetic, with fr-board.js turning
+     the public number into the bank row. The bank is finite at 120 boards, so
+     the ring does not run for ever and does not wrap — the day after the last
+     one has no board and says so. */
+  crossword_fr: { name: "Crossword XI: Friends", schedule: "ring" },
   wordsearch: { name: "Wordsearch XI", schedule: "day" },
   scrambled: { name: "Scrambled XI", schedule: "ring" },
   hilo: { name: "HiLo XI", schedule: "day" },

@@ -17,7 +17,10 @@
    already keep about naming unbuilt games. */
 import { dailyKey, dailyDayKey, dailyNoForDay } from "./daily.js";
 
-export const GAMES = ["crossword", "wordsearch", "scrambled", "hilo", "vowels", "grid", "quickfire", "codeword", "whoami", "ballpark"];
+/* crossword_fr is the Friends crossword, the first game of the second theme.
+   Its ID is not its directory: it LIVES at friends/crossword, and
+   permalink.js owns that half. */
+export const GAMES = ["crossword", "wordsearch", "scrambled", "hilo", "vowels", "grid", "quickfire", "codeword", "whoami", "ballpark", "crossword_fr"];
 
 export const DEFAULT_GAME = "crossword";
 
@@ -87,11 +90,11 @@ export const LAUNCHED = {
      still in the bank and all 231 passing, the other 11 carrying a known and
      documented ambiguity about manager appointments rather than an error. */
   ballpark: "2026-09-18",
-  /* crossword_fr is BUILT AND NOT LAUNCHED. When it is, the date goes here
-     and its PUBLIC board numbers start at launchNumber("crossword_fr"),
-     not at 1 — boardKeys advertises launchNumber..today for every game,
-     which is why Vowels launched on board ten. fr-board.js converts, and
-     friends/crossword/deploy_check.mjs lists everything else the day needs. */
+  /* The second theme opens. Its PUBLIC board numbers start at
+     launchNumber("crossword_fr") rather than at 1 — boardKeys advertises
+     launchNumber..today for every game, which is why Vowels launched on board
+     ten. functions/_lib/fr-board.js converts between that and the bank row. */
+  crossword_fr: "2026-09-21",
   /* Codeword XI took the seventh shirt on 14 September 2026 — the next free
      number, which is what launching does. Its queue starts the same day, so
      the launch day and board one are the same day and nothing counts from
@@ -99,6 +102,44 @@ export const LAUNCHED = {
   codeword: "2026-09-18",
   grid: "2026-09-18",       // the sixth shirt; board #13
 };
+
+/* ---- WHICH LAUNCHED GAMES ARE NOT ADVERTISED ------------------------------
+ *
+ * A game listed here is LIVE — it has a launch date, it serves boards, its
+ * results bank, its streak counts — and the site does not tell anybody it
+ * exists. No sitemap entry, none of its board URLs advertised, no name on the
+ * team sheet, and the noindex stays on its page. Anybody holding the address
+ * can play it; nobody arrives by accident.
+ *
+ * WHY THIS IS A NAMED FACT AND NOT FOUR WITHHELD EDITS. Launching is five
+ * things that move together, and every gate in this repository treats them
+ * that way deliberately: half-launched is the state nobody notices. Shipping
+ * an unlisted game by simply not making four of the five edits produces
+ * precisely that half-launched tree — and it is then indistinguishable from
+ * somebody having forgotten, which is how a noindex outlives a launch and a
+ * live game never appears in a search result. This project has the mirror of
+ * that fault written down in three places already.
+ *
+ * So the gates key their visibility expectations off THIS rather than off
+ * LAUNCHED, and they still refuse drift in every direction: an unlisted game
+ * that turns up in the sitemap fails, and a listed one that keeps its noindex
+ * fails. Nothing is loosened; one more state is described.
+ *
+ * REMOVING A LINE HERE IS THE PUBLICATION, and that is the whole act. Delete
+ * the entry and the sitemap, the team sheet and the page's robots meta all
+ * follow from one edit, because each of them asks here rather than holding its
+ * own copy of the answer.
+ *
+ * Owner's call, 21 September 2026: Crossword XI: Friends launches today and is
+ * not to be publicly visible yet. */
+export const UNLISTED = {
+  crossword_fr: true,
+};
+
+/* Launched AND advertised, which is the question every list on the site is
+   actually asking. One function, because two lookups joined at each call site
+   is how the answers drift apart. */
+export const isListed = (game) => !!LAUNCHED[game] && !UNLISTED[game];
 
 /* ---- WHICH GAMES SHARE AN ENGINE -----------------------------------------
  *
@@ -259,6 +300,11 @@ export const HAS_ANSWERS = new Set([
 
 export const LABELS = {
   crossword: "Crossword XI",
+  /* The theme is IN the name here, unlike the football games, because this
+     one shares a game with football and the two appear together in a footer
+     and in search results. "Crossword XI" twice would be two links a reader
+     cannot tell apart. */
+  crossword_fr: "Crossword XI: Friends",
   wordsearch: "Wordsearch XI",
   scrambled: "Scrambled XI",
   vowels: "Vowels XI",
@@ -297,6 +343,17 @@ export function entryKey(game, row) {
   if (game === "crossword") {
     const n = Number(row && row.dailyNo);
     return Number.isFinite(n) && n > 0 ? dailyKey(Math.floor(n)) : null;
+  }
+  /* THE FRIENDS CROSSWORD. A prefix of its own, never a column — the rule this
+     file states for every new game. Its board number is the FAMILY's daily
+     number, the same quantity the football crossword's `daily:N` carries, so the
+     derivation is identical and only the prefix differs. Two games under one
+     prefix would file two different boards under one key, and the second would
+     read as a board already played — the fault Vowels and Scrambled were given
+     separate prefixes to avoid. */
+  if (game === "crossword_fr") {
+    const n = Number(row && (row.no != null ? row.no : row.dailyNo));
+    return Number.isFinite(n) && n > 0 ? "fr:" + Math.floor(n) : null;
   }
   if (game === "wordsearch") {
     /* The day the board was the daily, not the day it was played: a board
@@ -439,7 +496,13 @@ export function playedOn(game, row) {
      Grid's own ordinal this would silently date every row wrong — which is why
      the check in aligned_test runs each game's REAL recorded row rather than a
      fixture carrying every field. */
-  if (game === "scrambled" || game === "vowels" || game === "grid") {
+  /* crossword_fr BELONGS HERE for the same reason Grid does: its board number is
+     the family's daily number, so the number dates the row. Its client records
+     no date of its own, and results.js ORDERS BY played_on — a game whose whole
+     history sorts as null is the word search's fault of 6 September, and Grid's
+     repeat of it. */
+  if (game === "scrambled" || game === "vowels" || game === "grid" ||
+      game === "crossword_fr") {
     return dailyDayKey(row && row.no);
   }
   return null;

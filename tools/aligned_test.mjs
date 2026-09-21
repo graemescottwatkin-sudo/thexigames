@@ -97,12 +97,10 @@ const GAMES = [
   { id: "quickfire",  dir: "football/quickfire", name: "QuickFire XI",  prefix: "qfx"  },
   { id: "whoami",     dir: "football/whoami",    name: "Who Am I XI",   prefix: "xiwa" },
   { id: "ballpark",   dir: "football/ballpark",  name: "Ballpark XI",   prefix: "xibp" },
-  /* crossword_fr joins this table ON ITS LAUNCH DAY. Its failures here are the
-     integration checklist — a live_check of its own, a _headers cache block,
-     and one name used identically in the title, og:title, JSON-LD, h1 and on
-     the team sheet. Adding the row early only turns CI red on things that are
-     not true yet; friends/crossword/deploy_check.mjs asserts the absence so
-     the gap is visible rather than forgotten. */
+  /* The second theme, launched 21 September 2026. The id is not the directory
+     and the name carries its theme — both deliberate, and the reason this
+     table has an id column at all. */
+  { id: "crossword_fr", dir: "friends/crossword", name: "Crossword XI: Friends", prefix: "xifc" },
 ];
 
 const workflow = read(".github/workflows/checks.yml");
@@ -343,10 +341,27 @@ for (const g of GAMES) {
 
 console.log("\n=== The family as a whole ===");
 /* The squad list lives in the chrome and nowhere else. */
+/* LISTED, not launched. A game can be live and unadvertised — see UNLISTED
+   in functions/_lib/games.js — and the two assertions under this are about
+   being FOUND, not about being playable. Asked of the server module rather
+   than restated here: a second copy of "which games are advertised" is a
+   second answer the first time one changes. */
+const { isListed } = await import("../functions/_lib/games.js");
+const LISTED = (g) => isListed(g.id);
 const chrome = read("shared/xi-chrome.js");
-t("every released game is on the chrome's squad list, at its own path",
-  GAMES.every((g) => chrome.indexOf(`href: "/${g.dir}/"`) > -1 &&
-                     chrome.indexOf(`"${g.name}"`) > -1));
+/* EVERY GAME HAS A WAY IN; ONLY A LISTED GAME HAS A NAME. The two halves were
+   one assertion until 21 September 2026, when a game launched UNLISTED —
+   playable at its own address, banking results, and named nowhere. Splitting
+   them keeps both properties instead of weakening one: the path is still
+   required of everything, and the NAME is now required of listed games and
+   REFUSED of unlisted ones. An unlisted game that quietly grew a name on the
+   team sheet is the leak this half exists to catch, and it would have passed a
+   test that only checked the name was present when expected. */
+t("every game has a way into it on the chrome's squad list, at its own path",
+  GAMES.every((g) => chrome.indexOf(`href: "/${g.dir}/"`) > -1));
+t("every LISTED game is named there, and no unlisted one is",
+  GAMES.every((g) => chrome.indexOf(`"${g.name}"`) > -1 === LISTED(g)),
+  GAMES.filter((g) => !LISTED(g)).map((g) => g.id).join(", ") || "all listed");
 
 /* "CLEAR EVERYTHING" MUST REACH EVERY GAME, AND TWICE IT HAS NOT.
  *
@@ -460,8 +475,10 @@ t("every released game is on the chrome's squad list, at its own path",
    file. The file it replaced held thirteen URLs and not one board, months
    after the permalinks shipped — a hand-kept list of pages that appear daily
    was never going to hold them. */
-t("the sitemap lists every released game",
-  GAMES.every((g) => read("functions/sitemap.xml.js").indexOf(`"/${g.dir}/"`) > -1));
+t("the sitemap lists every LISTED game, and no unlisted one",
+  GAMES.every((g) =>
+    read("functions/sitemap.xml.js").indexOf(`"/${g.dir}/"`) > -1 === LISTED(g)),
+  "a game can be live and unadvertised; the sitemap is the advertising");
 t("and there is no static sitemap left to be served instead",
   !has("sitemap.xml"),
   "two answers to one URL is the fault this file exists to catch");
@@ -651,6 +668,11 @@ t("the server's game list and this table agree", (() => {
     quickfire: { game: "quickfire", day: "2026-09-14", no: 20, score: 600, right: 6 },
     whoami: { game: "whoami", day: "2026-09-14", no: 20, slot: 2, solved: true, score: 94 },
     ballpark: { no: 20, day: "2026-09-14", score: 90, result: "W", inBallpark: 9, bangOns: 2, subs: 1 },
+    /* The Friends crossword carries NO DATE of its own — `no` is the family
+       daily number and dates the row through playedOn, exactly as Grid and
+       Scrambled do. That is the shape that put every word search row in with
+       played_on NULL, so it is the one worth having a real row for. */
+    crossword_fr: { no: 20, score: 100, correct: 11, kept: true, at: 1 },
   };
   {
     const { playedOn } = await import("../functions/_lib/games.js");
@@ -983,13 +1005,13 @@ t("and no game writes the link itself", (() => {
   return guilty.length === 0;
 })(), "the href lives once, in shared/xi-chrome.js");
 
-const SHARED_TAG = "v51";
+const SHARED_TAG = "v52";
 /* The bytes that ship AS v50. The tag does not move again for this change:
    v50 has not shipped, so it is still the version being prepared, and a tag
    bumped once per edit before release would burn a letter a minute. What
    must not happen is shared bytes changing under a tag that IS live — which
    is the pairing this constant exists for. */
-const SHARED_HASH = "18c93cda139f403d";
+const SHARED_HASH = "446c0db69b33bb82";
 /* EVERY PAGE THAT LINKS THE SHARED LAYER, not the games alone. The hub, the
    two static pages and the unlaunched game all carry the chrome now, and the
    server-rendered shell writes the tag from a constant of its own — so a tag
@@ -1383,18 +1405,38 @@ console.log("\n=== The hub judges every live game ===");
   const probes = [...probeSrc.matchAll(/id:\s*"([a-z_]+)",\s*key:\s*"([^"]+)"/g)]
     .map((m) => ({ id: m[1], key: m[2] }));
 
+  /* EVERY THEME'S SQUAD, not football's. This read football's block alone, which
+     was right while there was one squad and wrong the moment the Friends
+     crossword took number 1 of its own: the join resolved null for it and the
+     shirt check reported a game with no shirt. A shirt number is unique WITHIN a
+     squad — two themes each having a number 1 is the design, not a clash — so
+     the slots are gathered across themes and the uniqueness is checked per
+     squad below. */
   const chromeSrc = read("shared/xi-chrome.js");
-  const fFrom = chromeSrc.indexOf("football: [");
-  const fTo = chromeSrc.indexOf("friends: [", fFrom);
-  const squadSrc = fFrom > -1 && fTo > fFrom ? chromeSrc.slice(fFrom, fTo) : "";
+  const squadsAt = chromeSrc.indexOf("var SQUADS = {");
+  /* Bounded by what FOLLOWS the map rather than by a newline escape: a "
+"
+     written into this file through a shell lost its backslash twice today
+     and arrived as a real line break, splitting the string literal. */
+  const squadsEnd = chromeSrc.indexOf("var SQUAD = SQUADS[", squadsAt);
+  const squadSrc = squadsAt > -1 && squadsEnd > squadsAt
+    ? chromeSrc.slice(squadsAt, squadsEnd) : "";
   const slots = [...squadSrc.matchAll(/n:\s*(\d+),[^}]*href:\s*"([^"]+)"/g)]
     .map((m) => ({ n: Number(m[1]), href: m[2] }));
   const idOf = (href) => {
     const parts = String(href).split("/").filter(Boolean);
     return parts.length ? parts[parts.length - 1] : "";
   };
+  /* JOINED ON THE ADDRESS, NOT ON A SLUG. This matched the last path segment of
+     the squad href against the probe id, which held only while the two were the
+     same word. They are not: the Friends crossword is `crossword_fr` and lives
+     at /friends/crossword/, so the segment is "crossword" and the join resolved
+     null — reporting a launched game as having no shirt. The GAMES table above
+     carries each game's dir, which IS the address, so that is what is compared. */
   const rows = probes.map((p) => {
-    const slot = slots.find((s) => idOf(s.href) === p.id);
+    const g = GAMES.find((x) => x.id === p.id);
+    const want = g ? "/" + g.dir + "/" : null;
+    const slot = want ? slots.find((s) => s.href === want) : null;
     return { id: p.id, key: p.key, n: slot ? slot.n : null };
   });
 
@@ -1416,11 +1458,22 @@ console.log("\n=== The hub judges every live game ===");
     unjudged.length ? unjudged.map((g) => g.name).join(", ") + " not judged"
       : rows.map((r) => r.id).join(", "));
 
-  t("each has its own shirt, and no shirt twice",
-    rows.length === GAMES.length &&
-    rows.every((r) => r.n !== null) &&
-    new Set(rows.map((r) => r.n)).size === GAMES.length,
-    rows.map((r) => r.n + " " + r.id).join(" | "));
+  /* PER SQUAD, because a shirt number is a team's. Football's eleven and
+     Friends' eleven each start at 1, so a single set across the family would
+     report a clash that is actually the design. What must hold is that every
+     game HAS a shirt, and that no two games in the SAME theme share one. */
+  t("each has its own shirt, and no shirt twice in a squad", (() => {
+    if (rows.length !== GAMES.length) return false;
+    if (!rows.every((r) => r.n !== null)) return false;
+    const byTheme = {};
+    for (const r of rows) {
+      const g = GAMES.find((x) => x.id === r.id);
+      const theme = g ? g.dir.split("/")[0] : "?";
+      (byTheme[theme] = byTheme[theme] || []).push(r.n);
+    }
+    return Object.keys(byTheme).every((t2) =>
+      new Set(byTheme[t2]).size === byTheme[t2].length);
+  })(), rows.map((r) => r.n + " " + r.id).join(" | "));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
