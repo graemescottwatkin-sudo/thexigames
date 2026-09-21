@@ -42,7 +42,7 @@ const RULE = {
   ladder: [
     { stage: 1, sub: 0, points: 0, label: "The spell" },
     { stage: 2, sub: 1, points: 20, label: "Full career" },
-    { stage: 3, sub: 2, points: 10, label: "Nationality and age" },
+    { stage: 3, sub: 2, points: 10, label: "Nationality and year of birth" },
   ],
   giveUp: { label: "Give up" },
 };
@@ -143,8 +143,15 @@ function server() {
           { club: "Arsenal", from: 2015, to: 2019, apps: 110, goals: 0, loan: false, mine: false },
         ];
       }
-      if (stage === 3) { body2.age = 44; body2.nationality = "Czech Republic";
-                         body2.position = "Goalkeeper"; }
+      /* birthYear, NOT age -- a stub must send what the SERVER sends, and the
+         server stopped computing an age on 21 September 2026. A stub left on the
+         old field keeps the page's old branch alive in testing long after
+         production has nothing left to feed it. */
+      if (stage === 3) {
+        body2.birthYear = 1982;
+        body2.nationality = "Czech Republic";
+        body2.position = "Goalkeeper";
+      }
       return [200, body2];
     }
     if (pathname === "/api/whoami/giveup") {
@@ -596,12 +603,26 @@ console.log("=== Buying the ladder, and giving up ===");
   t("a one-appearance spell reads 'app' rather than 'apps'",
     loanApps === "1 app", loanApps);
 
-  click(rung("Nationality and age"));
+  /* THE RUNG IS FOUND BY ITS LABEL, so renaming the clue broke this before it
+     broke any assertion: rung() returned undefined and click() threw on it,
+     taking the whole file down rather than failing one case. Worth knowing — a
+     suite that looks things up by display text fails in the loudest and least
+     informative way the moment that text moves. */
+  click(rung("Nationality and year of birth"));
   await settle(w);
   const clues = doc.getElementById("clues").textContent;
-  t("nationality and age arrive together", /44 years old/.test(clues) && /Czech/.test(clues));
-  t("and the birth year never appears", !/1982/.test(clues),
-    "the year is a sharper clue than the age, and the ladder says age");
+  /* THIS PAIR ENFORCED THE OPPOSITE RULE UNTIL 21 SEPTEMBER 2026: the age had to
+     arrive and the birth year had to be absent, because the year is the sharper
+     clue. The age is gone now — the bank has no death field, so it was computed
+     from today whether or not the man was alive. Owner's ruling; the whole
+     reason is in functions/_lib/wa-play.js.
+     The old version also pinned "44 years old", which would have drifted every
+     January by itself: a test asserting a computed age enforces the drift
+     instead of catching it. */
+  t("the country and the birth year arrive together",
+    /Born 1982/.test(clues) && /Czech/.test(clues), clues.slice(0, 120));
+  t("and no age is shown, in any form", !/years old/i.test(clues),
+    "an age cannot be computed correctly without knowing whether he is alive");
 
   click(doc.getElementById("giveUp"));
   await settle(w);

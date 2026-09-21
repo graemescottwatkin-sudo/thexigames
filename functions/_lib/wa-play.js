@@ -134,11 +134,29 @@ export function clueBody(row, reveals, door) {
       out.career = row.club_history || null;
       out.clubCount = Number(row.club_count) || 0;
     } else if (what === "bio") {
-      /* AGE RATHER THAN BIRTH YEAR, because the year is a sharper clue than the
-         age and the ladder says "age and country". Computed here so the page
-         cannot be handed the year and asked not to look at it. */
-      const year = Number(row.birth_year);
-      out.age = year ? new Date().getUTCFullYear() - year : null;
+      /* THE BIRTH YEAR, AND NO AGE. THIS REVERSES AN EARLIER DECISION, so what
+         that decision said is recorded rather than deleted: it sent the AGE and
+         withheld the year, on the grounds that the year is the sharper clue,
+         and it computed the age on the server precisely so the page could not
+         be handed the year and asked not to look at it. That reasoning was
+         sound, and the clue is now deliberately sharper at the same ten points.
+         Owner's ruling, 21 September 2026. A reversed decision with its
+         original reasoning left standing beside it is how the next person
+         reverses it back.
+
+         WHAT FORCED IT. The bank has no death field, so an age was this year
+         minus the birth year whether or not the man was alive. It read "age 92"
+         for Dave Mackay, who died in 2015, and "age 30" for Diogo Jota, who
+         died in 2025 — 109 deceased players in the bank, 75 of the 365 boards
+         carrying at least one. Removing the age does not CORRECT that: it
+         removes the arithmetic that produced it, so no later edit can bring it
+         back by forgetting that deceased players are a case.
+
+         A YEAR, NOT A DATE. wa_player holds birth_year and there is no birth
+         date in the bank, which is why the ladder says "year of birth" and must
+         not say D.O.B. — a label promising a date is one somebody eventually
+         satisfies by inventing a 1 January. */
+      out.birthYear = Number(row.birth_year) || null;
       out.nationality = row.nationality || null;
       out.position = row.position || null;
     } else if (what === "answer") {

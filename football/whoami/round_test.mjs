@@ -259,11 +259,27 @@ console.log("\n=== What each rung may say, and nothing more ===");
     !JSON.stringify(two.spells).toUpperCase().includes("CECH"));
 
   const three = clueBody(CECH, stageAt(3).reveals, door);
-  t("stage three is age and country", three.nationality === "Czech Republic" && three.age > 0);
-  /* THE YEAR IS SHARPER THAN THE AGE and the ladder says age, so the year must
-     not travel — a page cannot be handed it and asked not to look. */
-  t("and the birth YEAR does not travel, only the age",
-    !JSON.stringify(three).includes("1982"), `age ${three.age}`);
+  /* THESE TWO ENFORCED THE OPPOSITE RULE UNTIL 21 SEPTEMBER 2026, and what they
+     said is recorded rather than deleted, because they are the reason the old
+     rule held: stage three was "age and country", and the birth year was
+     asserted NOT to travel, on the grounds that the year is sharper than the age
+     and a page cannot be handed it and asked not to look.
+
+     The age is gone because the bank has no death field, so it was computed from
+     today whether or not the man was alive — "age 92" for Dave Mackay, who died
+     in 2015, and "age 30" for Diogo Jota, across 75 of the 365 boards. Owner's
+     ruling; the clue is deliberately sharper now at the same ten points. See
+     functions/_lib/wa-play.js. */
+  t("stage three is the country and the birth YEAR",
+    three.nationality === "Czech Republic" && three.birthYear === 1982,
+    `${three.nationality}, born ${three.birthYear}`);
+  /* AND NO AGE, IN ANY FORM, which is the half that carries the fix: an age is
+     the one thing here that cannot be computed correctly without knowing
+     whether the man is alive. Absence of the field is asserted directly, not
+     inferred from the rendered string. */
+  t("and no age travels, in any form",
+    three.age === undefined && !/years old/i.test(JSON.stringify(three)),
+    JSON.stringify(three));
   t("stage three does not give the birthplace either",
     !JSON.stringify(three).includes("Plzen"));
 

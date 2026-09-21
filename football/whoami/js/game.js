@@ -19,7 +19,7 @@
  * one especially, because deciding it here would need the club's whole roster
  * and a roster is a candidate list for the door.
  */
-var BUILD = "v001k";
+var BUILD = "v001l";
 
 (function bootstrap() {
   'use strict';
@@ -601,10 +601,15 @@ function start() {
          for the rung that was just paid for. */
       bits.push('<span class="c-body">' + esc(r.career) + '</span>');
     }
-    if (r.age != null || r.nationality) {
+    /* BORN <year>, NOT "<n> years old". The server stopped sending an age on
+       21 September 2026 because it had no way to know the man was dead — see
+       functions/_lib/wa-play.js for the whole reason. This reads birthYear and
+       nothing else, so `age` is GONE rather than merely unused: a field that is
+       no longer sent cannot resurrect the old wording through a stale page. */
+    if (r.birthYear != null || r.nationality) {
       bits.push('<span class="c-body">' +
-        (r.age != null ? esc(r.age) + ' years old' : '') +
-        (r.nationality ? (r.age != null ? ' · ' : '') + esc(r.nationality) : '') +
+        (r.birthYear != null ? 'Born ' + esc(r.birthYear) : '') +
+        (r.nationality ? (r.birthYear != null ? ' · ' : '') + esc(r.nationality) : '') +
         (r.position ? ' · ' + esc(r.position) : '') + '</span>');
     }
     if (r.answer) {

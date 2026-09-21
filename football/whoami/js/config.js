@@ -56,7 +56,13 @@
     LADDER: [
       { stage: 1, points: 0,  sub: 0, label: 'The spell',           reveals: ['spell'] },
       { stage: 2, points: 20, sub: 1, label: 'Full career',         reveals: ['career'] },
-      { stage: 3, points: 10, sub: 2, label: 'Nationality and age', reveals: ['bio'] }
+      /* "year of birth", not "age" and not "D.O.B.". The age went on 21 Sep 2026
+           because the bank has no death field and every age was computed from
+           today, so it read "age 92" for a man who died in 2015 -- see
+           functions/_lib/wa-play.js. It is a YEAR: the bank holds birth_year
+           and no birth date, and a label promising a date is one somebody
+           eventually satisfies by inventing a 1 January. */
+        { stage: 3, points: 10, sub: 2, label: 'Nationality and year of birth', reveals: ['bio'] }
     ],
 
     /* TWO SUBSTITUTIONS, NOT THREE. There was a third and it was "give up",
