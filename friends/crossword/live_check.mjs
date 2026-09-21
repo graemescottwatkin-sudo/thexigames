@@ -60,8 +60,9 @@ const MIN_ASSERTIONS = 23;
    so they are a legitimate skip today and become reachable on the day the game
    is announced. One more is `if (EXPECT)`, skipped when the run is not given a
    tag to check.
-   That is 24 on a normal --expect run, so the floor sits at 23: below the real
-   count by the one branch that can legitimately vary, and above anything a
+   MEASURED against production on 21 Sep 2026, not counted by eye: 26 run on a
+   --expect run and 0 fail. The floor sits at 23: below the real
+   count by the branches that can legitimately vary, and above anything a
    block going quiet would leave behind. The five inside `if (d.board)` are NOT
    counted as skippable — a day with no board is a day the assertion above it
    has already failed on, which is a red run, not a short one.

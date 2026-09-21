@@ -8,8 +8,24 @@ every rule below exists because its absence cost a real release.
 A family of football-themed daily puzzle games at **thexigames.com**, targeting
 eleven titles. **Which games are live is not written here.** `LAUNCHED` in
 `functions/_lib/games.js` is the one place that records it, with a date per
-game — so read that rather than a count in this file. As of 16 Sep 2026 it holds
-ten, Ballpark XI being the tenth.
+game — so read that rather than a count in this file. As of 21 Sep 2026 it holds
+ELEVEN, Crossword XI: Friends being the eleventh and the first of a second
+theme.
+
+**AND BEING IN `LAUNCHED` IS NO LONGER THE SAME AS BEING FINDABLE**, since that
+day. `UNLISTED`, beside it in the same file, names a game that is live — it
+serves boards, banks results and counts a streak — and that nothing on the site
+advertises: no sitemap entry, none of its board URLs, no name on the team sheet,
+and the noindex stays on its page. `isListed(game)` is the two questions joined,
+and it is what every surface that could disclose a game asks.
+
+It exists because launching is FIVE things that move together and the gates
+treat them that way on purpose: half-launched is the state nobody notices.
+Shipping a hidden game by simply not making four of the five edits produces
+exactly that tree, indistinguishable from somebody having forgotten — which is
+how a noindex outlives a launch and a live game never appears in a search
+result. DELETING A LINE FROM `UNLISTED` IS THE PUBLICATION: it turns the tree
+red in three places at once, so the gates say what is left to do.
 
 This line said FIVE for eight days after it stopped being true, and named the
 five. Four games launched in the week it went stale, and a session on 16 Sep
@@ -68,7 +84,10 @@ hub. A 301 there would have to be un-cached from every browser that ever saw it.
 2. **EVERY GAME'S GATE — one per game, and the list is the directory, not this
    sentence.** `for %g in (football\*) do node %g\deploy_check.mjs`, or read
    `dir football\*\deploy_check.mjs` and run each. Expect **0 failed** on each.
-   As of 16 Sep 2026 that is ten.
+   As of 21 Sep 2026 that is ELEVEN, and the directory to read is no longer
+   `football\*` alone — `friends\crossword\deploy_check.mjs` is the eleventh
+   and the second theme will not be the last. `for %t in (football friends) do
+   for %g in (%t\*) do node %g\deploy_check.mjs`.
 
    THIS SAID "there are EIGHT" while there were nine, and said seven before
    that. Every time a game launched, this number was wrong and the person
@@ -361,10 +380,17 @@ Where facts live — extend these, never copy them:
   both. This said "1 to 5" while ten were taken — it was rewritten for Vowels on
   4 Sep and then went stale through five more launches, because a range is a
   measurement and the rule underneath it is not.
-  Eleven shirts, so a launch pushes the tail down one and the squad loses an
-  unsigned slot rather than growing a twelfth. As of 16 Sep 2026 ten are worn
-  and one slot is unsigned — the first time the squad has had a single one
-  left, which is worth knowing before an eleventh game is promised a number.
+  Eleven shirts PER THEME, since 21 Sep 2026: `SQUADS` in `shared/xi-chrome.js`
+  is one list per theme and `themeHere()` picks the reader's. A launch pushes
+  that theme's tail down one and its squad loses an unsigned slot rather than
+  growing a twelfth. Football wears ten with one slot unsigned; Friends wears
+  one. A NUMBER IS ONLY UNIQUE WITHIN ITS THEME — there are two number 1s and
+  `aligned_test` checks uniqueness per squad, not across the family.
+  And a slot with an `href` and no `name` is no longer only the pre-launch
+  state: it is also how an UNLISTED game sits, which is why the squad carries a
+  way into Crossword XI: Friends and does not name it. `suggestNext()` requires
+  `g.name`, so an unlisted game is never offered at full time — the same fact
+  doing both jobs, rather than a second flag.
 - The reorder is cheap and stays cheap: the number lives in the squad list in
   `shared/xi-chrome.js`, and the hub carries the strip, the card, the kit
   colour and the played-today check. Nothing else may hold a shirt number.
