@@ -337,10 +337,45 @@ t("it does NOT load the season, which Friends is not in",
    the obvious sabotage. So the first argument of every call is captured
    whatever its shape, and each one must then be P. */
 t("every localStorage key it writes is under this game's own prefix", (() => {
-  const calls = [...noComments(js).matchAll(/setItem\(([^,]*),/g)]
-    .map((m) => m[1].trim());
-  return calls.length > 0 && calls.every((a) => /^P\s*\+/.test(a));
-})(), "xifc. — and never another game's");
+  const code = noComments(js);
+  const calls = [...code.matchAll(/setItem\(([^,]*),/g)].map((m) => m[1].trim());
+  if (!calls.length) return false;
+
+  /* A BUILDER IS RESOLVED, NOT WAVED THROUGH. boardKey() is a real key builder
+     — the board number is not known at load, and a save before it arrives would
+     otherwise land under "xifc.board.undefined" — so the first argument of that
+     call is a name, not a concatenation, and the pattern above refused it.
+
+     THE LAZY FIX IS TO ALLOW ANY IDENTIFIER CALL, and that is exactly the
+     blindness the check was rewritten to remove one revision ago: it would then
+     pass a builder returning "fcw.board.0", a hardcoded foreign prefix, which
+     is the violation this exists to find. So one level of indirection is
+     FOLLOWED instead, and every return in the builder must itself be P + ....
+     A name this cannot resolve, a builder with no returns, fails. An
+     unresolvable argument is not a pass — it is an unanswered question. */
+  const bodyOf = (name) => {
+    const at = code.indexOf("function " + name + "(");
+    if (at < 0) return null;
+    const open = code.indexOf("{", at);
+    if (open < 0) return null;
+    let depth = 0;
+    for (let j = open; j < code.length; j++) {
+      if (code[j] === "{") depth++;
+      else if (code[j] === "}" && --depth === 0) return code.slice(open + 1, j);
+    }
+    return null;
+  };
+
+  return calls.every((a) => {
+    if (/^P\s*\+/.test(a)) return true;
+    const name = (a.match(/^([A-Za-z_$][\w$]*)\(\)$/) || [])[1];
+    if (!name) return false;
+    const body = bodyOf(name);
+    if (!body) return false;
+    const returns = [...body.matchAll(/\breturn\b([^;]*);/g)].map((r) => r[1].trim());
+    return returns.length > 0 && returns.every((r) => /^P\s*\+/.test(r));
+  });
+})(), "xifc. — and never another game's, through a builder or directly");
 t("the prefix is this game's and is not taken", /var P = "xifc\."/.test(js));
 
 /* THE DIRECTIONS THE ENGINE ACTUALLY USES, read out of the engine rather than
@@ -380,11 +415,38 @@ t("the prefix is this game's and is not taken", /var P = "xifc\."/.test(js));
 
 t("the day comes from the server, never from the device", (() => {
   /* A suite must not decide for itself what day it is, and neither may a page:
-     one that computed the date from Date.now() would disagree with the server
-     across UTC midnight and read to a player as a lost streak. */
+     one that computed the date from the device clock would disagree with the
+     server across UTC midnight and all evening on any machine ahead of UTC,
+     and the disagreement reads to a player as a lost streak.
+
+     WHAT IS FORBIDDEN IS DECIDING A DAY, NOT READING A CLOCK. A flat ban on
+     Date.now() was the first version of this, and it was wrong in both
+     directions at once. It refused `at: Date.now()` on a banked result — a
+     timestamp, the same field every other game in the family records, making no
+     claim about which day it is — so the gate was red on correct code, which
+     is how a gate stops being read. And it MISSED the thing it cared about
+     most: `new Date(Date.now()).toISOString().slice(0, 10)` contains no empty
+     `new Date()` for it to object to, and would have sailed through the half of
+     the rule that was left.
+
+     So the line is drawn around the CONVERSION instead. The clock may be read;
+     it may not be turned into a date. Every Date construction must be anchored
+     to `day`, which is the server's word — the one legitimate construction
+     here derives yesterday from it, to ask whether the streak continues. */
   const stripped = noComments(js);
-  return !/new Date\(\)/.test(stripped) && !/Date\.now\(\)/.test(stripped);
-})());
+  if (/new Date\(\s*\)/.test(stripped)) return false;
+  if (/Date\.now\(\s*\)[^;\n]*\.(toISOString|getFullYear|getMonth|getDate|toLocale)/
+    .test(stripped)) return false;
+
+  const built = [...stripped.matchAll(/new Date\(([^)]*)\)/g)].map((m) => m[1]);
+  if (!built.every((a) => /\bday\b/.test(a))) return false;
+
+  /* AND SAID IN THE POSITIVE, because every line above is a prohibition and
+     three prohibitions all pass on a page that computes no day at all —
+     including one that has stopped counting the streak entirely. The page must
+     be seen USING the server's day, not merely not misusing its own. */
+  return built.length > 0 && /\bkeepDay\s*\(/.test(stripped);
+})(), "the clock may be read; only the server may say what day it is");
 
 /* ---- the bank ----------------------------------------------------------- */
 
