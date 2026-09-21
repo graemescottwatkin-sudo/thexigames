@@ -254,6 +254,32 @@ console.log("\nOwner attempts are siloed");
     /botPlays/.test(admin) && /botFinished/.test(admin));
   t("a bot flag cannot be set by the browser",
     /isBot\(request, env\)/.test(src) && !/body\.(isBot|bot|byBot)/.test(src));
+  /* THE RENDER GATE, which is the third kind of non-visitor and the one that
+     proves a tag alone is not enough. render_test.mjs has appended ?r=gate
+     since the run that "landed as 49 daily plays with zero completions", and
+     for weeks afterwards nothing read it — the marker existed and the rows
+     still counted. On 21 Sep 2026 one run was 13 of the day's 21 apparent
+     plays. These assert the reading half, which is the half that was missing. */
+  /* Matched on the skip itself, not merely on the name appearing somewhere.
+     The first version of this asserted /utm_campaign === GATE_CAMPAIGN/, which
+     the CSV's own column test also satisfies — so deleting the funnel's skip
+     entirely left the suite green. Proved by breaking it. */
+  t("the render gate is excluded from the funnel",
+    /if \(r\.utm_campaign === GATE_CAMPAIGN\) \{[\s\S]{0,140}continue;/.test(admin));
+  t("and from the sources report and the per-board standings",
+    /utm_campaign IS NOT \?/.test(admin) &&
+    /!r\.by_bot && r\.utm_campaign !== GATE_CAMPAIGN/.test(admin));
+  t("and is reported rather than silently dropped",
+    /gatePlays/.test(admin) && /gateFinished/.test(admin));
+  /* One string, both sides. A literal in the writer and another in the reader
+     is one rename away from the gate counting as players again. */
+  t("the writer and the readers share one campaign name", (() => {
+    const render = fs.readFileSync(
+      path.join(DIR, "render_test.mjs"), "utf8");
+    return /GATE_CAMPAIGN/.test(render) && !/"r=gate"/.test(render) &&
+           /export const GATE_CAMPAIGN/.test(
+             fs.readFileSync(path.join(DIR, "../../functions/_lib/games.js"), "utf8"));
+  })());
   const mig = fs.readFileSync(path.join(DIR, "../../data/migrations/008-plays-theme.sql"), "utf8");
   t("the column is added by the same migration",
     /ALTER TABLE plays ADD COLUMN by_owner INTEGER DEFAULT 0/.test(mig));

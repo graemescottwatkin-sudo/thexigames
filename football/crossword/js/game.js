@@ -286,7 +286,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v003w";
+  var BUILD = "v003x";
   try {
     window.CROSSWORDXI_BUILD = BUILD;
     console.log("Crossword XI build " + BUILD);
@@ -3361,6 +3361,16 @@
           (d.botPlays === 1 ? "" : "s") + ", " + d.botFinished + " finished " +
           "(kept out of the figures above)"
         : "";
+      /* Shown for the same reason as the bot's. The render gate opens the
+         daily sixteen times a run and finishes none, so a run left in reads
+         as a daily nobody can solve — one on 21 Sep 2026 was 13 of the day's
+         21 apparent plays. Reported rather than silently dropped, because a
+         count appearing here is also how you notice the gate ran at all. */
+      var gate = d.gatePlays
+        ? "\n\nRender gate: " + d.gatePlays + " attempt" +
+          (d.gatePlays === 1 ? "" : "s") + ", " + d.gateFinished + " finished " +
+          "(kept out of the figures above)"
+        : "";
       /* Say the period. "50 finished" with no window is a number nobody can
          act on — it could be today's post or a month of drift. */
       var window = d.hours
@@ -3369,12 +3379,12 @@
            : "last " + d.hours + " hours")
         : "recent plays";
       if (!d.days.length) {
-        adminMsg("No visitors have played in the " + window + "." + mine + bot);
+        adminMsg("No visitors have played in the " + window + "." + mine + bot + gate);
         return;
       }
       $("adminReportList").innerHTML = "";
       adminMsg("How far players got \u2014 " + window +
-        ". The CSV covers everything." + mine + bot);
+        ". The CSV covers everything." + mine + bot + gate);
       var lines = d.days.slice(0, 20).map(function (x) {
         /* Themed boards read as their own name and number, because that is how
            they are shared and how they will be talked about. "man-united-3"
@@ -3409,7 +3419,7 @@
         }
         return out;
       });
-      adminMsg(lines.join("\n") + mine + bot);
+      adminMsg(lines.join("\n") + mine + bot + gate);
     }).catch(function (err) { adminMsg(String(err.message || err)); });
   });
 

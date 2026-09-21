@@ -53,6 +53,10 @@
 import { chromium } from "playwright";
 import fs from "fs";
 import path from "path";
+/* The campaign this run tags itself with, imported rather than typed. The tag
+   only works if the reports exclude the same string, and a literal written in
+   two files is one rename away from the gate counting as players again. */
+import { GATE_CAMPAIGN } from "../../functions/_lib/games.js";
 
 const BASE = process.env.BASE || "http://localhost:8788";
 
@@ -340,7 +344,7 @@ const run = async () => {
          by_owner does not help: it is set from the session, and the gate is not
          signed in. ?r= is the short campaign tag, so the rows carry
          utm_campaign='gate' and any report can exclude them. */
-      const url = BASE + (BASE.indexOf("?") > -1 ? "&" : "?") + "r=gate";
+      const url = BASE + (BASE.indexOf("?") > -1 ? "&" : "?") + "r=" + GATE_CAMPAIGN;
       await page.goto(url, { waitUntil: "networkidle", timeout: 15000 });
 
       /* Only scroll if the player would actually have to. CrosswordXI's start

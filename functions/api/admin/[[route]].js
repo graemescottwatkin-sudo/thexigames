@@ -12,7 +12,7 @@ import { json, bad } from "../../_lib/puzzle.js";
 import { hasDB, serverToday } from "../../_lib/db.js";
 import { currentUser, csrfOk, newId } from "../../_lib/auth.js";
 import { dailyNumber, dailyKey } from "../../_lib/daily.js";
-import { validPlayGame, reportableGames } from "../../_lib/games.js";
+import { validPlayGame, reportableGames, GATE_CAMPAIGN } from "../../_lib/games.js";
 
 async function requireAdmin(request, env) {
   if (!hasDB(env)) return { error: bad("Accounts are not configured.", 503) };
@@ -196,7 +196,7 @@ export async function onRequest({ request, env, params }) {
     if (gameAsked && !game) return json({ error: "Unknown game." }, 400);
     const rows = await env.DB.prepare(
       `SELECT game, board_key, mode, daily_no, phase, solved, total, completed, elapsed_secs,
-              ended_at, theme_key, by_owner, by_bot
+              ended_at, theme_key, by_owner, by_bot, utm_campaign
          FROM plays
         WHERE started_at > datetime('now', ?) AND (? IS NULL OR game = ?)
         ORDER BY started_at DESC LIMIT 5000`).bind("-" + hours + " hours", game, game).all();
@@ -207,8 +207,25 @@ export async function onRequest({ request, env, params }) {
        than deleted, since they are still the only record of what was tried. */
     /* And the bot's, which are neither. play_bot.mjs plays every game nightly;
        left in, it was the largest single contributor to the visitor figure. */
+    /* AND THE RENDER GATE'S, which are neither a player, the owner nor the
+       bot. football/crossword/render_test.mjs opens the live daily at sixteen
+       viewports a run and finishes none of them, and it already tags itself
+       with ?r=gate for exactly this reason — the comment there records the run
+       that "landed as 49 daily plays with zero completions on a day the daily
+       had one genuine player". The tag was added and then nothing read it, so
+       the rows went on counting as visitors anyway. On 21 Sep 2026 a single
+       run was 13 of the day's 21 apparent plays.
+       by_owner cannot catch these (the gate is not signed in) and by_bot
+       cannot either (it is not the play bot), so the campaign is the only
+       thing that distinguishes them. */
     let ownerPlays = 0, ownerFinished = 0, botPlays = 0, botFinished = 0;
+    let gatePlays = 0, gateFinished = 0;
     for (const r of rows.results || []) {
+      if (r.utm_campaign === GATE_CAMPAIGN) {
+        gatePlays++;
+        if (r.completed) gateFinished++;
+        continue;
+      }
       if (r.by_bot) {
         botPlays++;
         if (r.completed) botFinished++;
@@ -261,7 +278,8 @@ export async function onRequest({ request, env, params }) {
     })).sort((a, b) => (b.dailyNo || 0) - (a.dailyNo || 0));
     /* The window is reported, not implied. A panel showing "50 finished" with
        no period is a number nobody can act on. */
-    return json({ ownerPlays, ownerFinished, botPlays, botFinished, days, hours });
+    return json({ ownerPlays, ownerFinished, botPlays, botFinished,
+                  gatePlays, gateFinished, days, hours });
   }
 
   /* ---- Clear my own record ----
@@ -393,10 +411,11 @@ export async function onRequest({ request, env, params }) {
               SUM(total) AS answers,
               AVG(elapsed_secs) AS avg_secs
          FROM plays
-        WHERE by_owner = 0 AND by_bot = 0 AND (? IS NULL OR game = ?)
+        WHERE by_owner = 0 AND by_bot = 0 AND utm_campaign IS NOT ?
+          AND (? IS NULL OR game = ?)
         GROUP BY source, campaign, community
         ORDER BY started DESC
-        LIMIT 200`).bind(game, game).all();
+        LIMIT 200`).bind(GATE_CAMPAIGN, game, game).all();
     return json({ sources: (rows.results || []).map((r) => ({
       source: r.source, campaign: r.campaign, community: r.community,
       started: r.started, finished: r.finished || 0,
@@ -488,7 +507,7 @@ export async function onRequest({ request, env, params }) {
          floating to the top; they fall back to the old figure. */
         `SELECT srv_score AS score,
                 COALESCE(srv_elapsed_secs, elapsed_secs) AS secs, started_at,
-                solved, total, completed, by_owner, by_bot,
+                solved, total, completed, by_owner, by_bot, utm_campaign,
                 srv_checks, srv_check_alls,
                 srv_reveal_letters, srv_reveal_answers
            FROM plays
@@ -499,7 +518,8 @@ export async function onRequest({ request, env, params }) {
       /* The bot is dropped outright rather than reported alongside: a board's
          standings are about who played it, and a synthetic finish at a fixed
          clock would sit in the middle of a real median. */
-      const all = (rows.results || []).filter((r) => !r.by_bot);
+      const all = (rows.results || [])
+        .filter((r) => !r.by_bot && r.utm_campaign !== GATE_CAMPAIGN);
       const done = all.filter((r) => r.completed && !r.by_owner);
       return json({
         theme, no,
@@ -613,7 +633,7 @@ export async function onRequest({ request, env, params }) {
     const esc = (v) => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
     const head = ["Started", "Ended", "Game", "Board key", "Mode", "Board", "Reference", "Solved",
                   "Of", "Finished", "Seconds", "Checks",
-                  "Reveal letters", "Reveal answers", "Owner test", "Bot",
+                  "Reveal letters", "Reveal answers", "Owner test", "Bot", "Render gate",
                   "Source", "Medium", "Campaign", "Content", "Term", "Referrer"];
     const lines = [head.map(esc).join(",")];
     for (const r of rows.results || []) {
@@ -626,6 +646,7 @@ export async function onRequest({ request, env, params }) {
         r.elapsed_secs, r.checks, r.reveal_letters, r.reveal_answers,
         r.by_owner ? "yes" : "",
         r.by_bot ? "yes" : "",
+        r.utm_campaign === GATE_CAMPAIGN ? "yes" : "",
         r.utm_source || "", r.utm_medium || "", r.utm_campaign || "",
         r.utm_content || "", r.utm_term || "", r.referrer || "",
       ].map(esc).join(","));

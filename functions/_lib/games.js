@@ -263,6 +263,24 @@ export function validMode(v) {
   return MODES.indexOf(m) === -1 ? null : m;
 }
 
+/* THE CAMPAIGN THE RENDER GATE TAGS ITSELF WITH.
+ *
+ * render_test.mjs opens the live daily at sixteen viewports a run and finishes
+ * none of them, so its rows read as a broken daily unless something tells them
+ * apart. It already appends ?r=gate for that reason — the comment there
+ * records a run landing as "49 daily plays with zero completions on a day the
+ * daily had one genuine player".
+ *
+ * The tag was added and nothing read it. On 21 Sep 2026 one run was 13 of the
+ * day's 21 apparent plays, still counted as visitors, which is precisely the
+ * state the tag was introduced to prevent — a marker written by one side and
+ * never consulted by the other is not a marker.
+ *
+ * It lives here so the writer and the readers share one string. Neither
+ * by_owner nor by_bot can stand in for it: the gate is not signed in, so the
+ * session says nothing, and it is not the play bot either. */
+export const GATE_CAMPAIGN = "gate";
+
 /* WHAT THE OWNER'S FUNNEL CALLS EACH GAME.
  *
  * xi-chrome.js already holds a squad list with these names in it, and a second
