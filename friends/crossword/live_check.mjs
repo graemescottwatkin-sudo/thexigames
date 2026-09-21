@@ -26,6 +26,14 @@
  *
  *   3. A BOARD THAT IS NOT OUT YET.
  *
+ *   4. THE GAME BECOMING FINDABLE. It launched UNLISTED — live, playable, and
+ *      advertised nowhere — so the two assertions this file first carried were
+ *      backwards: it demanded the noindex be GONE and the sitemap advertise the
+ *      boards, which are precisely the two things that must not be true. Both
+ *      are now asserted in the direction the site is actually in, and both say
+ *      what would have to change to flip them, so the day it is announced this
+ *      file says what is left to do rather than going quietly green.
+ *
  * VALUES, NEVER THE SERIALISED PAYLOAD. Normalising JSON.stringify turns KEY
  * NAMES into searchable letters — "acROSS" contains ROSS, which is an answer in
  * 131 bank rows — so a scan built that way reports a leak on any board that
@@ -44,7 +52,22 @@ const EXPECT = (() => {
    set BELOW the real count on purpose, by the number of assertions that can
    legitimately skip — so when assertions are added, REVIEW it rather than
    raising it by reflex. A floor equal to the count flaps on the first skip. */
-const MIN_ASSERTIONS = 18;
+const MIN_ASSERTIONS = 23;
+/* REVIEWED, NOT RAISED BY REFLEX, on 21 September 2026 when the unlisted launch
+   added six assertions. 27 t() calls exist. Two of them sit inside
+   `if (links.length)` and CANNOT run while the game is unlisted, because that
+   block reads board links out of the sitemap and the sitemap must carry none —
+   so they are a legitimate skip today and become reachable on the day the game
+   is announced. One more is `if (EXPECT)`, skipped when the run is not given a
+   tag to check.
+   That is 24 on a normal --expect run, so the floor sits at 23: below the real
+   count by the one branch that can legitimately vary, and above anything a
+   block going quiet would leave behind. The five inside `if (d.board)` are NOT
+   counted as skippable — a day with no board is a day the assertion above it
+   has already failed on, which is a red run, not a short one.
+   A floor equal to the count flaps on the first legitimate skip; a floor left
+   alone for five releases stops being able to refuse anything. Both have
+   happened in this project. */
 
 let pass = 0, fail = 0;
 const t = (name, ok, note) => {
@@ -80,9 +103,17 @@ const tag = (html.match(/js\/game\.js\?v=([^"]+)"/) || [])[1];
 t("the game script carries a build tag", !!tag, tag);
 if (EXPECT) t("the build is " + EXPECT, tag === EXPECT, "serving " + tag);
 
-t("it is no longer noindex, now that it has launched",
-  !/<meta\s+name="robots"\s+content="noindex">/.test(html),
-  "a noindex nobody removes is a live game that never appears in a search result");
+/* NOINDEX, BECAUSE IT IS UNLISTED. This is the live half of what
+   friends/crossword/deploy_check.mjs asserts about the tree — and the tree is
+   not the deploy. Who Am I's gate passed 38 of 38 on a tree whose daily
+   endpoint answered 500 in production for hours.
+   WHEN THE GAME IS ANNOUNCED this assertion inverts: delete crossword_fr from
+   UNLISTED in functions/_lib/games.js and the meta must be GONE, because a
+   noindex nobody removes is a live game that never appears in a search
+   result. */
+t("the page is noindex, because the game is unlisted",
+  /<meta\s+name="robots"\s+content="noindex">/.test(html),
+  "live and playable, findable by nobody — the owner's call on 21 Sep 2026");
 t("and it names itself the same way everywhere",
   (html.match(/Crossword XI: Friends/g) || []).length >= 3,
   "title, og:title and h1");
@@ -142,8 +173,41 @@ if (d) {
   const map = await get("/sitemap.xml");
   const xml = map.status === 200 ? await map.text() : "";
   const links = [...xml.matchAll(/\/friends\/crossword\/daily\/(\d+)</g)].map((m) => Number(m[1]));
-  t("the sitemap advertises this game's boards", links.length > 0,
-    links.length + " board link(s)");
+
+  /* THE SITEMAP MUST NOT MENTION THIS GAME AT ALL, in any form, while it is
+     unlisted — not the front page, not the archive index, not one board. The
+     boards are the half that matters: they resolve for anyone holding one, and
+     this file is what would hand a crawler all of them.
+     CHECKED AGAINST THE SERVED XML, not against the generator. The generator is
+     what deploy_check reads; a filter that is right in the tree and a sitemap
+     that is stale in the CDN are the same page to a crawler. */
+  t("the sitemap does not advertise this game at all", !/\/friends\//.test(xml),
+    links.length ? `ADVERTISED: ${links.length} board link(s)`
+                 : "no /friends/ anywhere in the served sitemap");
+  t("PRECONDITION: the sitemap is a real one, so the check above is not passing on an empty file",
+    /\/football\/crossword\/daily\//.test(xml) && xml.length > 2000,
+    `${xml.length} bytes — a prohibition cannot notice an empty document`);
+
+  /* THE ARCHIVE, WHICH IS THE FULLEST DISCLOSURE THE SITE COULD MAKE: a list of
+     every board this game has run, each at its own address. It is served — the
+     route exists — and it must tell a crawler to keep out, by BOTH routes,
+     because one half without the other publishes it to whichever crawler uses
+     the other. */
+  const arch = await get("/friends/crossword/archive/");
+  const archHtml = arch.status === 200 ? await arch.text() : "";
+  t("the archive page is served", arch.status === 200, "HTTP " + arch.status);
+  t("and tells a crawler to keep out, by both routes",
+    /noindex/.test(archHtml) && /noindex/.test(arch.headers.get("x-robots-tag") || ""),
+    `meta ${/noindex/.test(archHtml)}, header ${arch.headers.get("x-robots-tag")}`);
+
+  /* AND A PERMALINK RESOLVES, which is the thing PERMA_GAMES promises and which
+     nothing served until 1006eb8: there was no functions/friends/ directory, so
+     every board address 404'd while the data said the game had permanent ones.
+     Unlisted is not unreachable, and a link somebody has been given must work. */
+  const perma = await get(`/friends/crossword/daily/${d.today}`);
+  t("a board permalink resolves, because unlisted is not unreachable",
+    perma.status === 200, `daily/${d.today} -> ${perma.status}`);
+
   if (links.length) {
     const highest = Math.max(...links);
     t("and never a board beyond today", highest <= d.today, `highest ${highest}, today ${d.today}`);
