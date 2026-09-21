@@ -62,7 +62,16 @@ t("and no stale hub is left at the root to be served beside it",
    This is the half that cannot be derived, because the canonical is a literal
    in a static file, so it is gated instead. */
 {
-  const hub = readRoot(themeHubFile("football"));
+  /* GUARDED, BECAUSE AN UNGUARDED READ HERE HIDES EVERY CHECK BELOW IT. This
+     read the hub straight and threw ENOENT when the file was absent, which
+     ends the whole gate: node exits, and the thirty assertions after this
+     point never run or report. That is a red run, so nothing SHIPS wrongly --
+     but it turns one missing file into a stack trace instead of a named
+     failure, and it cost a sabotage that looked like a check not working.
+     The assertion above already names the real fault; this block simply
+     declines to run rather than taking the gate down with it. */
+  const hub = hasRoot(themeHubFile("football"))
+    ? readRoot(themeHubFile("football")) : "";
   const canonical = (hub.match(/rel="canonical"\s+href="([^"]+)"/) || [])[1] || "";
   const og = (hub.match(/property="og:url"\s+content="([^"]+)"/) || [])[1] || "";
   t("PRECONDITION: the football hub states a canonical and an og:url",
@@ -832,12 +841,19 @@ t("no preview build is in the package", (() => {
    Script blocks are stripped first — there the escape is valid and correct. */
 let escapeHits = "";
 t("no literal unicode escapes in markup", (() => {
-  const pages = ["index.html", "404.html", "football/crossword/index.html",
+  const pages = [themeHubFile("football"), "404.html", "football/crossword/index.html",
                  "football/crossword/how-to-play.html", "football/crossword/privacy.html",
                  "football/wordsearch/index.html"];
   const found = [];
+  /* A PAGE THAT IS NOT THERE IS A FAULT, NOT A SKIP. This named "index.html"
+     for the hub and skipped anything missing, so when the hub moved to
+     football/index.html on 21 Sep 2026 the scan stopped looking at it and went
+     on reporting a pass. A check that passes when it finds no problems also
+     passes when it is given nothing to look at, and `continue` is what made
+     that silent. Every page named here must exist. */
+  const missing = pages.filter((f) => !hasRoot(f));
+  if (missing.length) { escapeHits = "MISSING: " + missing.join(", "); return false; }
   for (const p of pages) {
-    if (!hasRoot(p)) continue;
     const markup = readRoot(p).replace(/<script[\s\S]*?<\/script>/gi, "");
     for (const m of markup.matchAll(/\\u[0-9a-fA-F]{4}/g)) found.push(`${p} ${m[0]}`);
   }

@@ -12,7 +12,7 @@
  *
  *   node crossword/chrome_test.mjs        (from the repo root)
  */
-import { gameDir } from "../../functions/_lib/permalink.js";
+import { gameDir, themeHubFile } from "../../functions/_lib/permalink.js";
 import { GAMES, BUILT, LABELS } from "../../functions/_lib/games.js";
 import fs from "node:fs";
 import { JSDOM } from "jsdom";
@@ -50,7 +50,7 @@ const ws = render("football/wordsearch/index.html", "https://www.thexigames.com/
    masthead and footer and the two static pages their own, so the front door
    and a policy page read as different sites from the games they belong to. */
 const sc = render("football/scrambled/index.html", "https://www.thexigames.com/football/scrambled/");
-const hub = render("index.html", "https://www.thexigames.com/");
+const hub = render(themeHubFile("football"), "https://www.thexigames.com/");
 const priv = render("football/crossword/privacy.html", "https://www.thexigames.com/football/crossword/privacy.html");
 const htp = render("football/crossword/how-to-play.html", "https://www.thexigames.com/football/crossword/how-to-play.html");
 
@@ -121,7 +121,7 @@ for (const [label, file] of [
   ["the word search page", "football/wordsearch/index.html"],
   ["how-to-play", "football/crossword/how-to-play.html"],
   ["privacy", "football/crossword/privacy.html"],
-  ["the hub", "index.html"],
+  ["the football hub", themeHubFile("football")],
 ]) {
   if (!fs.existsSync(file)) continue;
   /* Comments are not markup: an explanation of why a name was removed must be
@@ -335,7 +335,7 @@ t("a bar filled twice has one burger, not two", (() => {
 t("the sign-in controls stay hidden until the session is known",
   hilo.querySelector(".xic-signin").hidden && hilo.querySelector(".xic-account").hidden);
 t("no page carries an account sheet of its own", (() => {
-  const raw = ["football/crossword/index.html", "football/wordsearch/index.html", "football/scrambled/index.html", "football/hilo/index.html", "index.html"]
+  const raw = ["football/crossword/index.html", "football/wordsearch/index.html", "football/scrambled/index.html", "football/hilo/index.html", themeHubFile("football")]
     .map((f) => fs.readFileSync(f, "utf8").replace(/<!--[\s\S]*?-->/g, "")).join("");
   return !/id="accountSheet"|id="googleBtn"|accounts\.google\.com\/gsi/.test(raw);
 })());
