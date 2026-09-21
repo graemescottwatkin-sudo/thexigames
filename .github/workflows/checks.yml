@@ -574,10 +574,29 @@ jobs:
       # of an empty page. wrangler pages dev serves the Functions locally
       # against the development sample puzzles — no D1, no secrets, nothing that
       # needs a token.
+      # A D1 BINDING, AND A BOARD IN IT. Without one, getDailyPuzzle() falls
+      # through to SAMPLE_PUZZLES and returns list[(dailyNo - 1) % 3] — a
+      # three-board rotation keyed on the DATE. So which board the sixteen
+      # viewports measured depended on what day the run happened, and on
+      # 21 September 2026 that bit: the 23:38 run drew the 11x9 sample and
+      # passed, the 00:00 run drew the 14x12 and failed on the two narrowest
+      # phones. Same commit, twenty-two minutes apart, opposite results — and it
+      # would have healed itself two days later, which is WORSE than staying
+      # red, because a red that heals teaches you to ignore the next one.
+      #
+      # Measured against production the same night, all sixteen viewports
+      # passed — phone-360 at 56.7px against a floor of 32 — because the
+      # follow-word default fires on a coarse pointer. CI was measuring a code
+      # path no player reaches: the fallback for an unbound database.
       - name: Serve the site
         run: |
-          npx wrangler pages dev . --port 8788 --log-level error &
+          npx wrangler pages dev . --port 8788 --log-level error --d1 DB=crosswordxi &
           npx wait-on http://127.0.0.1:8788 --timeout 90000
+          # Load-bearing, not a health check: the local database file is not
+          # created until the binding is first touched. It is expected to fail,
+          # because there is no table yet.
+          curl -s -o /dev/null http://127.0.0.1:8788/api/daily || true
+          node tools/ci_seed_crossword.mjs
 
       - name: Measure
         env:
