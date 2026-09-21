@@ -23,6 +23,7 @@
  * until eleven separate requests had landed. One call now marks the whole grid,
  * so finishing offline works the moment the connection returns.
  */
+import { crosswordOf, LEGACY_GAME } from "../_lib/cw-registry.js";
 import { json, bad, normalise } from "../_lib/puzzle.js";
 import { getPuzzleForToken, hasDB } from "../_lib/db.js";
 import { playableDailyNo } from "../_lib/daily.js";
@@ -30,7 +31,13 @@ import { isAdmin } from "../_lib/auth.js";
 import { computeScore, gridIsComplete, SCORING } from "../_lib/scoring.js";
 import { attemptMatches, ATTEMPT_COLUMNS } from "../_lib/attempt.js";
 
-export async function onRequestPost({ request, env }) {
+export async function finishHandler({ request, env }, game) {
+  /* AN UNKNOWN CROSSWORD IS REFUSED, NEVER DEFAULTED TO FOOTBALL'S. Serving one
+     game's board under another game's address is the quietest failure these
+     endpoints could have. */
+  const cw = crosswordOf(game);
+  if (!cw) return bad("Unknown crossword.", 404);
+
   let body;
   try { body = await request.json(); } catch (e) { return bad("Expected a JSON body."); }
   const { token, playId, letters } = body || {};
@@ -38,7 +45,7 @@ export async function onRequestPost({ request, env }) {
   if (playableDailyNo(token) === false && !(await isAdmin(request, env))) {
     return bad("That puzzle is not today's daily.", 403);
   }
-  const stored = await getPuzzleForToken(env, token);
+  const stored = await cw.loadByToken(env, token);
   if (!stored) return bad("Unknown puzzle.", 404);
 
   /* Marked against the stored answers. The only thing the browser asserts is
@@ -137,10 +144,10 @@ export async function onRequestPost({ request, env }) {
          srv_score IS NULL makes the first score the one that stands: a second
          finish cannot overwrite it, which is the atomicity the review asked
          for. */
-      WHERE play_id = ? AND game = 'crossword' AND srv_score IS NULL`)
+      WHERE play_id = ? AND game = ? AND srv_score IS NULL`)
     .bind(res.score, elapsed + helpSeconds,
           stored.puzzle.entries.length, stored.puzzle.entries.length,
-          String(playId || "")).run();
+          String(playId || ""), game).run();
 
   return json({
     complete: true, verified: true, score: res.score,
@@ -155,3 +162,9 @@ export async function onRequestPost({ request, env }) {
     breakdown: res,
   });
 }
+
+/* THE FOOTBALL ADDRESS, UNCHANGED. Every live football client is calling this
+   right now; a deploy that moved it would break the game for anybody who had
+   not reloaded. The same rules are reachable at
+   /api/crossword/<game>/finish for any crossword. */
+export const onRequestPost = (ctx) => finishHandler(ctx, LEGACY_GAME);

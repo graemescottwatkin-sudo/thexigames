@@ -13,6 +13,7 @@
  * nothing to gain; keeping score server-side would need accounts and is out of
  * scope for a puzzle with no login.
  */
+import { crosswordOf, LEGACY_GAME } from "../_lib/cw-registry.js";
 import { normalise, json, bad } from "../_lib/puzzle.js";
 import { tally } from "../_lib/tally.js";
 import { getPuzzleForToken, hasDB } from "../_lib/db.js";
@@ -20,7 +21,13 @@ import { boardKeyForToken } from "../_lib/attempt.js";
 import { playableDailyNo } from "../_lib/daily.js";
 import { isAdmin } from "../_lib/auth.js";
 
-export async function onRequestPost({ request, env }) {
+export async function revealHandler({ request, env }, game) {
+  /* AN UNKNOWN CROSSWORD IS REFUSED, NEVER DEFAULTED TO FOOTBALL'S. Serving one
+     game's board under another game's address is the quietest failure these
+     endpoints could have. */
+  const cw = crosswordOf(game);
+  if (!cw) return bad("Unknown crossword.", 404);
+
   let body;
   try {
     body = await request.json();
@@ -37,7 +44,7 @@ export async function onRequestPost({ request, env }) {
   if (playableDailyNo(token) === false && !(await isAdmin(request, env))) {
     return bad("That puzzle is not today's daily.", 403);
   }
-  const stored = await getPuzzleForToken(env, token);
+  const stored = await cw.loadByToken(env, token);
   if (!stored) return bad("Unknown puzzle.", 404);
   const puzzle = stored.puzzle;
 
@@ -55,7 +62,7 @@ export async function onRequestPost({ request, env }) {
      is; a reveal has to touch both or it is free.
      Offline and with no database this is unchanged: nothing there can be
      verified, and /api/finish says so on its own. */
-  const identity = { game: "crossword", boardKey: boardKeyForToken(token, stored) };
+  const identity = { game, boardKey: boardKeyForToken(token, stored) };
   const charge = async (column) => {
     if (!hasDB(env)) return true;
     return tally(env, playId, column, identity);
@@ -83,3 +90,9 @@ export async function onRequestPost({ request, env }) {
 function refused() {
   return bad("That help could not be charged to this attempt. Start the board again.", 409);
 }
+
+/* THE FOOTBALL ADDRESS, UNCHANGED. Every live football client is calling this
+   right now; a deploy that moved it would break the game for anybody who had
+   not reloaded. The same rules are reachable at
+   /api/crossword/<game>/reveal for any crossword. */
+export const onRequestPost = (ctx) => revealHandler(ctx, LEGACY_GAME);

@@ -78,8 +78,23 @@ function makeEnv(rows) {
             /* The predicates this suite has to honour, because they are the
                fix: the game, the board where one is named, and srv_score IS
                NULL for the write that must not overwrite a banked score. */
-            if (/game = \?/.test(sql) && String(a[1]) !== String(row.game)) {
-              return { meta: { changes: 0 } };
+            /* THE GAME IS FOUND BY COUNTING PLACEHOLDERS, NOT BY POSITION.
+               This read a[1], which is where the TALLY puts the game and is not
+               where the FINISH puts it -- the finish binds it last. The comment
+               directly above already says the play id cannot be located
+               positionally for exactly that reason; the game was left
+               positional anyway, and it broke the moment finish.js stopped
+               writing 'crossword' into its SQL and started binding the game
+               (22 Sep 2026, when the crossword API was namespaced by game).
+               A stub that models a predicate wrongly fails a correct endpoint,
+               which is the most expensive kind of red: the code was right and
+               the test was not. Comments are stripped before the count because
+               a "?" inside one would shift it. */
+            if (/game = \?/.test(sql)) {
+              const before = sql.slice(0, sql.indexOf("game = ?"))
+                .replace(/\/\*[\s\S]*?\*\//g, "");
+              const gi = (before.match(/\?/g) || []).length;
+              if (String(a[gi]) !== String(row.game)) return { meta: { changes: 0 } };
             }
             if (/game = 'crossword'/.test(sql) && String(row.game) !== "crossword") {
               return { meta: { changes: 0 } };

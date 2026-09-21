@@ -13,6 +13,7 @@
  * endpoint always returned positions, the paid feature would be free to anyone
  * calling the API directly, and each guess would leak far more per attempt.
  */
+import { crosswordOf, LEGACY_GAME } from "../_lib/cw-registry.js";
 import { normalise, json, bad, solutionString } from "../_lib/puzzle.js";
 import { lockedSource } from "../_lib/sources.js";
 import { tally } from "../_lib/tally.js";
@@ -21,7 +22,13 @@ import { boardKeyForToken } from "../_lib/attempt.js";
 import { playableDailyNo } from "../_lib/daily.js";
 import { isAdmin } from "../_lib/auth.js";
 
-export async function onRequestPost({ request, env }) {
+export async function checkAnswerHandler({ request, env }, game) {
+  /* AN UNKNOWN CROSSWORD IS REFUSED, NEVER DEFAULTED TO FOOTBALL'S. Serving one
+     game's board under another game's address is the quietest failure these
+     endpoints could have. */
+  const cw = crosswordOf(game);
+  if (!cw) return bad("Unknown crossword.", 404);
+
   let body;
   try {
     body = await request.json();
@@ -45,7 +52,7 @@ export async function onRequestPost({ request, env }) {
   if (playableDailyNo(token) === false && !(await isAdmin(request, env))) {
     return bad("That puzzle is not today's daily.", 403);
   }
-  const stored = await getPuzzleForToken(env, token);
+  const stored = await cw.loadByToken(env, token);
   if (!stored) return bad("Unknown puzzle.", 404);
   const puzzle = stored.puzzle;
 
@@ -67,7 +74,7 @@ export async function onRequestPost({ request, env }) {
      so a crossword check could be counted against a word search's row of the
      same id; the identity goes into the UPDATE's own predicate now. See
      _lib/tally.js and _lib/attempt.js. */
-  const identity = { game: "crossword", boardKey: boardKeyForToken(token, stored) };
+  const identity = { game, boardKey: boardKeyForToken(token, stored) };
   /* Offline and with no database, help is served as it always was: nothing
      there can be verified, and /api/finish says so itself. */
   const charge = async (column) => (hasDB(env) ? tally(env, playId, column, identity) : true);
@@ -188,3 +195,9 @@ export async function onRequestPost({ request, env }) {
   }
   return json({ correct, wrong, length: answer.length, source });
 }
+
+/* THE FOOTBALL ADDRESS, UNCHANGED. Every live football client is calling this
+   right now; a deploy that moved it would break the game for anybody who had
+   not reloaded. The same rules are reachable at
+   /api/crossword/<game>/check-answer for any crossword. */
+export const onRequestPost = (ctx) => checkAnswerHandler(ctx, LEGACY_GAME);

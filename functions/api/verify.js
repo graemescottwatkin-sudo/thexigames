@@ -15,6 +15,7 @@
  * Deliberately no `detail`. Which letters are wrong is what the paid check
  * buys; this only ever says yes or no, so it cannot be used as a free one.
  */
+import { crosswordOf, LEGACY_GAME } from "../_lib/cw-registry.js";
 import { normalise, json, bad, solutionString } from "../_lib/puzzle.js";
 import { lockedSource } from "../_lib/sources.js";
 import { getPuzzleForToken, hasDB } from "../_lib/db.js";
@@ -22,7 +23,13 @@ import { limited, tooMany } from "../_lib/limit.js";
 import { playableDailyNo } from "../_lib/daily.js";
 import { isAdmin } from "../_lib/auth.js";
 
-export async function onRequestPost({ request, env }) {
+export async function verifyHandler({ request, env }, game) {
+  /* AN UNKNOWN CROSSWORD IS REFUSED, NEVER DEFAULTED TO FOOTBALL'S. Serving one
+     game's board under another game's address is the quietest failure these
+     endpoints could have. */
+  const cw = crosswordOf(game);
+  if (!cw) return bad("Unknown crossword.", 404);
+
   let body;
   try { body = await request.json(); } catch (e) { return bad("Expected a JSON body."); }
 
@@ -31,7 +38,7 @@ export async function onRequestPost({ request, env }) {
   if (playableDailyNo(token) === false && !(await isAdmin(request, env))) {
     return bad("That puzzle is not today's daily.", 403);
   }
-  const stored = await getPuzzleForToken(env, token);
+  const stored = await cw.loadByToken(env, token);
   if (!stored) return bad("Unknown puzzle.", 404);
 
   /* The free nudge: how much of a full grid is wrong, never where. It fires by
@@ -105,3 +112,9 @@ export async function onRequestPost({ request, env }) {
      that reason. */
   return json({ correct: true, source: lockedSource(stored.puzzle.entries[idx].row) });
 }
+
+/* THE FOOTBALL ADDRESS, UNCHANGED. Every live football client is calling this
+   right now; a deploy that moved it would break the game for anybody who had
+   not reloaded. The same rules are reachable at
+   /api/crossword/<game>/verify for any crossword. */
+export const onRequestPost = (ctx) => verifyHandler(ctx, LEGACY_GAME);

@@ -1,89 +1,18 @@
-/* GET /api/daily
+/* GET /api/daily — the FOOTBALL crossword's board, at the address it has
+ * always had.
  *
- * Returns today's puzzle and nothing else. Tomorrow's is never sent, so a
- * player cannot read ahead by opening dev tools — the requirement in §6 of the
- * deployment standard.
+ * The rules moved to functions/_lib/cw-daily.js on 22 September 2026, when the
+ * crossword API was namespaced by game so a second crossword could have the
+ * same server instead of a second copy of it. Nothing about what this address
+ * does has changed, and nothing about it may: every live football client on
+ * every device is calling it right now, and a deploy that moved it would break
+ * the game for anybody who had not reloaded. It delegates, and it always will.
  *
- * The day is decided by the server's own clock, not the browser's, so moving a
- * device clock forward cannot open a future puzzle.
+ * The same rules are reachable at /api/crossword/crossword/daily. Two
+ * addresses, one implementation — the same shape as the hub serving at both /
+ * and /football/.
  */
-import { publicPuzzle, json, bad } from "../_lib/puzzle.js";
-import { getDailyPuzzle, makeToken } from "../_lib/db.js";
-import { dailyNumber, dailyDayKey, ANSWERS_AFTER_DAYS } from "../_lib/daily.js";
-import { mayOpenArchive, archiveRefusal, backForBoard, FREE_ARCHIVE_DAYS } from "../_lib/archive.js";
+import { dailyHandler } from "../_lib/cw-daily.js";
+import { LEGACY_GAME } from "../_lib/cw-registry.js";
 
-export async function onRequestGet({ request, env }) {
-  /* ?no= asks for an earlier board. Without it you get today's.
-
-     A number above today is ANSWERED WITH TODAY, not refused. The refusal
-     dead-ended a real player, nightly: the server's day flips at midnight
-     UTC, the browser's at local midnight, so every UK summer night between
-     twelve and one the client computed tomorrow's number, asked for it, got
-     403 "not available yet", and the daily was a toast on an empty pitch.
-     The client-side recovery for a number disagreement — adoptServerBoard,
-     "the server owns the calendar, so its answer wins" — was already written
-     and already right, but it only runs when a BOARD comes back; a 403
-     carries nothing to adopt. Clamping the ask is what lets the stated
-     principle actually operate.
-
-     Nothing leaks: the clamped answer is today's board, which is what the
-     asker is entitled to. And this is the ASK only — check, reveal, verify
-     and finish still validate tokens through playableDailyNo, where a claim
-     about a future board stays refused. Asking is a question; a token is a
-     claim. */
-  let asked = NaN;
-  /* Guarded because the endpoint took no request at all until ?no= arrived, and
-     callers that never needed one still exist — functions_test invokes it as
-     daily({ env }). An endpoint that throws when asked for its default is worse
-     than one that ignores a parameter it cannot read. */
-  try { asked = Number(new URL(request.url).searchParams.get("no")); } catch (e) {}
-  const wanted = Number.isFinite(asked) && asked > 0 ? Math.floor(asked) : dailyNumber();
-  const today = dailyNumber();
-  const no = Math.min(Math.max(1, wanted), today);
-
-  /* HOW FAR BACK IS THIS. Board numbers ARE days here — #1 is the epoch and
-     each one after it is a day later — so the distance is subtraction, and no
-     date arithmetic is needed to ask the shared question. Asked through
-     backForBoard, which also answers "never a daily at all" for a board from
-     before the game launched; the crossword launched on #1, so for this
-     endpoint the answer never changes, and it is asked the same way as the
-     others so that a game which launches later cannot be the one place the
-     question is skipped. */
-  const back = backForBoard("crossword", no, today);
-  if (!(await mayOpenArchive(request, env, back))) {
-    return json(archiveRefusal(back), 401);
-  }
-
-  const stored = await getDailyPuzzle(env, no);
-  if (!stored) {
-    return bad("No daily puzzle is stored for #" + no +
-      ". Run tools/build_puzzles.js and import the result — see README step 5.", 404);
-  }
-  return json({
-    mode: "daily",
-    dailyNo: no,
-    /* THE DAY THIS BOARD IS, named by the server that decides it. The hub used
-       to write its own date from the device clock, and an independent review
-       read "Tuesday 8 September" on the front page beside "Mon 7 Sept" in the
-       game — a UK evening after local midnight and before UTC midnight, which
-       is an hour of every summer night. The number was already here; the day
-       it stands for was not, so the only way to name it on the client was a
-       second copy of the epoch. This is the first fact, said once. */
-    day: dailyDayKey(no),
-    /* How many days until a board's answers page is published. The client
-       needs the number for the calendar badges and the strap link, and this
-       payload is how it learns it — copying the constant into game.js would
-       be a second seven, drifting from the first the day one of them
-       changes. The server remains the only place the rule LIVES;
-       the client only displays it. */
-    answersAfter: ANSWERS_AFTER_DAYS,
-    /* How far back the archive is open without an account, sent for the same
-       reason as answersAfter and on the same terms: the calendar needs the
-       number to mark which days are locked, and a copy of it in game.js
-       would be a second seven to keep in step. The rule LIVES on the server
-       — the page only draws it. */
-    freeArchiveDays: FREE_ARCHIVE_DAYS,
-    token: makeToken("daily", no),
-    puzzle: publicPuzzle(stored.puzzle),
-  });
-}
+export const onRequestGet = (ctx) => dailyHandler(ctx, LEGACY_GAME);
