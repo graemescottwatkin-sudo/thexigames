@@ -386,11 +386,20 @@ Where facts live — extend these, never copy them:
   growing a twelfth. Football wears ten with one slot unsigned; Friends wears
   one. A NUMBER IS ONLY UNIQUE WITHIN ITS THEME — there are two number 1s and
   `aligned_test` checks uniqueness per squad, not across the family.
-  And a slot with an `href` and no `name` is no longer only the pre-launch
-  state: it is also how an UNLISTED game sits, which is why the squad carries a
-  way into Crossword XI: Friends and does not name it. `suggestNext()` requires
-  `g.name`, so an unlisted game is never offered at full time — the same fact
-  doing both jobs, rather than a second flag.
+  An UNLISTED game's slot carries NEITHER a name NOR an href — only its shirt
+  number and a status, the same shape as a game in build. `shared/xi-chrome.js`
+  is downloaded by every page, so an href in it is the site stating where the
+  game is, which is the one thing "not publicly visible" cannot allow. This
+  file said the opposite for three hours on 21 Sep 2026, because the slot first
+  shipped with a way in and no name and that WAS the pre-launch convention here
+  — Ballpark sat that way for twenty-one days. The owner's ruling the same day
+  changed it. Be honest about what it buys: `/friends/crossword/` is guessable,
+  and this removes the site TELLING anyone, not the reachability.
+  The THEME KEY still has to exist: `themeHere()` falls back to football for an
+  unknown segment, so a theme with no squad shows its own players the wrong
+  team sheet. `suggestNext()` requires `g.name`, so an unlisted game is never
+  offered at full time — the same fact doing both jobs, rather than a second
+  flag.
 - The reorder is cheap and stays cheap: the number lives in the squad list in
   `shared/xi-chrome.js`, and the hub carries the strip, the card, the kit
   colour and the played-today check. Nothing else may hold a shirt number.

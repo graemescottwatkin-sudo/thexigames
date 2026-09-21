@@ -184,15 +184,44 @@ t(launched ? "it is in PERMA_GAMES now, so the sitemap advertises it"
    `friends:` is the structure, not a disclosure. The rule is that an unreleased
    game is NAMED nowhere, so what this looks for is a slot carrying both an href
    into this game and a name — which is precisely the launched state. */
+/* THE SLOT CARRIES NEITHER A NAME NOR AN ADDRESS WHILE UNLISTED, and the
+   address is the half added on 21 September 2026. shared/xi-chrome.js is
+   downloaded by every page of the site, so an href in it is the site stating
+   where the game is — which is the one thing "no public way to access" cannot
+   allow, whatever the slot is called.
+   FOUND BY LOOKING AT THE SHIPPED BYTES rather than at the rendered page. The
+   slot rendered as nothing at all, because squadList() needs a name to draw a
+   link; the leak was in the source, where nothing was looking. */
 t(listed ? "it has a named slot in its theme's squad"
-         : "its squad slot carries a way in and no name", (() => {
+         : "its squad slot carries neither a name nor an address", (() => {
+  const raw = read("shared/xi-chrome.js");
+  const chrome = noComments(raw);
+  const squads = (chrome.match(/friends:\s*\[[\s\S]*?\]/) || [""])[0];
+  if (!squads) return false;                   // no squad at all is not the state
+  const named = /name:/.test(squads);
+
+  /* THE ADDRESS IS LOOKED FOR IN THE RAW FILE, COMMENTS AND ALL, and that is
+     the difference between this check working and not. shared/xi-chrome.js
+     SHIPS UNMINIFIED: every comment in it is bytes a visitor downloads, so a
+     paragraph explaining that the path was removed, which then writes the path,
+     puts it straight back where anybody can read it.
+     THAT EXACT MISTAKE WAS MADE IN THE EDIT THAT REMOVED THE HREF — the comment
+     justifying the removal spelled the address out — and this check, reading
+     stripped code, could not see it. It was caught by a grep run by hand, which
+     is not a thing that happens twice.
+     A NAME in a comment is different and is allowed: this project's files
+     discuss their games in prose everywhere, the family rule exempts comments
+     from naming, and a name is not a way in. An ADDRESS is. */
+  const addressed = /friends\/crossword/.test(raw);
+  return listed ? (named && addressed) : (!named && !addressed);
+})(), "the shipped chrome must not say where an unlisted game lives");
+/* AND SAID IN THE POSITIVE, because the two prohibitions above both pass on a
+   theme that has no squad at all — which would silently give every Friends
+   player the football team sheet, themeHere() falling back. */
+t("but the theme still HAS a squad, so its own pages do not show football's", (() => {
   const chrome = noComments(read("shared/xi-chrome.js"));
-  const slot = (chrome.match(/\{[^{}]*href:\s*"\/friends\/crossword\/"[^{}]*\}/) || [""])[0];
-  if (!slot) return false;                     // no slot at all is not the middle state
-  return listed ? /name:/.test(slot) : !/name:/.test(slot);
-})(), "a href and no name is the state a game is in before it is announced — " +
-      "whether it has launched or not, because being playable and being " +
-      "advertised are different facts");
+  return /friends:\s*\[\s*\{[^{}]*n:\s*1[^{}]*\}/.test(chrome);
+})(), "themeHere() falls back to football for a theme with no squad");
 t(listed ? "its front page is among the sitemap's static pages"
          : "its front page is not among the sitemap's static pages", (() => {
   const sm = read("functions/sitemap.xml.js");

@@ -239,10 +239,36 @@ t("and in GAMES, so its results are the account's to carry",
 t("and has a launch day, which is what every list counts from",
   /grid: "[0-9]{4}-[0-9]{2}-[0-9]{2}"/.test(games),
   "boardKeys, the archive index and the sitemap all start there");
+/* FOOTBALL'S SQUAD, NOT EVERY SQUAD. This sliced from `var SQUAD` to
+   `var PAGES`, which is the whole SQUADS map — both themes — and the rules
+   below are about who wears which FOOTBALL shirt. It was harmless only while
+   football was the sole theme with entries in it.
+   It failed on 21 September 2026, the first time a second theme had an
+   unsigned slot: the Friends crossword launched UNLISTED, its slot carries a
+   shirt number and a status and no name, and this read that as a football game
+   in testing sitting on shirt 1 — at or below Grid's six — and refused a squad
+   that was entirely correct. A shirt is a TEAM's, and comparing two teams'
+   numbers is comparing nothing. */
 const squad = (() => {
   const s = read("shared/xi-chrome.js");
-  return s.slice(s.indexOf("var SQUAD"), s.indexOf("var PAGES"));
+  const at = s.indexOf("football: [");
+  if (at < 0) return "";
+  let depth = 0;
+  for (let i = s.indexOf("[", at); i < s.length; i++) {
+    if (s[i] === "[") depth++;
+    else if (s[i] === "]" && --depth === 0) return s.slice(at, i);
+  }
+  return "";
 })();
+/* SAID IN THE POSITIVE, because every rule below is a prohibition and all of
+   them pass on an empty string. The slice must have found the football squad
+   AND must be narrower than the file it came from — a slice that silently
+   returned everything is the bug being fixed here wearing a different hat. */
+t("PRECONDITION: the football squad was found, and it is not the whole map", (() => {
+  const whole = read("shared/xi-chrome.js");
+  return squad.length > 200 && squad.length < whole.length &&
+         !/friends:/.test(squad) && /name: "Grid XI"/.test(squad);
+})(), `${squad.length} chars, football only`);
 t("it wears the sixth shirt", /n: 6,[^}]*name: "Grid XI"/.test(squad),
   "a launched game takes the next free number");
 /* AND THE TAIL MOVED DOWN, which is the rule rather than a fact about any one

@@ -349,16 +349,20 @@ console.log("\n=== The family as a whole ===");
 const { isListed } = await import("../functions/_lib/games.js");
 const LISTED = (g) => isListed(g.id);
 const chrome = read("shared/xi-chrome.js");
-/* EVERY GAME HAS A WAY IN; ONLY A LISTED GAME HAS A NAME. The two halves were
-   one assertion until 21 September 2026, when a game launched UNLISTED —
-   playable at its own address, banking results, and named nowhere. Splitting
-   them keeps both properties instead of weakening one: the path is still
-   required of everything, and the NAME is now required of listed games and
-   REFUSED of unlisted ones. An unlisted game that quietly grew a name on the
-   team sheet is the leak this half exists to catch, and it would have passed a
-   test that only checked the name was present when expected. */
-t("every game has a way into it on the chrome's squad list, at its own path",
-  GAMES.every((g) => chrome.indexOf(`href: "/${g.dir}/"`) > -1));
+/* A LISTED GAME HAS BOTH A NAME AND A WAY IN; AN UNLISTED ONE HAS NEITHER.
+   This was one assertion demanding both of every game until 21 September 2026,
+   when a game launched UNLISTED. It was split in two that morning and the
+   address half was still required of everything — on the reasoning that a way
+   in with no name is how this project has always run a game before announcing
+   it. The owner's ruling later the same day was that the address counts too:
+   THIS FILE IS DOWNLOADED BY EVERY PAGE, so an href here is the site telling
+   every visitor where the game is, whatever the slot is called.
+   BOTH DIRECTIONS, both halves. "Present when it should be" alone passes a
+   chrome that has quietly started advertising an unlisted game, and that is
+   the direction that leaks. */
+t("every LISTED game has a way into it on the chrome's squad list, and no unlisted one does",
+  GAMES.every((g) => (chrome.indexOf(`href: "/${g.dir}/"`) > -1) === LISTED(g)),
+  GAMES.filter((g) => !LISTED(g)).map((g) => g.dir).join(", ") || "all listed");
 t("every LISTED game is named there, and no unlisted one is",
   GAMES.every((g) => chrome.indexOf(`"${g.name}"`) > -1 === LISTED(g)),
   GAMES.filter((g) => !LISTED(g)).map((g) => g.id).join(", ") || "all listed");
@@ -1005,13 +1009,13 @@ t("and no game writes the link itself", (() => {
   return guilty.length === 0;
 })(), "the href lives once, in shared/xi-chrome.js");
 
-const SHARED_TAG = "v52";
+const SHARED_TAG = "v53";
 /* The bytes that ship AS v50. The tag does not move again for this change:
    v50 has not shipped, so it is still the version being prepared, and a tag
    bumped once per edit before release would burn a letter a minute. What
    must not happen is shared bytes changing under a tag that IS live — which
    is the pairing this constant exists for. */
-const SHARED_HASH = "446c0db69b33bb82";
+const SHARED_HASH = "51fa815dfc2e874f";
 /* EVERY PAGE THAT LINKS THE SHARED LAYER, not the games alone. The hub, the
    two static pages and the unlaunched game all carry the chrome now, and the
    server-rendered shell writes the tag from a constant of its own — so a tag
@@ -1462,18 +1466,36 @@ console.log("\n=== The hub judges every live game ===");
      Friends' eleven each start at 1, so a single set across the family would
      report a clash that is actually the design. What must hold is that every
      game HAS a shirt, and that no two games in the SAME theme share one. */
-  t("each has its own shirt, and no shirt twice in a squad", (() => {
+  /* A SHIRT IS JOINED BY ADDRESS, SO AN UNLISTED GAME HAS NO JOINABLE SHIRT —
+     and that is the design, not a gap. The join is slot.href === "/" + dir +
+     "/", and an unlisted game's slot carries no href precisely so that the
+     shipped chrome does not say where the game is. Nothing on the client can
+     then tell which game that slot belongs to, which is the whole point.
+     NOTHING IS LOST. A shirt number is used for the hub strip, the card and
+     the kit colour, all of which are things an unlisted game is absent from.
+     So the rule is scoped to LISTED games and the inverse is asserted rather
+     than skipped: an unlisted game that acquired a joinable shirt would mean
+     its address had come back into shared/xi-chrome.js, which is exactly the
+     leak the href was removed to close. */
+  t("each LISTED game has its own shirt, no shirt twice in a squad, and no unlisted game is joinable", (() => {
     if (rows.length !== GAMES.length) return false;
-    if (!rows.every((r) => r.n !== null)) return false;
+
+    const listed = rows.filter((r) => LISTED(GAMES.find((x) => x.id === r.id)));
+    const hidden = rows.filter((r) => !LISTED(GAMES.find((x) => x.id === r.id)));
+
+    if (!listed.length) return false;                 // a vacuous pass is not a pass
+    if (!listed.every((r) => r.n !== null)) return false;
+    if (!hidden.every((r) => r.n === null)) return false;
+
     const byTheme = {};
-    for (const r of rows) {
+    for (const r of listed) {
       const g = GAMES.find((x) => x.id === r.id);
       const theme = g ? g.dir.split("/")[0] : "?";
       (byTheme[theme] = byTheme[theme] || []).push(r.n);
     }
     return Object.keys(byTheme).every((t2) =>
       new Set(byTheme[t2]).size === byTheme[t2].length);
-  })(), rows.map((r) => r.n + " " + r.id).join(" | "));
+  })(), rows.map((r) => (r.n === null ? "unlisted" : r.n) + " " + r.id).join(" | "));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

@@ -113,16 +113,47 @@
     ],
 
     /* Friends. Its own eleven, and its number 1 — LAUNCHED on 21 September
-       2026 and UNLISTED, so it carries an href and NO NAME. That is not the
-       pre-launch state wearing the same clothes: the game is live, it serves
-       boards and it banks results, and this slot is the whole reason it is not
-       offered to anybody. shared/xi-played.js suggestNext() requires g.name, so
-       a nameless slot is never suggested at full time — which is the
-       behaviour wanted, arrived at without a second flag.
-       The name goes in when functions/_lib/games.js stops calling it UNLISTED,
-       and the gate refuses these two disagreeing. */
+       2026 and UNLISTED: no name AND NO HREF.
+
+       THIS FILE IS DOWNLOADED BY EVERY PAGE ON THE SITE, so an href here is a
+       literal statement of the game's address that any visitor can read in the
+       source. It carried one for a few hours, on the reasoning that a way in
+       with no name is how this project has always run a game before announcing
+       it — true, and Ballpark sat that way for twenty-one days. The owner's
+       call on the day was that "no public way to access" means the address too.
+
+       BE HONEST ABOUT WHAT THIS BUYS. The address is guessable -- the theme is
+       the first path segment and the game is a crossword -- so removing this
+       does not make the game unreachable and was never going to. What it
+       removes is the site TELLING anyone where it is, which is the whole of
+       what unlisted has ever meant here.
+
+       AND THIS COMMENT MAY NOT SPELL THE ADDRESS OUT, which is why it does
+       not. THIS FILE SHIPS UNMINIFIED: its comments are served bytes like any
+       other, so a paragraph explaining that the path was removed, which then
+       writes the path, puts it straight back. That fault was made HERE, in
+       this comment, in the same edit that removed the href -- and it is the
+       third time in one day a comment has defeated the thing it was explaining.
+       IT WAS NOT THE GATE THAT CAUGHT IT. The gate read this file with its
+       comments STRIPPED, so it could not see the path in prose at all; the
+       catch was a grep run by hand, which is not a thing that happens twice.
+       The gate now reads the raw bytes for an address, and was proved to
+       refuse a path written into a comment before that claim was believed.
+
+       THE THEME KEY STAYS, and that is not an oversight. themeHere() reads
+       SQUADS[first path segment] and falls back to football, so deleting
+       `friends` would hand a Friends player the FOOTBALL team sheet — worse
+       for the reader and not one bit more private.
+
+       A STATUS, BECAUSE THE RENDERER PRINTS ONE. The no-href branch of
+       squadList() writes g.status into the markup unconditionally, so a slot
+       without one renders the word "undefined" on the page. "Unlisted" is the
+       true thing to say and names nothing.
+
+       The name AND the href both go in when functions/_lib/games.js stops
+       calling this game UNLISTED, and the gates refuse the three disagreeing. */
     friends: [
-      { n: 1,  href: "/friends/crossword/" },
+      { n: 1,  status: "Unlisted" },
     ],
   };
 
