@@ -901,6 +901,10 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
 <footer class="xic-foot"></footer>
 <script src="shared/xi-season.js?v=v50"></script>
 <script src="shared/xi-chrome.js?v=v50"></script>
+<!-- AFTER xi-chrome.js, because xi-played.js joins its probe to the squad and
+     the squad is declared there. Before the inline script below, which calls
+     XIPlayed.list() while it builds the shirts. -->
+<script src="shared/xi-played.js?v=v50"></script>
 
 <script>
 /* Progressive enhancement only: everything above renders complete without
@@ -1185,76 +1189,28 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
        that game's own results list whether today's board is in it. The two
        cypher games share a daily number and never a board, so each reads its
        OWN key: a player who has done one has not done the other. */
-    var GAMES = [
-      { n: 1, id: "crossword", name: "Crossword XI", key: "fcw.results.v1",
-        api: "/api/daily",
-        today: function (d) { return d.dailyNo; },
-        done: function (r, t) { return r.dailyNo === t && r.complete !== false; } },
-      { n: 2, id: "wordsearch", name: "Wordsearch XI", key: "xiws.results",
-        api: "/api/wordsearch/daily",
-        today: function (d) { return d.day; },
-        done: function (r, t) { return r.day === t; } },
-      { n: 3, id: "scrambled", name: "Scrambled XI", key: "xisc.results",
-        api: "/api/scrambled/daily",
-        today: function (d) { return d.today; },
-        done: function (r, t) { return r.no === t; } },
-      { n: 4, id: "hilo", name: "HiLo XI", key: "xihl.results",
-        api: "/api/hilo/daily",
-        today: function (d) { return d.day; },
-        done: function (r, t) { return r.day === t; } },
-      { n: 5, id: "vowels", name: "Vowels XI", key: "xivw.results",
-        api: "/api/scrambled/daily?cy=1",
-        today: function (d) { return d.today; },
-        done: function (r, t) { return r.no === t; } },
-      /* Grid XI launched 7 Sep 2026. Its calendar names one board per day and
-         its payload carries that board's number, so it is judged by number
-         like the two cypher games rather than by day. */
-      { n: 6, id: "grid", name: "Grid XI", key: "xigd.results",
-        api: "/api/grid/daily",
-        today: function (d) { return d.no; },
-        done: function (r, t) { return r.no === t; } },
-      /* Codeword XI launched 14 Sep 2026 and its queue starts the same day, so
-         board one and the launch are the same date. Its payload carries the
-         board's own number — cw_board.no, counted from ITS epoch — which is not
-         the family board number an address uses; this table is judging "did
-         you play today", so the board's own number is the right one to compare
-         and the two never meet here. */
-      { n: 7, id: "codeword", name: "Codeword XI", key: "xicw.results",
-        api: "/api/codeword/daily",
-        today: function (d) { return d.no; },
-        done: function (r, t) { return r.no === t; } },
-      /* QuickFire XI launched 15 Sep 2026. Judged by DAY rather than by number,
-         like the word search and HiLo: its boards are keyed on play_date in
-         qf_daily and a result is banked under that day, so the day is the thing
-         both sides already hold. The payload does carry a board number and it
-         would work too — but it is the FAMILY number, derived from the day, and
-         picking the derived value over the one it is derived from is how two
-         numberings get a chance to disagree. */
-      { n: 8, id: "quickfire", name: "QuickFire XI", key: "qfx.results.v1",
-        api: "/api/quickfire/daily",
-        today: function (d) { return d.day; },
-        done: function (r, t) { return r.day === t; } },
-      /* Who Am I XI launched 15 Sep 2026. Judged by DAY: its boards are keyed
-         on play_date and a result is banked under that day, so the day is the
-         thing both sides already hold. ONE RESULT A DAY, NOT ELEVEN — the
-         owner's exception of 11 September: this game's eleven are the CLUBS,
-         and a person plays one of them. */
-      { n: 9, id: "whoami", name: "Who Am I XI", key: "xiwa.results.v1",
-        api: "/api/whoami/daily",
-        today: function (d) { return d.day; },
-        done: function (r, t) { return r.day === t; } },
-      /* Ballpark keyed on the DAY, like Who Am I and Codeword: bp_schedule
-         hands one board to one day and the page records the day it played. */
-      { n: 10, id: "ballpark", name: "Ballpark XI", key: "xibp.results",
-        api: "/api/ballpark/daily",
-        today: function (d) { return d.day; },
-        done: function (r, t) { return r.day === t; } }
-    ];
+    /* THE TABLE MOVED TO shared/xi-played.js ON 21 SEPTEMBER 2026, and this is
+       the whole of what is left of it. It held ten games, each with the
+       localStorage key its results live under, the endpoint that says what
+       today's board is, and a done(row, today) probe — and it was the only
+       statement of "what counts as played" anywhere on the site.
 
-    var listOf = function (key) {
-      try { return JSON.parse(localStorage.getItem(key) || "[]") || []; }
-      catch (e) { return []; }
-    };
+       It moved because the full-time panel needs the same fact to suggest a
+       game you have not started, and the alternative was a second copy. A value
+       stored twice is what this project traces every major bug back to; this
+       one would have drifted the first time a game changed how it records a
+       result, and the hub would have kept lighting a shirt the panel thought
+       was unplayed.
+
+       THE NAMES AND SHIRT NUMBERS ARE STILL THE SQUAD'S. xi-played.js holds the
+       probe and nothing else; list() joins it to xi-chrome.js's squad, which is
+       already the one statement of what a game is called and where it lives.
+       This asks for FOOTBALL explicitly rather than taking the reader's theme:
+       it is the football hub's shirts being lit here, not the shirts of
+       whichever theme somebody arrived from. */
+    var GAMES = (window.XIPlayed && XIPlayed.list("football")) || [];
+    var listOf = (window.XIPlayed && XIPlayed.listOf) ||
+      function () { return []; };
 
     /* WHAT THE ACCOUNT SAYS, ASKED ONCE FOR ALL FIVE. The shirts were lit from
        localStorage alone, which is device-local by construction: a player

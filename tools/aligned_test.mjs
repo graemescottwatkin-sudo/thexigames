@@ -989,7 +989,7 @@ const SHARED_TAG = "v50";
    bumped once per edit before release would burn a letter a minute. What
    must not happen is shared bytes changing under a tag that IS live — which
    is the pairing this constant exists for. */
-const SHARED_HASH = "b53fe4b86669c901";
+const SHARED_HASH = "b3732b65eaf2b265";
 /* EVERY PAGE THAT LINKS THE SHARED LAYER, not the games alone. The hub, the
    two static pages and the unlaunched game all carry the chrome now, and the
    server-rendered shell writes the tag from a constant of its own — so a tag
@@ -1355,32 +1355,70 @@ console.log("\nNo game restates a shared token");
  * shirt marked, or the hub is not judging it. */
 console.log("\n=== The hub judges every live game ===");
 {
-  /* READ THE HUB'S TABLE, NOT THE CODE THAT USES IT.
+    /* READ THE TABLE WHERE IT LIVES, NOT THE CODE THAT USES IT.
      This looked for five hand-written blocks — a getItem per prefix and a
      markDone per shirt. That was the right property checked against the wrong
-     thing: the hub HAD five copies of one idea, which is exactly why the fifth
-     was forgotten the day Vowels launched. It keeps one table now, and five
-     literal blocks are what it must never have again — so a check demanding
-     them would be demanding the fault back. The table is the one place, and
-     this reads the one place.
-     Matched on the prefix rather than a guessed key: the crossword's is
-     `fcw.results.v1`, and a check that demands a key shape the games never
+     thing: the hub HAD five copies of one idea, which is exactly why the
+     fifth was forgotten the day Vowels launched. A check demanding those
+     blocks would be demanding the fault back.
+
+     THE TABLE MOVED AGAIN ON 21 SEPTEMBER 2026, out of index.html and into
+     shared/xi-played.js, because the full-time panel needs the same fact and
+     a second copy is the fault this whole file exists to catch. So it is now
+     in TWO files by design and this must read both: the PROBE (id, storage
+     key, endpoint) in xi-played.js, and the SHIRT NUMBER in xi-chrome.js's
+     football squad, which is already the one statement of what a game is
+     called and where it lives.
+
+     That makes this check stronger rather than weaker: what is verified is
+     the JOIN. A probe with no squad slot, or a slot with no probe, is a game
+     that is half-registered — the state nobody notices — and either one fails
+     here now.
+     Matched on the PREFIX rather than a guessed key: the crossword's is
+     `fcw.results.v1`, and a check demanding a key shape the games never
      agreed on fails a game for being itself. */
-  const hub = read("index.html");
-  const at = hub.indexOf("var GAMES = [");
-  const table = at > -1 ? hub.slice(at, hub.indexOf("];", at)) : "";
-  const rows = [...table.matchAll(/n:\s*(\d+),\s*id:\s*"([a-z]+)"[\s\S]*?key:\s*"([^"]+)"/g)]
-    .map((m) => ({ n: Number(m[1]), id: m[2], key: m[3] }));
-  t("the front door keeps one table of the games, not a block each",
-    !!table && rows.length > 0, rows.length + " rows");
+  const played = read("shared/xi-played.js");
+  const probeAt = played.indexOf("var PROBE = [");
+  const probeSrc = probeAt > -1 ? played.slice(probeAt, played.indexOf("\n  ];", probeAt)) : "";
+  const probes = [...probeSrc.matchAll(/id:\s*"([a-z_]+)",\s*key:\s*"([^"]+)"/g)]
+    .map((m) => ({ id: m[1], key: m[2] }));
+
+  const chromeSrc = read("shared/xi-chrome.js");
+  const fFrom = chromeSrc.indexOf("football: [");
+  const fTo = chromeSrc.indexOf("friends: [", fFrom);
+  const squadSrc = fFrom > -1 && fTo > fFrom ? chromeSrc.slice(fFrom, fTo) : "";
+  const slots = [...squadSrc.matchAll(/n:\s*(\d+),[^}]*href:\s*"([^"]+)"/g)]
+    .map((m) => ({ n: Number(m[1]), href: m[2] }));
+  const idOf = (href) => {
+    const parts = String(href).split("/").filter(Boolean);
+    return parts.length ? parts[parts.length - 1] : "";
+  };
+  const rows = probes.map((p) => {
+    const slot = slots.find((s) => idOf(s.href) === p.id);
+    return { id: p.id, key: p.key, n: slot ? slot.n : null };
+  });
+
+  t("the probe table exists and is one table, not a block per game",
+    probes.length > 0, probes.length + " rows");
+
+  /* THE INVERSE, so the duplicate cannot quietly come back. The hub held this
+     table until today; if a row shape ever reappears in index.html it means
+     somebody rebuilt it there rather than reading the shared one, which is
+     the exact drift this move was made to stop. */
+  t("and the hub no longer keeps one of its own",
+    !/api:\s*"\/api\//.test(read("index.html")),
+    "index.html reads XIPlayed.list() instead");
+
   const unjudged = GAMES.filter((g) =>
     !rows.some((r) => r.id === g.id && r.key.indexOf(g.prefix + ".") === 0));
   t("every live game has a row in it, under its own prefix",
     unjudged.length === 0,
     unjudged.length ? unjudged.map((g) => g.name).join(", ") + " not judged"
       : rows.map((r) => r.id).join(", "));
+
   t("each has its own shirt, and no shirt twice",
     rows.length === GAMES.length &&
+    rows.every((r) => r.n !== null) &&
     new Set(rows.map((r) => r.n)).size === GAMES.length,
     rows.map((r) => r.n + " " + r.id).join(" | "));
 }

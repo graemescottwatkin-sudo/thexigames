@@ -304,9 +304,14 @@ console.log("\nAnd it IS launched, which every one of these makes true");
   t("and the play link names the game, for a screen reader",
     /Play[\s\S]{0,120}Ballpark\s*XI/.test(cardBallpark) || cardBallpark.includes('aria-label="Play Ballpark XI today"'));
   t("and an archive to open",
-    cardBallpark.includes('href="/football/ballpark/archive/"'));
-  t("and a row in the hub's table, so the front door knows it was played today",
-    /id: "ballpark"[\s\S]*?key: "xibp\.results"/.test(hub));
+    cardBallpark.includes('href="/football/ballpark/archive/"'))    /* THE TABLE MOVED to shared/xi-played.js on 21 September 2026, out of
+       index.html, because the full-time panel needs the same fact and a
+       second copy is this project's oldest fault. The hub reads it now, so
+       this asks the file that HOLDS the row rather than the file that uses
+       it. The question is unchanged: the front door must be able to tell
+       that this game was played today. */
+    t("and a row in the played table, so the front door knows it was played today",
+      /id: "ballpark",\s*key: "xibp\.results"/.test(readRoot("shared/xi-played.js")));
   t("it is in the sitemap, offered to a crawler", /football\/ballpark\//.test(sitemap));
 
   t("the archive route exists, because the hub links to it",

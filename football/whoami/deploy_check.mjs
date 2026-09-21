@@ -342,9 +342,14 @@ console.log("\nAnd it IS launched, which every one of these makes true");
   t("and the play link names the game, for a screen reader",
     /Play[\s\S]{0,120}Who\s*Am\s*I\s*XI/.test(cardWhoami) || cardWhoami.includes('aria-label="Play Who Am I XI today"'));
   t("and an archive to open",
-    cardWhoami.includes('href="/football/whoami/archive/"'));
-  t("and a row in the hub's table, so the front door knows it was played today",
-    /id: "whoami"[\s\S]*key: "xiwa\.results\.v1"/.test(hub));
+    cardWhoami.includes('href="/football/whoami/archive/"'))    /* THE TABLE MOVED to shared/xi-played.js on 21 September 2026, out of
+       index.html, because the full-time panel needs the same fact and a
+       second copy is this project's oldest fault. The hub reads it now, so
+       this asks the file that HOLDS the row rather than the file that uses
+       it. The question is unchanged: the front door must be able to tell
+       that this game was played today. */
+    t("and a row in the played table, so the front door knows it was played today",
+      /id: "whoami",\s*key: "xiwa\.results\.v1"/.test(readRoot("shared/xi-played.js")));
 
   t("it is in the sitemap, offered to a crawler", /football\/whoami/.test(sitemap));
 
