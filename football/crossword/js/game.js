@@ -1389,7 +1389,24 @@
       toast("This puzzle has changed", "Your earlier progress on it could not be carried over.");
       staleSave = false;
     }
-    if (restore) checkComplete(); // a finished daily boots straight to Full Time
+    /* A RESTORED BOARD TAKES ONE OF TWO PATHS, AND THIS LINE USED TO TAKE
+       NEITHER. It read `if (restore) checkComplete();` with the comment "a
+       finished daily boots straight to Full Time" -- and that stopped being true
+       the day `complete` began restoring with the save. checkComplete opens
+       `if (complete || !isComplete()) return;`, so on a finished board it
+       returned at once, and the comment outlived the behaviour it claimed.
+
+       The restore of `complete` was itself a fix, for finishing twice, and it
+       took this with it. That is the shape worth noticing: not a change that
+       broke something loudly, but one whose comment went on asserting the old
+       behaviour, so nobody reading the line could see that it did nothing.
+
+       reopenFullTime PAINTS ONLY. checkComplete is still the path for a board
+       being finished now, and is still the only one that records. */
+    if (restore) {
+      if (complete) reopenFullTime();   // finished earlier: show the result again
+      else checkComplete();             // completed by the restore itself
+    }
   }
   /* The icon shows what pressing it would do next: pause bars while showing,
      a play triangle once the board is hidden. */
@@ -5024,16 +5041,18 @@
     }
   }
 
-  function checkComplete() {
-    if (complete || !isComplete()) return;
-    complete = true;
-    paused = false; $("pauseBtn").disabled = true; syncPauseIcon();
-    stopTimer(); save();
-    var res = FCW.computeScore(elapsed, checksUsed, revealedLetterCount(),
-                               revealedAnswerCount(), checkAllsUsed);
-    var table = FCW.buildTable(club, res.score, season);
-    var pos = FCW.playerPosition(table);
-    lastPosition = pos;
+  /* FULL TIME, DRAWN. Nothing here records anything, tells the server
+     anything, or asks the player anything — that is the whole point of it
+     being its own function. It is called twice: once when a board is
+     finished, and once when a finished board is opened again.
+
+     IT WAS ONE BLOCK WITH THE RECORDING until 21 September 2026, and that is
+     why reopening a completed puzzle showed a board with no result on it. The
+     screen was reachable only by finishing, and finishing again was exactly
+     what must not happen: another /api/finish, another recorded result,
+     another streak entry. Separating the drawing from the consequences is
+     what makes showing it again safe. */
+  function paintFullTime(res, table, pos) {
     if ($("rClockNote")) $("rClockNote").style.display = "none";
     showPauseNote();
     updateScoreUI();
@@ -5052,20 +5071,62 @@
     $("bAnswers").textContent = footballPhrase("answer", revealedAnswerCount(), res.revealAnswerPenalty);
     $("bAnswerPen").textContent = helpMins("revealAnswer", revealedAnswerCount());
     setFinalScore(res.score);
-    if (board.kind === "daily") { recordDaily(pos, res.score, res); renderStreak(); }
-    else if (board.kind === "theme") recordThemed(pos, res.score);
     renderLeagueRows($("finalTableBody"), table, false); // Full Time: all 20
-    var youRow = $("finalTableBody").querySelector("tr.you");
-    playEnd(true);
     $("doneOverlay").classList.add("show");
     /* THE NEXT GAME, ASKED FOR WHEN THE PANEL OPENS rather than at page load.
-       What has been played today changes while this page is open — another tab,
-       another device, or this very game a moment ago — and a suggestion worked
-       out at load would offer a board the player has since finished. */
+       What has been played today changes while this page is open — another
+       tab, another device, or this very game a moment ago — and a suggestion
+       worked out at load would offer a board the player has since finished.
+       Asking here rather than in checkComplete means a reopened board gets a
+       fresh suggestion too, which is the case that most needs one: the player
+       came back later, and more of the day has happened. */
     if (window.XIFullTime && $("nextUpRow")) {
       window.XIFullTime.nextUp($("nextUpRow"), { game: "crossword" });
     }
+    var youRow = $("finalTableBody").querySelector("tr.you");
     if (youRow && youRow.scrollIntoView) youRow.scrollIntoView({ block: "center" });
+  }
+
+  /* A FINISHED BOARD, OPENED AGAIN, SHOWS ITS RESULT. Asked for directly:
+     "if i move away from the crossword screen it would be great if this came
+     back if i came back to the daily board later".
+
+     THE SCORE IS RECOMPUTED, NOT RE-EARNED. Every input it needs — the
+     elapsed clock, the checks, the reveals — is restored with the save, and
+     FCW.computeScore is pure, so the same inputs give the same number the
+     player was shown when they finished. Nothing is recorded: the result was
+     banked the first time and the merge rule is that the first result banked
+     wins. */
+  function reopenFullTime() {
+    if (!complete || !puzzle) return;
+    var res = FCW.computeScore(elapsed, checksUsed, revealedLetterCount(),
+                               revealedAnswerCount(), checkAllsUsed);
+    var table = FCW.buildTable(club, res.score, season);
+    var pos = FCW.playerPosition(table);
+    lastPosition = pos;
+    paintFullTime(res, table, pos);
+  }
+
+  function checkComplete() {
+    if (complete || !isComplete()) return;
+    complete = true;
+    paused = false; $("pauseBtn").disabled = true; syncPauseIcon();
+    stopTimer(); save();
+    var res = FCW.computeScore(elapsed, checksUsed, revealedLetterCount(),
+                               revealedAnswerCount(), checkAllsUsed);
+    var table = FCW.buildTable(club, res.score, season);
+    var pos = FCW.playerPosition(table);
+    lastPosition = pos;
+    paintFullTime(res, table, pos);
+    /* THE SIDE EFFECTS, AFTER THE PAINT AND ONLY HERE. Everything above this
+       line draws; everything below it records, tells the server, or asks the
+       player something. They were one block until 21 September 2026, which is
+       why a finished board could not simply show its result again — repainting
+       meant re-recording. recordDaily writes into #rClockNote, so it must come
+       after the paint that clears it. */
+    if (board.kind === "daily") { recordDaily(pos, res.score, res); renderStreak(); }
+    else if (board.kind === "theme") recordThemed(pos, res.score);
+    playEnd(true);
     /* Full Time appears immediately with the score worked out here, then the
        server's verdict replaces it when it arrives. Waiting would mean a
        finished puzzle showing nothing on a slow connection, and a puzzle that

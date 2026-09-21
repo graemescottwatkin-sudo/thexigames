@@ -76,5 +76,81 @@
     });
   }
 
-  window.XIFullTime = { nextUp: nextUp };
+  /* THE SAME SUGGESTION, REFRESHED EACH TIME THE PANEL IS SHOWN, for the nine
+     games whose full-time screens this session did not write. The crossword
+     calls nextUp() directly from the function that paints its panel, which is
+     better where it is available: it knows exactly when the panel opens.
+
+     THE OTHER NINE SHOW THEIR RESULTS NINE DIFFERENT WAYS — a class on an
+     overlay, a hidden attribute, a screen swap — and hooking each one means
+     reading nine flows and being wrong about at least one of them. VISIBILITY
+     is the thing they actually have in common, and IntersectionObserver reports
+     it however the panel was shown.
+
+     FILLED ONCE IMMEDIATELY, because an empty element has no height and an
+     element with no height never intersects — it would wait for ever for a
+     signal it had made impossible. */
+  function watch(target, opts) {
+    if (!target) return;
+    nextUp(target, opts);
+    if (!window.IntersectionObserver) return;   // filled once is still correct
+
+    var showing = false;
+    new IntersectionObserver(function (entries) {
+      var visible = entries.some(function (e) { return e.isIntersecting; });
+      /* ONLY ON THE EDGE, not on every scroll tick. A panel scrolled in and out
+         of view is still the same showing, and refreshing on each one would ask
+         the season endpoint a dozen times for an answer that has not changed. */
+      if (visible && !showing) { showing = true; nextUp(target, opts); }
+      else if (!visible) showing = false;
+    }, { threshold: 0.01 }).observe(target);
+  }
+
+  /* SELF-MOUNTING, so a game needs markup and nothing else. A page declares
+
+       <div id="nextUpRow" data-game="ballpark"></div>
+
+     and this finds it. The alternative was a line of script in each of nine
+     games, which is nine places to forget and nine places to get the id wrong —
+     and the id is the one thing here that must match xi-played.js exactly.
+
+     TWICE, BECAUSE NOT EVERY PANEL EXISTS AT LOAD. Most games have their
+     results card in the page from the start; Grid builds its card in script
+     when the round ends, so a scan at DOMContentLoaded would find nothing and
+     never look again. The observer catches the ones that arrive later.
+
+     ONCE PER ELEMENT. `xiftDone` marks what has been claimed, because the
+     observer fires for every subtree that is added and a card rebuilt twice
+     would otherwise be watched twice. */
+  function claim(el) {
+    if (!el || el.xiftDone) return;
+    var game = el.getAttribute("data-game");
+    if (!game) return;            // no id, no suggestion: guessing it would be worse
+    el.xiftDone = true;
+    watch(el, { game: game });
+  }
+
+  function autoMount() {
+    var node = document.getElementById("nextUpRow");
+    if (node) claim(node);
+
+    if (!window.MutationObserver || !document.body) return;
+    new MutationObserver(function (records) {
+      for (var i = 0; i < records.length; i++) {
+        var added = records[i].addedNodes;
+        for (var j = 0; j < added.length; j++) {
+          var n = added[j];
+          if (!n || n.nodeType !== 1) continue;
+          if (n.id === "nextUpRow") claim(n);
+          else if (n.querySelector) claim(n.querySelector("#nextUpRow"));
+        }
+      }
+    }).observe(document.body, { childList: true, subtree: true });
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", autoMount);
+  } else { autoMount(); }
+
+  window.XIFullTime = { nextUp: nextUp, watch: watch };
 })();

@@ -113,15 +113,15 @@
      width:var(--tap) was invalid, not because it was styled small. Order
      matters — style.css comes after and still wins wherever the crossword
      genuinely differs. -->
-<link rel="stylesheet" href="/shared/xi-tokens.css?v=v50">
-<link rel="stylesheet" href="/shared/xi-landing.css?v=v50">
-<link rel="stylesheet" href="/shared/xi-chrome.css?v=v50">
-<link rel="stylesheet" href="/shared/xi-keys.css?v=v50">
-<link rel="stylesheet" href="/shared/xi-share.css?v=v50">
-<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v50">
+<link rel="stylesheet" href="/shared/xi-tokens.css?v=v51">
+<link rel="stylesheet" href="/shared/xi-landing.css?v=v51">
+<link rel="stylesheet" href="/shared/xi-chrome.css?v=v51">
+<link rel="stylesheet" href="/shared/xi-keys.css?v=v51">
+<link rel="stylesheet" href="/shared/xi-share.css?v=v51">
+<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v51">
 <!-- The theme, stamped before first paint: light unless the player chose
      dark, decided in one shared place for every page of the family. -->
-<script src="/shared/xi-theme.js?v=v50"></script>
+<script src="/shared/xi-theme.js?v=v51"></script>
 <link rel="stylesheet" href="css/style.css?v=v003w">
 </head>
 <body>
@@ -1091,6 +1091,11 @@
          Empty in the markup and empty if there is nothing to suggest: the
          family has ten games and most players know about two, and this is the
          one moment that fact is useful — the game they came for has ended. -->
+    <!-- NO data-game HERE, DELIBERATELY. xi-fulltime.js self-mounts any
+         #nextUpRow that carries one; this game calls nextUp() from the
+         function that paints Full Time, which knows exactly when the panel
+         opens and so refreshes on a REOPENED board too. Adding the
+         attribute would mount it twice. -->
     <div id="nextUpRow"></div>
     <button class="btn primary" id="againBtn">New puzzle</button><br>
     <button class="view-grid" id="viewGridBtn">View the finished grid</button>
@@ -1132,19 +1137,19 @@
      aligned_test only grepped for the class, which is true of an element
      sealed inside a hidden container. -->
 <footer class="xic-foot"></footer>
-<script src="/shared/xi-clubs.js?v=v50"></script>
-<script src="/shared/xi-chrome.js?v=v50"></script>
-<script src="/shared/xi-season.js?v=v50"></script>
-<script src="/shared/xi-menu.js?v=v50"></script>
-<script src="/shared/xi-plays.js?v=v50"></script>
-<script src="/shared/xi-share.js?v=v50"></script>
+<script src="/shared/xi-clubs.js?v=v51"></script>
+<script src="/shared/xi-chrome.js?v=v51"></script>
+<script src="/shared/xi-season.js?v=v51"></script>
+<script src="/shared/xi-menu.js?v=v51"></script>
+<script src="/shared/xi-plays.js?v=v51"></script>
+<script src="/shared/xi-share.js?v=v51"></script>
 <!-- xi-played.js first: xi-fulltime.js asks it what has been played today. -->
-<script src="/shared/xi-played.js?v=v50"></script>
-<script src="/shared/xi-fulltime.js?v=v50"></script>
-<script src="/shared/xi-keys.js?v=v50"></script>
-<script src="/shared/xi-seasons.js?v=v50"></script>
-<script src="/shared/xi-clubs.js?v=v50"></script>
-<script src="/shared/xi-table.js?v=v50"></script>
+<script src="/shared/xi-played.js?v=v51"></script>
+<script src="/shared/xi-fulltime.js?v=v51"></script>
+<script src="/shared/xi-keys.js?v=v51"></script>
+<script src="/shared/xi-seasons.js?v=v51"></script>
+<script src="/shared/xi-clubs.js?v=v51"></script>
+<script src="/shared/xi-table.js?v=v51"></script>
 <script src="js/engine.js?v=v003w"></script>
 <script src="js/game.js?v=v003w"></script>
 </body>

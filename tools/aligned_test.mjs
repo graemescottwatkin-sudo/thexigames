@@ -983,13 +983,13 @@ t("and no game writes the link itself", (() => {
   return guilty.length === 0;
 })(), "the href lives once, in shared/xi-chrome.js");
 
-const SHARED_TAG = "v50";
+const SHARED_TAG = "v51";
 /* The bytes that ship AS v50. The tag does not move again for this change:
    v50 has not shipped, so it is still the version being prepared, and a tag
    bumped once per edit before release would burn a letter a minute. What
    must not happen is shared bytes changing under a tag that IS live — which
    is the pairing this constant exists for. */
-const SHARED_HASH = "c58f61ddb77dc185";
+const SHARED_HASH = "18c93cda139f403d";
 /* EVERY PAGE THAT LINKS THE SHARED LAYER, not the games alone. The hub, the
    two static pages and the unlaunched game all carry the chrome now, and the
    server-rendered shell writes the tag from a constant of its own — so a tag

@@ -25,14 +25,15 @@
  "operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"GBP"},
  "publisher":{"@type":"Organization","name":"The XI Games","url":"https://www.thexigames.com/"}}
 </script>
-<link rel="stylesheet" href="/shared/xi-tokens.css?v=v50">
-<link rel="stylesheet" href="/shared/xi-landing.css?v=v50">
-<link rel="stylesheet" href="/shared/xi-chrome.css?v=v50">
-<link rel="stylesheet" href="/shared/xi-share.css?v=v50">
+<link rel="stylesheet" href="/shared/xi-tokens.css?v=v51">
+<link rel="stylesheet" href="/shared/xi-landing.css?v=v51">
+<link rel="stylesheet" href="/shared/xi-chrome.css?v=v51">
+<link rel="stylesheet" href="/shared/xi-share.css?v=v51">
+<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v51">
 <!-- The theme, stamped before first paint: light unless the player chose
      dark, decided in one shared place for every page of the family. -->
-<script src="/shared/xi-theme.js?v=v50"></script>
-<link rel="stylesheet" href="css/style.css?v=v001r">
+<script src="/shared/xi-theme.js?v=v51"></script>
+<link rel="stylesheet" href="css/style.css?v=v001s">
 <!-- NO data-game ON <html>, DELIBERATELY. The accent palette lives in
      shared/xi-tokens.css, which every page of the site loads, and this game has
      not launched — naming it there would name it to everybody. QuickFire XI is
@@ -340,6 +341,9 @@
           <button class="kick" id="copy" type="button">Copy result</button>
           <a class="ghostBtn" href="/football/ballpark/">Back to the menu</a>
           <div id="shareRow"></div>
+    <!-- Filled by shared/xi-fulltime.js: the next game in this theme that
+     has not been played today. Empty when there is nothing to suggest. -->
+    <div id="nextUpRow" data-game="ballpark"></div>
         </div>
         <div class="xic-community"></div>
       </div>
@@ -348,16 +352,19 @@
 
 </main>
 
-<script src="/shared/xi-chrome.js?v=v50"></script>
-<script src="/shared/xi-share.js?v=v50"></script>
+<script src="/shared/xi-chrome.js?v=v51"></script>
+<script src="/shared/xi-share.js?v=v51"></script>
+<!-- xi-played.js first: xi-fulltime.js asks it what has been played today. -->
+<script src="/shared/xi-played.js?v=v51"></script>
+<script src="/shared/xi-fulltime.js?v=v51"></script>
 <footer class="xic-foot"></footer>
-<script src="/shared/xi-season.js?v=v50"></script>
-<script src="/shared/xi-plays.js?v=v50"></script>
-<script src="/shared/xi-menu.js?v=v50"></script>
+<script src="/shared/xi-season.js?v=v51"></script>
+<script src="/shared/xi-plays.js?v=v51"></script>
+<script src="/shared/xi-menu.js?v=v51"></script>
 <!-- The rules, the same file the server grades with. It holds the ladders, the
      clock and what a substitution costs — and no answers, which is the whole
      arrangement: see the note at the top of it. -->
-<script src="js/rules.js?v=v001r"></script>
-<script src="js/game.js?v=v001r"></script>
+<script src="js/rules.js?v=v001s"></script>
+<script src="js/game.js?v=v001s"></script>
 </body>
 </html>

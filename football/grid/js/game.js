@@ -32,7 +32,7 @@
 
   var R = window.XIGR_RULES;
   var $ = function (id) { return document.getElementById(id); };
-  var BUILD = "v002j";
+  var BUILD = "v002k";
 
   var S = {
     board: null,          // the PUBLIC board: shape, lengths, crossings. No letters.
@@ -523,6 +523,11 @@
       S.misses + (S.misses === 1 ? " miss" : " misses") + "</p>" +
       "<table>" + rows + "</table>" +
       '<div id="shareRow"></div>' +
+      /* The next game in this theme that has not been played today. Grid builds
+         its results card in script rather than in the page, so the mount point
+         is written here with the rest of it; shared/xi-fulltime.js finds it by
+         data-game and fills it. */
+      '<div id="nextUpRow" data-game="grid"></div>' +
       /* THE COMMUNITY LINE, WRITTEN INTO THE CARD RATHER THAN PLACED IN THE
          PAGE. Every other game has a static results card and puts an empty
          .xic-community in it; this one BUILDS its card from a string on every
@@ -668,6 +673,11 @@
       "<p>You played this board. The grid below is still here if you want" +
       " another go — a replay is not recorded.</p>" +
       '<div id="shareRow"></div>' +
+      /* The next game in this theme that has not been played today. Grid builds
+         its results card in script rather than in the page, so the mount point
+         is written here with the rest of it; shared/xi-fulltime.js finds it by
+         data-game and fills it. */
+      '<div id="nextUpRow" data-game="grid"></div>' +
       '<div class="xic-community"></div>';
     if (window.XIChrome && window.XIChrome.community) window.XIChrome.community(el);
     /* AND IT IS SHAREABLE, like the card a live full time draws. The restore

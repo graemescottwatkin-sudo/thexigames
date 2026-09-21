@@ -30,12 +30,13 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/shared/xi-tokens.css?v=v50">
-<link rel="stylesheet" href="/shared/xi-landing.css?v=v50">
-<link rel="stylesheet" href="/shared/xi-chrome.css?v=v50">
-<link rel="stylesheet" href="/shared/xi-share.css?v=v50">
-<script src="/shared/xi-theme.js?v=v50"></script>
-<link rel="stylesheet" href="css/style.css?v=v001l">
+<link rel="stylesheet" href="/shared/xi-tokens.css?v=v51">
+<link rel="stylesheet" href="/shared/xi-landing.css?v=v51">
+<link rel="stylesheet" href="/shared/xi-chrome.css?v=v51">
+<link rel="stylesheet" href="/shared/xi-share.css?v=v51">
+<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v51">
+<script src="/shared/xi-theme.js?v=v51"></script>
+<link rel="stylesheet" href="css/style.css?v=v001m">
 </head>
 <body>
 
@@ -295,6 +296,9 @@
       <textarea id="shareText" rows="7" readonly aria-label="Shareable result"></textarea>
       <button class="btn" id="copyShare">Copy result</button>
       <div id="shareRow"></div>
+    <!-- Filled by shared/xi-fulltime.js: the next game in this theme that
+     has not been played today. Empty when there is nothing to suggest. -->
+    <div id="nextUpRow" data-game="whoami"></div>
     </div>
     <div class="xic-community"></div>
     <button class="btn quiet" id="backToDoors">Back to the board</button>
@@ -305,11 +309,14 @@
 
 <footer class="xic-foot"></footer>
 
-<script src="/shared/xi-chrome.js?v=v50"></script>
-<script src="/shared/xi-share.js?v=v50"></script>
-<script src="js/config.js?v=v001l"></script>
-<script src="/shared/xi-season.js?v=v50"></script>
-<script src="/shared/xi-plays.js?v=v50"></script>
-<script src="js/game.js?v=v001l"></script>
+<script src="/shared/xi-chrome.js?v=v51"></script>
+<script src="/shared/xi-share.js?v=v51"></script>
+<!-- xi-played.js first: xi-fulltime.js asks it what has been played today. -->
+<script src="/shared/xi-played.js?v=v51"></script>
+<script src="/shared/xi-fulltime.js?v=v51"></script>
+<script src="js/config.js?v=v001m"></script>
+<script src="/shared/xi-season.js?v=v51"></script>
+<script src="/shared/xi-plays.js?v=v51"></script>
+<script src="js/game.js?v=v001m"></script>
 </body>
 </html>
