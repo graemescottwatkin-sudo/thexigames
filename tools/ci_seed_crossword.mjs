@@ -80,6 +80,47 @@ const size = `${(widest.puzzle || widest).width}x${(widest.puzzle || widest).hei
 const no = dailyNumber(Date.now());
 
 const db = new DatabaseSync(dbPath);
+
+/* EVERY TABLE THE SCHEMA DEFINES, EMPTY, BEFORE THE BOARD GOES IN.
+   Binding D1 at all is what makes this necessary, and it was not obvious until
+   it ran: with NO binding, every endpoint took its "there is no database" path
+   and answered from a fallback. With a binding and only `puzzles` in it, the
+   others reach D1 and fail on a missing table — so the first run of this seeder
+   turned sixteen graceful pages into sixteen pages logging a 500, and the
+   viewport job, which refuses runtime console errors, failed on ALL of them
+   rather than two. The board was right and the page was broken.
+
+   An EMPTY table is the point. The queries return no rows and the code takes
+   the same "nothing here" branch it takes in the fallback, instead of throwing.
+   Nothing is seeded into them and nothing should be: this job measures layout,
+   not data.
+
+   Statement failures are tolerated ONE AT A TIME rather than per file. The
+   migrations include ALTER TABLE on tables that predate them and are created
+   outside this directory, and an ALTER that cannot apply must not abandon the
+   CREATEs after it in the same file. */
+const migDir = path.join(ROOT, "data", "migrations");
+let applied = 0, skipped = 0;
+if (fs.existsSync(migDir)) {
+  for (const f of fs.readdirSync(migDir).filter((x) => x.endsWith(".sql")).sort()) {
+    /* COMMENTS STRIPPED BEFORE SPLITTING, and this was wrong first. The split
+       is on ";", and a chunk that begins with a comment line was skipped as
+       though the whole chunk were a comment — but in this repository almost
+       every statement is preceded by one, often a long one. So it discarded the
+       CREATEs it was there for and reported them as "skipped ALTERs", and the
+       tables it needed most (plays, users, season_play) were never made. The
+       count looked like tolerance working; it was the check throwing away its
+       own input. */
+    const sql = fs.readFileSync(path.join(migDir, f), "utf8")
+      .replace(/^\s*--.*$/gm, "");
+    for (const stmt of sql.split(";")) {
+      const s = stmt.trim();
+      if (!s) continue;
+      try { db.exec(s + ";"); applied++; } catch { skipped++; }
+    }
+  }
+}
+
 db.exec(`CREATE TABLE IF NOT EXISTS puzzles (
   id         INTEGER PRIMARY KEY AUTOINCREMENT,
   mode       TEXT NOT NULL,
@@ -100,6 +141,8 @@ for (let n = Math.max(1, no - 2); n <= no + 2; n++) insert.run(n, payload);
 const count = db.prepare("SELECT COUNT(*) AS n FROM puzzles").get().n;
 db.close();
 
+console.log(`schema: ${applied} statement(s) applied, ${skipped} skipped ` +
+  `(ALTERs on tables that predate the migrations)`);
 console.log(`seeded ${count} row(s) into ${path.basename(dbPath)}`);
 console.log(`  board ${size}, the widest of ${samples.length} samples`);
 console.log(`  daily numbers ${Math.max(1, no - 2)}..${no + 2} (today is ${no})`);

@@ -118,10 +118,11 @@
 <link rel="stylesheet" href="/shared/xi-chrome.css?v=v50">
 <link rel="stylesheet" href="/shared/xi-keys.css?v=v50">
 <link rel="stylesheet" href="/shared/xi-share.css?v=v50">
+<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v50">
 <!-- The theme, stamped before first paint: light unless the player chose
      dark, decided in one shared place for every page of the family. -->
 <script src="/shared/xi-theme.js?v=v50"></script>
-<link rel="stylesheet" href="css/style.css?v=v003v">
+<link rel="stylesheet" href="css/style.css?v=v003w">
 </head>
 <body>
 <!-- The page's only H1, first thing in the body.
@@ -1086,6 +1087,11 @@
          game mounts the same row. The challenge form above keeps its own
          button, so the shared row is asked for without one. -->
     <div id="shareRow"></div>
+    <!-- THE NEXT GAME, filled by shared/xi-fulltime.js when Full Time opens.
+         Empty in the markup and empty if there is nothing to suggest: the
+         family has ten games and most players know about two, and this is the
+         one moment that fact is useful — the game they came for has ended. -->
+    <div id="nextUpRow"></div>
     <button class="btn primary" id="againBtn">New puzzle</button><br>
     <button class="view-grid" id="viewGridBtn">View the finished grid</button>
     <div class="xic-community"></div>
@@ -1107,7 +1113,7 @@
 
 <footer>
   <button id="statsBtn">My Season</button> &middot; <span id="streakLine"></span><br>
-  Crossword <span class="xi">XI</span> by The <span class="xi">XI</span> Games &middot; unofficial word puzzle &middot; <span id="buildTag">v003v</span> &middot;
+  Crossword <span class="xi">XI</span> by The <span class="xi">XI</span> Games &middot; unofficial word puzzle &middot; <span id="buildTag">v003w</span> &middot;
   <a href="privacy.html">privacy</a> &middot;
   <button id="skipToggle">skip filled: off</button> &middot;
   <button id="bankToggle">letter bank: on</button> &middot;
@@ -1132,11 +1138,14 @@
 <script src="/shared/xi-menu.js?v=v50"></script>
 <script src="/shared/xi-plays.js?v=v50"></script>
 <script src="/shared/xi-share.js?v=v50"></script>
+<!-- xi-played.js first: xi-fulltime.js asks it what has been played today. -->
+<script src="/shared/xi-played.js?v=v50"></script>
+<script src="/shared/xi-fulltime.js?v=v50"></script>
 <script src="/shared/xi-keys.js?v=v50"></script>
 <script src="/shared/xi-seasons.js?v=v50"></script>
 <script src="/shared/xi-clubs.js?v=v50"></script>
 <script src="/shared/xi-table.js?v=v50"></script>
-<script src="js/engine.js?v=v003v"></script>
-<script src="js/game.js?v=v003v"></script>
+<script src="js/engine.js?v=v003w"></script>
+<script src="js/game.js?v=v003w"></script>
 </body>
 </html>

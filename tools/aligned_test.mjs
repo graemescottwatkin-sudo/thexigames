@@ -989,7 +989,7 @@ const SHARED_TAG = "v50";
    bumped once per edit before release would burn a letter a minute. What
    must not happen is shared bytes changing under a tag that IS live — which
    is the pairing this constant exists for. */
-const SHARED_HASH = "b3732b65eaf2b265";
+const SHARED_HASH = "c58f61ddb77dc185";
 /* EVERY PAGE THAT LINKS THE SHARED LAYER, not the games alone. The hub, the
    two static pages and the unlaunched game all carry the chrome now, and the
    server-rendered shell writes the tag from a constant of its own — so a tag

@@ -286,7 +286,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v003v";
+  var BUILD = "v003w";
   try {
     window.CROSSWORDXI_BUILD = BUILD;
     console.log("Crossword XI build " + BUILD);
@@ -5058,6 +5058,13 @@
     var youRow = $("finalTableBody").querySelector("tr.you");
     playEnd(true);
     $("doneOverlay").classList.add("show");
+    /* THE NEXT GAME, ASKED FOR WHEN THE PANEL OPENS rather than at page load.
+       What has been played today changes while this page is open — another tab,
+       another device, or this very game a moment ago — and a suggestion worked
+       out at load would offer a board the player has since finished. */
+    if (window.XIFullTime && $("nextUpRow")) {
+      window.XIFullTime.nextUp($("nextUpRow"), { game: "crossword" });
+    }
     if (youRow && youRow.scrollIntoView) youRow.scrollIntoView({ block: "center" });
     /* Full Time appears immediately with the score worked out here, then the
        server's verdict replaces it when it arrives. Waiting would mean a

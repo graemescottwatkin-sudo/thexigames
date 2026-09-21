@@ -1,0 +1,68 @@
+/* xi-fulltime.css — the shared end-of-game pieces.
+ *
+ * TOKENS ONLY. The palette is shared/xi-tokens.css and every game's gate
+ * refuses a restated colour, so there is not one here.
+ *
+ * DELIBERATELY QUIET. This sits under a result a player has just earned, and it
+ * is an invitation rather than the thing they came for. A block competing with
+ * the score would be read as an advert; one that is too faint is not read at
+ * all. It is a link that looks like a link, with the shirt to tie it to the
+ * squad the player already knows from the drawer.
+ */
+
+.xift-next {
+  margin: 14px 0 2px;
+  text-align: center;
+}
+
+.xift-kicker {
+  margin: 0 0 6px;
+  font-family: var(--disp);
+  font-weight: 600;
+  font-size: 0.72rem;
+  letter-spacing: var(--track-caps);
+  text-transform: uppercase;
+  color: var(--ink-faint);
+}
+
+.xift-go {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px 9px 9px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--card);
+  color: var(--ink);
+  text-decoration: none;
+  font-family: var(--body);
+  font-weight: 600;
+}
+.xift-go:hover,
+.xift-go:focus-visible { background: var(--tint); }
+
+/* THE SHIRT, as the drawer draws it, so the two read as the same squad. */
+.xift-shirt {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 26px;
+  height: 26px;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-on);
+  font-family: var(--disp);
+  font-weight: 700;
+  font-size: 0.85rem;
+}
+
+.xift-name { font-size: 0.95rem; }
+
+/* EVERY GAME PLAYED. Said, rather than left blank — see the comment in
+   xi-fulltime.js. */
+.xift-none {
+  margin: 14px 0 2px;
+  text-align: center;
+  font-size: 0.9rem;
+  color: var(--ink-soft);
+}
