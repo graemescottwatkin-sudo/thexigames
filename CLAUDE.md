@@ -149,7 +149,21 @@ hub. A 301 there would have to be un-cached from every browser that ever saw it.
    copies of a skip list are two answers about what was actually run.
 4. Stage BY NAME, then commit and push. Not `git add -A`: other sessions edit
    this tree, and `-A` pushes their work past gates you never ran on it.
-   Watch the Actions run (30+ jobs).
+   Watch the Actions run. **It is TWO jobs**, not thirty: `Test suites` and
+   `Sixteen viewports, real browser`, which are the two in `checks.yml` and the
+   only two that trigger on a push. This line said "30+ jobs" until 21 Sep
+   2026, and a reader who counted jobs and saw two would reasonably conclude
+   that most of CI had failed to fire and go looking for a fault that was not
+   there — the stale-measurement fault pointing the other way for once, raising
+   an alarm rather than hiding one.
+   The thirty were STEPS, which is what you are actually watching go green:
+   26 and 11 on 21 Sep 2026. `nightly.yml` and `playbot.yml` are the other two
+   workflows and neither runs on push, so a push showing one workflow is
+   correct and not a gap.
+   THE BROWSER JOB IS THE HALF A LOCAL SWEEP CANNOT DO. `render_test`,
+   `signin_test` and the crossword's `journey_test` run only there, so a green
+   local sweep and a red `Sixteen viewports` is the expected shape of a
+   failure, not a contradiction. A push is not verified until BOTH are green.
 5. **EVERY LAUNCHED GAME'S live_check with `--expect`, one per game**, and the
    list is `dir football\*\live_check.mjs` rather than a number here — same
    reasoning as step 2, and this line was wrong in the same way, saying five
