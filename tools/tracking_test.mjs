@@ -23,7 +23,7 @@ import * as acorn from "acorn";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { BUILT, MODES, validPlayGame, validMode } from "../functions/_lib/games.js";
+import { BUILT, MODES, validPlayGame, validMode, entryKey } from "../functions/_lib/games.js";
 import { gameDir } from "../functions/_lib/permalink.js";
 
 const ROOT = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -106,10 +106,74 @@ for (const game of BUILT) {
     : "";
 
   const startsIt = /XIPlays[.]start[\s]*[(]/.test(js);
-  const namesIt = new RegExp('game:\\s*[\'"]' + game + '[\'"]').test(js);
+  /* THE ID MAY BE A CONSTANT, AND IT MUST STILL BE THIS GAME'S. The literal is
+     what every football game happens to use; the Friends crossword holds its id
+     in one `var GAME` and passes that — which is the better of the two, because
+     an id written twice in a file is an id that can disagree with itself — and
+     this check could not see it. It reported a game whose plays ARE counted
+     correctly as a game that never names itself, which is a red build pointing
+     at the wrong thing: the reader fixes the code, and the code was right.
+
+     RESOLVED, NOT WAVED THROUGH. Accepting any identifier here would forfeit
+     the whole point of this file, which is the QuickFire fault — a game shipped
+     playable and completely uncounted because nothing checked the id its rows
+     carried. So the identifier is followed to its declaration in the same file
+     and that declaration must be THIS game's id. A name that cannot be
+     resolved fails; an unanswered question is not a pass. */
+  const literal = new RegExp('game:\\s*[\'"]' + game + '[\'"]').test(js);
+  const viaConst = (() => {
+    const m = js.match(/game:\s*([A-Za-z_$][\w$]*)\s*,/);
+    if (!m) return false;
+    return new RegExp('\\b(?:var|let|const)\\s+' + m[1] + '\\s*=\\s*[\'"]' + game + '[\'"]')
+      .test(js);
+  })();
+  const namesIt = literal || viaConst;
   if (!startsIt) fail(`${game}: nothing calls XIPlays.start`);
   else if (!namesIt) fail(`${game}: calls XIPlays.start but never as game: "${game}"`);
   else pass(`${game}: starts a play under its own name`);
+
+  /* AND THE KEY IT FILES THE PLAY UNDER MUST BE THE KEY ITS RESULTS USE.
+   *
+   * A play row and a result row for the same board are joined by this string
+   * and by nothing else. Get it wrong and BOTH rows look perfectly correct read
+   * on their own — the play counts, the result banks — while nothing downstream
+   * can put them together. That is the quiet half of the QuickFire fault this
+   * file already exists for: there the id was wrong and the rows vanished; here
+   * the rows survive and stop being the same board.
+   *
+   * FOUND ON 21 SEPTEMBER 2026 in the Friends crossword, which sent
+   * "daily:" + no while entryKey() keys its results "fr:" + no. It was copied
+   * from the football crossword, where "daily:" is right — so the bug is what
+   * copying a correct line into a game with a different prefix looks like, and
+   * nothing anywhere compared the two.
+   *
+   * ONLY THE PREFIX, and only where the client writes one as a literal. Some
+   * games build the key from a token or a day the server handed down
+   * (Scrambled, the word search), and this cannot see inside those — so it
+   * checks what it can and says how many it checked, rather than reporting a
+   * pass it did not earn.
+   */
+  const written = [...js.matchAll(/boardKey:\s*['"]([a-z]+):['"]/g)].map((m) => m[1]);
+  if (written.length) {
+    /* A ROW THAT SATISFIES EVERY SHAPE, because the games do not agree on one
+       and this is asking each of them its own question. A daily is addressed by
+       a NUMBER in some (Grid reads row.no, the crosswords row.dailyNo) and by a
+       DAY in others (the word search, Codeword, QuickFire). Probing with half a
+       row makes entryKey answer null and reads as "this game cannot key its
+       plays at all" — which is a real fault, and reporting it falsely on a
+       game that is correct is how a check gets ignored. Grid failed exactly
+       that way here before this line carried `no`. */
+    const probe = { no: 7, dailyNo: 7, day: "2026-09-21", date: "2026-09-21" };
+    const want = String(entryKey(game, probe) || "").split(":")[0];
+    const wrong = written.filter((w) => w !== want);
+    if (!want) {
+      fail(`${game}: entryKey gives no key for a board, so its plays cannot be joined`);
+    } else if (wrong.length) {
+      fail(`${game}: files plays under "${wrong[0]}:" but banks results under "${want}:"`);
+    } else {
+      pass(`${game}: plays and results share one board key, "${want}:"`);
+    }
+  }
 
   if (!/XIPlays\.end\s*\(/.test(js)) {
     fail(`${game}: nothing calls XIPlays.end — a finish would never be recorded`);

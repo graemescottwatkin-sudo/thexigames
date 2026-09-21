@@ -32,6 +32,7 @@
  * says so in the game's own words rather than restating the number.
  */
 import { PERMA_GAMES, boardKeys, permalinkPath, gamePath } from "./permalink.js";
+import { isListed } from "./games.js";
 import { dailyDayKey } from "./daily.js";
 import { FREE_ARCHIVE_DAYS } from "./archive.js";
 import { HAS_ANSWERS } from "./games.js";
@@ -84,6 +85,14 @@ function months(game, keys) {
 /* ---- the page ----------------------------------------------------------- */
 
 export function archiveIndex({ game, name, keys }) {
+  /* AN UNLISTED GAME'S ARCHIVE IS THE MOST COMPLETE DISCLOSURE ON THE SITE: it
+     is, by construction, a list of every board the game has ever run, each at
+     its own address. Keeping such a game out of the sitemap while serving an
+     indexable archive of it would be the sitemap doing nothing at all — a
+     crawler that reaches this page by any other route indexes the lot.
+     Asked of games.js rather than decided here, so the day the game is
+     announced this follows from deleting one line like everything else. */
+  const hidden = !isListed(game);
   const base = SITE + gamePath(game) + "archive/";
   const newest = keys.length ? partsOf(keys[keys.length - 1]) : null;
   const body = keys.length
@@ -111,6 +120,7 @@ address, as soon as there are any.</p>
      after, so an hour behind is a board appearing by breakfast rather than
      instantly, and it keeps a crawler from rebuilding the list on every hit. */
   return htmlResponse(sitePage({
+    noindex: hidden,
     title: `${name} archive — every board, by date`,
     description: `Every ${name} board that has run, newest first, each at its own ` +
       `permanent address. Today and the ${FREE_ARCHIVE_DAYS} days behind it are free to play.`,
@@ -118,7 +128,7 @@ address, as soon as there are any.</p>
     current: gamePath(game) + "archive/",
     game,
     body,
-  }), { maxAge: 3600 });
+  }), { maxAge: 3600, noindex: hidden });
 }
 
 /* The whole route, for every game. A game's file under functions/football/

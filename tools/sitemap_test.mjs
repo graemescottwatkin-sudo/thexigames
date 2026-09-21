@@ -23,7 +23,11 @@ import fs from "node:fs";
    test converts — through the same function the route converts with, since a
    second copy of the arithmetic is the thing this whole file guards. */
 import { dailyNoForDay } from "../functions/_lib/daily.js";
-import { GAMES, BUILT, launchNumber } from "../functions/_lib/games.js";
+/* isListed, not launchNumber: a game can be live with no public way to reach
+   it — see UNLISTED in functions/_lib/games.js — and the sitemap is precisely
+   the public way, so it is the one file where the distinction decides content
+   rather than merely describing it. */
+import { GAMES, BUILT, launchNumber, isListed } from "../functions/_lib/games.js";
 
 let pass = 0, fail = 0;
 const t = (n, ok, d) => { ok ? pass++ : fail++; console.log(`${ok ? "  ok  " : "FAIL  "}${n}${d ? "  — " + d : ""}`); };
@@ -117,12 +121,31 @@ for (const game of Object.keys(PERMA_GAMES)) {
     : (RAN[SCHEDULE_FIXTURE[game]] || [])
         .map((day) => String(dailyNoForDay(day)))
         .filter((no) => Number(no) >= from);
-  const missing = want.filter((k) => !locs.includes(`https://www.thexigames.com${permalinkPath(game, k)}`));
-  t(`${game}: all ${want.length} of its boards are listed`, missing.length === 0,
-    missing.length ? "missing " + missing.slice(0, 4).join(", ") : want.length + " boards");
+  const listed = want.filter((k) => locs.includes(`https://www.thexigames.com${permalinkPath(game, k)}`));
+
+  /* COMPLETE FOR A LISTED GAME, EMPTY FOR AN UNLISTED ONE, and the second is
+     the sharper assertion. An UNLISTED game is live with no public way to
+     reach it (see UNLISTED in functions/_lib/games.js); its boards have real
+     permanent addresses that resolve for anyone holding one, which is exactly
+     why the sitemap is the thing that must not hand them out. "All of them are
+     listed" inverted to "none of them is" rather than being skipped, because a
+     skipped game is a game nothing is watching — and the fault that would
+     arrive here is the sitemap quietly starting to advertise it. */
+  if (isListed(game)) {
+    t(`${game}: all ${want.length} of its boards are listed`, listed.length === want.length,
+      listed.length === want.length ? want.length + " boards"
+        : "missing " + want.filter((k) => !listed.includes(k)).slice(0, 4).join(", "));
+  } else {
+    t(`${game}: none of its ${want.length} boards is listed, being unlisted`,
+      listed.length === 0,
+      listed.length ? "ADVERTISED: " + listed.slice(0, 4).join(", ")
+                    : want.length + " boards, none advertised");
+  }
 }
-t("and each game's own front page is there",
-  Object.keys(PERMA_GAMES).every((g) => locs.includes(`https://www.thexigames.com${gamePath(g)}`)));
+t("and each LISTED game's own front page is there, and no unlisted one's",
+  Object.keys(PERMA_GAMES).every((g) =>
+    locs.includes(`https://www.thexigames.com${gamePath(g)}`) === isListed(g)),
+  Object.keys(PERMA_GAMES).filter((g) => !isListed(g)).join(", ") || "all listed");
 
 console.log("\nTrue: nothing in it answers 404");
 /* THE CHECK THAT PULLS THE OTHER WAY. Every board URL listed is fetched

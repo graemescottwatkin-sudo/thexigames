@@ -97,6 +97,24 @@ const MAST = {
           ["Answers", "/football/vowels/answers/"],
           ["How to play", "/football/vowels/#how"]],
   },
+  /* THE SECOND THEME. A game with no entry here gets NO MASTHEAD AT ALL —
+     masthead() returns "" for an unknown id — so every server-rendered page of
+     it comes out with no name, no tabs and no way back to the game. It is not
+     an error and nothing throws; the page simply has a hole where the chrome
+     should be, which is why the archive suite is what found it.
+
+     "Crossword" and not "Crossword XI: Friends", because the masthead appends
+     the XI itself and the theme is already the first path segment. The full
+     name belongs in the title and the JSON-LD, where aligned_test requires it
+     and where a search result has no path to lean on.
+
+     NO Answers TAB: this game has no answers page, and a tab to a 404 is worse
+     than an absent tab. */
+  crossword_fr: {
+    name: "Crossword", home: "/friends/crossword/",
+    nav: [["Today", "/friends/crossword/"], ["Archive", "/friends/crossword/archive/"],
+          ["How to play", "/friends/crossword/#how"]],
+  },
 };
 
 const CSS = `

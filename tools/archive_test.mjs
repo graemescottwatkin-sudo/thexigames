@@ -24,6 +24,11 @@ import {
   PERMA_GAMES, boardKeys, permalinkPath, permalinkRoute, todayKeyFor, gamePath, gameDir,
 } from "../functions/_lib/permalink.js";
 import { dailyNoForDay, dailyDayKey, dailyNumber, ANSWERS_AFTER_DAYS } from "../functions/_lib/daily.js";
+/* LISTED, not launched. A game can be live with no public way to reach it
+   — see UNLISTED in functions/_lib/games.js — and two of the rules in this
+   file are about being FINDABLE rather than about the page being right. The
+   page must be right either way, and that half is asserted for every game. */
+import { isListed } from "../functions/_lib/games.js";
 import { FREE_ARCHIVE_DAYS } from "../functions/_lib/archive.js";
 import { GAMES, BUILT, launchNumber, LAUNCHED, HAS_ANSWERS } from "../functions/_lib/games.js";
 import fs from "node:fs";
@@ -146,8 +151,16 @@ for (const game of Object.keys(PERMA_GAMES)) {
     /property="og:image"/.test(p.html) && /name="twitter:card"/.test(p.html));
   /* IT IS MEANT TO BE INDEXED. That is the entire purpose — so the check is
      that nothing has quietly marked it noindex. */
-  t(`${game}: offered to a crawler rather than hidden from one`,
-    !/noindex/.test(p.html) && p.headers.get("X-Robots-Tag") === null,
+  t(isListed(game)
+      ? `${game}: offered to a crawler rather than hidden from one`
+      : `${game}: hidden from a crawler, because the game is unlisted`,
+    isListed(game)
+      ? !/noindex/.test(p.html) && p.headers.get("X-Robots-Tag") === null
+      /* BOTH HALVES. The meta serves a crawler that renders; the header serves
+         one that reads a HEAD. An archive is every board this game has run, so
+         one half without the other publishes the lot to whichever crawler
+         happens to use the other route. */
+      : /noindex/.test(p.html) && p.headers.get("X-Robots-Tag") === "noindex",
     p.headers.get("X-Robots-Tag") || "no X-Robots-Tag");
 }
 
@@ -306,8 +319,13 @@ console.log("\nThe pages that link to it");
 {
   const map = await (await sitemap({ env })).text();
   for (const game of Object.keys(PERMA_GAMES)) {
-    t(`${game}: its archive is in the sitemap`,
-      map.includes(`<loc>https://www.thexigames.com${gamePath(game)}archive/</loc>`));
+    /* SAID IN BOTH DIRECTIONS. "Is it there when it should be" alone would
+       pass a sitemap that had quietly started advertising an unlisted game,
+       which is the direction that leaks. */
+    const there = map.includes(`<loc>https://www.thexigames.com${gamePath(game)}archive/</loc>`);
+    t(isListed(game) ? `${game}: its archive is in the sitemap`
+                     : `${game}: its archive is NOT in the sitemap, being unlisted`,
+      there === isListed(game), there ? "listed" : "absent");
   }
 
   /* AN ARCHIVE MUST NOT OFFER AN ANSWERS PAGE THAT DOES NOT EXIST.

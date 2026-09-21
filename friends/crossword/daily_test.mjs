@@ -17,12 +17,21 @@
  * below passed too, because the fixture had been written by the same hand as
  * the bug. See fixture.mjs.
  *
- * LAUNCHED IS USED AS A FIXTURE, deliberately. crossword_fr is not launched, so
- * every launched-path case below would otherwise be unreachable — and "not out
- * yet" and the archive rule are exactly the behaviour that has to be right ON
- * the day it launches, not discovered then. The key is set and deleted around
- * each case, and the last case asserts it is absent again, because a suite that
- * left it set would quietly launch the game for every other suite in the run.
+ * LAUNCHED IS USED AS A FIXTURE IN BOTH DIRECTIONS, and which direction is the
+ * fixture flipped on 21 September 2026. Until then the game was unlaunched and
+ * the launched path was unreachable, so the key was SET around those cases and
+ * DELETED after. It is launched now, so the launched path is the real one and
+ * it is the pre-launch path that has to be reached by fixture.
+ *
+ * WHICH MEANS "DELETE IT AFTER" IS NOW THE BUG. Every block restores to
+ * REAL_LAUNCH, read once at the top, because a block that deleted the key would
+ * leave the game unlaunched for every suite running after it in the same
+ * process — and those suites would pass, describing a site that does not
+ * exist. The last case asserts the real value is back, not that the key is
+ * gone.
+ *
+ * The pre-launch behaviour is still worth pinning: it is what the route does
+ * for the NEXT themed game built here, and that branch has not been deleted.
  */
 
 import { onRequestGet, onRequestHead } from "../../functions/api/crossword_fr/daily.js";
@@ -69,6 +78,25 @@ const body = async (r) => { try { return await r.clone().json(); } catch { retur
 const rowsFor = (puzzle, nos) =>
   (nos || [1]).map((no) => ({ no, payload: JSON.stringify({ puzzle }) }));
 
+/* THE REAL LAUNCH DATE, read once and restored by every block that moves it.
+   Captured before any case runs, so a case that throws still restores the
+   value the tree actually holds rather than a guess at it. */
+const REAL_LAUNCH = LAUNCHED.crossword_fr;
+
+/* THE FIRST PUBLIC BOARD NUMBER, WHICH IS NOT 1 AND IS THE WHOLE POINT.
+   A public number is the FAMILY's daily number, so this game's first board is
+   the family day it launched on — board 1 of the bank, advertised as no. 4.
+   Every case below that wants "the first board there is" asks for Q1; the two
+   that genuinely mean the literal 1 are left alone and say why.
+
+   These were written as ?no=1 while the game was unlaunched, because an
+   unlaunched game has no offset and the two numbers coincided. The launch is
+   what separated them, and a suite still asking for ?no=1 is asking for a board
+   from before the game existed — which the route correctly refuses, so nine
+   cases failed at once and not one of them was about what it was testing. */
+const FIRST = launchNumber("crossword_fr");
+const Q1 = `?no=${FIRST}`;
+
 const BOARD = makeBoard();
 const ONE = rowsFor(BOARD);
 
@@ -76,22 +104,38 @@ const ONE = rowsFor(BOARD);
 
 console.log("=== Before launch there is no today ===");
 {
-  t("crossword_fr really is unlaunched", !LAUNCHED.crossword_fr,
-    "every case in this file depends on it");
+  /* PINNED AS A PRECONDITION, not assumed. This block proves the UNLAUNCHED
+     branch, which is no longer the state of the tree — so if the fixture below
+     silently failed to remove the key, every assertion here would be asking the
+     launched route the unlaunched questions and the answers would look like
+     bugs in the route. Assert what is true first, then change it. */
+  t("PRECONDITION: crossword_fr IS launched in the tree",
+    !!REAL_LAUNCH && !!LAUNCHED.crossword_fr,
+    `LAUNCHED.crossword_fr = ${REAL_LAUNCH} — this block removes it as a fixture`);
 
-  const r = await get(ONE);
-  const b = await body(r);
-  t("a bare request answers 200 rather than erroring", r.status === 200, String(r.status));
-  t("and says so plainly", b && b.board === null && b.launched === false,
-    JSON.stringify(b && { board: b.board, launched: b.launched }));
-  t("and does not invent board 1", b && b.no === null && b.today === null,
-    JSON.stringify(b && { no: b.no, today: b.today }));
+  delete LAUNCHED.crossword_fr;
+  try {
+    t("and with the date removed the route says it is not out",
+      !LAUNCHED.crossword_fr, "the fixture applied, which a green run must not assume");
 
-  const e = await get(ONE, "?no=1");
-  const eb = await body(e);
-  t("an explicit ?no= still serves, so the game is buildable",
-    e.status === 200 && eb && eb.board && eb.board.entries.length === 11,
-    `${e.status}, ${eb && eb.board ? eb.board.entries.length : 0} entries`);
+    const r = await get(ONE);
+    const b = await body(r);
+    t("a bare request answers 200 rather than erroring", r.status === 200, String(r.status));
+    t("and says so plainly", b && b.board === null && b.launched === false,
+      JSON.stringify(b && { board: b.board, launched: b.launched }));
+    t("and does not invent board 1", b && b.no === null && b.today === null,
+      JSON.stringify(b && { no: b.no, today: b.today }));
+
+    const e = await get(ONE, "?no=1");
+    const eb = await body(e);
+    t("an explicit ?no= still serves, so the game is buildable",
+      e.status === 200 && eb && eb.board && eb.board.entries.length === 11,
+      `${e.status}, ${eb && eb.board ? eb.board.entries.length : 0} entries`);
+  } finally {
+    LAUNCHED.crossword_fr = REAL_LAUNCH;
+  }
+  t("and the real launch date is back", LAUNCHED.crossword_fr === REAL_LAUNCH,
+    "a suite that left this deleted would unlaunch the game for every suite after it");
 }
 
 /* ---- what is a board number --------------------------------------------- */
@@ -106,7 +150,7 @@ for (const q of ["?no=0", "?no=-1", "?no=abc", "?no=1.5", "?no="]) {
 
 console.log("\n=== The answers may not leave ===");
 {
-  const r = await get(ONE, "?no=1");
+  const r = await get(ONE, Q1);
   const b = await body(r);
 
   t("no cell carries a letter",
@@ -164,7 +208,7 @@ console.log("\n=== The scan between the database and the player ===");
      and a JSON round trip, and a leak that only appears in production is the
      one shape nothing offline can see. */
   const inCat = makeBoard((w, i) => (i === 0 ? { cat: `Fixture > ${title(w)}` } : {}));
-  const r = await get(rowsFor(inCat), "?no=1");
+  const r = await get(rowsFor(inCat), Q1);
   t("a board whose category carries its own answer is refused", r.status === 500,
     String(r.status));
   const refusal = JSON.stringify((await body(r)) || {});
@@ -173,7 +217,7 @@ console.log("\n=== The scan between the database and the player ===");
 
   const inEra = makeBoard((w, i) => (i === 3 ? { era: title(w) } : {}));
   t("the same in another served field",
-    (await get(rowsFor(inEra), "?no=1")).status === 500);
+    (await get(rowsFor(inEra), Q1)).status === 500);
 
 }
 {
@@ -184,7 +228,7 @@ console.log("\n=== The scan between the database and the player ===");
   const legit = makeBoard((w, i) =>
     (i === 0 ? { clue: `Who plays the Har${w.toLowerCase()} at the party?` } : {}));
   t("a clue that legitimately contains its own answer still serves",
-    (await get(rowsFor(legit), "?no=1")).status === 200);
+    (await get(rowsFor(legit), Q1)).status === 200);
 }
 {
   /* AND THE OTHER HALF OF THAT COLLISION, which cost 24 boards. An answer that
@@ -195,22 +239,34 @@ console.log("\n=== The scan between the database and the player ===");
     all.some((a) => norm("across").includes(a)),
     all.filter((a) => norm("across").includes(a)).join(",") || "none — case is vacuous");
   t("and the board carrying it serves anyway",
-    (await get(ONE, "?no=1")).status === 200);
+    (await get(ONE, Q1)).status === 200);
 }
 
 /* ---- a board that is not there ------------------------------------------ */
 
 console.log("\n=== A board that is not there ===");
 {
-  const r = await get(ONE, "?no=99");
+  /* AN EMPTY BANK AT A NUMBER THAT IS OTHERWISE FINE. This asked for ?no=99
+     while the game was unlaunched, when every positive number was in range
+     because there was no range. Launched, 99 is in the FUTURE — the route
+     refuses it as not out yet, 403, before it ever asks the bank, so the case
+     was proving the wrong refusal and would have gone on doing so.
+     The distinction matters and is the reason this block exists: "not out yet"
+     is a board the player may not have, and "no board there" is a day the bank
+     does not cover. They are different answers and only one of them is 200. */
+  const r = await get([], Q1);
   const b = await body(r);
   t("is not an error", r.status === 200, String(r.status));
   t("and says board: null", b && b.board === null);
+  t("PRECONDITION: the number asked for is in range, so 403 is not the answer",
+    (await get(ONE, Q1)).status === 200,
+    `${Q1} serves when the bank HAS the row — without this the case above ` +
+    `passes for the wrong reason the moment the number drifts out of range`);
 
   t("an unreadable payload is a 500",
-    (await get([{ no: 1, payload: "{not json" }], "?no=1")).status === 500);
+    (await get([{ no: 1, payload: "{not json" }], Q1)).status === 500);
   t("and so is a payload that is not a puzzle",
-    (await get([{ no: 1, payload: JSON.stringify({ puzzle: { nope: true } }) }], "?no=1"))
+    (await get([{ no: 1, payload: JSON.stringify({ puzzle: { nope: true } }) }], Q1))
       .status === 500);
 }
 
@@ -219,7 +275,7 @@ console.log("\n=== A board that is not there ===");
 console.log("\n=== The binds the route actually passes ===");
 {
   const seen = {};
-  await get(ONE, "?no=1", seen);
+  await get(ONE, Q1, seen);
   t("it asks fr_puzzles", /FROM fr_puzzles/.test(seen.sql || ""), seen.sql);
   t("for the daily mode", /mode = 'daily'/.test(seen.sql || ""));
   t("bound to the board number, not interpolated",
@@ -231,7 +287,7 @@ console.log("\n=== The binds the route actually passes ===");
 
 console.log("\n=== HEAD ===");
 {
-  const r = await onRequestHead({ request: req("?no=1"), env: db(ONE) });
+  const r = await onRequestHead({ request: req(Q1), env: db(ONE) });
   t("answers 200", r.status === 200, String(r.status));
   t("with an empty body", (await r.text()) === "");
   t("and no-store, so no shared cache holds a board",
@@ -305,10 +361,13 @@ console.log("\n=== Once it launches ===");
     t("and that is the launch number plus the bank, less one",
       nb.lastBoardNo === from + 120 - 1, String(nb.lastBoardNo));
   } finally {
-    delete LAUNCHED.crossword_fr;
+    LAUNCHED.crossword_fr = REAL_LAUNCH;
   }
-  t("and the fixture is removed again", !LAUNCHED.crossword_fr,
-    "a suite that left this set would launch the game for every suite after it");
+  t("and the real launch date is back", LAUNCHED.crossword_fr === REAL_LAUNCH,
+    `restored to ${REAL_LAUNCH} — this block moves the launch to yesterday to ` +
+    `reach a numbering the real date does not produce, and a suite that left ` +
+    `that in place would describe a site that does not exist to every suite ` +
+    `after it`);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

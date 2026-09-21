@@ -440,7 +440,16 @@
         if (window.XIPlays && !finished) {
           XIPlays.start({
             game: GAME, mode: "daily", dailyNo: v.no,
-            boardKey: "daily:" + v.no, total: board.entries.length,
+            /* "fr:", NOT "daily:". This said daily: — copied from the football
+               crossword, where it is right — while entryKey() in
+               functions/_lib/games.js keys this game's result rows "fr:" + n.
+               A play row and a result row for the same board would have carried
+               two different keys, so nothing downstream could join them, and
+               both would look correct read on their own. Every other game in
+               the family uses its own prefix here (hl:, gd:, cw:, qf:, wa:,
+               bp:) for exactly this reason; this game copied the one file whose
+               prefix is a word rather than an abbreviation. */
+            boardKey: "fr:" + v.no, total: board.entries.length,
           }, function () {
             return board.entries.filter(function (e) {
               return keysOf(e).every(function (k) { return !!filled[k]; });

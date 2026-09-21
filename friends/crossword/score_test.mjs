@@ -16,6 +16,20 @@ import { onRequestPost } from "../../functions/api/crossword_fr/check.js";
 import { boardScore, keptTheDay, TOTAL, ENTRIES, REVEAL_WORTH }
   from "../../functions/_lib/fr-score.js";
 import { makeBoard, answersOf, solvedGrid, key } from "./fixture.mjs";
+import { launchNumber } from "../../functions/_lib/games.js";
+
+/* THE FIRST PUBLIC BOARD NUMBER, NOT 1. A public number is the FAMILY's daily
+   number, so the bank's board 1 is advertised as no. 4 — and the endpoint
+   refuses anything below the launch, because that is a board from before the
+   game existed.
+
+   EVERY CASE BELOW SAID no: NO1, written while the game was unlaunched and the
+   two numbers coincided. Three of them failed on the launch; the rest went on
+   passing FOR THE WRONG REASON, because they assert a 400 or a 403 and a
+   refused board number produces one of those too. A case that cannot tell its
+   own subject from a bad fixture is the quieter half of this bug, so they are
+   all moved, not just the three that went red. */
+const NO1 = launchNumber("crossword_fr");
 
 let pass = 0, fail = 0;
 const t = (n, ok, d) => {
@@ -101,7 +115,7 @@ const rightGrid = () => solvedGrid(BOARD);
 
 console.log("\n=== Marking ===");
 {
-  const r = await mark({ no: 1, filled: rightGrid() });
+  const r = await mark({ no: NO1, filled: rightGrid() });
   const b2 = await r.json();
   t("PRECONDITION: the board has eleven markable entries",
     ANSWERS.length === 11 && ANSWERS.every((a) => a.letters.length > 2),
@@ -118,7 +132,7 @@ console.log("\n=== Marking ===");
   const spoiledKey = target.keys[0];
   const wrong = { ...rightGrid() };
   wrong[spoiledKey] = wrong[spoiledKey] === "X" ? "Q" : "X";
-  const r2 = await (await mark({ no: 1, filled: wrong })).json();
+  const r2 = await (await mark({ no: NO1, filled: wrong })).json();
 
   const crossing = ANSWERS.filter((a) => a.keys.includes(spoiledKey)).map((a) => a.id);
   t("the entry holding the wrong letter fails",
@@ -132,7 +146,7 @@ console.log("\n=== Marking ===");
 
 console.log("\n=== What marking may not say ===");
 {
-  const b3 = await (await mark({ no: 1, filled: {} })).json();
+  const b3 = await (await mark({ no: NO1, filled: {} })).json();
   t("an empty grid is marked wrong, not right", b3.correct === 0, String(b3.correct));
 
   /* VALUES, WALKED — never the serialised reply. Normalising JSON.stringify
@@ -157,27 +171,27 @@ console.log("\n=== What marking may not say ===");
 
 console.log("\n=== Refusals ===");
 {
-  t("no CSRF header", (await mark({ no: 1, filled: {} }, undefined, { noCsrf: true })).status === 403);
+  t("no CSRF header", (await mark({ no: NO1, filled: {} }, undefined, { noCsrf: true })).status === 403);
   t("not JSON", (await mark("{nope", undefined)).status === 400);
   t("no board number", (await mark({ filled: {} })).status === 400);
   t("board number zero", (await mark({ no: 0, filled: {} })).status === 400);
-  t("filled is an array", (await mark({ no: 1, filled: [] })).status === 400);
-  t("filled is missing", (await mark({ no: 1 })).status === 400);
+  t("filled is an array", (await mark({ no: NO1, filled: [] })).status === 400);
+  t("filled is missing", (await mark({ no: NO1 })).status === 400);
 
   const huge = {};
   for (let i = 0; i < 500; i++) huge[`c${i}`] = "A";
   t("an absurdly large grid is refused rather than truncated",
-    (await mark({ no: 1, filled: huge })).status === 400,
+    (await mark({ no: NO1, filled: huge })).status === 400,
     "truncating would mark the rest blank — a wrong answer invented by the server");
 
-  t("a board that is not there is a 404", (await mark({ no: 1, filled: {} }, null)).status === 404);
+  t("a board that is not there is a 404", (await mark({ no: NO1, filled: {} }, null)).status === 404);
 
   /* AN ENTRY WITH NO STORED LETTERS MUST NOT MARK CORRECT. Two empty strings
      compare equal, so the naive check hands a point for nothing — and it would
      do it on exactly the boards that are already broken. */
   const hollow = JSON.parse(JSON.stringify(BOARD));
   for (const k of Object.keys(hollow.cells)) hollow.cells[k].ch = "";
-  const h = await (await mark({ no: 1, filled: {} }, hollow)).json();
+  const h = await (await mark({ no: NO1, filled: {} }, hollow)).json();
   t("a board with no letters scores 0, not 11 out of 11", h.correct === 0 && h.score === 0,
     JSON.stringify({ correct: h.correct, score: h.score }));
 }
