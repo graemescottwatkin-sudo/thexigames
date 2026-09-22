@@ -30,6 +30,8 @@
  * eventually be written differently.
  */
 import { getDailyPuzzle, getPuzzleForToken, parseToken } from "./db.js";
+import { computeScore, SCORING } from "./scoring.js";
+import { boardScore, TOTAL as FR_TOTAL } from "./fr-score.js";
 import { storedNo, lastPublicNo } from "./fr-board.js";
 
 export const CROSSWORDS = {
@@ -43,6 +45,23 @@ export const CROSSWORDS = {
        somewhere different; getPuzzleForToken has held that fan-out since long
        before there was a second crossword. */
     loadByToken: (env, token) => getPuzzleForToken(env, token),
+    /* WHAT A FINISHED BOARD IS WORTH. Football's rule, unchanged and moved
+       here verbatim: the clock decays from the maximum and help is charged as
+       MINUTES on that clock, which is why the caller hands over an elapsed
+       time with the help already folded into it. */
+    score: ({ elapsedSeconds, row }) => computeScore(
+      elapsedSeconds,
+      row.srv_checks || 0, row.srv_reveal_letters || 0,
+      row.srv_reveal_answers || 0, row.srv_check_alls || 0),
+    /* Help costs TIME in this game, so the caller needs the conversion. */
+    helpSeconds: (row) => {
+      const perMin = SCORING.MATCH_CLOCK_REAL_SECONDS / SCORING.MATCH_CLOCK_MAX_MINUTES;
+      return Math.round(perMin * (
+        (row.srv_checks || 0) * SCORING.HELP_MINUTES.check +
+        (row.srv_check_alls || 0) * SCORING.HELP_MINUTES.checkAll +
+        (row.srv_reveal_letters || 0) * SCORING.HELP_MINUTES.revealLetter +
+        (row.srv_reveal_answers || 0) * SCORING.HELP_MINUTES.revealAnswer));
+    },
     publicToStored: (no) => no,
     lastNo: null,                 // the bank is extended, not finite
     /* The archive and its paywall are football's. Friends has 120 boards and
@@ -81,6 +100,18 @@ export const CROSSWORDS = {
       if (!t || t.mode !== "daily") return null;
       return CROSSWORDS.crossword_fr.load(env, t.id);
     },
+    /* ELEVEN AT TEN, AND THE CLOCK BUYS NOTHING. finish only runs on a
+       COMPLETE grid, so every entry is correct by the time this is asked --
+       what is left to price is how many were revealed rather than solved, and
+       fr-score.js says half. The owner's ruling, 22 September 2026.
+       NO TIME PENALTY AT ALL, which is the substantive half of the difference:
+       this game has no match clock to decay against, and inventing one here
+       would be this file deciding a game rule instead of recording one. */
+    score: ({ row, entries }) => ({
+      score: boardScore(entries, row.srv_reveal_answers || 0, entries),
+      total: FR_TOTAL,
+    }),
+    helpSeconds: () => 0,
     publicToStored: storedNo,
     lastNo: () => lastPublicNo(),
     archive: false,

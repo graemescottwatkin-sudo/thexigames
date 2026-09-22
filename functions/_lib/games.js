@@ -132,6 +132,26 @@ export const LAUNCHED = {
  *
  * Owner's call, 21 September 2026: Crossword XI: Friends launches today and is
  * not to be publicly visible yet. */
+/* ---- WHICH GAMES ARE NOT IN THE SEASON -------------------------------------
+ *
+ * The season counts DAYS across the family, and a game in it writes a record
+ * every day it is played. The Friends crossword is not in it: the owner's
+ * ruling is a genuine streak, +1 a day, and no season at all.
+ *
+ * NAMED HERE BECAUSE TWO CONTRACTS DISAGREED WITHOUT IT. tools/aligned_test.mjs
+ * requires every game that posts plays to load shared/xi-season.js beside it --
+ * a good rule, and the reason it exists is that a game posting plays with no
+ * season silently drops them from the device's record. friends/crossword's own
+ * gate requires the opposite, because loading that file would give the game a
+ * record it must not write. Both were right and neither could pass, which is
+ * what an unstated exception looks like from the inside.
+ * So the exception is stated, once, and both gates ask it. */
+export const NO_SEASON = {
+  crossword_fr: true,
+};
+
+export const inSeason = (game) => !NO_SEASON[game];
+
 export const UNLISTED = {
   crossword_fr: true,
 };

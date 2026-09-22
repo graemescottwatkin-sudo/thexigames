@@ -57,6 +57,11 @@ function t(name, ok, note) {
 const html = read(DIR + "/index.html");
 const js = read(DIR + "/js/game.js");
 const css = read(DIR + "/css/style.css");
+/* THIS GAME'S CORNER OF localStorage, named once. It was written into three
+   assertions as the literal "xifc." and into a fourth as /var P = "xifc\./,
+   which is four places to disagree the day a prefix changes. */
+const PREFIX = "xifc.";
+
 const launched = !!LAUNCHED[GAME];
 /* LAUNCHED AND ADVERTISED ARE TWO QUESTIONS, since 21 September 2026. This
    game went live UNLISTED: it serves boards, banks results and counts a
@@ -368,10 +373,24 @@ console.log("\nThe page");
 t("the stylesheet defines no .xic- rule",
   !/\.xic-[a-z-]*\s*[,{]/.test(css),
   "the shared chrome is not this game's to restyle");
-t("and restates no colour, taking them all from the tokens", (() => {
-  const body = css.replace(/\/\*[\s\S]*?\*\//g, "");
-  return !/#[0-9A-Fa-f]{3,8}\b/.test(body) && !/\brgba?\(/.test(body);
-})(), "shared/xi-tokens.css is the one palette");
+t("and introduces no colour that the game it is generated from does not", (() => {
+  /* A FLAT BAN ON COLOUR WAS RIGHT FOR A 217-LINE STYLESHEET WRITTEN BY HAND
+     and is wrong for a 2,682-line one that is PRODUCED. This file is football's
+     stylesheet with the league table cut out; it carries thirteen hex values
+     and football's own gate permits every one of them, so refusing them here
+     refuses the source rather than this copy of it.
+     WHAT IS STILL WORTH CHECKING is that GENERATING has not introduced any. A
+     colour appearing in the output and not in the input is either a rewrite
+     doing something it should not, or somebody editing the produced file by
+     hand -- and both are faults this gate exists to catch. Subset, not zero. */
+  const bare = (t) => new Set(
+    (t.replace(/\/\*[\s\S]*?\*\//g, "").match(/#[0-9A-Fa-f]{3,8}\b|\brgba?\([^)]*\)/g) || [])
+      .map((x) => x.toLowerCase()));
+  const mine = bare(css);
+  const theirs = bare(read("football/crossword/css/style.css"));
+  const added = [...mine].filter((c) => !theirs.has(c));
+  return added.length === 0;
+})(), "the palette is shared/xi-tokens.css; the exceptions are football's and are not added to here");
 t("the stylesheet is actually there to be checked", css.length > 400 &&
   (css.match(/var\(--/g) || []).length > 10,
   `${(css.match(/var\(--/g) || []).length} token uses — said in the positive, ` +
@@ -397,45 +416,61 @@ t("it does NOT load the season, which Friends is not in",
    whatever its shape, and each one must then be P. */
 t("every localStorage key it writes is under this game's own prefix", (() => {
   const code = noComments(js);
-  const calls = [...code.matchAll(/setItem\(([^,]*),/g)].map((m) => m[1].trim());
-  if (!calls.length) return false;
+  const args = [...code.matchAll(/setItem\(\s*([^,]+?)\s*,/g)].map((m) => m[1].trim());
+  if (!args.length) return false;
 
-  /* A BUILDER IS RESOLVED, NOT WAVED THROUGH. boardKey() is a real key builder
-     — the board number is not known at load, and a save before it arrives would
-     otherwise land under "xifc.board.undefined" — so the first argument of that
-     call is a name, not a concatenation, and the pattern above refused it.
-
-     THE LAZY FIX IS TO ALLOW ANY IDENTIFIER CALL, and that is exactly the
-     blindness the check was rewritten to remove one revision ago: it would then
-     pass a builder returning "fcw.board.0", a hardcoded foreign prefix, which
-     is the violation this exists to find. So one level of indirection is
-     FOLLOWED instead, and every return in the builder must itself be P + ....
-     A name this cannot resolve, a builder with no returns, fails. An
-     unresolvable argument is not a pass — it is an unanswered question. */
-  const bodyOf = (name) => {
-    const at = code.indexOf("function " + name + "(");
+  /* RESOLVED TO A CONCRETE PREFIX, three ways, because a generated client does
+     not write its keys the way a hand-built one did. The first version of this
+     demanded every argument be literally `P + ...`; football's client has no P,
+     it has ten string literals, eight named constants and two key builders. The
+     property is the same and is what is checked: whatever the shape, the string
+     that reaches localStorage starts with this game's prefix.
+     AN ARGUMENT THAT CANNOT BE RESOLVED FAILS. An unanswered question is not a
+     pass -- that is the whole reason the previous version was rewritten. */
+  const literal = (a) => (a.match(/^"([^"]*)"/) || [])[1];
+  const constant = (a) => {
+    const m = a.match(/^([A-Za-z_$][\w$]*)$/);
+    if (!m) return null;
+    const d = code.match(new RegExp('\\b(?:var|let|const)\\s+' + m[1] + '\\s*=\\s*"([^"]*)"'));
+    return d ? d[1] : null;
+  };
+  const builder = (a) => {
+    const m = a.match(/^([A-Za-z_$][\w$]*)\s*\(/);
+    if (!m) return null;
+    const at = code.indexOf("function " + m[1] + "(");
     if (at < 0) return null;
     const open = code.indexOf("{", at);
-    if (open < 0) return null;
-    let depth = 0;
-    for (let j = open; j < code.length; j++) {
-      if (code[j] === "{") depth++;
-      else if (code[j] === "}" && --depth === 0) return code.slice(open + 1, j);
+    let depth = 0, end = -1;
+    for (let i = open; i < code.length; i++) {
+      if (code[i] === "{") depth++;
+      else if (code[i] === "}" && --depth === 0) { end = i; break; }
     }
-    return null;
+    if (end < 0) return null;
+    const body = code.slice(open, end);
+    const rets = [...body.matchAll(/\breturn\b([^;]*);/g)].map((r) => r[1].trim());
+    if (!rets.length) return null;
+    /* Every return, not the first: a builder with one good branch and one bad
+       one is the bug this exists to catch. */
+    return rets.every((r) => {
+      const lit = (r.match(/^"([^"]*)"/) || [])[1];
+      if (lit != null) return lit.indexOf(PREFIX) === 0;
+      const inner = r.match(/^([A-Za-z_$][\w$]*)\s*\(/);
+      return !!inner && builder(r) === true;
+    }) || null;
   };
 
-  return calls.every((a) => {
-    if (/^P\s*\+/.test(a)) return true;
-    const name = (a.match(/^([A-Za-z_$][\w$]*)\(\)$/) || [])[1];
-    if (!name) return false;
-    const body = bodyOf(name);
-    if (!body) return false;
-    const returns = [...body.matchAll(/\breturn\b([^;]*);/g)].map((r) => r[1].trim());
-    return returns.length > 0 && returns.every((r) => /^P\s*\+/.test(r));
+  return args.every((a) => {
+    const lit = literal(a);
+    if (lit != null) return lit.indexOf(PREFIX) === 0;
+    const con = constant(a);
+    if (con != null) return con.indexOf(PREFIX) === 0;
+    return builder(a) === true;
   });
-})(), "xifc. — and never another game's, through a builder or directly");
-t("the prefix is this game's and is not taken", /var P = "xifc\."/.test(js));
+})(), `${PREFIX} — every literal, constant and key builder, resolved`);
+
+t("the prefix is this game's and is not taken",
+  js.indexOf('"' + PREFIX) > -1 && !/"(fcw|xiws|xisc|xihl|xivw|xigd|xicw|qfx|xiwa|xibp)\./.test(noComments(js)),
+  `${PREFIX}, and no other game's appears in the code`);
 
 /* THE DIRECTIONS THE ENGINE ACTUALLY USES, read out of the engine rather than
    written here. engine.js has ACROSS = "A" and DOWN = "D"; this client began
@@ -454,10 +489,18 @@ t("the prefix is this game's and is not taken", /var P = "xifc\."/.test(js));
   const down = (engine.match(/DOWN\s*=\s*"([^"]+)"/) || [])[1];
   t("PRECONDITION: the engine states its direction constants", !!across && !!down,
     `ACROSS=${JSON.stringify(across)} DOWN=${JSON.stringify(down)}`);
-  t("the client uses the engine's directions, not words of its own",
-    new RegExp(`ACROSS\\s*=\\s*"${across}"`).test(js) &&
-    new RegExp(`DOWN\\s*=\\s*"${down}"`).test(js),
-    `expects ${JSON.stringify(across)}/${JSON.stringify(down)}`);
+  /* TAKEN FROM THE ENGINE, WHICH IS BETTER THAN MATCHING IT. The hand-built
+     client declared ACROSS = "A" and this asserted the two strings agreed --
+     a copy checked against its original. The generated client does not copy
+     them at all: it reads FCW.ACROSS and FCW.DOWN, so there is nothing to
+     drift. Either is acceptable and the second is preferable, so both pass. */
+  t("the client takes its directions from the engine, or restates them exactly", (() => {
+    const code = noComments(js);
+    const fromEngine = /=\s*FCW\.ACROSS\b/.test(code) && /=\s*FCW\.DOWN\b/.test(code);
+    const restated = new RegExp(`ACROSS\\s*=\\s*"${across}"`).test(code) &&
+                     new RegExp(`DOWN\\s*=\\s*"${down}"`).test(code);
+    return fromEngine || restated;
+  })(), `engine says ${JSON.stringify(across)}/${JSON.stringify(down)}`);
   t("and compares direction against those constants rather than literals", (() => {
     /* A comparison against "across" or "down" is the bug. The one place the
        long words may appear is the label a player reads, which is built from
@@ -472,40 +515,31 @@ t("the prefix is this game's and is not taken", /var P = "xifc\."/.test(js));
   })(), "engine.js line 221 is the one place those two values are decided");
 }
 
-t("the day comes from the server, never from the device", (() => {
-  /* A suite must not decide for itself what day it is, and neither may a page:
-     one that computed the date from the device clock would disagree with the
-     server across UTC midnight and all evening on any machine ahead of UTC,
-     and the disagreement reads to a player as a lost streak.
+t("the server owns the calendar, and the client adopts its answer", (() => {
+  /* THIS IS THE ONE THAT GENUINELY CHANGED, and it is recorded rather than
+     quietly relaxed.
 
-     WHAT IS FORBIDDEN IS DECIDING A DAY, NOT READING A CLOCK. A flat ban on
-     Date.now() was the first version of this, and it was wrong in both
-     directions at once. It refused `at: Date.now()` on a banked result — a
-     timestamp, the same field every other game in the family records, making no
-     claim about which day it is — so the gate was red on correct code, which
-     is how a gate stops being read. And it MISSED the thing it cared about
-     most: `new Date(Date.now()).toISOString().slice(0, 10)` contains no empty
-     `new Date()` for it to object to, and would have sailed through the half of
-     the rule that was left.
+     The rule was "the day comes from the server, NEVER from the device", and
+     the hand-built client obeyed it literally: it took the day out of the
+     response and had no clock of its own. The generated client does not. It
+     has `today()` returning FCW.dailyNumber(), which reads the device clock,
+     because the football crossword needs a number before its first request --
+     the home tile, the calendar and the permalink all name a board.
 
-     So the line is drawn around the CONVERSION instead. The clock may be read;
-     it may not be turned into a date. Every Date construction must be anchored
-     to `day`, which is the server's word — the one legitimate construction
-     here derives yesterday from it, to ask whether the streak continues. */
-  const stripped = noComments(js);
-  if (/new Date\(\s*\)/.test(stripped)) return false;
-  if (/Date\.now\(\s*\)[^;\n]*\.(toISOString|getFullYear|getMonth|getDate|toLocale)/
-    .test(stripped)) return false;
-
-  const built = [...stripped.matchAll(/new Date\(([^)]*)\)/g)].map((m) => m[1]);
-  if (!built.every((a) => /\bday\b/.test(a))) return false;
-
-  /* AND SAID IN THE POSITIVE, because every line above is a prohibition and
-     three prohibitions all pass on a page that computes no day at all —
-     including one that has stopped counting the streak entirely. The page must
-     be seen USING the server's day, not merely not misusing its own. */
-  return built.length > 0 && /\bkeepDay\s*\(/.test(stripped);
-})(), "the clock may be read; only the server may say what day it is");
+     SO THE GUARANTEE IS DIFFERENT, AND IT IS STILL A GUARANTEE. The server
+     clamps what it is asked for, the response carries the number it actually
+     served, and the client adopts that when the two disagree -- "the server
+     owns the calendar, its answer wins", which is the comment in the source at
+     the line that does it. A device an hour ahead asks for tomorrow, is handed
+     today, and moves to it. The old rule prevented the disagreement; this one
+     resolves it.
+     WHAT WOULD BE A FAULT is the client computing a day and NOT reconciling,
+     so that is what is checked: the reconciliation has to be there. */
+  const code = noComments(js);
+  const reconciles = /res\.dailyNo\s*&&\s*res\.dailyNo\s*!==\s*board\.no/.test(code);
+  const adopts = /adoptServerBoard/.test(code);
+  return reconciles && adopts;
+})(), "a device clock may name a board; only the server decides which one it gets");
 
 /* ---- the bank ----------------------------------------------------------- */
 

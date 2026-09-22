@@ -4897,6 +4897,12 @@
   }
 
   function populateClubSelect(sel) {
+    /* NO ELEMENT, NOTHING TO POPULATE. This read sel.options straight and threw
+       on any page without a club picker -- which took finishBuild down one line
+       before renderGrid(), so the board never drew and the promise's catch
+       swallowed the reason. A control that is optional on the page has to be
+       optional in the code that fills it. */
+    if (!sel) return;
     if (sel.options.length) return;
     var opt = document.createElement("option");
     /* "Random club", not "Random club and season". The season is always drawn
@@ -4969,11 +4975,13 @@
   }
   function syncClubSelect() {
     var sel = $("clubSelect");
+    if (!sel) return;                 // the picker is optional on the page
     populateClubSelect(sel);
     sel.value = clubMode === "chosen" ? club : "__random__";
   }
   function syncKickSelect() {
     var sel = $("kickClubSelect");
+    if (!sel) return;                 // the picker is optional on the page
     populateClubSelect(sel);
     sel.value = clubMode === "chosen" ? club : "__random__";
     var home = $("homeClubSelect");

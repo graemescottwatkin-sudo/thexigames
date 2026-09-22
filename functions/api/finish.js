@@ -105,17 +105,18 @@ export async function finishHandler({ request, env }, game) {
 
      The counts are the server's own — srv_checks and the rest are incremented
      by the check and reveal endpoints, not reported by the browser. */
-  const perMin = SCORING.MATCH_CLOCK_REAL_SECONDS / SCORING.MATCH_CLOCK_MAX_MINUTES;
-  const helpSeconds = Math.round(perMin * (
-    (row.srv_checks || 0) * SCORING.HELP_MINUTES.check +
-    (row.srv_check_alls || 0) * SCORING.HELP_MINUTES.checkAll +
-    (row.srv_reveal_letters || 0) * SCORING.HELP_MINUTES.revealLetter +
-    (row.srv_reveal_answers || 0) * SCORING.HELP_MINUTES.revealAnswer));
-
-  const res = computeScore(elapsed + helpSeconds,
-                           row.srv_checks || 0, row.srv_reveal_letters || 0,
-                           row.srv_reveal_answers || 0, row.srv_check_alls || 0);
-
+  /* ASKED OF THE GAME, because two crosswords price a board differently --
+     football decays a clock, Friends counts entries at ten apiece. Both rules
+     live in functions/_lib/cw-registry.js beside where each game's boards come
+     from; neither is written here, because a scoring rule written into the
+     endpoint is a rule every later game has to be granted an exception from.
+     Moved verbatim: football's numbers are unchanged. */
+  const helpSeconds = cw.helpSeconds(row);
+  const res = cw.score({
+    elapsedSeconds: elapsed + helpSeconds,
+    row,
+    entries: stored.puzzle.entries.length,
+  });
   await env.DB.prepare(
     `UPDATE plays
         SET srv_score = ?, srv_verified_at = datetime('now'),

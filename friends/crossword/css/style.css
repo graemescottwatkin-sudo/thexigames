@@ -1,217 +1,2828 @@
-/* friends/crossword/css/style.css — the Friends crossword's own rules.
- *
- * TOKENS ONLY, AND NO .xic- RULES. The palette lives in shared/xi-tokens.css
- * and the chrome in shared/xi-chrome.css; a game that restates a colour has
- * made a second answer about what the family looks like, and a game that
- * reaches into .xic- has made the shared bar its own to break. Both gates
- * check for this, which is why neither appears below.
- *
- * THE BOARD AND THE KEYBOARD ARE ALMOST THE WHOLE SCREEN ON A PHONE. That is
- * not a preference, it is a bug report: a real player on an iPhone could not
- * reach the football crossword's board for furniture — "a little slit" — and
- * v003s rebuilt that page around the board. This one starts where that ended
- * rather than repeating the lesson.
- */
+/* ============ DESIGN TOKENS ============ */
+/* ============ THIS GAME'S OWN FACTS ============
+   The palette, the type, the corners, the shadows, the motion and the state
+   colours are shared/xi-tokens.css — see shared/DESIGN.md. This file used to
+   carry its own copy of twelve of them, and an inverted dark palette of its
+   own on top, which is the drift the shared file exists to stop. What is left
+   here is only what has no meaning outside a crossword. */
+:root{
+  --cell:52px;
+  /* The separator between two words of one answer: AFC | BOURNEMOUTH is a
+     different answer from AFCBOURNEMOUTH, and the enumeration only says so
+     if you go and read it. Green, because it carries information. */
+  --wordbreak:var(--pitch);
+  /* The separator on the selected word, where the fill is darker. */
+  --sel-line:#79B7B2;
+  /* Empty answer slots in the letter bank: a step darker than --line, which
+     is right for a hairline between panels and invisible as a box. */
+  --slot:#A9B4A4;
+  --slot-fill:var(--tint);
+  /* League-table zones. Blue for Europe and red for the drop are the two
+     colours the family palette does not carry, because only this game has a
+     table with zones in it. */
+  --zone-euro:#6FA8C9; --zone-drop:#C25B4E;
+}
+:root[data-theme="dark"]{
+  --wordbreak:#9DB3A6;
+  --sel-line:#6E9C99;
+  --slot:#6B7A66;
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%}
+body{
+  background:var(--paper);color:var(--ink);font-family:var(--body);
+  font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased;
+}
+button{font-family:inherit;cursor:pointer}
+:focus-visible{outline:2px solid var(--pitch);outline-offset:2px}
 
-.fx-wrap {
-  max-width: 44rem;
-  margin: 0 auto;
-  padding: 0 16px 24px;
+/* ============ MASTHEAD ============ */
+/* THE BOARD IS WHAT THE PAGE IS FOR.
+   This block cost 80px above the grid on a 375x812 phone — a quarter of the
+   screen given to a wordmark, a slogan and a date before a single square. The
+   short-screen rule below already made the argument and only applied under
+   620px: the shared bar one row up carries the wordmark and the way out, so
+   the masthead repeats it in larger type and the BRANDLINE repeats it again in
+   a sentence. That is true at every height, so the slogan goes at every height
+   and the rest is tightened.
+   The strap stays wherever it fits — "Today's puzzle · Tue 8 Sept" is the only
+   thing here that says WHICH board is on screen. */
+header{
+  border-bottom:3px double var(--pitch-deep);
+  padding:8px 20px 8px;text-align:center;
+}
+header .brandline{display:none}
+header .masthead{font-size:clamp(19px,3.4vw,26px);letter-spacing:.1em}
+/* SHORT SCREENS GIVE THE HEIGHT BACK TO THE BOARD.
+   The shared bar costs a row, and on a 320x568 phone render_test measured the
+   board frame down to 112px — "the board has nowhere to go". The bar is not
+   what should go: it is the only route off the puzzle. This block is, because
+   everything in it is now said twice. The bar carries the wordmark and the way
+   home; the masthead and brandline underneath repeat it in larger type. The
+   strap stays — it names which board you are on, which nothing else does. */
+@media (max-height: 620px) {
+  header{ padding:4px 20px 6px; border-bottom:1px solid var(--line); }
+  header .masthead, header .brandline{ display:none; }
+}
+/* Shorter still and the in-game masthead block goes entirely. The bar above it
+   already carries the wordmark and the way out; what is left below is a strap
+   naming the board, and on a screen this short the board itself is worth more
+   than a label describing it. */
+@media (max-height: 580px) {
+  header{ display:none; }
 }
 
-/* NO .sr-only HERE. The shared layer defines it and a game redefining any part
-   of the shared vocabulary is a second definition that will drift — aligned_test
-   refuses it by name. This file had a copy, which agreed today and would not
-   have agreed for ever. */
+/* PHONES GIVE THE BOARD THE SAME HEIGHT, AT ANY VIEWPORT HEIGHT.
+   The two rules above are the same argument as this one and they were keyed on
+   HEIGHT, which is why they never fired for the player who reported it: a 390
+   x 844 iPhone is not a short screen. What squeezes the board there is not the
+   viewport, it is everything stacked in it — bar, masthead, toolbar, letter
+   strip, clue card and keyboard — and that stack is the same however tall
+   the phone is. Measured on a 390x714 sheet before this block: the board frame
+   had 229px of 714, under a third of the screen.
+   So the same things go on a phone by WIDTH, and each one goes because it is
+   already somewhere else on screen, not to make room by taking something away:
+     - the masthead repeats the wordmark in the bar one row up;
+     - the strap moves INTO that bar (#barBoard), so nothing is lost;
+     - the house button repeats the bar's wordmark, which goes home;
+     - Daily repeats the landing the wordmark leads to;
+     - Log in repeats the bar's own Sign in / Account.
+   The clue card keeps its place and loses only slack. */
+@media (max-width: 560px) {
+  body.flex-layout:not(.home-showing) > header:not(.xic-bar){ display:none; }
+  body.flex-layout:not(.home-showing) #tbHome,
+  body.flex-layout:not(.home-showing) #tbMode,
+  body.flex-layout:not(.home-showing) #tbSignIn{ display:none; }
+  /* THE CLUE CARD LOSES ONLY SLACK, AND THE FLOOR IS MEASURED.
+     The first attempt took it to 76px and added overflow-y:auto, which
+     viewport_test refused — rightly, and it names the reason: a clue readable
+     only by scrolling inside a small card is one nobody discovers, and that
+     had already shipped once. A clue cut off mid-word is unsolvable rather
+     than untidy, so the height is set by the WORST clue.
+     Measured at 390x714 with a 152-character clue at the xxlong step: it draws
+     three lines and needs 69px inside the card. 88px held it, 80px clipped.
+     104 leaves room for a fourth line, which is the step xxlong exists for.
+     Saving 14px rather than the 42 first tried is the honest number. */
+  body.flex-layout:not(.home-showing) .now-clue{ height:104px; }
+}
+/* The bar's copy of the strap. Hidden wherever the strap itself is on screen,
+   so the board is named once and only once. */
+.cw-bartitle{ display:none; }
+@media (max-width: 560px) {
+  body.flex-layout:not(.home-showing) .cw-bartitle{
+    display:block;
+    /* Tracking is what costs the room here. At .16em "Today's puzzle · Sat
+       19 Sept" measured 155px and truncated to "SAT 19 SE…" beside a signed-in
+       name — losing the end of the date, which is the half that identifies
+       the board. Tightened until it fits; it is a label in a bar, not a strap
+       across a masthead, so it does not need the same air. */
+    font-family:var(--disp);font-weight:600;letter-spacing:.06em;
+    font-size:10px;text-transform:uppercase;color:var(--pitch);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    flex:0 1 auto;min-width:0;
+  }
+}
+.masthead{
+  font-family:var(--disp);font-weight:700;letter-spacing:.12em;
+  font-size:clamp(24px,4vw,34px);text-transform:uppercase;
+  color:var(--pitch-ink);line-height:1;
+}
+.masthead .ball{display:inline-block;transform:translateY(-2px);font-size:.5em;margin:0 .5em;color:var(--pitch)}
+.masthead{letter-spacing:.14em}
+/* The XI is the mark shared across The XI Games suite (Scrambled XI,
+   Missing XI), so it carries the accent while the word stays ink. */
+/* The XI is the mark the whole suite shares, so it gets a chip rather than a
+   colour.
 
-/* THE BODY, RESET AND GIVEN THE FAMILY'S FONT. Without the margin reset the
-   page sits in the browser's default gutter while every other game does not,
-   and without the font it inherits the browser's serif — which looks like a
-   stylesheet that failed to load rather than a design. */
-body {
-  margin: 0;
-  font-family: var(--body);
-  background: var(--paper);
-  color: var(--ink);
+   Colour alone could not do it. Anything dark enough to read on paper is too
+   dark to separate from the word beside it — CROSSWORD is pitch-deep, and
+   violet, blue and green all came out under 2:1 against it. Gold reads well
+   against the word and is invisible on paper at 1.45:1. The chip decouples the
+   two: the letters get their own background, so the hue no longer has to
+   survive the paper.
+
+   White on pitch-deep is 12.6:1, the strongest separation available, and it
+   reads as a squad number rather than as coloured text. It also separates by
+   shape and lightness rather than hue alone, so it holds for a colour-blind
+   player — which red text would not have. */
+.xi{
+  display:inline-block;background:var(--pitch-deep);color:#fff;
+  /* Asymmetric on purpose. With the line box at cap height the letters still
+     sit slightly low in it — the font's own ascent leaves a little more room
+     above the caps than below the baseline — so an evenly padded box reads
+     heavy at the top. Less above, sides tight to the letterforms. */
+  padding:.03em .07em .08em;border-radius:.12em;
+  /* line-height sized to the cap height, not to the em.
+
+     At line-height:1 the content box is a full em tall while uppercase
+     letterforms occupy about .72em of it — roughly .13em of ascender space
+     above the caps and .15em of descender space below the baseline that XI
+     never uses. That is three times the padding, and it is there before any
+     padding is added, which is why tightening the padding barely moved it.
+
+     Set to the cap height the box closes on the letters, and the padding then
+     means what it says. */
+  line-height:.72;
+  /* letter-spacing is zeroed inside the chip, not merely reduced.
+
+     The masthead tracks at .14em and tracking is applied AFTER the last
+     character, so the I was carrying a trailing gap the box then had to
+     enclose — a right-hand margin nothing put there and no padding value could
+     remove. Zeroed here and the box closes on the letterforms. */
+  letter-spacing:0;
+  /* Uppercase sits above the baseline with descender space below it, so an
+     evenly padded box reads low. A hair of lift puts the chip on the cap
+     height of the word beside it. */
+  transform:translateY(-.05em);
+}
+/* In dark mode the chip inverts: pitch-deep is the light green there, so white
+   letters on it would be two light tones. Green on white keeps the contrast
+   and the shape. */
+:root[data-theme="dark"] .xi{background:var(--on-pitch);color:var(--pitch)}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]) .xi{background:var(--on-pitch);color:var(--pitch)}
+}
+/* At strapline and footer size the chip would shout, so it is tighter still —
+   same shape, less weight. */
+.brandline .xi,footer .xi{padding:.02em .06em .07em;border-radius:.1em}
+.brandline{
+  font-family:var(--disp);font-weight:500;letter-spacing:.2em;
+  font-size:11.5px;text-transform:uppercase;color:var(--ink-soft);margin-top:4px;
+}
+.brandline .by{color:var(--ink-faint)}
+.strap{
+  font-family:var(--disp);font-weight:600;letter-spacing:.24em;
+  font-size:10.5px;text-transform:uppercase;color:var(--pitch);margin-top:3px;
 }
 
-/* ---- identity ----------------------------------------------------------- */
-
-.fx-ident { margin: 12px 0 10px; }
-
-.fx-kicker {
-  margin: 0;
-  font-family: var(--disp);
-  font-weight: 700;
-  font-size: 0.8rem;
-  letter-spacing: var(--track-caps);
-  text-transform: uppercase;
-  color: var(--ink-faint);
+/* ============ TOOLBAR ============
+   One bounded card, three zones: the match state (clock, position, progress),
+   the point-costing help actions, and the game controls. Grouping is the point
+   — a flat row of mixed-weight buttons gave no clue which ones cost you. */
+/* One column, one edge. Every block below the clue strip is capped to the
+   board's published width so the page has a single measure rather than each
+   element finding its own. */
+.grid-panel > .bank-strip,
+.grid-panel > .now-clue,
+.grid-panel > .tb-box,
+.grid-panel > .tb-table{
+  width:100%;max-width:var(--board-w,100%);margin:8px auto 0;box-sizing:border-box;
 }
-.fx-sub {
-  margin: 2px 0 0;
-  font-size: 0.95rem;
-  color: var(--ink-soft);
+/* The clue strip is the one block above the board, so it keeps its own top
+   margin — but it takes the same edge as everything below it. It was the last
+   element sizing itself to the panel rather than to the board, which is why it
+   overhung the column on both sides. */
+.grid-panel > .now-clue{margin:0 auto 8px}
+.grid-panel > .tb-help{margin-top:6px}
+/* The game controls are one row, as they read: pause, menu, and the two ways
+   to get a different puzzle. */
+/* One row: the readings, then the four controls. The buttons give up their
+   equal share so the clock and the count fit beside them — they were a
+   full-width panel of their own holding two short readings.
+   nowrap only where there is room. On a 390px screen a clock, a count and four
+   buttons on one unbreakable line push past the edge, and nothing about the
+   arrangement is worth that. */
+.grid-panel > .tb-game .tb-controls{
+  display:flex;flex-wrap:wrap;width:100%;align-items:center;gap:6px;
 }
-
-/* ---- the board ---------------------------------------------------------- */
-
-.fx-boardwrap {
-  display: flex;
-  justify-content: center;
+@media (min-width:900px){
+  .grid-panel > .tb-game .tb-controls{flex-wrap:nowrap}
 }
-
-/* The grid sizes itself from the number of columns the server sent, capped so
-   a wide board on a narrow phone shrinks rather than overflowing. --cols and
-   --rows are written by js/game.js from the board, never guessed here. */
-.fx-board {
-  display: grid;
-  grid-template-columns: repeat(var(--cols, 12), 1fr);
-  gap: 1px;
-  width: min(100%, calc(var(--cols, 12) * 2.2rem));
-  aspect-ratio: var(--cols, 12) / var(--rows, 12);
-  background: var(--grid-line);
-  border: 2px solid var(--grid-block);
-  touch-action: manipulation;   /* kills double-tap zoom, keeps pinch */
+.grid-panel > .tb-game .tb-controls .tb-readouts{
+  flex:0 0 auto;gap:10px;margin-right:2px;padding-right:10px;
+  border-right:1px solid var(--line);
 }
-
-.fx-cell {
-  position: relative;
-  background: var(--grid-cell);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--body);
-  font-weight: 600;
-  font-size: clamp(0.7rem, 3.2vw, 1.1rem);
-  line-height: 1;
-  color: var(--ink);
-  user-select: none;
-  cursor: pointer;
+/* min-width:0 lets a button shrink below its own label, and the label does not
+   shrink with it — "Menu", "Today's puzzle" and "New puzzle" ended up drawn on
+   top of one another as "MENUODAY'S PULEW PUZZLE". A floor wide enough for the
+   short labels, and anything still too long is clipped rather than allowed to
+   escape the button it belongs to. */
+.grid-panel > .tb-game .tb-controls .btn{
+  flex:1 1 0;min-width:74px;padding:0 8px;
+  overflow:hidden;text-overflow:ellipsis;
 }
-.fx-block { background: var(--grid-block); cursor: default; }
-
-/* NOT --ink-faint, WHICH FAILS. Measured in the browser rather than guessed:
-   at 0.5em the number renders 8.8px, and --ink-faint (#8A968D) on a lit cell
-   (--sel-word, #CBE7E5) is 2.4:1 — under 3:1, at a size where 4.5:1 is what is
-   actually wanted. --ink-soft takes the same pairing to 4.55:1. This is the
-   football crossword's faint zoom controls again, which shipped at about
-   2.7:1 and had to be redone; a number a player cannot read is the one piece of
-   furniture a crossword cannot do without. */
-.fx-num {
-  position: absolute;
-  top: 1px; left: 2px;
-  font-size: 0.55em;
-  font-weight: 600;
-  color: var(--ink-soft);
-  pointer-events: none;
+/* Below this the full labels do not fit however the row is arranged, so the
+   short ones take over: "Today" rather than "Today's puzzle". The mechanism
+   already existed and was never switched on here. */
+@media (max-width:1100px){
+  .grid-panel > .tb-game .tb-controls .lbl-full{display:none}
+  .grid-panel > .tb-game .tb-controls .lbl-short{display:inline}
 }
-
-.fx-lit { background: var(--sel-word); }
-.fx-cursor { background: var(--sel); }
-
-/* RIGHT AND WRONG ARE NOT COLOUR ALONE. A cell that says only "green" says
-   nothing to a player who cannot separate it from red, so the verdict also
-   changes the weight and draws a rule under the wrong ones. */
-.fx-right { background: var(--correct); color: var(--correct-ink); }
-.fx-wrong {
-  background: var(--wrong-bg);
-  color: var(--wrong-ink);
-  text-decoration: underline;
-  text-decoration-thickness: 2px;
-  text-underline-offset: 2px;
+/* justify-content, not just padding:0. The base .btn is an inline-flex with no
+   justification, so zeroing the padding left the icon against the left edge
+   rather than centring it in the square. */
+.grid-panel > .tb-game .tb-controls .icon-btn{
+  flex:0 0 44px;padding:0;justify-content:center;
+}
+/* Readings, not controls: no border, no card face, whatever the row around
+   them is wearing. */
+.tb-controls .tb-readouts .match-clock,
+.tb-controls .tb-readouts .live-chip{
+  border:none;background:none;border-radius:0;padding:0;min-width:0;
+}
+.tb-controls .tb-readouts .match-clock{font-size:22px;text-align:left}
+.tb-controls .tb-readouts .match-clock small{font-size:9px;letter-spacing:.1em}
+.tb-controls .tb-readouts .live-chip{font-size:12px;white-space:nowrap}
+@media (max-width:899px){
+  /* Readings on their own line, controls beneath. The dividing rule goes with
+     the side-by-side arrangement it was dividing. */
+  .grid-panel > .tb-game .tb-controls .tb-readouts{
+    flex:0 0 100%;border-right:none;padding-right:0;margin-right:0;
+    justify-content:flex-start;gap:14px;
+  }
+  .grid-panel > .tb-game .tb-controls .btn{flex:1 1 auto;min-width:84px}
+}
+@media (max-width:560px){
+  .grid-panel > .tb-game .tb-controls .btn{min-width:0;padding:0 6px;font-size:12.5px}
+  .tb-controls .tb-readouts .match-clock{font-size:19px}
 }
 
-/* ---- the clue card ------------------------------------------------------ */
+/* Help on one row. Three labelled groups side by side rather than three rows
+   stacked: the labels are what make "Check: Answer" and "Reveal: Answer"
+   different phrases, so they stay — they just sit beside their buttons now.
+   The groups wrap rather than overflow, so on a narrow screen this becomes two
+   or three rows again by itself, which is the right answer there: five buttons
+   and three labels do not fit across a phone at a readable size. */
+.grid-panel > .tb-help #helpRow{
+  display:flex;flex-wrap:wrap;align-items:center;gap:4px 14px;width:100%;
+}
+@media (max-width:899px){
+  .grid-panel > .tb-help .tb-row{flex:1 1 100%}
+  .grid-panel > .tb-help .tb-row .btn{flex:1 1 0;min-width:0}
+}
+.grid-panel > .tb-help .tb-row{
+  display:flex;align-items:center;gap:5px;margin:0;grid-template-columns:none;
+}
+.grid-panel > .tb-help .tb-row .btn{min-width:0;padding:0 9px}
+.grid-panel > .tb-help .tb-sub{min-width:0;flex:0 0 auto}
 
-.fx-cluecard {
-  display: grid;
-  grid-template-columns: 2.4rem 1fr 2.4rem;
-  align-items: center;
-  gap: 8px;
-  margin: 10px 0;
-  padding: 8px 4px;
-  border-top: 1px solid var(--line);
+/* The full lists, closed by default and opened when wanted. */
+/* Listed with the other panel children rather than styled on its own, so the
+   column measure is stated once. */
+.clues-block{width:100%;max-width:var(--board-w,100%);margin:8px auto 0;
+  box-sizing:border-box;display:flex;flex-direction:column;align-items:center}
+/* A heading, not a control. */
+.clues-head{
+  font-family:var(--disp);font-weight:700;font-size:11px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-faint);
+  /* Capped and centred on the same measure as the columns it heads, rather
+     than inheriting whatever width the block happens to have.
+
+     It was taking the block's full width while .clues capped itself to the
+     board, so on a tablet the label sat at the page edge with the columns
+     starting several hundred pixels to its right — a heading pointing at
+     nothing. Sharing the measure means the two cannot drift apart, whatever
+     the block around them does. */
+  width:100%;max-width:var(--board-w,100%);margin:0 auto 2px;
+}
+.clues-block .clues{margin-top:10px}
+
+.toolbar{
+  display:flex;align-items:stretch;justify-content:flex-start;
+  gap:10px;flex-wrap:wrap;
+  max-width:1180px;margin:10px auto 4px;padding:9px 11px;
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r-lg);
+  box-shadow:0 1px 2px rgba(18,59,39,.05);
+}
+.tb-group{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+/* One box, three times. Everything in the banner is either a readout or a
+   control, and both live in a bordered, labelled panel of the same shape —
+   which is what makes the row scan as a dashboard rather than as three
+   unrelated widgets with white space between them. justify-content is
+   flex-start, not space-between: the old rule pushed the groups to the edges
+   and put the gap in the middle, which is the white space complained of. */
+.tb-box{
+  flex:0 1 auto;display:flex;flex-direction:column;align-items:flex-start;gap:5px;
+  padding:7px 10px 8px;border:1px solid var(--line);border-radius:var(--r-md);
+  background:var(--paper);
+}
+.tb-readouts,.tb-controls{display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+/* Readouts are not controls, and must not dress like them. The clock and the
+   solved count wore the same card face and border as the buttons beside them,
+   so the only way to find out what was pressable was to press it. */
+.tb-match .match-clock,.tb-match .live-chip{
+  border:none;background:none;box-shadow:none;padding:0;
+}
+/* Controls keep a face and an edge, and all of them are the same size. Same
+   size means the same width, not the same minimum: min-width alone let each
+   button size to its own label, so "Today's puzzle" came out half again as
+   wide as "Menu" and the row read as three unrelated controls. flex:1 1 0
+   gives every button an identical basis and an equal share of what is left,
+   so the widths match whether three buttons are showing or four.
+   The pause icon is the one exception: it is square by design. */
+.tb-controls .btn{flex:1 1 0;min-width:104px;justify-content:center}
+.tb-controls .icon-btn{flex:0 0 auto;min-width:44px;width:44px}
+/* Help stacks into columns by kind: checking, revealing, substituting.
+   Two rows, filled column-first, so Check sits above Check all and Reveal
+   letter above Reveal answer without needing a wrapper per pair. */
+/* Label, then its two buttons. Equal columns so Check and Reveal line up
+   under each other and read as a pair rather than a queue. */
+.tb-row{
+  display:grid;grid-template-columns:auto minmax(0,1fr) minmax(0,1fr);
+  gap:6px;align-items:center;margin-bottom:5px;
+}
+.tb-row:last-child{margin-bottom:0}
+.tb-sub{
+  font-family:var(--disp);font-weight:700;font-size:10px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink-faint);min-width:46px;
+}
+/* The free row has one button, which sits under the first column of buttons
+   rather than stretching across both. */
+.tb-row-sub .btn{grid-column:2 / span 2}
+@media (max-width:560px){
+  /* Label above its pair when there is no room for it alongside. */
+  .tb-row{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}
+  .tb-sub{grid-column:1 / -1;min-width:0}
+  .tb-row-sub .btn{grid-column:1 / span 2}
+}
+/* Pause is an icon: it is a single recognisable control and the word was
+   taking the space of a label it did not need. */
+.icon-btn{
+  width:38px;padding:0;
+  /* Both axes, and stated here rather than inherited: this button holds a
+     glyph, not a word, so it has no text baseline to fall back on. */
+  display:inline-flex;align-items:center;justify-content:center;
+}
+.icon-btn .ic{width:15px;height:15px;fill:currentColor;display:block;flex:0 0 auto}
+.icon-btn .ic-play{display:none}
+.icon-btn.playing .ic-pause{display:none}
+.icon-btn.playing .ic-play{display:block}
+/* The live table belongs directly under the board, at exactly the board's
+   width. It sat in the banner beside the clock — which is where the banner's
+   width came from — and "how is this going" was a long way from the thing it
+   is about. --board-w is calculated by fitCells() from the puzzle's own
+   dimensions, never measured off the painted board, so the table's edges and
+   the board's cannot drift apart. */
+.tb-table{
+  display:flex;flex-direction:column;gap:4px;
+  padding:7px 10px 6px;border:1px solid var(--line);border-radius:var(--r-md);
+  background:var(--paper);box-sizing:border-box;
+}
+.grid-panel > .board-table{
+  width:min(100%,var(--board-w,100%));align-self:center;margin:0;
+  /* The grid is centred on a pitch built for the widest possible board, so a
+     narrow puzzle sits in the middle of the turf rather than against one edge. */
+  justify-items:center;
+}
+.tb-table table.league{font-size:12.5px}
+.tb-table table.league td{padding:2px 6px}
+.tb-table table.league tr.you td{padding-top:4px;padding-bottom:4px}
+.tb-table table.league tr.you td.club{font-size:13.5px}
+.tb-table table.league tr.you td.pts{font-size:14px}
+.tb-table .season-tag{float:none;padding:0;margin-left:4px;font-size:11px}
+/* The help group is fenced off and labelled: these are the buttons that cost
+   points, and that should be legible before you press one, not after. It now
+   shares .tb-box with the other two groups and only keeps what is its own. */
+.tb-help{position:relative}
+.tb-label{
+  font-family:var(--disp);font-weight:600;font-size:9.5px;letter-spacing:.16em;
+  text-transform:uppercase;color:var(--ink-faint);line-height:1;
+}
+/* The help label doubles as the collapse control on phones. It stays a real
+   button for keyboard and screen-reader users at every width; above 640px it
+   simply has nothing to collapse. */
+button.tb-label{
+  background:none;border:none;padding:0;cursor:default;text-align:left;
+}
+@media (max-width:640px){ button.tb-label{cursor:pointer} }
+/* Scoped to both homes. This was .toolbar-only, and when the banner was
+   dissolved the buttons in the board column stopped being flex at all — which
+   is why the pause icon sat off-centre on both axes: justify-content and
+   align-items have nothing to act on inside an inline-block. */
+.toolbar .btn,
+.grid-panel .tb-box .btn{
+  padding:0 12px;min-height:44px;font-size:14px;white-space:nowrap;
+  display:inline-flex;align-items:center;justify-content:center;gap:4px;
+}
+.tb-sep{width:1px;height:26px;background:var(--line);margin:0 3px}
+.lbl-short{display:none}
+.lbl-busy{display:none}
+.btn.busy .lbl-full,.btn.busy .lbl-short{display:none}
+.btn.busy .lbl-busy{display:inline}
+.timer{
+  font-family:var(--disp);font-weight:600;font-size:19px;letter-spacing:.05em;
+  min-width:66px;text-align:center;color:var(--ink-soft);
+  border:1px solid var(--line);border-radius:var(--r-sm);background:var(--card);
+  padding:5px 10px;font-variant-numeric:tabular-nums;
+}
+.btn{
+  font-family:var(--disp);font-weight:600;font-size:15px;letter-spacing:.06em;
+  text-transform:uppercase;border-radius:var(--r-sm);padding:8px 16px;
+  transition:background var(--t-fast) var(--ease),color var(--t-fast) var(--ease),border-color var(--t-fast) var(--ease),box-shadow var(--t-fast) var(--ease);
+}
+.btn.secondary{border:1px solid var(--pitch);background:var(--card);color:var(--pitch)}
+.btn.secondary:hover{background:var(--sel-word)}
+/* Every control carries a visible edge. The old ghost buttons had a transparent
+   border and read as disabled text next to the solid primary. */
+.btn.outline{border:1px solid var(--line);background:var(--card);color:var(--ink-soft)}
+.btn.outline:hover{border-color:var(--ink-faint);color:var(--ink)}
+.btn.ghost{border:1px solid transparent;background:none;color:var(--ink-soft)}
+.btn.ghost:hover{border-color:var(--line);color:var(--ink)}
+.btn.primary{border:1px solid var(--pitch);background:var(--pitch);color:var(--on-pitch)}
+.btn.primary:hover{background:var(--pitch-hover);border-color:var(--pitch-hover)}
+.btn:disabled{opacity:.5;cursor:default}
+.btn .cost{
+  font-size:10.5px;font-weight:600;letter-spacing:.02em;
+  padding:1px 5px;border-radius:var(--r-pill);background:var(--paper);
+  color:var(--ink-faint);font-variant-numeric:tabular-nums;
+}
+.btn.secondary .cost{background:var(--sel-word);color:var(--pitch)}
+.btn.primary .cost{background:rgba(255,255,255,.18);color:var(--on-pitch)}
+.live-chip{
+  font-family:var(--disp);font-weight:600;font-size:14px;letter-spacing:.04em;
+  color:var(--pitch-ink);border:1px solid var(--line);border-radius:var(--r-sm);
+  background:var(--card);padding:5px 10px;font-variant-numeric:tabular-nums;
+  white-space:nowrap;display:flex;align-items:center;gap:7px;
+}
+.live-chip .pos{font-size:15px;color:var(--pitch-ink)}
+.live-chip .pts{color:var(--ink-soft)}
+.live-chip .club{
+  max-width:150px;overflow:hidden;text-overflow:ellipsis;
+}
+@media (max-width:1100px){ .live-chip .club{max-width:96px} }
+
+/* ============ LAYOUT ============ */
+/* One column, board first. The clue lists used to sit in a right-hand column
+   beside the grid, which made the page read as a dashboard with a crossword in
+   it; they now run underneath, and the board takes the full gameplay width. */
+.stage{
+  display:flex;flex-direction:column;align-items:center;gap:22px;
+  max-width:1140px;margin:0 auto;padding:8px 16px 32px;width:100%;
+}
+.grid-panel{display:flex;flex-direction:column;align-items:center;gap:12px;
+  min-width:0;width:100%;position:relative}
+.grid-wrap > .grid{position:relative;z-index:1}
+
+/* selected clue strip */
+/* Fixed height, not auto. A one-line clue and a three-line clue used to give
+   the card different heights, which moved the whole board down the page between
+   answers — and moved it again when fitCells() re-measured the chrome. Sized to
+   hold the longest clue in the bank (121 chars) plus its letter bank; anything
+   longer scrolls rather than being clipped, because a clipped clue is unsolvable. */
+.now-clue{
+  width:100%;background:var(--card);border:1px solid var(--line);
+  border-left:4px solid var(--pitch);border-radius:var(--r-md);
+  padding:7px 9px;display:flex;align-items:center;gap:8px;
+  height:96px;box-sizing:border-box;
+}
+.nc-main{
+  flex:1;min-width:0;display:flex;flex-wrap:nowrap;align-items:center;
+  gap:5px 14px;                       /* row gap, column gap */
+  max-height:100%;overflow:hidden;
+  /* Clear of the chevrons at both edges. They sit 8px in and draw about 14px
+     wide, so without this a long clue's last line ran underneath the one on
+     the right — the mark got bigger and so did the collision. */
+  padding:0 22px;
+}
+/* Number and clue share the space the slots do not take. */
+.nc-clue{
+  flex:1 1 auto;min-width:0;display:flex;flex-wrap:wrap;align-items:baseline;
+  gap:2px 10px;
+}
+/* Nothing to make room for now, so the sentence gets the card. This is what
+   the reservation was taking: 390px of a strip capped to the board width, on
+   every clue whether the answer needed it or not. */
+.grid-panel > .now-clue .nc-main{flex-wrap:nowrap}
+.grid-panel > .now-clue .nc-clue{flex:1 1 100%}
+/* The slots are a fixed column, not whatever is left after the words. The
+   board is bounded at 15 cells (MAX_DIM in engine.js), so the widest answer
+   that can ever be placed is 15 letters with up to three enumeration gaps —
+   and that width is reserved for every clue, whether it needs it or not.
+   Before this the boxes started wherever the sentence happened to end, which
+   moved them across the card on every clue.
+   Derived rather than typed: change --bank-cell and the reservation follows. */
+:root{
+  /* Smaller than they were. The reservation is fifteen boxes wide whatever the
+     answer, and at 26px that claimed 473px of a strip now capped to the board
+     — leaving under 200px for the clue itself, which is what pushed long clues
+     to four lines and off the bottom of the card. The boxes are read one at a
+     time; the sentence is read whole, so the sentence gets the width. */
+  --bank-cell:21px;
+  --bank-gap:3px;
+  /* Slots reserved for the longest answer in *this* puzzle, not the longest
+     the engine could ever place. The point of the reservation is that the
+     boxes start in the same place on every clue — which only has to hold
+     within one puzzle, since that is the only time you switch between them.
+     Reserving fifteen when the longest answer is nine spent 130px of a strip
+     now capped to the board, and the clue text paid for it. Falls back to
+     fifteen before a puzzle is loaded. */
+  --bank-slots:15;
+  --bank-w:calc(var(--bank-slots) * var(--bank-cell) + (var(--bank-slots) - 1) * var(--bank-gap) + 27px);
+}
+/* Long clues are shrunk to fit rather than clipped or scrolled. The card
+   height is fixed so the board never moves between clues; the text scales
+   instead. A clue you have to scroll to read is a clue you will not read. */
+.nc-text.long{font-size:15px;line-height:1.35}
+.nc-text.xlong{font-size:13.5px;line-height:1.3}
+/* Four lines became reachable once the strip was capped to the board width,
+   and the card is a fixed 96px: "with Chile runners-up" was sliced in half
+   horizontally by the bottom edge. A clue cut off mid-word is unsolvable, not
+   untidy, so there is a step below xlong rather than a hard stop at three. */
+.nc-text.xxlong{font-size:12px;line-height:1.25}
+@media (max-width:1099px){ :root{--bank-cell:19px} }
+/* Below this there is not enough width for a sentence and fifteen boxes side
+   by side, so the slots take their own row. They still start in the same place
+   on every clue — the left edge — which is the point of the reservation. */
+@media (max-width:900px){
+  .now-clue{height:118px}
+  .nc-main{flex-wrap:wrap}
+  .bank{flex:0 0 100%;width:100%}
+}
+@media (max-width:560px){ .now-clue{height:132px} :root{--bank-cell:17px} }
+.nc-meta{
+  font-family:var(--disp);font-weight:700;font-size:15px;letter-spacing:.06em;
+  color:var(--pitch);white-space:nowrap;flex:none;
+}
+.nc-text{font-size:16px;font-weight:500;color:var(--ink);flex:1 1 auto;min-width:0}
+/* Its own strip, the same width as everything else in the column and only as
+   tall as the boxes need. The clue card above is a fixed height because the
+   board must not jump between clues; the boxes have no such constraint, and
+   sharing that height was what forced the text to be scaled to fit. */
+.bank-strip{
+  /* Two stated columns rather than two things sharing a row: two thirds for the
+     answer, one third for the clock and the count. Letting them negotiate meant
+     a long answer took the space and pushed the readings outside the rounded
+     border — and even when it fitted, the boxes shifted about as the clock
+     passed a digit. Stated tracks cannot do either: the boxes wrap inside their
+     own column and the readings stay where they are. */
+  /* ONE TRACK NOW. The second held the clock and the score, which have moved
+     to the action row above the board — the strip is the letter boxes and
+     nothing else, which is what it was named for. */
+  display:grid;grid-template-columns:minmax(0,1fr);align-items:center;
+  gap:8px 12px;overflow:hidden;
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);
+  padding:6px 9px;margin:0 auto 8px;box-sizing:border-box;
+  min-height:calc(var(--bank-cell) + 18px);
+}
+.bank{
+  /* Wraps between words, not between letters. The gap between groups is the
+     word break the enumeration describes, so it no longer needs an element of
+     its own. min-width:0 so a long answer wraps inside its column rather than
+     widening it — a grid track will otherwise grow to fit its contents. */
+  display:flex;gap:4px 14px;flex-wrap:wrap;align-items:center;
+  justify-content:flex-start;min-width:0;
+}
+.bank-word{display:flex;gap:var(--bank-gap);align-items:center}
+/* The readings hold their width so the boxes do not shift left and right as
+   the clock ticks past a digit or the count reaches ten. */
+.bank-strip .tb-readouts{
+  /* Its own column now, so it needs no pushing: right-aligned within it, with
+     the rule marking the boundary. */
+  display:flex;align-items:center;justify-content:flex-end;gap:14px;
+  min-width:0;padding-left:18px;border-left:1px solid var(--line);
+}
+/* Readings, not controls: no card face, whatever the base rules say. Written
+   with the strip and the wrapper in the selector so it beats anything scoped
+   less tightly, rather than relying on source order. */
+.bank-strip .tb-readouts .match-clock,
+.bank-strip .tb-readouts .live-chip{
+  border:none;background:none;border-radius:0;padding:0;min-width:0;box-shadow:none;
+}
+.bank-strip .tb-readouts .match-clock{font-size:21px;text-align:right;line-height:1}
+.bank-strip .tb-readouts .match-clock small{font-size:9px;letter-spacing:.1em}
+.bank-strip .tb-readouts .live-chip{font-size:12px;white-space:nowrap}
+/* Nothing in the column may be wider than the column.
+   The board can be 284px on a short landscape phone, and neither a clock beside
+   a count nor a twenty-club league table fits in that — both burst the panel
+   and widened the page to 685px, which is horizontal scrolling on a screen
+   568px across. They are allowed to scroll inside themselves instead. */
+.grid-panel > *{max-width:100%;min-width:0}
+.grid-panel > .tb-table{overflow-x:auto}
+.bank-strip{min-width:0}
+.bank-strip > *{min-width:0}
+
+@media (max-width:700px){
+  /* A third of a narrow screen cannot hold "15:34 elapsed" beside a count.
+     Stacking is the only arrangement that fits, at any height. */
+  .bank-strip{grid-template-columns:1fr;gap:8px}
+  .bank-strip .tb-readouts{
+    justify-content:flex-start;padding-left:0;padding-top:8px;
+    border-left:none;border-top:1px solid var(--line);
+  }
+}
+
+@media (max-width:560px){
+  .bank-strip .tb-readouts{
+    justify-content:flex-start;padding-left:0;padding-top:8px;
+    border-left:none;border-top:1px solid var(--line);
+  }
+  .bank-strip .tb-readouts{gap:10px}
+  .bank-strip .tb-readouts .match-clock{font-size:18px}
+  .bank-strip .tb-readouts .live-chip{font-size:11px}
+}
+.bank-cell{
+  width:var(--bank-cell);height:calc(var(--bank-cell) + 4px);
+  border:1px solid var(--line);border-radius:3px;
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--disp);font-weight:600;
+  font-size:calc(var(--bank-cell) * 0.65);color:var(--ink);
+  background:var(--card);flex:none;
+}
+.bank-cell.empty{
+  /* Dashed on --line was 1.26:1 against the page: the slots were there but
+     could not be seen, so the enumeration read as empty space. */
+  border-style:dashed;border-color:var(--slot);background:var(--slot-fill);
+}
+.bank-cell.wrong{background:var(--wrong-bg);color:var(--wrong-ink);border-color:var(--wrong)}
+.bank-cell.gold{background:var(--gold);color:var(--gold-ink);border-color:var(--gold)}
+.bank-cell.gold-ans{background:var(--revealed-bg);color:var(--gold-ink);border-color:var(--revealed-bg)}
+.bank-cell.here{box-shadow:inset 0 0 0 2px var(--pitch)}
+/* Tapping a box moves the caret to that letter, so it takes a press cleanly:
+   no text selection on a double tap, no grey flash from the platform.
+   NOT ENLARGED TO 44px, and that was tried and undone. Making the element the
+   tap size the control rule asks for grew the strip from 86px to 104px and
+   took all eighteen off the board frame — which is the FIRST thing the
+   player who asked for this complained about ("only that little slit to
+   operate in"). It is the same trade the on-screen keys are exempted for, and
+   it comes out the same way. The board's own squares are the precedent and
+   they are 19px on this phone: a square is small, labelled, and tapped, and a
+   bank box is a second view of a square. */
+.bank-cell{cursor:pointer;-webkit-user-select:none;user-select:none;
+  -webkit-tap-highlight-color:transparent}
+
+/* A SECOND TAP IN THE SAME PLACE IS A SECOND TAP, NOT A ZOOM.
+   iOS reads two quick taps near the same point as double-tap-to-zoom, and
+   every control here is one a player taps twice in a row on purpose: the clue
+   card's halves to step through clues, a letter box to move along a word, the
+   plus to zoom in twice. Reported on a phone — tapping the clue card a few
+   times blew the page up to a corner of the keyboard.
+   The grid has carried touch-action:manipulation for exactly this reason; what
+   it does NOT cover is everything that has become a tap target around it. It
+   keeps panning and pinch-zoom and drops only the double-tap gesture, which is
+   why the board's own frame can keep touch-action:none for its script-driven
+   pan and pinch and this changes nothing there.
+   The on-screen keyboard is NOT in this list and has the same exposure — two
+   quick taps on the same key is how a double letter is typed. Its keys are in
+   shared/xi-keys.css, so that is a change to the shared layer and to every
+   game that loads it, not to this one. */
+/* THE SURFACE, NOT A LIST OF CONTROLS. This named the clue card, the arrows,
+   the letter boxes, the toolbar buttons and the zoom controls — and a tap
+   that landed BETWEEN any of them, on the panel behind the card or the gap
+   above the keyboard, was still an uncovered double-tap. It was reported again
+   on v003s for exactly that reason: the list was right about every element on
+   it and the page is not a list of elements.
+   On the body it covers the whole class at once and the rules below it can go.
+   `manipulation` disables double-tap-to-zoom and NOTHING else — pinch-zoom
+   is explicitly preserved by the spec, which is the line this stops at: a
+   player who needs to magnify a 15px clue still can. The board frame keeps its
+   own touch-action:none, which is more restrictive and so still wins there,
+   and it earns that by implementing pan and pinch itself. */
+body{ touch-action:manipulation; }
+
+.bank-gap{width:9px}
+.nc-arrow{min-height:44px;min-width:44px;
+  background:none;border:1px solid var(--line);border-radius:var(--r-sm);
+  color:var(--ink-soft);font-size:17px;flex:none;
+}
+.nc-arrow:hover{background:var(--sel-word);color:var(--pitch)}
+
+/* ============ GRID ============ */
+/* ============ PITCH BACKDROP ============
+   A helicopter view of the ground behind the board: mown bands and full
+   markings, drawn to real 105x68 proportions. Deliberately low-contrast — §12
+   keeps the grid as the main visual object, and an earlier saturated green was
+   rejected for reading as a pitch where a pitch was not wanted. Here it is
+   wanted, so it is a soft field the near-black grid sits on top of, not a
+   colour field competing with it. Toggle in the footer; off is v05j exactly. */
+/* The board: a landscape box of turf with the puzzle set inside it. Horizontal
+   padding is deliberately larger than vertical, so the pitch reads as a pitch
+   rather than a square, and the markings have room to show around the grid.
+   Absolute positioning keeps the backdrop out of fitCells()'s measurement. */
+.grid-wrap{
+  /* The pitch hugs the grid rather than spanning the content width. Full width
+     looked right in the abstract and wrong on a real iPad: the crossword sat
+     small in the middle of an enormous pitch, which is the opposite of the
+     board being the focus. The turf is a margin around the board, not a field
+     the board floats on. */
+  position:relative;z-index:1;align-self:center;max-width:100%;
+  padding:clamp(9px,1.6vw,20px) clamp(14px,2.2vw,30px);
+}
+/* Wide screens: the pitch is a fixed frame and the board sits in the middle of
+   it. --board-w is built for the widest board the generator makes, so the turf
+   is the same size whichever puzzle loads and every block below lines up with
+   it. The comment above records the opposite decision, taken when the pitch
+   stretched to an arbitrary content width and left the board looking lost — a
+   fixed frame is a different thing, and it is what the column needs to have
+   one edge.
+   Not on narrow screens: there the frame would be wider than the display and
+   everything would scale down to fit turf nobody asked for, so the pitch goes
+   back to hugging the board. */
+@media (min-width:900px){
+  .grid-wrap{width:min(100%,var(--board-w,100%));box-sizing:border-box}
+  .grid-wrap > .grid{width:max-content;margin-left:auto;margin-right:auto}
+}
+.pitch-bg{
+  position:absolute;inset:0;z-index:0;border-radius:var(--r-lg);
+  overflow:hidden;pointer-events:none;
+  /* One flat step off paper. It was two saturated greens in stripes, and the
+     white cells and near-black blocks — the game — were competing with the
+     field they sat on. The pitch lines stay, drawn in the same hairline, so
+     it still reads as a pitch without reading as a lawn. */
+  background:var(--grid-field);
+  box-shadow:inset 0 0 0 1px var(--grid-field-line);
+}
+/* On phones the turf margin would come straight out of the cells, and §12.5
+   protects cell size above decoration. Keep a margin, but a thin one. */
+@media (max-width:700px){ .grid-wrap{padding:7px 9px} }
+.pitch-bg svg{width:100%;height:100%;display:block}
+.pitch-bg .pl{stroke:var(--grid-field-line)}
+.pitch-bg .pl .spot{fill:var(--grid-field-line);stroke:none}
+/* Pitch off restores the newspaper board: painted blocks, framed grid, no turf.
+   The blocks carry the grid's structure in that mode, so they must come back. */
+body.no-pitch .pitch-bg{display:none}
+body.no-pitch .grid-wrap{padding:2px}
+body.no-pitch .grid{
+  background:var(--card);border:2px solid var(--pitch-deep);border-radius:3px;
+  box-shadow:0 1px 3px rgba(18,59,39,.08);
+}
+body.no-pitch .cell.block{background:var(--grid-block);border-color:var(--grid-block)}
+.grid{
+  display:grid;gap:0;background:transparent;
+  border:none;border-radius:2px;
+  touch-action:manipulation;user-select:none;-webkit-user-select:none;
+}
+.cell{
+  width:var(--cell);height:var(--cell);position:relative;background:var(--grid-cell);
+  border-right:1px solid var(--grid-line);border-bottom:1px solid var(--grid-line);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--disp);font-weight:600;
+  font-size:calc(var(--cell) * .54);color:var(--ink);cursor:pointer;
+  /* A letter arriving, a square going green on check or red on a wrong
+     letter, the word lighting up as you move onto it: all state changes,
+     all at --t-base, so the board answers rather than snaps. */
+  transition:background var(--t-base) var(--ease),color var(--t-base) var(--ease),border-color var(--t-fast) var(--ease);
+}
+/* KEYBOARD. Every control shows the family's ring on focus-visible. The
+   grid's own focus is the active square, which already carries a ring of
+   its own, so the outline is not doubled there. */
+.btn:focus-visible,.icon-btn:focus-visible,.tbar-btn:focus-visible,
+[role="menuitem"]:focus-visible,select:focus-visible,input:focus-visible,
+.chip:focus-visible,.sheet button:focus-visible{outline:none;box-shadow:var(--ring)}
+
+/* Blocked squares are simply not painted: the pitch behind the board is the
+   puzzle's background, so the turf shows through them. This reverses the
+   newspaper convention in §12 deliberately — the near-black block was the
+   thing making the grid read as newsprint rather than as a football game. */
+.cell.block{background:transparent;border-color:transparent;cursor:default}
+.cell .num{
+  position:absolute;top:1px;left:3px;
+  font-family:var(--body);font-weight:600;font-size:calc(var(--cell) * .22);
+  color:var(--ink-faint);
+}
+.cell.in-word{
+  background:var(--sel-word);
+  /* Darker separators on the selected word.
+
+     --cell-line is tuned for a white cell, where it measures 1.30:1 — quiet on
+     purpose. Against the deepened selection it fell to 1.06:1, a six percent
+     difference, so the letters ran together into one bar and you could not see
+     where one square ended and the next began.
+
+     2.05:1 here: still a hairline rather than a grid of boxes, but a hairline
+     you can actually see. */
+  border-right-color:var(--sel-line);
+  border-bottom-color:var(--sel-line);
+}
+/* The neighbours matter too: a cell to the left of the selection draws the
+   border between them, so without this the first separator of the word is the
+   only faint one. */
+.cell.in-word + .cell:not(.in-word){border-left-color:var(--sel-line)}
+/* Colour and a ring, not colour alone. A fill difference is the first thing
+   lost to a dim screen, sunlight, or colour vision deficiency — the ring
+   carries the same information as a shape. */
+.cell.active{
+  background:var(--sel);
+  /* THE ACTIVE LETTER IS RINGED IN INDIGO, not in the family green. The ring
+     was --pitch-deep, which is the same green as the hero, the buttons and a
+     correct answer's neighbourhood — so "the square I am typing in" was drawn
+     in the colour that everywhere else means "this is right". Indigo belongs
+     to nothing else on the board, which is what makes it readable at a
+     glance. The ring itself is unchanged: colour was never carrying this
+     alone. */
+  box-shadow:inset 0 0 0 3px var(--sel-ring);
+  /* The active square has a darker fill again, so the separator that works on
+     the rest of the word disappears into it. Darker still here — the ring
+     already marks the square, this is only about seeing its edges. */
+  border-right-color:var(--sel-ring);
+  border-bottom-color:var(--sel-ring);
+}
+.cell.wrong{color:var(--wrong-ink);background:var(--wrong-bg)}
+.cell.wrong::after{
+  content:"";position:absolute;inset:auto 7px 5px 7px;height:2px;border-radius:2px;
+  background:var(--wrong);
+}
+/* Reveal Letter — locked gold cell (persists after completion) */
+/* A SOLVED WORD. Painted the instant the server says it is right — the same
+   instant the counter moves — and locked from then on. Declared after .active
+   and .wrong so it wins their fills, and before .gold so a revealed square
+   still says it was revealed: correct is what you did, gold is what you were
+   told. The ring on the active square is a box-shadow, so it still shows if
+   you tap a locked square, as it does on gold. */
+.cell.correct{background:var(--correct);color:var(--correct-ink)}
+.cell.correct .num{color:var(--correct-ink)}
+.cell.gold{background:var(--gold);color:var(--gold-ink)}
+.cell.gold .num{color:var(--gold-ink)}
+.cell.gold::before{
+  content:"";position:absolute;top:3px;right:3px;width:5px;height:5px;border-radius:50%;
+  background:var(--xi-ink);
+}
+/* Reveal Answer — locked, related but lighter treatment */
+.cell.gold-ans{background:var(--revealed-bg);color:var(--gold-ink)}
+.cell.gold-ans .num{color:var(--xi-ink)}
+.cell.gold-ans::before{
+  content:"";position:absolute;top:3px;right:3px;width:5px;height:5px;border-radius:50%;
+  background:var(--draw);
+}
+.cell.gold.active,.cell.gold-ans.active{box-shadow:inset 0 0 0 2px var(--pitch-deep)}
+/* softened multi-word separators (max 2px) */
+.cell.just-solved{animation:solved var(--t-slow) var(--ease)}
+/* The flash lands on the colour the word now keeps, rather than fading back
+   to white under a square that then snaps green. */
+@keyframes solved{0%{background:var(--sel)}100%{background:var(--correct)}}
+/* 3px, and in the pitch green rather than a grey. A word break is structure,
+   not decoration — it should read as firmly as the grid edge does. */
+.cell.brk-r{border-right:3px solid var(--wordbreak)}
+.cell.brk-b{border-bottom:3px solid var(--wordbreak)}
+/* The break marker on a selected word.
+
+   --wordbreak is a green, and so is the selection since it was deepened, so on
+   the answer being typed the divider stopped reading as a divider and became
+   part of the highlight — exactly where knowing "(5,4)" runs out and the
+   second word begins matters most.
+
+   Ink rather than green on those cells: 11.9:1 on the selected word and 7.9:1
+   on the active square, against 4.7 and 3.1 before, and a different hue from
+   everything around it rather than a darker shade of the same one. */
+.cell.in-word.brk-r{border-right-color:var(--ink)}
+.cell.in-word.brk-b{border-bottom-color:var(--ink)}
+.cell.active.brk-r{border-right-color:var(--ink)}
+.cell.active.brk-b{border-bottom-color:var(--ink)}
+
+.stage.prestart{filter:blur(7px);pointer-events:none;user-select:none}
+.kick-card{
+  background:var(--card);border-radius:var(--r-lg);max-width:340px;width:100%;
+  padding:26px 26px 24px;text-align:center;border-top:6px solid var(--pitch);
+}
+.kick-card h2{
+  font-family:var(--disp);font-weight:700;font-size:30px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--pitch-ink);
+}
+.kick-mode{
+  font-family:var(--disp);font-weight:600;font-size:13px;letter-spacing:.22em;
+  text-transform:uppercase;color:var(--ink-soft);margin:2px 0 16px;
+}
+.kick-club{display:flex;align-items:center;gap:8px;margin-bottom:18px;text-align:left}
+.kick-club label{
+  font-family:var(--disp);font-weight:600;font-size:12px;letter-spacing:.06em;
+  text-transform:uppercase;color:var(--ink-soft);white-space:nowrap;
+}
+.kick-club select{
+  flex:1;min-width:0;font-family:var(--body);font-size:13.5px;color:var(--ink);
+  border:1px solid var(--line);border-radius:var(--r-sm);background:var(--card);padding:6px 8px;
+}
+.kick-card .btn.primary{width:100%;font-size:18px;padding:11px}
+.filters{text-align:left;margin-bottom:14px}
+.filter-toggle{
+  width:100%;background:none;border:1px solid var(--line);border-radius:var(--r-sm);
+  color:var(--ink-soft);font-family:var(--disp);font-weight:600;font-size:12px;
+  letter-spacing:.1em;text-transform:uppercase;padding:7px 9px;text-align:left;
+}
+.filter-toggle span{float:right;color:var(--ink-faint);letter-spacing:0;text-transform:none;font-size:11.5px}
+.filter-body{display:none;padding:10px 2px 0}
+.filter-body.show{display:block}
+.filter-group{margin-bottom:10px}
+.filter-label{
+  display:block;font-family:var(--disp);font-weight:600;font-size:10.5px;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:5px;
+}
+.chips{display:flex;flex-wrap:wrap;gap:5px}
+.chip{
+  border:1px solid var(--line);border-radius:var(--r-pill);background:var(--card);
+  color:var(--ink-soft);font-family:var(--body);font-size:12px;padding:4px 10px;
+}
+.chip.on{background:var(--sel-word);border-color:var(--pitch);color:var(--pitch-ink);font-weight:600}
+.chip .n{opacity:.55;font-size:11px;margin-left:3px}
+.filter-warn{font-size:11.5px;color:var(--xi-ink);min-height:14px;line-height:1.4}
+.filter-warn.ok{color:var(--ink-faint)}
+.kick-note{font-size:12px;color:var(--ink-faint);margin-top:10px}
+.match-clock{
+  font-family:var(--disp);font-weight:700;font-size:30px;line-height:1;letter-spacing:.02em;
+  color:var(--pitch-ink);min-width:74px;text-align:center;
+  border:1px solid var(--line);border-radius:var(--r-md);background:var(--card);
+  padding:5px 12px 4px;font-variant-numeric:tabular-nums;
+}
+.match-clock small{display:block;font-size:10.5px;font-weight:600;letter-spacing:.14em;
+  color:var(--ink-faint);text-transform:uppercase;margin-top:2px}
+.match-clock.ht{color:var(--draw)}
+.form-strip{display:flex;align-items:center;gap:5px;margin-top:9px}
+.form-strip .lbl{font-family:var(--disp);font-weight:600;font-size:11px;letter-spacing:.18em;
+  color:var(--ink-faint);text-transform:uppercase;margin-right:2px}
+.form-mark{
+  width:21px;height:21px;border-radius:var(--r-xs);display:flex;align-items:center;justify-content:center;
+  font-family:var(--disp);font-weight:700;font-size:12px;color:#fff;
+}
+.form-mark.W{background:var(--pitch)}
+.form-mark.D{background:var(--draw)}
+.form-mark.L{background:var(--loss)}
+.stat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:9px;margin-bottom:18px}
+.stat{border:1px solid var(--line);border-radius:var(--r-md);padding:9px 8px;text-align:center;background:var(--paper)}
+.stat b{display:block;font-family:var(--disp);font-weight:700;font-size:23px;color:var(--pitch-ink);
+  font-variant-numeric:tabular-nums;line-height:1.1}
+.stat span{display:block;font-family:var(--disp);font-weight:600;font-size:10px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-soft);margin-top:3px}
+table.history{width:100%;border-collapse:collapse;font-size:13px}
+table.history td{padding:6px 6px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums}
+table.history td.club{font-weight:600;color:var(--ink)}
+table.history td.pos{text-align:right;font-weight:700;color:var(--pitch-ink)}
+table.history td.dim{color:var(--ink-faint)}
+.toast{
+  position:fixed;left:50%;transform:translateX(-50%) translateY(-8px);top:12px;z-index:60;
+  background:var(--pitch-deep);color:var(--on-pitch);border-radius:var(--r-md);padding:9px 16px;text-align:center;
+  font-family:var(--disp);font-weight:700;letter-spacing:.1em;text-transform:uppercase;font-size:14px;
+  opacity:0;pointer-events:none;transition:opacity var(--t-base) var(--ease),transform var(--t-base) var(--ease);box-shadow:0 4px 14px rgba(0,0,0,.22);
+  max-width:90vw;
+}
+.toast.show{opacity:1;transform:translateX(-50%) translateY(0)}
+.toast small{display:block;font-family:var(--body);font-weight:500;letter-spacing:0;
+  text-transform:none;font-size:12px;opacity:.85;margin-top:2px}
+.toast.loss{background:var(--danger)}
+.toast.draw{background:var(--xi-ink)}
+/* The one rule this query was written for. Thirty-three lines of the sheet
+   and calendar sat between the brace and it, pasted in by accident: a third
+   copy of rules that now live once, in shared/xi-chrome.css. */
+@media (prefers-reduced-motion:reduce){.toast{transition:none}}
+/* Overlaid on the foot of the pitch rather than sitting in the flow. It used
+   to be a block between the board and the clue lists, so showing it — on every
+   Check, every Check All, and twice per New Puzzle while "Getting the puzzle"
+   came and went — moved everything below it. Taking it out of the flow means
+   the page never moves when a button is pressed. */
+/* A row that is always there, so the page cannot move when the message
+   appears. The message itself is centred inside it and is the only thing that
+   changes. */
+/* Full width, on the landing screen, and only while there is no account. */
+.home-signin{
+  display:block;width:100%;min-height:48px;margin:14px 0 4px;
+  font-size:13.5px;letter-spacing:.04em;
+}
+
+.nudge-row{
+  display:flex;align-items:center;justify-content:center;
+  min-height:36px;width:100%;max-width:var(--board-w,100%);margin:6px auto 0;
+}
+.nudge{
+  max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  opacity:0;visibility:hidden;transition:opacity var(--t-fast) var(--ease);
+  text-align:center;font-size:var(--fs-sm);color:var(--xi-ink);
+  background:var(--revealed-bg);border:1px solid var(--gold);border-radius:var(--r-md);padding:7px 12px;
+  box-shadow:0 2px 6px rgba(18,34,25,.18);pointer-events:none;
+}
+.nudge.show{opacity:1;visibility:visible}
+
+/* ============ CLUES ============ */
+/* Two columns of the same width as the board above, with a real gutter. They
+   stack below 820px rather than squeezing clue text into a narrow measure. */
+.clues{
+  display:grid;grid-template-columns:1fr 1fr;gap:14px 40px;
+  width:100%;max-width:var(--board-w, 100%);margin:0 auto;
+}
+@media (max-width:820px){ .clues{grid-template-columns:1fr;gap:20px} }
+.clue-col h2{
+  font-family:var(--disp);font-weight:700;font-size:19px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--pitch-ink);
+  border-bottom:2px solid var(--pitch-deep);padding-bottom:5px;margin-bottom:10px;
+}
+.clue-col ol{list-style:none}
+.clue-col li{
+  display:flex;gap:9px;padding:8px 9px;border-radius:var(--r-sm);cursor:pointer;
+  font-size:15px;line-height:1.45;border-left:3px solid transparent;
+}
+.clue-col li:hover{background:var(--sel-word)}
+.clue-col li.active{background:var(--sel-word);border-left-color:var(--pitch)}
+.clue-col li.done{opacity:.55}
+.cl-num{
+  font-family:var(--disp);font-weight:700;min-width:20px;text-align:right;
+  color:var(--pitch);font-size:15px;padding-top:1px;
+}
+.cl-enum{color:var(--ink-soft);white-space:nowrap}
+
+/* ============ CLUB + LEAGUE TABLE ============ */
+/* In the header now, above the mini table: the club you pick is the table's
+   identity, so the control and the table belong together. */
+.club-bar{
+  display:flex;align-items:center;gap:7px;margin-bottom:6px;
+  font-size:13px;color:var(--ink-soft);
+}
+.tb-table .club-bar label{font-size:9.5px;letter-spacing:.16em;color:var(--ink-faint)}
+.tb-table .club-bar select{font-size:12.5px;padding:3px 6px}
+.tb-season{margin-top:5px;display:block}
+.club-bar label{font-family:var(--disp);font-weight:600;letter-spacing:.06em;text-transform:uppercase;font-size:12px}
+.club-bar select{
+  flex:1;min-width:0;font-family:var(--body);font-size:13.5px;color:var(--ink);
+  border:1px solid var(--line);border-radius:var(--r-sm);background:var(--card);padding:5px 8px;
+}
+.table-panel{margin-top:0}
+.season-tag{
+  font-family:var(--body);font-weight:600;font-size:12px;letter-spacing:0;
+  text-transform:none;color:var(--ink-soft);float:right;padding-top:5px;
+}
+.table-panel h2{
+  font-family:var(--disp);font-weight:700;font-size:19px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--pitch-ink);
+  border-bottom:2px solid var(--pitch-deep);padding-bottom:5px;margin-bottom:8px;
+}
+table.league{width:100%;border-collapse:collapse;font-size:13.5px}
+table.league td{
+  padding:4px 8px;border-bottom:1px solid var(--line);font-variant-numeric:tabular-nums;
+}
+table.league td.pos{width:30px;color:var(--ink-soft)}
+table.league td.pts{text-align:right;font-weight:600}
+/* The player's row carries a much stronger identity than its neighbours */
+table.league tr.you td{
+  background:var(--sel-word);color:var(--pitch-ink);
+  border-top:1px solid var(--pitch);border-bottom:1px solid var(--pitch);
+  padding-top:7px;padding-bottom:7px;
+}
+table.league tr.you td.pos{box-shadow:inset 5px 0 0 var(--pitch-deep);font-weight:700;color:var(--pitch-ink)}
+table.league tr.you td.club{font-weight:700;font-size:15px;letter-spacing:.01em}
+table.league tr.you td.pts{font-weight:700;font-size:16px}
+table.league tr.moved td{transition:background var(--t-move) var(--ease)}
+table.league tr.moved.up td{background:var(--sel-word)}
+table.league tr.moved.down td{background:var(--wrong-bg)}
+/* Game-defined zones: 1-4 Champions League, 5-6 Europe, 18-20 relegation */
+table.league tr.ucl td.pos{box-shadow:inset 4px 0 0 var(--pitch)}
+table.league tr.euro td.pos{box-shadow:inset 4px 0 0 var(--zone-euro)}
+table.league tr.drop td.pos{box-shadow:inset 4px 0 0 var(--zone-drop)}
+table.league tr.zone-edge td{border-bottom:1px dashed var(--ink-faint)}
+table.league tr.zone-end td{border-bottom:2px solid var(--ink-faint)}
+.table-note{
+  margin-top:7px;text-align:center;font-family:var(--disp);font-weight:600;
+  font-size:10.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);
+}
+/* The live table is a three-row window at all widths. The full 20-team
+   table belongs to Full Time, not to solving. */
+/* Scoped to the row, not the container. This was `.table-panel tr.faroff`, so
+   moving the live table into the toolbar silently un-hid the other 17 rows and
+   the full league table appeared in the header. The rule belongs to the row:
+   renderLeagueRows() marks what is outside the three-row window, and it should
+   stay hidden wherever the table is rendered. */
+tr.faroff{display:none}
+
+/* ============ ON-SCREEN KEYBOARD ============ */
+/* THE KEYS THEMSELVES ARE THE FAMILY'S NOW — shared/xi-keys.css, linked by
+   this page — because Scrambled XI needed the same keyboard and the sizing
+   here had already been got wrong twice and fixed twice. What stays in this
+   file is what belongs to this game's layout: the heights it wants when the
+   board is short, and hiding the keyboard while the landing is up. */
+
+/* WHERE A CLUE CAME FROM. Small, and after the enumeration, because it is a
+   footnote on a clue rather than part of it — and it only exists once the
+   clue is solved, so it can never be read as a hint. */
+.cl-src,.nc-src a{
+  font-size:.82em;font-weight:600;letter-spacing:.01em;
+  color:var(--pitch-ink,var(--pitch));text-decoration:none;white-space:nowrap;
+}
+.cl-src:hover,.nc-src a:hover{text-decoration:underline;text-underline-offset:2px}
+.cl-src:focus-visible,.nc-src a:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.nc-src{margin-left:6px}
+/* The unopened mark is a BUTTON, because there is nothing to point at until
+   an account asks for it. It has to read as the same footnote the link does,
+   so the browser's button chrome is taken off and the .cl-src rule above is
+   left to do the work. */
+button.cl-src{background:none;border:0;padding:0;font-family:inherit;cursor:pointer}
+
+/* ============ COMPLETION ============ */
+.overlay{
+  position:fixed;inset:0;background:rgba(18,34,25,.6);z-index:50;
+  display:none;align-items:center;justify-content:center;padding:20px;
+}
+.overlay.show{display:flex}
+.result{
+  background:var(--card);border-radius:var(--r-lg);max-width:400px;width:100%;
+  padding:26px 26px 24px;text-align:center;border-top:6px solid var(--pitch);
+  animation:pop var(--t-slow) cubic-bezier(.2,1.4,.4,1);
+  /* The same shape as the challenge card: a twenty-row league table under a
+     score, and nothing stopping the card growing past the screen. Caught while
+     fixing the challenge screen rather than after somebody met it. */
+  max-height:100%;overflow-y:auto;overscroll-behavior:contain;
+  -webkit-overflow-scrolling:touch;
+}
+@keyframes pop{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
+@media (prefers-reduced-motion:reduce){.result{animation:none}}
+.result h2{
+  font-family:var(--disp);font-weight:700;font-size:26px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink-soft);
+}
+.res-pos{
+  font-family:var(--disp);font-weight:700;font-size:64px;line-height:1;
+  color:var(--pitch-ink);margin:6px 0 0;
+}
+.res-pos-label{
+  font-family:var(--disp);font-weight:600;font-size:13px;letter-spacing:.22em;
+  text-transform:uppercase;color:var(--ink-soft);margin-bottom:12px;
+}
+.res-score{
+  font-family:var(--disp);font-weight:700;font-size:30px;color:var(--pitch);
+  margin-bottom:16px;font-variant-numeric:tabular-nums;
+}
+.res-score small{font-size:17px;font-weight:600;color:var(--ink-soft)}
+.res-club{
+  font-family:var(--disp);font-weight:600;font-size:17px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--pitch);margin-top:2px;
+}
+.res-msg{font-size:14.5px;color:var(--ink);margin:0 0 14px;font-weight:500}
+.res-final{
+  display:flex;justify-content:space-between;padding:7px 6px 0;font-size:14px;
+  font-family:var(--disp);font-weight:700;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--pitch-ink);
+}
+/* Five rows, then scroll.
+
+   It was 34vh, which is ten rows on a tall phone and six on a short one — the
+   same table a different length depending on the handset, and ten rows of a
+   twenty-team league pushes the buttons under it down the card. Five is enough
+   to see where you landed and who is either side, which is what the table is
+   for at Full Time; the rest is still there by scrolling.
+
+   Sized in rows rather than viewport height so it is the same everywhere. */
+.res-table-wrap{
+  --res-row:26px;
+  max-height:calc(var(--res-row) * 5);
+  overflow:auto;overscroll-behavior:contain;
+  margin-bottom:14px;border:1px solid var(--line);border-radius:var(--r-md);
+}
+/* The player's own row is scrolled into view, so five rows always include the
+   one that matters rather than the top five of the league. */
+.res-table-wrap table.league td{padding:4px 6px}
+.res-table-wrap table.league{font-size:12.5px}
+.view-grid{
+  background:none;border:0;color:var(--ink-soft);text-decoration:underline;
+  font-size:12.5px;margin-top:10px;
+}
+.result{max-width:430px;max-height:92vh;overflow:auto}
+.breakdown{
+  border-top:1px solid var(--line);border-bottom:1px solid var(--line);
+  padding:10px 4px;margin-bottom:14px;font-size:14px;
+}
+.breakdown .row{display:flex;justify-content:space-between;padding:3px 6px}
+.breakdown .row span:first-child{color:var(--ink-soft);text-transform:uppercase;font-size:12px;letter-spacing:.08em;font-family:var(--disp);font-weight:600;padding-top:2px}
+.breakdown .row b{font-variant-numeric:tabular-nums;font-weight:600}
+.breakdown .row .pen{color:var(--xi-ink);margin-left:10px;min-width:34px;text-align:right;display:inline-block}
+.mini-table{
+  width:100%;border-collapse:collapse;margin-bottom:18px;font-size:13.5px;
+}
+.mini-table th{
+  font-family:var(--disp);font-weight:600;font-size:11px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--ink-faint);text-align:left;padding:2px 8px;
+}
+.mini-table th:last-child,.mini-table td:last-child{text-align:right}
+.mini-table td{padding:5px 8px;border-top:1px solid var(--line);font-variant-numeric:tabular-nums}
+.mini-table tr.you td{
+  background:var(--sel-word);font-weight:700;color:var(--pitch-ink);
+}
+
+/* ============ FOOTER / DEV ============ */
+footer{
+  text-align:center;padding:8px 0 20px;color:var(--ink-faint);font-size:11.5px;
+}
+footer button{background:none;border:0;color:var(--ink-faint);text-decoration:underline;font-size:11.5px}
+.dev{
+  max-width:1080px;margin:0 auto 30px;padding:16px;background:var(--card);
+  border:1px solid var(--line);border-radius:var(--r-lg);display:none;
+}
+.dev.show{display:block}
+.dev h3{font-family:var(--disp);letter-spacing:.1em;text-transform:uppercase;color:var(--pitch-ink);margin-bottom:8px}
+.dev .dev-actions{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.dev .btn{font-size:13px;padding:6px 12px}
+.dev pre{
+  background:var(--paper);border:1px solid var(--line);border-radius:var(--r-sm);padding:10px;
+  font-size:11.5px;overflow:auto;max-height:380px;white-space:pre;
+}
+
+/* ============ RESPONSIVE ============ */
+@media (max-width:900px){
+  /* The stage is flex now; grid-template-columns here was left over from the
+     two-column layout and did nothing. The .clues override did do something,
+     and it was wrong: this block sits after the 820px stacking rule, so it won
+     the cascade and forced two columns from 641px to 820px — exactly the width
+     where the clue text needed to stack. Removed rather than reordered. */
+  .stage{gap:16px;padding-bottom:8px}
+  header{padding:12px 12px 9px}
+}
+@media (max-width:640px){
+  .clues{grid-template-columns:1fr;gap:8px}
+  /* The toolbar was taking three rows before the puzzle appeared. */
+  .toolbar{gap:5px;padding:8px 6px 5px}
+  .toolbar .btn,.grid-panel .tb-box .btn{font-size:12.5px;padding:6px 8px;letter-spacing:.03em}
+  .lbl-full{display:none}
+  .lbl-short{display:inline}
+  .toolbar .cost{font-size:10px;margin-left:2px}
+  .tb-sep{display:none}
+  .match-clock{font-size:22px;min-width:56px;padding:3px 8px 3px}
+  .match-clock small{font-size:9px;letter-spacing:.08em}
+  .live-chip{font-size:12px;padding:4px 7px;gap:5px}
+  .live-chip .pos{font-size:13px}
+  .live-chip .club{max-width:74px}
+  .nc-text{font-size:15px;flex:1 1 100%}
+  .now-clue{padding:6px 7px;gap:6px}
+  .nc-main{gap:4px 8px}
+  .nc-arrow{font-size:15px}
+  .bank-cell{width:22px;height:26px;font-size:15px}
+  /* Club selection lives on the Kick Off card; the duplicate control
+     just pushed the clue list further down the page. */
+  .club-bar{display:none}
+  header{padding:9px 10px 7px}
+  .masthead{font-size:22px}
+  .strap{font-size:9.5px;letter-spacing:.2em;margin-top:3px}
+  .stage{padding:6px 8px 8px;gap:10px}
+  .tb-table{padding:5px 8px 5px;min-width:0}
+  .tb-season{font-size:8.5px;margin-top:3px}
+  .tb-box{padding:5px 7px 6px}
+  .tb-help{flex:1 1 100%}
+
+  /* Phone header, in three lines rather than five:
+       clock · solved · pause · new
+       check · all · letter · answer
+       (the league table has moved below the board)
+     Each is one row, so the board starts far higher up the screen. */
+  /* Match and Game side by side on one line, each still in its own box. */
+  .tb-match,.tb-game{flex:0 1 auto}
+  .tb-readouts,.tb-controls{gap:5px;flex-wrap:nowrap}
+  .tb-controls .btn{min-width:0;padding:0 9px}
+  /* Two pairs, each with its label alongside — the four-across row lost the
+     distinction between checking and revealing, which is the whole point. */
+  .tb-row{grid-template-columns:auto minmax(0,1fr) minmax(0,1fr);gap:4px}
+  .tb-sub{min-width:38px;font-size:9px}
+  .tb-row .btn{padding:0 5px;font-size:11px;letter-spacing:.02em;min-height:44px;
+    justify-content:center;gap:3px}
+  .tb-row .cost{font-size:9px;padding:0 4px}
+  .tb-row-sub .btn{grid-column:2 / span 2}
+  .tb-label{font-size:8.5px;letter-spacing:.12em}
+  .toolbar .btn,.grid-panel .tb-box .btn{min-height:44px}
+  .icon-btn{width:34px}
+  /* 132px of clue card is a lot of a phone screen. Two lines plus the bank
+     still fit; the height stays fixed so the board does not jump. */
+  .now-clue{height:112px}
+  .grid-wrap{padding:5px 6px}
+}
+
+
+/* ============ SHORT AND LANDSCAPE: GIVE THE BOARD THE HEIGHT ============
+   On a landscape tablet the header, toolbar, clue card and on-screen keyboard
+   together leave the grid only a few hundred pixels, so the cells come out
+   small however wide the page is — height binds, not width. These rules trim
+   the chrome rather than the board. Nothing here changes on a desktop monitor,
+   where there is height to spare. */
+@media (orientation:landscape) and (max-height:1100px){
+  header{padding:8px 20px 6px}
+  .masthead{font-size:clamp(20px,2.6vw,26px)}
+  .brandline{display:none}          /* the masthead already says it */
+  .strap{font-size:9.5px;margin-top:2px}
+  .toolbar{padding:7px 9px;margin:7px auto 3px}
+  .tb-table table.league td{padding:1px 6px}
+  .tb-table .club-bar{margin-bottom:4px}
+  /* 64px fitted one line plus the bank. About 1% of clues are long enough to
+     wrap at this width — and when they did, the bank was pushed out of the card
+     and you could not see the letters you were typing. 84px holds two lines and
+     the bank. It costs the board ~20px of height, which is the right way round:
+     a board you can see but cannot type into is worse than a slightly smaller
+     one. */
+  /* 84px left the longest clue 3px short once the meta line and bank are
+     counted — which is exactly the case that was clipping. */
+  .now-clue{height:92px}            /* one line plus the bank, which is inline here */
+  /* Wide but very short. The slots stay on the clue's line and shrink instead
+     of taking a row of their own, because a row costs height and height is
+     what the board is short of here. */
+  :root{--bank-cell:20px}
+  .nc-main{flex-wrap:nowrap}
+  .bank{flex:0 0 var(--bank-w);width:var(--bank-w)}
+  .stage{gap:14px;padding:6px 16px 24px}
+  .grid-wrap{padding:10px 16px}
+  /* Keyboard height is the last thing standing between the board and the space
+     it needs. Keys stay wide — width costs nothing here — but lose a little
+     height, which goes straight into the cells. */
+  .osk{padding:3px 4px calc(3px + env(safe-area-inset-bottom));--osk-h:clamp(30px,4vh,38px);
+    --osk-gap:clamp(4px,0.6vw,7px)}
+  .stage{padding-top:4px}
+
+  .tb-help{padding:5px 9px 6px}
+  .tb-label{font-size:9px}
+}
+
+/* Narrow landscape — a small tablet or a phone on its side. No room for a rail,
+   so the toolbar stays on top and gives back what it can: the league table
+   collapses to your own row with the club inline. The full table is still shown
+   at Full Time. */
+@media (orientation:landscape) and (max-height:1100px) and (max-width:859px){
+  .tb-table{flex-direction:row;align-items:center;gap:10px;padding:5px 10px}
+  .tb-table .club-bar{margin-bottom:0;flex:0 0 auto}
+  .tb-table table.league{width:auto;min-width:190px;flex:1 1 auto}
+  .tb-season{display:none}
+}
+
+/* ============ LANDSCAPE TABLET: RAIL BESIDE THE BOARD ============
+   The first version gridded the body, which put the rail beside the *stage*
+   rather than beside the board — so the rail ran the height of the whole page
+   while the board sat somewhere in the middle of the column, and the panels
+   inside the rail spilled past the card that was supposed to hold them.
+
+   This grids the stage instead, so the rail is a genuine column next to the
+   grid: the active clue spans both, the rail stretches to the board's height,
+   and the clue lists run full width underneath. The toolbar is moved into the
+   stage by script, since it is a sibling of it in the markup. */
+/* The landscape rail is gone.
+   It was a two-column grid: a rail of controls beside the board, built when
+   the toolbar was a banner that could be stood on its side. There is no
+   toolbar now — the controls sit in one column under the board — and the rule
+   that made it work, .grid-panel{display:contents}, turned every block in that
+   column into an item of a two-column grid. Four of them had no placement, so
+   on a tablet in landscape the game row, the help row, the clue toggle and the
+   league table auto-placed into whatever cell came next.
+   Landscape now uses the same single column as everything else, capped to the
+   board's width like every other block. */
+@media (orientation:landscape) and (max-height:1100px) and (min-width:860px){
+  /* Nothing here sizes the stage from --board-w. It did, briefly, and that is
+     a loop: fitCells measures .grid-panel, .grid-panel takes its width from
+     .stage, and .stage was taking its width from the value fitCells had just
+     published. The browser reported it honestly — "ResizeObserver loop
+     completed with undelivered notifications", seven times. The blocks inside
+     are capped to the board individually, which gets the same column without
+     the board being sized from itself. */
+  .stage{margin:0 auto}
+}
+
+@media (orientation:landscape) and (max-height:820px){
+  .masthead{font-size:20px}
+  .strap{display:none}
+  /* Under 820px tall the board needs every pixel, so the clue scales further
+     rather than the card growing. A long clue at 12.5px still reads; a board
+     squeezed another 16px does not. */
+  .now-clue{height:86px}
+  .nc-text.long{font-size:13.5px;line-height:1.25}
+  .nc-text.xlong{font-size:12.5px;line-height:1.2}
+  .osk{--osk-h:clamp(30px,4.2vh,38px)}
+}
+
+/* ============ BUILD BADGE (temporary) ============
+   Pinned top-right so the deployed build is visible in any screenshot without
+   scrolling. Sits below the overlays (z-index 50+) so it never covers Kick Off
+   or Full Time. Delete this block and the element in index.html when the
+   layout is settled. */
+.build-badge{
+  position:fixed;top:0;right:0;z-index:40;border:none;cursor:pointer;
+  font-family:var(--disp);font-weight:700;font-size:11px;letter-spacing:.14em;
+  background:var(--gold);color:var(--gold-ink);
+  padding:3px 9px;border-radius:0 0 0 7px;
+  box-shadow:0 1px 3px rgba(0,0,0,.25);
+}
+
+/* ============ ACCOUNT SHEET ============
+   Reuses the My Season sheet's furniture. Nothing here appears unless the
+   player opens it: accounts are optional and must not intrude on a game that
+   works perfectly well without one. */
+.acct-why{
+  font-size:14.5px;line-height:1.55;color:var(--ink-soft);margin:0 0 16px;
+}
+.acct-provider{display:flex;justify-content:center;min-height:44px;margin-bottom:10px}
+.acct-note{font-size:13px;color:var(--ink-faint);margin:0}
+.acct-field{display:block;text-align:left;margin-bottom:14px}
+.acct-field span{
+  display:block;font-family:var(--disp);font-weight:600;font-size:11px;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint);margin-bottom:5px;
+}
+.acct-field input{
+  width:100%;font-family:var(--body);font-size:15px;color:var(--ink);
+  border:1px solid var(--line);border-radius:var(--r-md);background:var(--card);
+  padding:9px 10px;
+}
+.acct-actions{display:flex;gap:8px;justify-content:center;margin-bottom:12px}
+.acct-actions .btn{min-height:44px}
+
+
+/* Clues seen, and the control to put them back. Practice only — the Daily is
+   the same for everyone and does not vary by what you have played. */
+.circ-line{color:var(--ink-faint);margin-right:6px}
+
+
+/* What's live. Rows of fact, deliberately plain — this is a diagnostic, not a
+   feature, and it should read like one. */
+.status-table{width:100%;border-collapse:collapse;text-align:left;margin-bottom:14px}
+.status-table td{
+  padding:6px 4px;font-size:14px;border-bottom:1px solid var(--line);
+  color:var(--ink);vertical-align:top;
+}
+.status-table td:first-child{
+  color:var(--ink-faint);font-family:var(--disp);font-weight:600;font-size:11px;
+  letter-spacing:.14em;text-transform:uppercase;white-space:nowrap;width:44%;
+  padding-top:9px;
+}
+.status-table td.bad{color:var(--wrong);font-weight:600}
+.status-table td.good{color:var(--pitch)}
+
+
+/* The second way out of the Kick Off card. Quieter than Kick Off — the daily is
+   the point of the game and practice is the alternative, not an equal. */
+.kick-alt{margin-top:8px;width:100%;height:38px}
+
+
+/* Offline notice. Fixed, so it cannot shift the board, and quiet enough not to
+   look like an error — losing signal is not the player's mistake. */
+.net-strip{
+  display:none;position:fixed;left:0;right:0;bottom:0;z-index:45;
+  background:var(--xi-ink);color:var(--on-pitch);text-align:center;
+  font-family:var(--disp);font-weight:600;font-size:12px;letter-spacing:.06em;
+  padding:6px 10px;
+}
+body.offline .net-strip{display:block}
+body.touch.offline .net-strip{bottom:auto;top:0}
+
+
+/* Pauses on the Full Time card. Quiet — it is a fact about the run, not a
+   telling-off. */
+.res-pause{
+  font-size:12.5px;color:var(--ink-faint);margin:-4px 0 10px;
+}
+
+
+/* ============ C3 — TAP TARGETS ============
+   44px is the platform guidance on iOS and Android, and it matters more here
+   than in most apps: Check and Reveal deduct points, so a mis-tap costs score
+   rather than merely annoying. Measured before this: helpToggle 9px, clubSelect
+   25px, every game button 30-34px.
+
+   .osk-key is deliberately exempt. Ten keys must fit a row, so they are sized
+   like a native keyboard's — and making them 44px tall would push the board
+   further under the keyboard, worsening C1 while appearing to fix C3. */
+.btn,
+.toolbar button,
+#clubSelect,
+select {
+  min-height:44px;
+}
+/* .osk-key's exemption moved with the keys, to shared/xi-keys.css. */
+.build-badge { min-height:0; }      /* status pill, not a control */
+
+
+/* The cost pill sits inside the button, so the button grows around it rather
+   than the pill dictating the height. */
+.btn .cost { line-height:1; }
+
+/* Footer links are navigation rather than gameplay, but a 44px target costs
+   nothing there either. */
+footer button { min-height:44px;padding:0 6px }
+
+
+/* ============ C2 — ROTATE PROMPT ============
+   Only ever shown when the board cannot be drawn legibly above the keyboard.
+   A crossword needs height for the grid and height for the keyboard, and a
+   390px-tall landscape phone has neither to spare. */
+.rotate-prompt{display:none}
+body.rotate-needed .rotate-prompt{
+  display:flex;position:fixed;inset:0;z-index:60;
+  align-items:center;justify-content:center;
+  background:var(--paper);padding:20px;text-align:center;
+}
+.rotate-card{max-width:340px}
+.rotate-icon{font-size:38px;color:var(--pitch);margin-bottom:10px}
+.rotate-prompt h2{
+  font-family:var(--disp);font-weight:700;letter-spacing:.04em;
+  font-size:19px;color:var(--ink);margin:0 0 8px;
+}
+.rotate-prompt p{font-size:14.5px;line-height:1.5;color:var(--ink-soft);margin:0}
+
+
+/* height beats min-height, so the fixed heights above were quietly overriding
+   the 44px rule — the controls would have measured 30-34px while the
+   stylesheet appeared to say otherwise. They are min-height now. */
+
+
+/* ============ RECLAIMING THE HEIGHT C3 SPENT ============
+   Making every control 44px added 14px to each of five toolbar rows — 70px,
+   which is exactly how far the grid moved down between builds. The cells got
+   smaller and the board still ended lower, because it now starts lower.
+
+   Help is collapsed by default on phones. It is three of those five rows, and
+   it is the group a player touches least: Check and Reveal cost points, so
+   they are used occasionally and deliberately. One tap opens them. */
+@media (max-width:760px){
+}
+
+
+/* The pre-season line on My Season. Quieter than the season figures — it is
+   history now, not the thing being built. */
+.stats-pre{
+  font-size:12.5px;color:var(--ink-faint);margin:-4px 0 12px;
+}
+
+
+
+
+/* ============ OWNER TOOLS ============ */
+.admin-group{
+  border-top:1px solid var(--line);padding-top:12px;margin-bottom:14px;
+  display:flex;flex-direction:column;gap:8px;
+}
+.admin-group .btn{width:100%}
+#adminDay{font-family:var(--disp);font-size:16px}
+
+/* The flag sits with the clue arrows, quieter than either — it is used rarely
+   and must never be mistaken for the next-clue button. */
+.nc-flag{
+  background:none;border:none;color:var(--ink-faint);font-size:15px;
+  min-height:44px;min-width:44px;cursor:pointer;flex:none;
+}
+.nc-flag:hover{color:var(--wrong)}
+.nc-flag.done{color:var(--pitch)}
+
+
+/* Quick reasons. Tapping one is faster than typing, and a consistent set of
+   reasons is far easier to act on later than free text alone — but the box is
+   there too, because the useful objection is often the unexpected one. */
+.flag-reasons{
+  display:flex;flex-wrap:wrap;gap:6px;justify-content:center;margin-bottom:14px;
+}
+.flag-reasons .btn{font-size:12.5px;padding:0 10px;min-height:38px}
+.flag-reasons .btn.picked{
+  background:var(--sel-word);border-color:var(--pitch);color:var(--pitch);
+}
+#flagClueText{font-style:italic;margin-bottom:14px}
+
+
+/* The flagged list. Each row can be closed on its own, because working through
+   them one at a time is how they actually get dealt with. */
+.report-list{text-align:left;max-height:280px;overflow-y:auto;margin-bottom:10px}
+.report-row{
+  border-bottom:1px solid var(--line);padding:8px 2px;font-size:13px;
+  display:flex;gap:8px;align-items:flex-start;
+}
+.report-row.done{opacity:.5}
+.report-row .rr-body{flex:1 1 auto;min-width:0}
+.report-row .rr-id{
+  font-family:var(--disp);font-size:11px;letter-spacing:.1em;color:var(--ink-faint);
+}
+.report-row .rr-clue{color:var(--ink);line-height:1.35}
+.report-row .rr-reason{color:var(--wrong);font-size:12px;margin-top:2px}
+.report-row .rr-done{
+  background:none;border:1px solid var(--line);border-radius:var(--r-sm);
+  color:var(--ink-faint);font-size:15px;min-height:34px;min-width:34px;
+  cursor:pointer;flex:none;
+}
+.report-row .rr-done:hover{color:var(--pitch);border-color:var(--pitch)}
+.admin-check{
+  font-size:12.5px;color:var(--ink-faint);display:flex;align-items:center;
+  gap:6px;justify-content:center;margin-bottom:6px;
+}
+
+
+/* Where to post it. Quieter than the main Share button, which uses the phone's
+   own sheet and covers everything installed. */
+.share-to{display:flex;gap:6px;justify-content:center;margin:8px 0 4px}
+.share-to .btn{flex:1 1 0;font-size:12.5px;padding:0 8px}
+
+
+/* ============ THE THEMED SECTION ============
+   Three panels: what can be played, what is coming, and how to ask for one.
+   Boards are grouped by theme rather than listed by date, because people
+   arrive looking for their club, not for last October. */
+/* Name and boards on one line. Stacked, every theme cost two rows and a
+   margin, so twelve themes filled the sheet and the schedule below it needed a
+   scroll to reach. The name is the label for the boxes beside it, not a
+   heading over a section. */
+.theme-group{
+  display:flex;align-items:center;gap:10px;
+  border-bottom:1px solid var(--line);padding:5px 2px;
+}
+.theme-group:last-child{border-bottom:none}
+.theme-name{
+  font-family:var(--disp);font-weight:700;font-size:14px;letter-spacing:.02em;
+  color:var(--ink);margin:0;flex:1 1 auto;min-width:0;
+}
+.theme-asked{
+  font-family:var(--disp);font-weight:600;font-size:10px;letter-spacing:.12em;
+  text-transform:uppercase;color:var(--pitch);border:1px solid var(--pitch);
+  border-radius:var(--r-xs);padding:2px 6px;margin-left:8px;vertical-align:middle;
+}
+.theme-boards{display:flex;flex-wrap:wrap;gap:5px;flex:0 0 auto}
+/* Square-ish and sized to the number they hold, rather than a wide button with
+   "#1" adrift in the middle of it. Still 44px, and still set with min-height
+   rather than height: four rules elsewhere in this stylesheet were silently
+   overriding touch targets set the other way. */
+.theme-board{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r-sm);
+  color:var(--ink);font-family:var(--disp);font-weight:600;font-size:13px;
+  min-height:44px;min-width:44px;padding:0 6px;cursor:pointer;
+  display:inline-flex;align-items:center;justify-content:center;
+}
+.theme-board:hover{border-color:var(--pitch);color:var(--pitch)}
+.theme-board.played{border-color:var(--pitch);box-shadow:inset 3px 0 0 var(--pitch)}
+.theme-board .tb-score{font-size:10px;color:var(--ink-faint);margin-left:4px}
+.theme-next{
+  display:flex;justify-content:space-between;gap:10px;
+  border-bottom:1px solid var(--line);padding:8px 2px;font-size:13px;
+}
+.theme-next:last-child{border-bottom:none}
+.theme-next .tn-date{color:var(--ink-faint);font-size:12px;white-space:nowrap}
+.theme-mine{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.theme-mine .mine-chip{
+  display:inline-flex;align-items:center;gap:6px;min-height:36px;
+  border:1px solid var(--line);border-radius:var(--r-sm);padding:0 6px 0 10px;
+  font-size:12.5px;color:var(--ink-soft);background:var(--card);
+}
+/* 44px on the target itself even though the chip is 36px: the cross is the
+   thing being aimed at, and it is the smallest control on the sheet. */
+.theme-mine .mine-drop{
+  border:none;background:none;color:var(--ink-faint);cursor:pointer;
+  font-size:16px;line-height:1;min-width:44px;min-height:44px;
+}
+.theme-mine .mine-drop:hover{color:var(--wrong)}
+/* Whether the score on screen is the server's or this device's guess at it. */
+/* The challenge screen: one field, and nothing else competing with it.
+   The card needs its own panel — .overlay-card was a class this markup invented
+   and the stylesheet had never heard of, so the board showed straight through
+   the text. .result is the equivalent for the Full Time sheet; this is the same
+   idea, sized for one question. */
+.challenge-overlay{background:rgba(18,34,25,.82)}
+.challenge-overlay .overlay-card{
+  background:var(--card);border-radius:var(--r-lg);max-width:440px;width:100%;
+  padding:28px 24px;text-align:center;
+  box-shadow:0 18px 50px rgba(0,0,0,.28);
+  border-top:4px solid var(--pitch);box-sizing:border-box;
+  /* The card cannot grow past the screen.
+
+     The standings table has no fixed length — this one already has thirty-two
+     finishers — so the card grew with it and pushed Play and the way out off
+     the bottom, on a challenge somebody had just been sent. A card whose
+     controls cannot be reached is a dead end.
+
+     The card holds still and the table scrolls inside it; see below. */
+  /* The overlay is fixed to the viewport with 20px of padding, so its content
+     box is already the space available — 100% of that is the right cap, and a
+     dvh figure would have to guess at the padding and would be wrong by 40px.
+     The svh/dvh line is only a fallback for browsers without a sized parent. */
+  max-height:100%;
+  display:flex;flex-direction:column;
+}
+.ch-who{
+  font-family:var(--disp);font-size:12px;letter-spacing:.16em;text-transform:uppercase;
+  color:var(--ink-faint);margin-bottom:6px;
+}
+.ch-board{
+  font-family:var(--disp);font-weight:700;font-size:26px;letter-spacing:.02em;
+  color:var(--pitch-ink);margin:0 0 8px;
+}
+.ch-count{color:var(--ink-soft);font-size:14px;margin-bottom:18px}
+.ch-label{
+  display:block;font-family:var(--disp);font-size:11px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ink-faint);margin-bottom:6px;
+}
+#chName{
+  width:100%;min-height:52px;font-size:17px;text-align:center;
+  border:1px solid var(--line);border-radius:var(--r-md);background:var(--card);
+  color:var(--ink);margin-bottom:12px;box-sizing:border-box;
+}
+#chName:focus{border-color:var(--pitch);outline:none}
+.challenge-overlay .btn.primary{width:100%;min-height:52px;font-size:16px}
+.ch-note{font-size:12px;color:var(--ink-faint);margin-top:12px}
+#chCancel{
+  display:block;margin:14px auto 0;background:none;border:none;cursor:pointer;
+  color:var(--ink-soft);font-size:13px;text-decoration:underline;min-height:44px;
+}
+#chCancel:hover{color:var(--pitch)}
+
+/* The standings, after Full Time. Time and help beside every score, because a
+   114 in thirty-eight seconds with no help is self-evidently what it is. */
+/* The people, above the season. Given a border and its own weight because it
+   is the reason this game was played at all. */
+.challenge-table{
+  margin:14px 0;padding:12px;border:1px solid var(--pitch);
+  border-radius:var(--r-lg);background:var(--card);
+  /* The one thing in the card allowed to be long, so it is the one thing that
+     scrolls. Everything above and below it stays put and stays reachable —
+     including the name field, Play, and the way out. */
+  min-height:0;overflow-y:auto;overscroll-behavior:contain;
+  flex:0 1 auto;
+  -webkit-overflow-scrolling:touch;
+}
+/* The heading names whose table it is, and the key explains the shorthand in
+   the rows. Both stay put while the rows move — a legend you have to scroll to
+   is a legend nobody reads, and thirty-two rows is a long way to scroll back
+   to find out whose challenge this was. */
+.challenge-table h3{
+  position:sticky;top:-12px;margin-top:0;
+  background:var(--card);z-index:1;padding:4px 0;
+}
+.challenge-table .ct-key{
+  position:sticky;bottom:-12px;
+  background:var(--card);z-index:1;padding-top:6px;
+}
+/* Everything that is not the table keeps its size when the card is short. */
+.challenge-overlay .overlay-card > :not(.challenge-table){flex:none}
+/* The table is scanned, so nothing in it may wrap. A long help list pushed the
+   score off the panel and the name onto two lines. */
+.challenge-table table{
+  width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed;
+}
+.challenge-table td{
+  padding:6px 4px;border-bottom:1px solid var(--line);
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+/* The name takes what is left; everything explaining the score is pinned to
+   the right of it, next to the score. */
+/* Left aligned, hard against the position. Centred, every name floated in the
+   middle of whatever space was left and the column had no edge to read down —
+   a list of names is scanned vertically, and that needs them to start in the
+   same place. */
+.challenge-table .ct-name{width:auto;text-align:left;padding-left:2px}
+.challenge-table .ct-pos{text-align:right;padding-right:8px}
+.challenge-table .ct-time{
+  width:56px;text-align:right;font-variant-numeric:tabular-nums;
+  color:var(--ink-soft);font-size:12px;
+}
+.challenge-table .ct-key{
+  margin-top:8px;font-size:10.5px;letter-spacing:.04em;color:var(--ink-faint);
+  text-align:center;
+}
+.challenge-table tr.you{background:var(--pitch-tint);font-weight:700}
+.challenge-table .ct-pos{width:28px;color:var(--ink-faint)}
+.challenge-table .ct-score{text-align:right;font-variant-numeric:tabular-nums}
+.challenge-table .ct-help{
+  /* A real width. width:1% asks a fixed-layout table for the narrowest column
+     it can give, which is none — and overflow:hidden then clipped the text to
+     nothing. It was in the page all along, which is why copying the table
+     showed penalties the eye could not see. */
+  color:var(--ink-faint);font-size:11px;white-space:nowrap;text-align:right;
+  width:104px;padding-right:8px;
+}
+.challenge-table .ct-score{width:52px;font-weight:700}
+.challenge-table h3{
+  font-family:var(--disp);font-weight:700;font-size:14px;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--pitch-ink);margin:0 0 8px;
+}
+.challenge-table .ct-note{
+  font-size:12px;color:var(--ink-soft);margin-top:8px;
+}
+
+.ch-make{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0}
+.ch-make input{
+  flex:1 1 120px;min-width:0;min-height:44px;padding:0 10px;font-size:14px;
+  border:1px solid var(--line);border-radius:var(--r-md);background:var(--card);color:var(--ink);
+}
+.ch-make .btn{flex:0 0 auto}
+.ch-make input[disabled]{background:var(--paper);color:var(--ink-faint)}
+
+.verify-note{
+  font-family:var(--disp);font-size:10.5px;font-weight:600;letter-spacing:.1em;
+  text-transform:uppercase;color:var(--ink-faint);margin:6px 0 10px;
+}
+.verify-note.verified{color:var(--pitch)}
+.verify-note.unverified{color:var(--ink-soft)}
+
+.admin-links{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-top:8px}
+.admin-links select,.admin-links input{
+  min-height:44px;border:1px solid var(--line);border-radius:var(--r-sm);
+  background:var(--card);color:var(--ink);padding:0 8px;font-size:13px;min-width:0;
+}
+.admin-links input{flex:1 1 140px}
+#linkOut{word-break:break-all;font-family:var(--mono,monospace);font-size:12px}
+.theme-ask{display:flex;gap:6px;align-items:stretch;margin-top:4px}
+.theme-ask select{flex:1 1 auto;min-width:0;min-height:44px}
+.theme-ask .btn{flex:none}
+
+/* Clubs and themes: Core / Special / General bands. A club shows every Core
+   category, greyed where no board exists yet — hiding an empty one tells a
+   supporter their club has nothing, greying it says the category exists and
+   has not been written. */
+.theme-club {
+  margin-bottom: 18px;
+  padding-bottom: 14px;
   border-bottom: 1px solid var(--line);
 }
+.theme-club:last-child { border-bottom: 0; }
 
-/* Bolder than a default button and still out of the text's way — the football
-   crossword's arrows were raised twice for the same reason. */
-.fx-arrow {
-  appearance: none;
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  background: var(--card);
-  color: var(--ink);
-  font-size: 1.5rem;
-  font-weight: 700;
-  line-height: 1;
-  padding: 6px 0;
-  cursor: pointer;
-}
-.fx-arrow:active { background: var(--tint); }
-
-.fx-clue { min-width: 0; text-align: center; }
-.fx-clue-ref {
-  margin: 0;
-  font-family: var(--disp);
-  font-weight: 600;
-  font-size: 0.75rem;
-  letter-spacing: var(--track-caps);
+.club-name {
+  font-family: "Barlow Condensed", sans-serif;
+  font-size: 20px;
   text-transform: uppercase;
-  color: var(--ink-faint);
-}
-.fx-clue-text {
-  margin: 2px 0 0;
-  font-size: 1rem;
-  color: var(--ink);
+  letter-spacing: .04em;
+  margin-bottom: 8px;
 }
 
-/* ---- full time ---------------------------------------------------------- */
+.theme-band { display: flex; gap: 10px; margin-bottom: 8px; align-items: flex-start; }
 
-.fx-ft { margin: 14px 0; text-align: center; }
-.fx-ft-score {
-  margin: 0;
-  font-family: var(--disp);
-  font-weight: 700;
-  font-size: 3rem;
-  line-height: 1;
-  color: var(--ink);
-}
-.fx-ft-score span { font-size: 1.1rem; color: var(--ink-faint); }
-.fx-ft-line { margin: 4px 0 0; color: var(--ink-soft); }
-
-/* ---- how to play -------------------------------------------------------- */
-
-.how { margin-top: 28px; color: var(--ink-soft); }
-.how h2 {
-  font-family: var(--disp);
-  font-size: 1.2rem;
-  letter-spacing: var(--track-caps);
+.band-label {
+  flex: 0 0 62px;
+  font-size: 11px;
   text-transform: uppercase;
-  color: var(--ink);
-}
-.how ol { padding-left: 1.1rem; line-height: 1.6; }
-
-/* ---- the phone ---------------------------------------------------------- */
-
-/* On a touch device the drawn keyboard is present and the page must fit around
-   it. Everything that is not the board, the clue or the keys gets out of the
-   way — the how-to is still on the page for a crawler and a reader, just below
-   the fold rather than between the player and the grid. */
-@media (max-width: 560px) {
-  .fx-wrap { padding: 0 12px 12px; }
-  .fx-ident { margin: 6px 0; }
-  .fx-sub { font-size: 0.85rem; }
-  .fx-cluecard { margin: 8px 0; }
-  .fx-board { width: 100%; }
+  letter-spacing: .08em;
+  opacity: .65;
+  padding-top: 6px;
 }
 
-body.touch .fx-keys { margin-top: 6px; }
-body:not(.touch) .fx-keys { display: none; }
+.band-chips { flex: 1 1 auto; display: flex; flex-wrap: wrap; gap: 6px; }
 
-/* `hidden` must actually hide. A display rule elsewhere in this file beats the
-   attribute's default UA style, and .fx-board sets display:grid — so without
-   this the board would stay on screen with hidden="" set and nothing would
-   look wrong in the markup. */
-[hidden] { display: none !important; }
+.theme-board.ghost {
+  opacity: .38;
+  cursor: default;
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.tb-soon {
+  font-size: 9px;
+  text-transform: uppercase;
+  letter-spacing: .06em;
+  opacity: .8;
+}
+
+@media (max-width: 420px) {
+  .theme-band { flex-direction: column; gap: 4px; }
+  .band-label { flex: none; padding-top: 0; }
+}
+
+/* One chip per category, with a picker underneath.
+
+   A category with three boards was three buttons each repeating the category
+   name. The chip carries a count instead and the picker holds the numbers, so
+   a band stays the same width however many boards land in it. */
+.cat-wrap{position:relative;display:inline-block}
+.theme-board.cat{display:inline-flex;align-items:center;gap:6px}
+.tb-count{
+  font-size:10px;line-height:1;padding:2px 5px;border-radius:var(--r-md);
+  background:var(--pitch);color:#fff;letter-spacing:.02em
+}
+.theme-board.cat.played .tb-count{opacity:.7}
+.theme-board.cat[aria-expanded="true"]{border-color:var(--pitch);color:var(--pitch)}
+.cat-picker{
+  display:flex;flex-wrap:wrap;gap:6px;margin-top:6px;padding:6px;
+  border:1px solid var(--line);border-radius:var(--r-md);background:var(--card)
+}
+.cat-picker[hidden]{display:none}
+.theme-board.pick{min-width:44px;justify-content:center}
+
+/* The coming-soon toggle. One control for the whole section rather than one
+   per club: the question "do I want to see what is planned" is asked once. */
+.theme-filter{display:flex;justify-content:flex-end;margin:-4px 0 8px}
+.theme-filter button{
+  font-size:11px;text-transform:uppercase;letter-spacing:.06em;
+  padding:5px 10px;border:1px solid var(--line);border-radius:var(--r-pill);
+  background:transparent;color:inherit;opacity:.7;cursor:pointer
+}
+.theme-filter button:hover{opacity:1;border-color:var(--pitch);color:var(--pitch)}
+.theme-filter button[aria-pressed="true"]{
+  opacity:1;border-color:var(--pitch);color:var(--pitch)
+}
+
+/* Board of the day picker in owner tools. */
+.admin-row{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:10px}
+.admin-row select{flex:1 1 200px;min-width:0}
+.btn.tiny{padding:3px 8px;font-size:11px}
+
+/* Where today's field put you, on the board of the day. */
+.res-rank{color:var(--pitch);font-weight:600}
+
+/* ============ PHONE: FULL WIDTH ============
+   Every block below the masthead was capped to --board-w, the board's own
+   computed width. On a desktop that is the point — one measure down the page
+   rather than each element finding its own edge. On a phone it is the opposite:
+   a board narrower than the screen pulled the clue card, the letter bank and
+   the controls in with it, so a 393px screen was reading a clue in about 250px
+   and wrapping a one-line sentence to four.
+
+   Below 560px the cap comes off and the blocks take the screen. The board keeps
+   its own width, because its cells are sized by fitCells() and stretching them
+   is a different decision. */
+@media (max-width:560px){
+  .grid-panel > .bank-strip,
+  .grid-panel > .now-clue,
+  .grid-panel > .tb-box,
+  .grid-panel > .tb-table,
+  .clues-block{max-width:100%}
+
+  /* The arrows were 44px wide each — 88px of a 393px screen, before gaps,
+     taken from the sentence. Narrowed but kept 44px tall, so the touch target
+     stays comfortable in the direction the thumb actually travels and still
+     clears the 24px minimum for WCAG 2.5.8. The sentence is what has to be
+     read; the arrows only have to be hit. */
+  .nc-arrow{min-width:26px;padding:0;font-size:17px;line-height:1}
+  .nc-flag{min-width:26px;padding:0}
+  .now-clue{gap:5px;padding:6px}
+  .nc-main{gap:3px 6px}
+
+  /* With the width back, a long clue fits in three lines rather than four, so
+     the card can give some height back to the board. */
+  .now-clue{height:118px}
+  .stage{padding:5px 5px 8px}
+}
+
+/* ============ CLUE ARROWS: PHONE ONLY ============
+   Tab and Shift+Tab already step between clues, and Enter advances — that has
+   been in the keydown handler all along. With a pointer there is also the full
+   clue list on screen and a click on any square. So on anything with a
+   keyboard the arrows are a third route to somewhere you can already get,
+   taking width from the sentence.
+
+   Kept on phones, where there is no Tab key and "next clue" is the most common
+   move in solving. Auto-advance now handles the ordinary case — finish a word
+   and it moves on by itself — so the arrows are the fallback rather than the
+   route, and worth reviewing again once that has been used in anger. */
+/* ============ EDGE TAPS ============
+   The arrows are not removed — they are the whole left and right edge of the
+   card, transparent, taking no width from the sentence. Tap the left edge for
+   the previous clue, the right for the next, wrapping at both ends.
+
+   Reusing the existing buttons rather than adding zones means they stay
+   keyboard-focusable and keep their aria-labels, so the control that is
+   invisible to the eye is still announced to a screen reader.
+
+   Not fully invisible, though. A control nobody can see is a control nobody
+   finds, so a chevron sits at low opacity — enough to notice by the second or
+   third clue, quiet enough to read as part of the card edge. It comes up on
+   hover for anything with a pointer. */
+.nc-arrow{
+  /* Half the card each, and invisible.
+
+     They were 40px strips at the extreme edges with a faint chevron, which is a
+     small target at the very edge of a phone and easy to miss entirely. The
+     whole card is the control now: tap the left half for the previous clue, the
+     right half for the next. Nothing is drawn, because there is nothing to aim
+     at — the target is the half of the card you are already looking at.
+
+     The clue label sits above them and still opens the list. */
+  position:absolute;top:0;bottom:0;width:50%;z-index:2;
+  min-width:0;min-height:0;padding:0 8px;margin:0;
+  background:none;border:0;border-radius:0;
+  /* THE CHEVRON IS DRAWN, which is what the paragraph above always claimed:
+     "a chevron sits at low opacity — enough to notice by the second or third
+     clue". The rule underneath it said color:transparent and font-size:0, so
+     the control was completely invisible and the comment had outlived its own
+     code. A player who has not been told the card is a control has no way to
+     learn it.
+     The zone is unchanged — still half the card each, still the whole height,
+     so the target is as big as it ever was. Only the mark is back, at the
+     OUTER edge of each half where a next/previous control is looked for. */
+  /* Bigger and heavier than the 22px/.5 they were. The mark is the only thing
+     saying the card is a control, and a chevron that quiet is one you meet by
+     accident. It is still a chevron at the card edge, not a button. */
+  color:var(--ink-soft);font:700 30px/1 var(--body);opacity:.9;
+  display:flex;align-items:center;
+}
+/* AND THE RIGHT ONE HAD THE FLAG ON TOP OF IT. #nextClue is the right half of
+   the card, so its chevron is drawn at the card's right edge — and the flag
+   is the last thing in the sentence row, which put it at 343 to 369px of a
+   375px card, in the same few pixels. Faint, the two blurred together; made
+   bolder they read as one glyph, so making the arrow more visible on its own
+   made the pair worse. The flag moves in far enough for the chevron to have
+   its own air.
+   Moved rather than the sentence padded: widening .nc-main to push the flag
+   along cost a line of wrapping, and the card is a fixed height on a phone. */
+#flagClue{margin-right:16px}
+.nc-arrow:hover,.nc-arrow:focus-visible{opacity:1}
+#prevClue{left:0;justify-content:flex-start}
+#nextClue{right:0;justify-content:flex-end}
+/* WHERE ONE HALF ENDS AND THE OTHER BEGINS. The two zones meet at the middle
+   of the card and nothing said so, which made a card-wide tap target something
+   you had to be told about. A dotted hairline on the inner edge of the left
+   half is the join, drawn faintly enough to read as part of the card. */
+#prevClue{border-right:1px dotted var(--line)}
+/* A hint of where the halves are, for a pointer only — a touch screen has no
+   hover and gains nothing from it. */
+.nc-arrow:hover{background:var(--sel-word)}
+.nc-arrow:focus-visible{outline:2px solid var(--pitch);outline-offset:-3px}
+/* The card's own content sits above the zones, so the label still opens the
+   clue list rather than stepping backwards — it is top left, which is exactly
+   where the previous zone is. */
+/* The card content sits above the zones so the clue label still opens the list
+   rather than stepping backwards — it is top left, exactly where the previous
+   zone is. But it must not swallow taps meant for the zones either, so it only
+   catches pointers on its own children. */
+/* The card content sits above the zones so the label still opens the list. The
+   sentence itself does not take pointers, or it would swallow the tap for the
+   half it happens to cover — which is most of the card. */
+.now-clue > .nc-main{position:relative;z-index:3;pointer-events:none}
+.now-clue > .nc-main .nc-meta{pointer-events:auto}
+/* The sentence keeps clear of both edges so a tap meant for a word does not
+   land on a zone. */
+.nc-main{padding:0 10px}
+
+/* ============ CLUE LABEL TOP LEFT ============
+   The number and enumeration sat inline with the sentence, so the first line
+   of every clue began wherever "3A (8)" happened to end — and the label moved
+   left and right between clues as its own width changed.
+
+   Pinned to the top left instead. The label is a heading, not the opening
+   words of the sentence, and the sentence gets the full width of the card
+   rather than the width after the label. */
+.now-clue{align-items:stretch}
+.nc-main{align-items:flex-start}
+.nc-clue{flex-direction:column;align-items:flex-start;gap:1px}
+.nc-meta{line-height:1.2}
+.nc-text{width:100%}
+/* The flag keeps the middle: it is hit rather than read, and a control pinned
+   to the top of a card is one the thumb has to aim at.
+
+   The arrows are NOT included. They are absolutely positioned edge zones
+   spanning the full height of the card, and align-self on an absolutely
+   positioned box overrides top/bottom — which collapsed them back to a
+   centred glyph with nothing around it to press. That is why tapping the sides
+   of the clue bar did nothing. */
+/* Above the tap zones, or the right half covers it.
+
+   The zones are absolutely positioned with a z-index; the flag was a static
+   flex item, so the right half painted over it and a tap meant for the flag
+   stepped to the next clue instead. Raised, and given a background so it reads
+   as a control sitting on the card rather than part of the sentence. */
+.nc-flag{
+  align-self:center;position:relative;z-index:4;
+  border-radius:var(--r-md);
+}
+.nc-flag:hover{background:var(--sel-word)}
+
+
+/* ============ JUMP TO A CLUE ============
+   The clue label opens a list of unanswered clues. It sits over the card, so
+   the card needs to be the positioning context. */
+.now-clue{position:relative}
+.nc-meta{
+  cursor:pointer;display:inline-flex;align-items:center;gap:3px;
+  border:0;background:none;color:var(--pitch);font:inherit;
+  /* It is the control that opens the clue list, so it has to be hittable. The
+     padding does the work rather than a min-height, which would push the
+     sentence down the fixed-height card: the box grows around the text and the
+     negative margin keeps the label optically where it was. */
+  padding:11px 8px 11px 0;margin:-11px 0 -11px 0;
+  min-height:44px;box-sizing:border-box;
+}
+.nc-meta::after{content:"\25BE";font-size:.75em;opacity:.7}
+.nc-meta[aria-expanded="true"]::after{transform:rotate(180deg)}
+.jump-list{
+  position:absolute;z-index:60;left:0;right:0;top:100%;margin-top:4px;
+  /* see the flex override below: at the bottom of the screen it opens upward */
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);
+  box-shadow:0 8px 24px rgba(0,0,0,.16);
+  max-height:46vh;overflow-y:auto;padding:4px;
+}
+.jump-list[hidden]{display:none}
+/* In the flex layout the clue card is the last thing before the keyboard, so a
+   list opening downward opens behind the keyboard and off the bottom of the
+   screen. It was rendering all along — just nowhere anybody could see it. */
+body.flex-layout .jump-list{
+  top:auto;bottom:100%;margin-top:0;margin-bottom:6px;
+  box-shadow:0 -8px 24px rgba(0,0,0,.18);
+  max-height:52vh;
+}
+.jump-item{
+  display:flex;gap:8px;width:100%;text-align:left;padding:8px 9px;
+  border:0;background:none;color:var(--ink);font:inherit;border-radius:var(--r-sm);
+  min-height:40px;align-items:flex-start;cursor:pointer;
+}
+.jump-item:hover,.jump-item[aria-selected="true"]{background:var(--sel-word)}
+.jump-item .jn{color:var(--pitch);font-weight:600;flex:none;min-width:38px}
+.jump-item .jt{
+  flex:1;min-width:0;font-size:14px;line-height:1.35;color:var(--ink-soft);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.jump-empty{padding:10px;color:var(--ink-faint);font-size:14px}
+
+/* ============================================================
+   FLEX LAYOUT (opt-in)
+   ============================================================
+   The board stops having to fit.
+
+   Today fitCells() shrinks the cell until the whole board sits above the
+   keyboard, which is why a fourteen-row puzzle lands at 18px on a phone. Here
+   the board lives in a frame that takes whatever height is left, and pans and
+   zooms inside it — so the cell is sized for reading, not for fitting.
+
+   Applied by body.flex-layout and by nothing else, so the current layout is
+   untouched behind the toggle. No DOM is moved: the order below is CSS only,
+   which is what makes turning it off a genuine revert rather than a rebuild.
+   ============================================================ */
+body.flex-layout{
+  height:100dvh;height:var(--vh,100dvh);
+  display:flex;flex-direction:column;overflow:hidden;
+}
+body.flex-layout header{flex:none}
+/* The footer is hidden in flex: the settings menu in the toolbar mirrors every
+   control on it, so there are not two places to reach the same switch. */
+body.flex-layout footer{display:none}
+body.flex-layout .stage{
+  flex:1 1 auto;min-height:0;max-width:none;padding:0;gap:0;overflow:hidden;
+}
+body.flex-layout .grid-panel{
+  flex:1 1 auto;min-height:0;gap:0;align-items:stretch;
+}
+
+/* Column order. The clue sits directly above the keyboard, where the thumb
+   already is, rather than at the top of the screen above the board. */
+/* The clue is the LAST thing before the keyboard.
+
+   It sat above the controls, which put two rows of buttons between the clue
+   and the thumb — the clue was near the bottom rather than at it. The whole
+   reason for moving it off the top of the screen is that the eye and the thumb
+   should not have to travel between reading the clue and typing the answer, and
+   a control row in between undoes most of that. */
+body.flex-layout .grid-wrap{order:1;flex:1 1 auto;min-height:0}
+body.flex-layout .bank-strip{order:2;flex:none;border-radius:0;
+  border-left:0;border-right:0}
+body.flex-layout .tb-game{order:3;flex:none}
+body.flex-layout .tb-help{order:4;flex:none}
+/* Zero height, and the message floats over the board.
+
+   The row reserves 36px so a message appearing cannot shift the layout — right
+   in the classic column, where the board sits above it and would have moved.
+   In the flex column that reservation is 36px of permanent grey band between
+   the letter bank and the controls, paid on every screen for a message that is
+   almost never showing.
+
+   The row keeps its place in the order but takes no space: the message is
+   positioned out of it, rising over the bottom of the board frame, which is
+   where the eye already is. Nothing moves when it appears. */
+body.flex-layout .nudge-row{
+  order:2;flex:none;min-height:0;height:0;margin:0;
+  position:relative;z-index:8;overflow:visible;
+}
+body.flex-layout .nudge-row .nudge{
+  position:absolute;left:50%;transform:translateX(-50%);bottom:6px;
+  white-space:normal;max-width:calc(100% - 24px);
+}
+
+/* The league table is not shown on a phone.
+
+   Two goes at fitting it: stacked under the letter bank, which cost the board a
+   whole row of height, and beside the clock as a second grid track, which did
+   not lay out cleanly. Neither earned its space next to a board that is the
+   whole point of the screen.
+
+   The running score chip covers what the table was there for, and the season
+   table is a sheet away. Worth another attempt another day, not at the cost of
+   the board. */
+@media (max-width:859px){
+  body.flex-layout .tb-table{display:none}
+}
+body.flex-layout .tb-table .club-bar,
+body.flex-layout .tb-table .tb-season{display:none}
+body.flex-layout .tb-table .league{width:auto;font-size:12px;line-height:1.15}
+body.flex-layout .tb-table .league td{padding:1px 4px;white-space:nowrap}
+/* The club name is the widest column and the least useful of the three at this
+   size — the position and the points are what the glance is for. */
+body.flex-layout .tb-table .league td.club{
+  max-width:82px;overflow:hidden;text-overflow:ellipsis;
+}
+body.flex-layout .now-clue{order:6;flex:none;border-radius:0;
+  border-left-width:4px;border-right:0}
+
+/* Full width, every one of them.
+
+   They were still capped to --board-w, which is the classic layout's idea of
+   the column: the board's own width, so everything below it lines up with it.
+   Here the frame is the full screen, so the cap left the bank, the clue and the
+   controls in a narrow column down the left — and setting margin:0 on them
+   removed the auto-centring that had been hiding it. */
+body.flex-layout .bank-strip,
+body.flex-layout .now-clue,
+body.flex-layout .tb-box,
+body.flex-layout .nudge-row{
+  width:100%;max-width:none;margin:0;
+}
+
+/* ---- wide: board left, clue lists right ----
+   Above the breakpoint there is room to see every clue at once, and a board
+   fitted whole leaves turf either side doing nothing. The panel takes that
+   width and the lists stop being a scroll past the board.
+
+   A grid rather than a row of flex columns, so the panel can span the full
+   height beside a stack of five things without any of them knowing about it. */
+@media (min-width:860px){
+  body.flex-layout .grid-panel{
+    display:grid;
+    grid-template-columns:1fr 340px;
+    grid-template-rows:1fr auto auto auto auto auto;
+  }
+  body.flex-layout .grid-wrap{grid-column:1;grid-row:1;min-height:0}
+  body.flex-layout .bank-strip{grid-column:1;grid-row:2}
+  body.flex-layout .tb-game{grid-column:1;grid-row:3}
+  body.flex-layout .tb-help{grid-column:1;grid-row:4}
+  /* Given a row rather than hidden: this is where a wrong letter is reported,
+     and a game that stops telling you when you are wrong is worse than one
+     with an empty strip in it. */
+  body.flex-layout .nudge-row{grid-column:1;grid-row:5}
+  /* Last again, so the clue sits against the keyboard on a touch screen and
+     against the bottom of the window on a desktop. */
+  body.flex-layout .now-clue{grid-column:1;grid-row:6}
+  /* Column two is the clue lists above and the table below. The lists take the
+     scrolling rows; the table takes the last one, so it holds still while they
+     move — a table that scrolled away would be a readout you had to go and
+     find. */
+  body.flex-layout .tb-table{
+    grid-column:2;grid-row:6 / -1;order:0;
+    border-left:1px solid var(--line);border-top:1px solid var(--line);
+    border-right:0;border-bottom:0;border-radius:0;
+    margin:0;padding:6px 10px;max-width:none;width:auto;align-self:stretch;
+  }
+  body.flex-layout .tb-table .tb-season{display:block}
+  body.flex-layout .clues-block{
+    display:block;grid-column:2;grid-row:1 / 6;
+    min-height:0;overflow-y:auto;overscroll-behavior:contain;
+    border-left:1px solid var(--line);margin:0;padding:8px 10px 16px;
+    max-width:none;width:auto;
+  }
+  body.flex-layout .clues-block .clues{grid-template-columns:1fr;gap:16px;max-width:none}
+  body.flex-layout .clues-head{max-width:none;margin:0 0 4px}
+  /* Headings stay put while the list moves under them. */
+  body.flex-layout .clue-col h2{
+    position:sticky;top:-8px;background:var(--paper);z-index:1;padding:6px 0 4px;
+  }
+}
+
+/* On a phone there is no room for the panel; the jump list on the clue label
+   does its job without scrolling past the board. */
+@media (max-width:859px){
+  body.flex-layout .clues-block{display:none}
+}
+
+/* The frame. touch-action:none because pan and pinch are handled in script;
+   left to the browser it would scroll the page instead. */
+body.flex-layout .grid-wrap{
+  position:relative;overflow:hidden;touch-action:none;
+  /* Stretched by the column rather than declared width:100%.
+
+     frontend_test asserts the pitch hugs the grid instead of spanning the
+     content width — a small crossword floating in the middle of a huge pitch
+     was a real defect on an iPad. A bare width:100% on any .grid-wrap rule
+     trips that check, and rightly: the classic layout must keep hugging. Here
+     the frame does need the full column, so it takes it from align-self
+     instead of from a width the test cannot tell apart. */
+  width:auto;max-width:none;align-self:stretch;
+  background:var(--pitch-deep);
+}
+/* Turf fills the frame rather than tracking the board, so panning does not
+   drag the pitch markings around with it. */
+body.flex-layout .pitch-bg{position:absolute;inset:0;width:100%;height:100%}
+body.flex-layout .grid{
+  position:absolute;top:0;left:0;transform-origin:0 0;will-change:transform;
+}
+
+/* Board controls, bottom left of the frame. */
+.fx-zoom{position:absolute;left:8px;bottom:8px;z-index:6;display:none;gap:5px}
+body.flex-layout .fx-zoom{display:flex}
+/* THEY SIT ON THE BOARD, THEY DO NOT TAKE FROM IT.
+   fitFlex sizes the board to the whole frame and these float over it, so the
+   space they occupy is not space the board loses. What they did do is read as
+   two solid black slabs on a pale pitch — on a 375px phone the pair of them
+   plus the pill spanned most of the frame's bottom edge, which is why they
+   were reported as eating the board.
+   So the footprint stays 44px, because that is what a control has to be and
+   what render_test measures, and the chip painted inside it gets SMALLER —
+   34px centred in a 44px target, and the pill loses its padding.
+   IT DOES NOT GET FAINTER, and that was tried first: dropping the fill to 34%
+   black put white glyphs at about 2.7:1 against the pale pitch behind them,
+   under the 4.5:1 a label needs, and the minus and plus visibly washed out. A
+   control nobody can read is worse than one that is merely large. Smaller and
+   solid, not the same size and translucent. */
+.fx-zoom button{
+  width:44px;height:44px;border:0;background:none;padding:0;
+  color:#fff;font:600 17px var(--body);line-height:1;
+  display:flex;align-items:center;justify-content:center;position:relative;
+}
+.fx-zoom button::before{
+  /* BEHIND THE GLYPH. A positioned ::before paints after the element's own
+     text, so at first the chip covered the minus and the plus and they read as
+     faint grey through 55% black. z-index:-1 puts it back where a background
+     belongs; the button sets z-index:0 below, which gives it a stacking
+     context so the -1 cannot fall behind the pitch as well. */
+  content:"";position:absolute;left:5px;right:5px;top:5px;bottom:5px;z-index:-1;
+  border-radius:var(--r-md);background:rgba(0,0,0,.55);
+}
+.fx-zoom button > *,.fx-zoom button{z-index:0}
+.fx-zoom button:active::before{background:rgba(0,0,0,.72)}
+.fx-zoom button:disabled{opacity:.3}
+.fx-fit{
+  position:absolute;right:8px;bottom:8px;z-index:6;display:none;
+  min-height:44px;
+  border:0;border-radius:var(--r-pill);background:rgba(0,0,0,.55);color:#fff;
+  font:600 11px var(--body);text-transform:uppercase;letter-spacing:.04em;
+  padding:7px 10px;
+}
+.fx-fit:active{background:rgba(0,0,0,.72)}
+body.flex-layout .fx-fit{display:block}
+
+/* ============ FOCUS THE ACTIVE ANSWER ============
+   Everything outside the current entry is hidden, and that costs nothing.
+
+   The first version dimmed instead, on the reasoning that crossing letters are
+   the main solving aid and must stay visible. That reasoning was wrong: a
+   crossing letter lives in a cell that belongs to BOTH entries, so it is part
+   of the active word and never leaves. What disappears is only the cells the
+   active word does not touch, and those say nothing about the clue in hand.
+
+   Blocked squares are already transparent, so the board simply becomes the one
+   answer sitting on the turf. */
+body.flex-layout.focus-word .cell:not(.in-word){
+  opacity:0;pointer-events:none;
+}
+body.flex-layout.focus-word .cell{transition:opacity var(--t-fast) var(--ease-in)}
+
+/* ============ TOOLBAR ============
+   Above the board: where you are on the left, what you can do to the puzzle on
+   the right. Only in the flex layout — the classic one already has its control rows
+   below the board and two sets would be two places to keep in step. */
+.tbar{display:none}
+/* A sibling of .grid-panel, not a child of it.
+
+   It began inside the panel and frontend_test caught it: that test pins the
+   panel'''s child order, guarding against a toolbar that used to be relocated at
+   runtime. Outside the panel the order it protects is untouched, and the strip
+   spans the full width above both the board and the clue list. */
+body.flex-layout .tbar{
+  flex:none;display:flex;align-items:center;gap:6px;
+  padding:5px 8px;border-bottom:1px solid var(--line);background:var(--paper);
+}
+/* The readings take the left of the row and the controls keep the right. They
+   shrink before the buttons do: a clipped Check is a control you cannot use,
+   a clipped clock is a number you can still read most of. */
+body.flex-layout .tbar > .tb-readouts{
+  display:flex;align-items:baseline;gap:9px;min-width:0;flex:0 1 auto;
+  overflow:hidden;
+}
+body.flex-layout .tbar > .tb-readouts .live-chip{white-space:nowrap}
+/* ONE ROW OF BOXES, ALL THE SAME HEIGHT. The clock put its elapsed line under
+   the minute, so its box stood taller than every button beside it and the row
+   read as a tall thing with short things next to it. In this row the sub goes
+   inline instead and every box takes the height of a control — 44px, the
+   same number the buttons are held to — so the row lines up whatever is in
+   it. The minute keeps its place; it is the figure the scoring moves on. */
+body.flex-layout .tbar > .tb-readouts{ align-items:center; }
+body.flex-layout .tbar > .tb-readouts > *{
+  height:44px;box-sizing:border-box;display:flex;align-items:center;
+}
+body.flex-layout .tbar > .tb-readouts .match-clock{
+  gap:7px;font-size:22px;padding:0 10px;min-width:0;
+}
+body.flex-layout .tbar > .tb-readouts .match-clock small{
+  display:inline;margin-top:0;
+}
+/* The score was the one reading in the row without a face, which read as a
+   number that had escaped from somewhere rather than the third of three.
+   Same border, same radius, same background as the clock and the count. */
+body.flex-layout .tbar > .tb-readouts .live-score{
+  border:1px solid var(--line);border-radius:var(--r-sm);background:var(--card);
+  padding:0 10px;gap:4px;
+}
+/* WHAT THE ROW CAN AFFORD, measured at 375px: the readings came to 200px and
+   Check, Reveal and the cog to 183, which with the row's own padding is 399
+   against 375 — the cog went off the edge, and at 320 the row wrapped to
+   three. The numbers stay and the words go: "0:02 elapsed" under the minute
+   was 38px and "solved" beside the count 39px, and neither says anything the
+   figure beside it does not. */
+@media (max-width:560px){
+  body.flex-layout .tbar > .tb-readouts #elapsedLine,
+  body.flex-layout .tbar > .tb-readouts .live-chip small{ display:none; }
+  body.flex-layout .tbar > .tb-readouts{ gap:5px; }
+  /* The box the score gained costs 20px of padding the row did not have at
+     375: it came to 378 against 375. Taken back here rather than by dropping
+     the face again — the boxes matching is the point. */
+  body.flex-layout .tbar > .tb-readouts .match-clock{ padding:0 8px; }
+  body.flex-layout .tbar > .tb-readouts .live-score{ padding:0 7px; }
+  body.flex-layout .tbar > .tb-readouts .live-chip{ padding:5px 7px; }
+}
+/* Smaller still and the buttons give up their padding before anything is
+   dropped, because a control you cannot read is worse than a tight one. */
+@media (max-width:360px){
+  body.flex-layout .tbar{ gap:4px;padding:5px 6px; }
+  body.flex-layout .tbar .tbar-btn{ padding:6px 7px; }
+  /* And on the smallest phone the count goes as well. Measured at 320: with
+     the padding given up the row still ran to 362px against 320 and put the
+     cog off the edge. The clock and the score stay because one says how the
+     scoring is moving and the other is the score; how many of the eleven are
+     done is the one of the three the board itself already shows. */
+  body.flex-layout .tbar > .tb-readouts .live-chip{ display:none; }
+}
+body.flex-layout .tbar-right{margin-left:auto;display:flex;gap:6px;align-items:center}
+.tbar-menu{position:relative}
+.tbar-btn{
+  /* 44px, which is the platform guidance on both iOS and Android and what
+     render_test enforces. These were 34px: comfortable with a mouse, a mis-tap
+     on glass — and a mis-tap on Reveal costs points. */
+  font-family:var(--disp);font-weight:600;font-size:13px;letter-spacing:.06em;
+  text-transform:uppercase;padding:6px 10px;min-height:44px;
+  border:1px solid var(--line);border-radius:var(--r-md);background:var(--card);
+  color:var(--ink);white-space:nowrap;
+}
+.tbar-btn[aria-expanded="true"]{border-color:var(--pitch);color:var(--pitch)}
+#tbMode::after,#tbCheck::after,#tbReveal::after{content:" \25BE";font-size:.8em;opacity:.6}
+.tbar-cog{font-size:16px;padding:6px 11px;letter-spacing:0;min-width:44px}
+.tbar-pop{
+  position:absolute;top:calc(100% + 5px);z-index:80;min-width:190px;
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);
+  box-shadow:0 8px 24px rgba(0,0,0,.16);padding:4px;
+}
+.tbar-menu:last-child .tbar-pop,.tbar-right .tbar-pop{right:0}
+.tbar-pop[hidden]{display:none}
+.tbar-pop button{
+  display:flex;align-items:center;gap:10px;width:100%;text-align:left;
+  border:0;background:none;color:var(--ink);font:inherit;font-size:14px;
+  padding:9px 10px;border-radius:var(--r-sm);min-height:40px;
+}
+.tbar-pop button:hover{background:var(--sel-word)}
+/* Greyed, not gone. A missing item reads as a thing that does not exist; a
+   greyed one with a reason beside it reads as a thing that is not available to
+   you yet, which is the truth in both cases here. */
+.tbar-pop button[disabled]{opacity:.45;cursor:default}
+.tbar-pop button[disabled]:hover{background:none}
+.tbar-pop .pc.soon{
+  text-transform:uppercase;letter-spacing:.06em;font-size:10px;
+  border:1px solid var(--line);border-radius:var(--r-pill);padding:2px 6px;
+}
+.tbar-pop .pc{margin-left:auto;font-size:12px;color:var(--ink-faint);
+  font-variant-numeric:tabular-nums}
+.tbar-pop button.danger{color:var(--wrong)}
+.tbar-pop button.danger .pc{color:var(--wrong)}
+
+/* In flex the old control rows are gone: the toolbar does their job and two
+   sets of the same buttons is two things to keep in step. */
+body.flex-layout .tb-game,
+body.flex-layout .tb-help{display:none}
+
+@media (max-width:420px){
+  .tbar-btn{font-size:12px;padding:5px 8px}
+}
+
+/* Settings menu. Wider than the others because its rows carry a state. */
+.tbar-set{min-width:230px}
+.tbar-set a{
+  display:flex;align-items:center;gap:10px;padding:9px 10px;border-radius:var(--r-sm);
+  min-height:40px;color:var(--ink);text-decoration:none;font-size:14px;
+}
+.tbar-set a:hover{background:var(--sel-word)}
+.set-build{
+  padding:8px 10px 2px;margin-top:4px;border-top:1px solid var(--line);
+  font-size:11px;color:var(--ink-faint);letter-spacing:.04em;
+}
+
+/* Sign-in, offered where it means something.
+
+   Signed out it is outlined in the accent, because it is an invitation.
+   Signed in it is quiet: a name on screen is a readout, not something anybody
+   needs pressing. */
+.tbar-who{
+  border-color:var(--pitch);color:var(--pitch);background:var(--card);
+  max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.tbar-who.signed-in{
+  border-color:var(--line);color:var(--ink-soft);text-transform:none;
+  letter-spacing:.02em;font-weight:600;
+}
+.tbar-who.signed-in::before{
+  content:"";display:inline-block;width:7px;height:7px;border-radius:50%;
+  background:var(--pitch);margin-right:7px;vertical-align:middle;
+}
+@media (max-width:520px){ .tbar-who{max-width:96px} }
+.res-signin{
+  margin:14px 0 4px;padding:12px;border:1px solid var(--line);border-radius:var(--r-md);
+  background:var(--paper);text-align:center;
+}
+.res-signin p{margin:0 0 8px;font-size:14px;color:var(--ink-soft)}
+.res-signin-note{
+  display:block;margin-top:8px;font-size:12px;color:var(--ink-faint);
+}
+.res-signin-note a{color:var(--ink-faint)}
+
+
+/* The running score, beside the clock. Only in the flex layout: the classic one
+   still shows the league table, where the number already lives. */
+.live-score{display:none}
+/* The chip stands down only where the table is actually there to replace it.
+
+   has-table means a club has been chosen, not that the table is on screen — and
+   on a phone it is not. Hiding the chip on that class alone left a phone player
+   with a club and no score anywhere, which is the regression this chip exists
+   to fix. Scoped to the width where the table renders. */
+@media (min-width:860px){
+  body.flex-layout.has-table .live-score{display:none}
+}
+/* No club, no table: renderLeagueRows never runs without one, so the panel
+   would be an empty box taking room from the board. */
+body.flex-layout:not(.has-table) .tb-table{display:none}
+body.flex-layout .live-score{
+  display:inline-flex;align-items:baseline;gap:3px;
+  font-family:var(--disp);font-weight:700;font-size:19px;line-height:1;
+  color:var(--pitch);font-variant-numeric:tabular-nums;
+}
+body.flex-layout .live-score small{
+  font-family:var(--body);font-weight:600;font-size:10px;
+  text-transform:uppercase;letter-spacing:.08em;color:var(--ink-faint);
+}
+/* Falling is the point, so a change is worth a beat of attention. */
+body.flex-layout .live-score.dropped{animation:scoreDrop var(--t-slow) var(--ease)}
+@keyframes scoreDrop{
+  0%{color:var(--wrong);transform:translateY(-2px)}
+  100%{color:var(--pitch);transform:none}
+}
+
+/* ============ SHORT SCREENS ============
+   render_test measured 106px of frame on a 320x568 phone: the header, toolbar,
+   letter bank, clue card and keyboard between them took 424px of 568, leaving
+   a slot the board could not be panned around inside.
+
+   Rotating does not help a short PORTRAIT screen, so the chrome gives the room
+   back instead. Everything here is smaller, not missing — a control that
+   disappears on a small screen is a feature that phone does not have. */
+@media (max-height:640px){
+  body.flex-layout header{padding:3px 10px}
+  body.flex-layout .masthead{font-size:15px}
+  body.flex-layout .brandline{display:none}
+  body.flex-layout .strap{font-size:9px}
+
+  body.flex-layout .tbar{padding:3px 6px;gap:4px}
+  /* 44px stays. I dropped these to 40px to buy height on a short screen and
+     render_test refused it at four viewports, correctly: a mis-tap on Reveal
+     costs points, and a small screen is where mis-taps happen. The saving comes
+     from padding and type size, which cost nothing anybody has to hit. */
+  body.flex-layout .tbar-btn{min-height:44px;padding:3px 7px;font-size:12px}
+
+  body.flex-layout .bank-strip{padding:3px 6px}
+  body.flex-layout .bank-cell{width:18px;height:22px;font-size:13px}
+
+  /* The clue card is the biggest single saving. Two lines instead of three:
+     the sentence is still readable and anything longer scrolls inside the card
+     rather than being clipped, which is what the fixed height protects. */
+  body.flex-layout .now-clue{height:86px;padding:4px 6px}
+  body.flex-layout .nc-text{font-size:14px;line-height:1.25}
+
+  /* The keyboard is left alone. --osk-h is clamp(34px,5.4vh,52px), so on a
+     568px screen it is already at its 34px floor — an override here would only
+     push it below what a thumb can hit. The room comes from the chrome that is
+     not sized for the screen. */
+  body.flex-layout .osk{padding:3px 2px calc(3px + env(safe-area-inset-bottom))}
+}
+
+
+/* The daily, offered at Full Time. Given the accent and a solid button because
+   it is the one thing on this screen that is about tomorrow rather than about
+   the board just finished. */
+.res-daily{
+  margin:16px 0 6px;padding:14px 12px;border-radius:var(--r-lg);
+  border:1px solid var(--pitch);background:var(--sel-word);text-align:center;
+}
+.rd-line{
+  font-family:var(--disp);font-weight:700;font-size:17px;letter-spacing:.02em;
+  color:var(--pitch-ink);margin-bottom:9px;
+}
+.res-daily .btn{width:100%}
+.rd-note{margin-top:8px;font-size:12.5px;color:var(--ink-soft);line-height:1.4}
+:root[data-theme="dark"] .res-daily{background:var(--card)}
+
+
+/* The one-time tip about Follow word. Sits over the bottom of the board frame,
+   where the nudge goes — clear of the clue card and clear of the squares being
+   read. */
+.fx-tip{
+  position:absolute;left:8px;right:8px;bottom:60px;z-index:9;
+  display:flex;align-items:center;gap:8px;
+  background:var(--card);border:1px solid var(--pitch);border-radius:var(--r-lg);
+  padding:9px 10px;box-shadow:0 6px 20px rgba(18,34,25,.28);
+  font-size:13.5px;line-height:1.3;color:var(--ink);
+}
+.fx-tip[hidden]{display:none}
+.fx-tip span{flex:1;min-width:0}
+.fx-tip .btn{flex:none;min-height:38px;padding:6px 11px;font-size:12px}
+.fx-tip-x{
+  flex:none;width:32px;height:38px;border:0;background:none;
+  color:var(--ink-faint);font-size:19px;line-height:1;
+}
+
+/* ============ FULL TIME: the breakdown, collapsed ============
+   The score is the answer; the arithmetic is a follow-up question. Six rows of
+   it between the result and the buttons pushed the actions below the fold on
+   every phone. */
+.breakdown-wrap{
+  margin:14px 0 4px;border:1px solid var(--line);border-radius:var(--r-md);
+  background:var(--card);text-align:left;
+}
+.breakdown-wrap > summary{
+  display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:11px 12px;cursor:pointer;list-style:none;min-height:44px;
+  font-size:14px;color:var(--ink-soft);
+}
+.breakdown-wrap > summary::-webkit-details-marker{display:none}
+.breakdown-wrap > summary::after{
+  content:"\25BE";font-size:.8em;opacity:.6;order:3;color:var(--ink-faint);
+}
+.breakdown-wrap[open] > summary::after{content:"\25B4"}
+.breakdown-wrap[open] > summary{border-bottom:1px solid var(--line)}
+.bd-open{flex:1;min-width:0}
+.bd-total{
+  font-family:var(--disp);font-weight:700;font-size:16px;color:var(--ink);
+  font-variant-numeric:tabular-nums;
+}
+.breakdown-wrap .breakdown{padding:4px 12px 10px;margin:0}
+/* The total is already on the summary, so repeating it inside is the third
+   time the same number appears on this screen. */
+.breakdown-wrap .res-final{display:none}
+/* The board and its chrome are not behind this any more — they are simply not
+   shown until something is chosen. Hidden rather than covered, so a stray tap
+   cannot reach a puzzle nobody has started. */
+body.home-showing .stage,
+body.home-showing .osk,
+body.home-showing .tbar{visibility:hidden}
+
+/* The settings menu, opened from the landing rather than the toolbar. Same
+   markup, different anchor: in the toolbar it hangs under a button in a strip,
+   here it sits in the column under the Settings button. */
+.tbar-pop.as-home{
+  position:static;margin:8px 0 0;width:100%;min-width:0;
+  box-shadow:0 4px 16px rgba(18,34,25,.12);
+}
+
+/* Back to the menu. A glyph, not a word: the toolbar is tight on a phone and
+   this is the one control whose meaning is clear from its shape. */
+.tbar-home{
+  font-size:17px;line-height:1;letter-spacing:0;padding:6px 11px;min-width:44px;
+}
+.sc-note{display:block;font-size:12.5px;color:var(--ink-soft);margin-top:3px}
+
+.site-foot{border-top:1px solid var(--line);margin-top:36px;background:var(--tint)}
+.site-fw{max-width:1080px;margin:0 auto;padding:22px 20px 28px}
+.fg-kicker{font-size:11.5px;letter-spacing:.11em;color:var(--ink-faint);margin-bottom:10px}
+.fg-row{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.fg-card{
+  display:block;background:var(--card);border:1px solid var(--line);
+  border-radius:11px;padding:12px 14px;text-decoration:none;
+}
+.fg-card.soon{opacity:.55}
+.fg-name{display:block;font-weight:700;font-size:14.5px;color:var(--ink)}
+.fg-note{display:block;font-size:12px;color:var(--ink-soft);margin-top:2px}
+.foot-legal{
+  display:flex;gap:10px;align-items:center;flex-wrap:wrap;
+  margin-top:20px;padding-top:16px;border-top:1px solid var(--line);
+  font-size:12.5px;color:var(--ink-soft);
+}
+.foot-end{margin-left:auto;color:var(--ink-faint)}
+
+@media (max-width:860px){
+  .fg-row{grid-template-columns:1fr}
+  .foot-end{margin-left:0;width:100%}
+}
+
+
+/* Three across, below the fixture. Equal weight because they are alternatives
+   to each other, not to today — today is the block above with all the colour. */
+/* A CROSSWORD BEHIND THE FIXTURE, at the edge of visible.
+
+   The hero is the one block on the page with weight, and the family's card
+   draws a plain lattice behind it — which says "grid" and stops there. This
+   game is a crossword, so the card shows one: blocked squares, clue numbers,
+   letters that spell nothing, and clues beside it at a width you can see and
+   not read. The shared lattice is turned off here rather than drawn under it,
+   because two grids at two spacings is a moiré, not depth.
+
+   An element rather than a background image: it is themed with the same
+   tokens as everything else, it needs no escaping, and the next person can
+   read what it draws. Everything is one colour at low opacity — a texture,
+   not a diagram, and the white heading over it stays the thing being read. */
+#homeDaily.hero::after{display:none}
+.home-choice.hero .hc-art{
+  /* Fitted whole, not cropped to fill: sliced to cover, the card's own
+     height cut the grid off the left and left a column of clue lines that
+     said nothing about what game this is. */
+  position:absolute;right:8px;top:0;height:100%;width:min(66%,460px);
+  z-index:0;pointer-events:none;overflow:visible;
+  /* Faded out towards the words. The card is read left to right and the art
+     has to give way before it reaches the heading. */
+  -webkit-mask-image:linear-gradient(100deg,transparent 0%,transparent 22%,#000 72%);
+  mask-image:linear-gradient(100deg,transparent 0%,transparent 22%,#000 72%);
+}
+/* --on-pitch rather than --hero-rule: the rule token is tuned for a lattice
+   that is meant to be sensed and not seen, and at that weight the squares
+   disappeared at reading size and left a column of clue lines with nothing
+   beside them. Both tokens invert with the theme, so this is a weight change
+   and not a colour one. */
+.hc-art-grid rect{fill:none;stroke:var(--on-pitch);stroke-width:1;opacity:.13}
+/* The blocked squares carry the shape of a crossword more than the lines do,
+   so they are the one part allowed to be seen rather than sensed. */
+.hc-art-grid rect.b{fill:var(--on-pitch);stroke:none;opacity:.10}
+.hc-art-ink{fill:var(--on-pitch);opacity:.15}
+.hc-art-ink text.l{
+  font-family:var(--disp);font-size:15px;font-weight:700;text-anchor:middle;
+}
+.hc-art-ink text.n{font-family:var(--body);font-size:8px}
+.hc-art-ink rect.r{fill:var(--on-pitch)}
+/* Narrow screens: the words need the whole card, so the art steps back to a
+   corner rather than sitting under them. */
+@media (max-width:560px){
+  .home-choice.hero .hc-art{width:min(78%,320px);opacity:.55}
+}
+
+/* The device code. Two controls: one gives the code out, one takes one in. */
+.code-block{margin-top:18px;padding-top:16px;border-top:1px solid var(--line)}
+.code-or{font-size:12px;letter-spacing:.09em;color:var(--ink-faint);
+  text-align:center;margin-bottom:14px}
+.code-mine{margin-bottom:16px}
+.code-lbl{font-size:13px;font-weight:700;color:var(--ink);margin-bottom:6px}
+.code-row{display:flex;gap:8px;align-items:stretch}
+.code-row code{
+  flex:1;min-width:0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:16px;letter-spacing:.06em;background:var(--paper);
+  border:1px solid var(--line);border-radius:var(--r-md);padding:11px 12px;
+  display:flex;align-items:center;overflow:auto;
+}
+.code-row input{
+  flex:1;min-width:0;font-family:ui-monospace,SFMono-Regular,Menlo,monospace;
+  font-size:16px;letter-spacing:.06em;padding:11px 12px;
+  border:1px solid var(--line);border-radius:var(--r-md);text-transform:uppercase;
+}
+.code-row .btn{flex:none;min-height:44px}
+.code-note{font-size:12.5px;color:var(--ink-soft);margin-top:6px;line-height:1.45}
+
+/* ============ PREVIOUS PUZZLES CALENDAR ============
+   A board's only identity is its date, so a date is how you choose one. Three
+   states rather than two: played, still to play, and not yet released. */
+/* Not released. A dot rather than a number: there is nothing there to choose,
+   and an empty square with a date on it reads as something you failed to do. */
+/* The date and the score are separate lines. Inline, "24" and a score of 97
+   rendered as "2497". */
+/* The open-book marker: a board whose answers page is published. Bottom
+   corner, small and muted — information, not decoration. The strap's version
+   is a link in the board's own line. */
+.strap-ans{ color:inherit; text-decoration:underline; text-underline-offset:2px; }
+
+
+
+/* Available to a screen reader and to a crawler, not on screen.
+
+   The H1 reads "Crossword XI" visually; the phrase people actually search for —
+   "the daily football crossword" — rides in here rather than being stuffed into
+   the brand. clip-path with a 1px box is the form that survives; display:none
+   and visibility:hidden are both ignored by assistive tech, which would defeat
+   the point. */
+
+/* The error strip. It was nineteen inline properties in the markup with two
+   colours nothing else used; the same strip, drawn from the tokens. */
+#errStrip{
+  position:fixed;top:0;left:0;right:0;z-index:99;background:var(--danger);color:var(--on-pitch);
+  font:var(--fs-xs)/var(--lh-body) ui-monospace,Menlo,Consolas,monospace;
+  padding:6px 34px 6px 10px;white-space:pre-wrap;word-break:break-all;
+}
+#errStripX{
+  position:absolute;right:6px;top:4px;background:none;border:1px solid var(--on-pitch);
+  color:var(--on-pitch);border-radius:var(--r-xs);cursor:pointer;
+}
+
+/* A DAY BEHIND THE FREE WINDOW. Shown rather than hidden: what is behind the
+   lock is the reason to register, and a day that vanished from the grid would
+   say nothing at all. */
+
+
+/* iOS ZOOMS ANY FIELD IT FOCUSES BELOW 16px, AND DOES NOT ZOOM BACK OUT.
+   #chName was already 17px. #flagNote was 15 and .ch-make input 14, and the
+   flag is reachable mid-solve from the clue card — so reporting a bad clue
+   left the player zoomed into a dialog with no way back but pinching.
+
+   LAST IN THE FILE ON PURPOSE. Written as input[type="text"] up where the
+   touch rules are, it lost: `.ch-make input` and `.acct-field input` are the
+   same specificity and come later, so the 14px and 15px won and the fields
+   still measured 14 and 15 in the browser. Specificity ties are settled by
+   order, so the floor goes where nothing can follow it.
+   Player-facing fields only. The admin panel's 13px is denser on purpose and
+   nobody but the owner ever focuses it. */
+#flagNote,.ch-make input,.acct-field input{ font-size:16px; }

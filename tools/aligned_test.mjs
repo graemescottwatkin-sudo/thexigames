@@ -349,7 +349,7 @@ console.log("\n=== The family as a whole ===");
    being FOUND, not about being playable. Asked of the server module rather
    than restated here: a second copy of "which games are advertised" is a
    second answer the first time one changes. */
-const { isListed } = await import("../functions/_lib/games.js");
+const { isListed, inSeason } = await import("../functions/_lib/games.js");
 const LISTED = (g) => isListed(g.id);
 const chrome = read("shared/xi-chrome.js");
 /* A LISTED GAME HAS BOTH A NAME AND A WAY IN; AN UNLISTED ONE HAS NEITHER.
@@ -901,7 +901,12 @@ t("no game carries a private copy of a shared file",
  * records", which is the tell: the page assumed the thing it had not loaded. */
 {
   const posts = GAMES.filter((g) => /xi-plays\.js/.test(read(`${g.dir}/index.html`)));
-  const seasonless = posts.filter((g) => !/xi-season\.js/.test(read(`${g.dir}/index.html`)));
+  /* EXCEPT THE GAMES THAT ARE DELIBERATELY OUT OF IT. NO_SEASON in
+     functions/_lib/games.js names them and records why; without it this rule
+     and friends/crossword's own gate demanded opposite things and neither
+     could pass. Asked rather than listed here, so the exception has one home. */
+  const seasonless = posts.filter((g) =>
+    inSeason(g.id) && !/xi-season\.js/.test(read(`${g.dir}/index.html`)));
   t("every game that posts plays loads the season beside it",
     posts.length >= 8 && seasonless.length === 0,
     seasonless.length
