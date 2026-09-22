@@ -1017,13 +1017,22 @@ t("and no game writes the link itself", (() => {
   return guilty.length === 0;
 })(), "the href lives once, in shared/xi-chrome.js");
 
-const SHARED_TAG = "v53";
-/* The bytes that ship AS v50. The tag does not move again for this change:
-   v50 has not shipped, so it is still the version being prepared, and a tag
-   bumped once per edit before release would burn a letter a minute. What
-   must not happen is shared bytes changing under a tag that IS live — which
-   is the pairing this constant exists for. */
-const SHARED_HASH = "51fa815dfc2e874f";
+const SHARED_TAG = "v54";
+/* The bytes that ship AS v54, AND THE TAG HAD TO MOVE FOR THEM.
+   v53 WAS LIVE -- checked against production, not assumed: every page on
+   www.thexigames.com was serving shared/*?v=v53 when xi-chrome.js gained the
+   Friends squad's second slot. Shared bytes changing under a tag that is live
+   is the one thing this pairing exists to refuse, so v53 -> v54 across every
+   page and site-page.js's constant.
+   THE RULE IS NOT "bump on every edit". While a shared tag has NOT yet shipped
+   it is still the version being prepared, and moving it once per edit would
+   burn a number a minute; then only this hash moves. Which case you are in is
+   a question about PRODUCTION and is answered by asking it.
+   This comment said "the bytes that ship AS v50" while the tag beside it read
+   v53, which is this project's oldest fault in miniature: a measurement left
+   standing after it stopped being true, in the comment that tells the next
+   reader whether they may leave the tag alone. */
+const SHARED_HASH = "30b8d1a2c10f8aab";
 /* EVERY PAGE THAT LINKS THE SHARED LAYER, not the games alone. The hub, the
    two static pages and the unlaunched game all carry the chrome now, and the
    server-rendered shell writes the tag from a constant of its own — so a tag

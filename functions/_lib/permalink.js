@@ -344,6 +344,14 @@ export const THEME_OF = {
      game is built and launched — an entry here builds a path, it does not
      make a game. */
   crossword_fr: "friends",
+  /* THE SECOND FRIENDS GAME, AND IT IS NOT LAUNCHED. Its server is live and
+     proved — /api/whoami/whoami_fr/* answers, refuses an unknown game, and
+     reaches fr_wa_* and never wa_* — but migration 044 is not applied, the deck
+     is not imported and there is no page. This entry is here for the same
+     reason crossword_fr's was before its launch and on the same terms: it
+     builds a path, it does not make a game. Nothing reads it until the id is in
+     GAMES. */
+  whoami_fr: "friends",
 };
 export const themeOf = (game) => THEME_OF[game] || "football";
 
@@ -388,6 +396,12 @@ export const THEMES = [...new Set(Object.values(THEME_OF))];
  * that puts them together. */
 export const SLUG_OF = {
   crossword_fr: "crossword",
+  /* /friends/whoami/, not /friends/whoami_fr/. The id has to differ from
+     football's `whoami` because an id keys results rows and maps to exactly one
+     theme; the player sees "the Who Am I", and the theme in front of it is what
+     tells the two apart. The same collision crossword_fr had, answered the same
+     way. */
+  whoami_fr: "whoami",
 };
 export const slugOf = (game) => SLUG_OF[game] || game;
 

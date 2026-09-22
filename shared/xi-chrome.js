@@ -154,6 +154,19 @@
        calling this game UNLISTED, and the gates refuse the three disagreeing. */
     friends: [
       { n: 1,  status: "Unlisted" },
+      /* WHO AM I, FRIENDS — IN BUILD, SO IT HOLDS NO SHIRT. The two is where
+         the owner's ordering puts it, not a number it owns: "only a launched
+         game holds a number ... and moves down when a game ships past it". If a
+         different Friends game launches first, this slot moves down and nothing
+         else has to change.
+
+         A STATUS AND NOTHING ELSE, which is the same shape an UNLISTED game's
+         slot takes and for a stronger reason here: this file is downloaded by
+         every page on the site, so a name in it would be the site naming an
+         unreleased game in served markup — the thing chrome_test, aligned_test
+         and both live_checks exist to refuse. There is no href for the same
+         reason there is no page to point one at. */
+      { n: 2,  status: "In build" },
     ],
   };
 
