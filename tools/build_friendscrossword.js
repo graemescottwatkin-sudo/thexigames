@@ -282,6 +282,20 @@ function page() {
      cache fault this tag exists to prevent. */
   s = s.replace(/((?:css\/style\.css|js\/game\.js|js\/engine\.js)\?v=)[a-z0-9]+/g, `$1${TAG}`);
 
+  /* AND THE FOOTER'S BUILD TAG, WHICH IS WHAT A PERSON READS. The rewrite
+     above moved every asset to this game's tag and left the footer carrying
+     football's -- so the live Friends crossword said "v003x" at the bottom of
+     a page whose assets were all v002a, found in a site review on 22 September.
+     CLAUDE.md is explicit that game assets must match the footer, and "check
+     the deploy" starts by reading it: a reviewer comparing footer to origin
+     would have been comparing the wrong game's number. Counted, so a footer
+     that stops carrying a tag refuses rather than passing -- once() here takes
+     strings, and the tag it replaces is football's, which moves. */
+  const FOOT = /buildTag">v[0-9a-z]+</g;
+  const feet = (s.match(FOOT) || []).length;
+  if (feet !== 1) throw new Error(`rewrite "the footer build tag": found ${feet}, want 1`);
+  s = s.replace(FOOT, `buildTag">${TAG}<`);
+
   return s;
 }
 
