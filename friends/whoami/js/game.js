@@ -19,6 +19,7 @@
  * one especially, because deciding it here would need the club's whole roster
  * and a roster is a candidate list for the door.
  */
+var DECK_WORD = { main: 'Everyday', expert: 'Deep cut' };
 var BUILD = "v001a";
 
 (function bootstrap() {
@@ -52,7 +53,7 @@ var BUILD = "v001a";
     }
     if (status === 404) {
       return ["No board today",
-        "There is no Who Am I board for today. That is not a connection problem, so trying again will not help."];
+        "There is no board for today. That is not a connection problem, so trying again will not help."];
     }
     if (status === 503) {
       return ["Our end",
@@ -79,7 +80,7 @@ var BUILD = "v001a";
       if (hero) {
         hero.disabled = true;
         hero.querySelector(".hc-kicker").textContent = said[0];
-        hero.querySelector(".hc-title").textContent = "Who Am I XI";
+        hero.querySelector(".hc-title").textContent = "Who Am I XI: Friends";
         hero.querySelector(".hc-note").textContent = said[1];
         var state = hero.querySelector(".hc-state");
         if (state) state.textContent = "";
@@ -347,12 +348,12 @@ function start() {
          generic span the tree showed the label detached from the thing you
          press. */
       b.setAttribute('aria-label', done
-        ? (mine ? d.club + ', left in ' + d.leave + ' — the clue you played'
-                : d.club + ', left in ' + d.leave + ' — not yours today')
-        : d.club + ', left the club in ' + d.leave);
-      b.innerHTML = '<span class="d-club">' + esc(d.club) + '</span>' +
-        '<span class="d-year">' + esc(d.leave) + '</span>' +
-        '<span class="d-cap">Year left the club</span>' +
+        ? (mine ? d.section + ' — the door you opened'
+                : d.section + ' — not yours today')
+        : d.section + ', from the ' + d.deck + ' deck');
+      b.innerHTML = '<span class="d-club">' + esc(d.section) + '</span>' +
+        '<span class="d-year">' + esc(DECK_WORD[d.deck] || d.deck) + '</span>' +
+        '<span class="d-cap">How deep it goes</span>' +
         (mine ? '<span class="d-mine">Yours today</span>' : '');
       if (!done) {
         b.addEventListener('click', function () { choose(d, b); });
@@ -370,9 +371,9 @@ function start() {
     if (el.lede) {
       el.lede.textContent = done
         ? (state.solved
-            ? 'You got yours today. The other ten are somebody else\u2019s.'
-            : 'That was your go today. The other ten are somebody else\u2019s.')
-        : 'Pick a club. One player behind each door, and you get one go at him.';
+            ? 'You got yours today. The other two are somebody else\u2019s.'
+            : 'That was your go today. The other two are somebody else\u2019s.')
+        : 'Pick a door. One character behind each, and you get one go at them.';
     }
     /* SORTED AND UNATTRIBUTED, exactly as the server sent them. Rendering these
        beside their doors would undo the whole point of sorting them. */
@@ -398,11 +399,8 @@ function start() {
     var spells = (BOARD.doors || []).length;
     var players = (BOARD.careers || []).length;
     if (el.mechanism) {
-      el.mechanism.textContent = (spells && players)
-        ? 'Today’s ' + spells + ' club spells come from ' + players +
-          (players === 1 ? ' career.' : ' careers.') +
-          (players < spells ? ' Some choices lead to the same player.' : '') +
-          ' Choose one clue to play.'
+      el.mechanism.textContent = spells
+        ? 'Today’s ' + spells + ' doors each hide one character, with three clues behind them. Choose one to play.'
         : '';
     }
   }
@@ -509,7 +507,7 @@ function start() {
          one attribute and the alternative is a control a screen reader cannot
          name. */
       b.setAttribute('aria-label',
-        'Substitution ' + rung.sub + ': ' + rung.label + ', costs ' + rung.points + ' points');
+        'Clue ' + (rung.sub + 1) + ': ' + rung.label + ', costs ' + rung.points + ' points');
       b.innerHTML = '<span class="r-sub">Sub ' + esc(rung.sub) + '</span>' +
         '<span class="r-label">' + esc(rung.label) + '</span>' +
         '<span class="r-cost">−' + esc(rung.points) + '</span>';
@@ -736,7 +734,7 @@ function start() {
 
   function showDone(r) {
     var solved = r ? r.solved : state.solved;
-    el.doneKicker.textContent = solved ? 'Got him' : 'Full time';
+    el.doneKicker.textContent = solved ? 'Got them' : 'That’s a wrap';
     var html = '';
     html += '<div class="verdict">' + (solved ? 'Solved' : 'Not this time') + '</div>';
     if (r && r.answer) {
@@ -756,7 +754,7 @@ function start() {
       html += '<div class="row"><span class="rowLabel">Answered at</span><span>' +
         r.minute + "'" + '</span></div>';
     }
-    html += '<div class="row"><span class="rowLabel">Substitutions</span><span>' +
+    html += '<div class="row"><span class="rowLabel">Clues taken</span><span>' +
       (r ? r.subsUsed : 0) + ' of ' + LADDER.filter(function (x) { return x.points; }).length +
       (state.pointsSpent ? '  (−' + state.pointsSpent + ')' : '') + '</span></div>';
     html += '<div class="row"><span class="rowLabel">Names tried</span><span>' +

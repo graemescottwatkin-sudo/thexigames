@@ -406,6 +406,66 @@ t("and the generated SQL is ignored by git", (() => {
   } catch { return false; }
 })(), "data/fr-whoami-production.sql and its calendar, per git check-ignore");
 
+/* ---- and it does not read as a football game ---------------------------
+ *
+ * THE STYLESHEET IS FOOTBALL'S ON PURPOSE -- `--pitch` is the PALETTE token,
+ * not a football one, and the Friends crossword settled that on 21 September by
+ * keeping the family green and removing only the pitch graphic. THE WORDS WERE
+ * NOT SETTLED, and they were football's entire: seventy-eight football terms in
+ * a Friends page, four of which told the player something untrue about the game
+ * in front of them -- eleven doors in a three-door game, a career where there is
+ * a written clue, substitutions where there are clues, and a clock in a game
+ * that has none.
+ *
+ * SCANNED AS RENDERED TEXT AND ATTRIBUTES, not as raw bytes: `--pitch` is a
+ * token name, `.d-club` is a class the stylesheet owns, and a scan over the
+ * whole file would fail on both and be switched off within a week. What a
+ * PLAYER can read is the question. */
+const words = ["club", "clubs", "player", "players", "spell", "spells", "career",
+  "careers", "pitch", "substitution", "substitutions", "goals", "nationality",
+  "ninety", "footballer", "footballers", "eleven", "kick off", "full time"];
+
+const readable = (() => {
+  const body = markup
+    .replace(/<script[\s\S]*?<\/script>/g, " ")
+    .replace(/<style[\s\S]*?<\/style>/g, " ");
+  const text = body.replace(/<[^>]+>/g, " ");
+  /* THE ATTRIBUTES A READER OR A SCREEN READER MEETS, which are copy as much as
+     the text is -- the guess box said "Name him" in a placeholder, where no scan
+     of text nodes would ever have found it. */
+  const attrs = (body.match(/(?:placeholder|aria-label|title|alt|content)="[^"]*"/g) || []).join(" ");
+  return text + " " + attrs;
+})();
+
+t("PRECONDITION: there is copy here to scan at all", readable.length > 400,
+  readable.length + " characters");
+
+/* MATCHED WITHOUT A REGEX, AND THAT IS THE POINT RATHER THAN A STYLE CHOICE.
+   The first version built one from "\\b" + word + "\\b" and was VACUOUS: it
+   went into this file through a shell heredoc, the backslashes were eaten, and
+   the JS string "\b" is a backspace character. It scanned for
+   <backspace>player<backspace>, found nothing, printed "19 terms checked" and
+   passed on a page that said "One door, one player" in its own headings.
+   Proven by sabotage this time, before it was believed.
+
+   Normalising to single-spaced letters and asking includes() has no escapes to
+   lose, and it reads through punctuation, entities and line wraps that a
+   boundary scan over markup would miss anyway. */
+const hay = " " + readable.toLowerCase().replace(/[^a-z]+/g, " ").trim() + " ";
+
+t("PRECONDITION: the scan can see the copy it is scanning",
+  hay.indexOf(" door ") > -1 && hay.indexOf(" clue ") > -1,
+  "if these two are missing the scan below is looking at nothing");
+
+t("no football vocabulary survives in what a player can read", (() => {
+  const hit = words.filter((w) => hay.indexOf(" " + w + " ") > -1);
+  if (hit.length) console.log("        still football: " + hit.join(", "));
+  return hit.length === 0;
+})(), words.length + " terms checked");
+
+t("and the tagline says the number of doors this deck actually deals",
+  /Three doors/i.test(readable) && !/Eleven doors/i.test(readable));
+
 t("the stylesheet defines no .xic- rule, which the chrome owns",
   !/\.xic-/.test(css.replace(/\/\*[\s\S]*?\*\//g, "")));
 

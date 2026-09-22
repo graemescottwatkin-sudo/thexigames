@@ -70,7 +70,7 @@
        end somehow, but it is not a rung and it is not priced. It ends the board
        at nothing, which is not a penalty but an accounting: a board you were
        told the answer to scored nothing. */
-    GIVE_UP: { label: 'Give up', reveals: ['answer'] },
+    GIVE_UP: { label: 'Tell me', reveals: ['answer'] },
 
     /* Both substitutions bought, derived from the ladder rather than stated
        twice — change a price and this follows. */
