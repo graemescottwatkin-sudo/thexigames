@@ -22,7 +22,7 @@
 
 import { json, bad, cellKey } from "../../_lib/puzzle.js";
 import { csrfOk } from "../../_lib/auth.js";
-import { boardScore, keptTheDay, ENTRIES } from "../../_lib/fr-score.js";
+import { boardScore, keptTheDay, ENTRIES, TOTAL } from "../../_lib/fr-score.js";
 import { storedNo } from "../../_lib/fr-board.js";
 
 const norm = (s) => String(s == null ? "" : s).toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -110,6 +110,13 @@ export async function onRequestPost({ request, env }) {
     correct,
     revealed: shown,
     score: boardScore(correct, shown, total),
+    /* THE CEILING TRAVELS WITH THE SCORE. The full-time panel renders "88/110"
+       and the share text says the same, and the only way for the page to know
+       the 110 was to write it down a second time -- which is exactly how a
+       total changes on the server and a page goes on showing the old one. It is
+       sent, so fr-score.js stays the only place the rule LIVES and the page
+       only draws it. The same reasoning as answersAfter on the daily. */
+    total: TOTAL,
     kept: keptTheDay(correct, total),
   });
 }

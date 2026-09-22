@@ -1,4 +1,4 @@
-/* friends/crossword/score_test.mjs — the /100 rule, and what marking sends back.
+/* friends/crossword/score_test.mjs — the /110 rule, and what marking sends back.
  *
  * THE ARITHMETIC CASE IS THE REASON THIS FILE EXISTS. Eleven entries do not
  * divide into 100: 100/11 is 9.0909…, so eleven entries scored one at a time
@@ -39,23 +39,49 @@ const t = (n, ok, d) => {
 
 /* ---- the rule ----------------------------------------------------------- */
 
-console.log("=== Out of 100, with eleven entries ===");
+console.log("=== Out of 110, which is eleven tens ===");
 {
-  t("PRECONDITION: eleven does not divide 100", (TOTAL / ENTRIES) % 1 !== 0,
-    `${TOTAL}/${ENTRIES} = ${(TOTAL / ENTRIES).toFixed(4)} — the whole reason for the next case`);
+  /* THE PRECONDITION IS THE OPPOSITE OF WHAT IT WAS, and that inversion is the
+     point of the change rather than a consequence of it.
+
+     It read "eleven does not divide 100" and was the stated reason for the two
+     defences in fr-score.js: round ONCE from the total, and PIN the all-correct
+     case. Both were right, and both existed only because the number was wrong.
+     110/11 is 10, so the problem is gone rather than handled — and asserting
+     that it divides is what stops anybody reintroducing a total that does not.
+
+     Renumbering this to "eleven does not divide 110" would have been the easy
+     edit and the wrong one: a test pinned to a literal defends the drift
+     instead of catching it. */
+  t("PRECONDITION: eleven divides 110 exactly, which is the whole point",
+    (TOTAL / ENTRIES) % 1 === 0,
+    `${TOTAL}/${ENTRIES} = ${TOTAL / ENTRIES} — every reachable score is whole`);
 
   const perEntry = Math.round(TOTAL / ENTRIES) * ENTRIES;
-  t("and rounding per entry would NOT reach 100", perEntry !== TOTAL,
-    `${perEntry}, which is what the naive sum gives`);
+  t("so the naive per-entry sum reaches the total too", perEntry === TOTAL,
+    `${perEntry} — with 100 this came to 99, and a solved board said 99`);
 
-  t("all eleven is exactly 100", boardScore(11, 0) === 100, String(boardScore(11, 0)));
+  t("all eleven is exactly the total", boardScore(11, 0) === TOTAL, String(boardScore(11, 0)));
   t("none is 0", boardScore(0, 0) === 0, String(boardScore(0, 0)));
-  t("one is 9", boardScore(1, 0) === 9, String(boardScore(1, 0)));
-  t("ten is 91", boardScore(10, 0) === 91, String(boardScore(10, 0)));
-  t("never above 100", boardScore(99, 0) === 100, String(boardScore(99, 0)));
+  t("one is 10", boardScore(1, 0) === 10, String(boardScore(1, 0)));
+  t("ten is 100", boardScore(10, 0) === 100, String(boardScore(10, 0)));
+  t("never above the total", boardScore(99, 0) === TOTAL, String(boardScore(99, 0)));
   t("never below 0", boardScore(-5, 0) === 0, String(boardScore(-5, 0)));
   t("nonsense is 0 rather than NaN", boardScore("x", null) === 0,
     String(boardScore("x", null)));
+
+  /* EVERY REACHABLE SCORE IS A WHOLE TEN OR FIVE, said once over the whole
+     range rather than sampled. A total that stops dividing would fail here
+     even if every case above were renumbered to match it. */
+  t("and every combination of solved and revealed lands on a whole number", (() => {
+    for (let c = 0; c <= ENTRIES; c++) {
+      for (let r = 0; r <= c; r++) {
+        const v = boardScore(c, r);
+        if (v % 5 !== 0) return false;
+      }
+    }
+    return true;
+  })(), "ten a solved entry, five a revealed one");
 }
 
 console.log("\n=== A reveal is worth less, and is not counted twice ===");
@@ -122,7 +148,7 @@ console.log("\n=== Marking ===");
     `${ANSWERS.length} entries, shortest answer ${Math.min(...ANSWERS.map((a) => a.letters.length))}`);
   t("a fully solved board marks every entry right",
     r.status === 200 && b2.correct === 11, `${r.status}, ${b2.correct} correct`);
-  t("and scores exactly 100", b2.score === 100, String(b2.score));
+  t("and scores exactly the total", b2.score === TOTAL, String(b2.score));
   t("and keeps the day", b2.kept === true);
 
   /* ONE WRONG LETTER, PLACED IN A REAL CELL OF A REAL ENTRY. The entry it
@@ -141,7 +167,7 @@ console.log("\n=== Marking ===");
     r2.entries.filter((e) => !crossing.includes(e.id)).every((e) => e.correct === true),
     `${crossing.length} entr(ies) cross it`);
   t("so the day is not kept", r2.kept === false);
-  t("and the score falls short of 100", r2.score < 100, String(r2.score));
+  t("and the score falls short of the total", r2.score < TOTAL, String(r2.score));
 }
 
 console.log("\n=== What marking may not say ===");

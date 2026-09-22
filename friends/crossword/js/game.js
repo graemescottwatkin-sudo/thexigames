@@ -3,7 +3,7 @@
  * THIS IS NOT THE FOOTBALL CROSSWORD'S game.js AND MUST NOT BECOME A COPY OF
  * IT. That file is 7,795 lines because it carries match-minute scoring, a
  * league table, seasons, badges, form strips and a challenge mode — none of
- * which this game has. The owner's ruling for Friends is a score out of 100 and
+ * which this game has. The owner's ruling for Friends is a score out of 110 and
  * a genuine streak of +1 a day, with no season. Forking 469K to delete most of
  * it would have created the one failure this project keeps tracing every major
  * bug back to: the same value stored twice, drifting.
@@ -43,7 +43,13 @@
      A default taken from real data hid a constant that was wrong. */
   var ACROSS = "A", DOWN = "D";
 
-  var BUILD = "v001a";                 // the gate compares this with the page's ?v=
+  var BUILD = "v001b";                 // the gate compares this with the page's ?v=
+  /* THE BOARD'S CEILING, TAKEN FROM THE SERVER AND NOT WRITTEN DOWN HERE.
+     functions/_lib/fr-score.js owns it; the marking response carries it; this
+     holds whatever arrived last so the panel and the share text agree with the
+     score beside them. The fallback exists only for a panel drawn from a result
+     banked before the server started sending it. */
+  var FR_TOTAL = 110;
   var P = "xifc.";                     // this game's own corner of localStorage
   var GAME = "crossword_fr";
   var API = "/api/" + GAME + "/";
@@ -291,6 +297,11 @@
       body: JSON.stringify({ no: boardNo, filled: filled, revealed: [] }),
     }).then(function (r) { return r.json(); }).then(function (v) {
       if (!v || !v.entries) return;
+      /* THE CEILING THE SERVER JUST SCORED AGAINST, taken from the response
+         rather than assumed. Without this the panel could print a score over a
+         total the server had stopped using -- which is the drift that sending
+         it was meant to prevent, arriving one step later. */
+      if (typeof v.total === "number" && v.total > 0) FR_TOTAL = v.total;
       v.entries.forEach(function (e) { marks[e.id] = !!e.correct; });
       if (v.kept) {
         finished = true;
@@ -319,7 +330,7 @@
       return;
     }
     body.innerHTML =
-      "<p class='fx-ft-score'>" + v.score + "<span>/100</span></p>" +
+      "<p class='fx-ft-score'>" + v.score + "<span>/" + FR_TOTAL + "</span></p>" +
       "<p class='fx-ft-line'>Solved. Streak: " + streak() + "</p>";
 
     /* THE SHARE ROW, THE FAMILY'S. This game hands over its own sentence and the
@@ -329,7 +340,7 @@
     if (window.XIShare && $("shareRow")) {
       window.XIShare.mount($("shareRow"), {
         text: function () {
-          return "Crossword XI: Friends #" + boardNo + " — " + v.score + "/100";
+          return "Crossword XI: Friends #" + boardNo + " — " + v.score + "/" + FR_TOTAL;
         },
         url: function () {
           return "https://www.thexigames.com/friends/crossword/daily/" + boardNo;
