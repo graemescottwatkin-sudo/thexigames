@@ -206,7 +206,7 @@
         <span class="cm-note">Start with the hardest of the three clues.</span>
       </div>
       <button class="kick" id="playChoice" type="button" disabled>
-        Play this clue <span aria-hidden="true">&#8594;</span>
+        Open this door <span aria-hidden="true">&#8594;</span>
       </button>
     </div>
   </section>
@@ -215,7 +215,7 @@
   <section class="screen" id="screenPlay" hidden>
     <div class="playHead">
       <div>
-        <p class="eyebrow">Who Am I XI &middot; today&#8217;s mystery</p>
+        <p class="eyebrow">Who Am I XI: Friends &middot; today&#8217;s mystery</p>
         <h2 class="waTitle">Three clues. One name.</h2>
       </div>
       <!-- The match clock and what the board is worth at this minute, together
@@ -223,12 +223,12 @@
            displays them and never decides them. -->
       <div class="matchHead">
         <span class="mh-one">
-          <span class="label">Match clock</span>
-          <span class="clock"><span id="clockValue">0</span><span class="prime">&#39;</span><span class="of">/ 90&#39;</span></span>
+          <span class="label">Clues seen</span>
+          <span class="clock"><span id="clockValue">1</span><span class="of">of 3</span></span>
         </span>
         <span class="mh-one">
-          <span class="label">Available points</span>
-          <span class="worthVal" id="worthNow">114</span>
+          <span class="label">Worth now</span>
+          <span class="worthVal" id="worthNow">10</span>
         </span>
       </div>
     </div>
@@ -244,11 +244,9 @@
         <span class="pf-cap"><b>The mystery character</b>Who am I?</span>
       </div>
       <div class="pf-facts" id="startClue">
-        <span class="pf-kicker">Your starting clue &middot; included</span>
-        <span class="pf-pre">I played for</span>
-        <span class="pf-club" id="playClub"></span>
-        <span class="pf-years" id="playLeft"></span>
-        <span class="pf-nums" id="playNums"></span>
+        <span class="pf-kicker"><span id="playLeft"></span> &middot; <span id="playClub"></span></span>
+        <ol class="clueStack" id="clueStack" aria-live="polite"></ol>
+        <span class="pf-nums" id="playNums" hidden></span>
       </div>
     </div>
 
@@ -266,7 +264,7 @@
 
     <div class="cluesHead">
       <h3 class="waSub">Need another clue?</h3>
-      <span class="ch-hint">Hints cost points. Your choice.</span>
+      <span class="ch-hint">Clues cost points. Your choice.</span>
     </div>
     <!-- The substitutions, and what they bought. A rung that has been taken
          becomes the card that shows its clue, in place — so the page never has
@@ -276,7 +274,7 @@
 
     <!-- Leaving the pitch. Not a substitution and not on the ladder: it ends
          the board at nothing, so it sits apart from the things you buy. -->
-    <button class="giveup" id="giveUp">Give up</button>
+    <button class="giveup" id="giveUp">Tell me</button>
   </section>
 
   <!-- ---- what it came to ---- -->

@@ -49,7 +49,19 @@
         /* EVERY GAME PLAYED IS AN ACHIEVEMENT, not an empty state. Saying
            nothing here would read as the feature having failed; the player has
            done the whole family today and should be told so. */
-        target.appendChild(el("p", "xift-none", "That is all ten today. Come back tomorrow."));
+        /* THE COUNT IS THIS THEME'S LISTED SQUAD, not a number written here.
+           It read "all ten" -- right for football on the day it was written, a
+           measurement that goes stale the day an eleventh game launches, and
+           wrong on every Friends page from the start: unlisted games are never
+           suggested, so a Friends player finishing one game was congratulated
+           on "all ten". */
+        var squad = (window.XIChrome && window.XIChrome.squad) || [];
+        var n = squad.filter(function (g) { return g && g.name; }).length;
+        var WORDS = ["", "one", "two", "three", "four", "five", "six", "seven",
+                     "eight", "nine", "ten", "eleven"];
+        target.appendChild(el("p", "xift-none", n >= 2
+          ? "That is all " + (WORDS[n] || n) + " today. Come back tomorrow."
+          : "That is today done. Come back tomorrow."));
         return null;
       }
 

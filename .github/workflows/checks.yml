@@ -339,6 +339,15 @@ jobs:
           # TABLES each deck's statements named: a Friends round written into
           # wa_round would be judged against football's door for that slot.
           node friends/whoami/round_test.mjs
+          # THE PAGE, PLAYED THROUGH, AGAINST THE REAL SERVER CODE. The page is
+          # generated from football's, and a review found its round screen read
+          # the clue text in zero places -- it drew football's spell, ran a
+          # 90-minute clock, and searched the second letter of every name. Its
+          # fetch is routed into the actual wa-endpoints handlers with only D1
+          # stubbed, so every payload it sees is the producer's, not a
+          # hand-written copy of what somebody thought the server sent.
+          # Offline, in jsdom, like every journey_test except the crossword's.
+          node friends/whoami/journey_test.mjs
           # Named here and never run in CI, for the same reason as every other
           # live_check: it reads the DEPLOYED site.
           #   ->  node friends/whoami/live_check.mjs --expect v001a

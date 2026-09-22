@@ -263,19 +263,36 @@
      something, and it is the game the privacy page already lives under. */
   function pagesHere() {
     var m = /^\/football\/([a-z]+)\//.exec(location.pathname || "");
-    var own = (m && GAME_PAGES[m[1]]) || GAME_PAGES.crossword;
-    /* THE SUBREDDIT, on every page of every game rather than written into any
-       one of them — the same reason the rest of this footer is built here. It
-       is the only OUTSIDE link the chrome carries, so it is marked as one and
-       the builder gives it target and rel; an external link opened in place
-       takes the player out of a game they may be halfway through. */
-    return own.map(function (p) { return { name: p[0], href: p[1] }; })
-      .concat([{ name: "Privacy", href: PRIVACY_HREF },
-               { name: "r/FootballQuizzes", href: COMMUNITY_HREF, external: true }]);
+    /* A PAGE IN ANOTHER THEME GETS NO FOOTBALL GAME'S PAGES. This fell back to
+       the crossword's for anything it did not recognise, which was right while
+       every page was football's -- site-wide pages have to get something -- and
+       wrong the day a second theme arrived: every Friends page carried "How to
+       play" and "Answers" links to the FOOTBALL crossword, and the Friends games
+       have no answers page at all. Found reviewing Who Am I: Friends on
+       22 September 2026. Football, and the site-wide pages under it, are
+       unchanged. */
+    var own = m ? (GAME_PAGES[m[1]] || GAME_PAGES.crossword)
+                : (themeHere() === "football" ? GAME_PAGES.crossword : []);
+    /* THE COMMUNITY, where the theme has one, on every page of it rather than
+       written into any one game — the same reason the rest of this footer is
+       built here. It is the only OUTSIDE link the chrome carries, so it is
+       marked as one and the builder gives it target and rel; an external link
+       opened in place takes the player out of a game they may be halfway
+       through. */
+    var links = own.map(function (p) { return { name: p[0], href: p[1] }; })
+      .concat([{ name: "Privacy", href: PRIVACY_HREF }]);
+    var c = COMMUNITY[themeHere()];
+    if (c) links.push({ name: c.name, href: c.href, external: true });
+    return links;
   }
   var PRIVACY = "/football/crossword/privacy";
-  /* Where players talk about the games. One place, so a move is one edit. */
-  var COMMUNITY_HREF = "https://www.reddit.com/r/FootballQuizzes";
+  /* WHERE PLAYERS TALK ABOUT THE GAMES, per theme. One place, so a move is one
+     edit. A theme with no entry gets no community link at all: sending a
+     Friends player to a football subreddit is worse than sending them nowhere. */
+  var COMMUNITY = {
+    football: { name: "r/FootballQuizzes", href: "https://www.reddit.com/r/FootballQuizzes" },
+  };
+  var COMMUNITY_HREF = COMMUNITY.football.href;
 
   /* xic-xi, not xi. The chrome owns its markup and every class in it lives in
      the xic- namespace, because a bare .xi is a class any game may already
@@ -907,6 +924,9 @@
    * element that has been emptied. */
   function community(root) {
     var scope = root && root.querySelectorAll ? root : document;
+    /* NOTHING, in a theme with no community -- the box stays empty rather than
+       pointing a Friends player at a football subreddit. */
+    if (!COMMUNITY[themeHere()]) return;
     Array.prototype.forEach.call(scope.querySelectorAll(".xic-community"), function (box) {
       if (box.querySelector(".xic-community-in")) return;   // already built
       var wrap = el("div", "xic-community-in");

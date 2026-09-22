@@ -1041,7 +1041,7 @@ const SHARED_TAG = "v54";
    v53, which is this project's oldest fault in miniature: a measurement left
    standing after it stopped being true, in the comment that tells the next
    reader whether they may leave the tag alone. */
-const SHARED_HASH = "c5ab780903f921ea";
+const SHARED_HASH = "9e87b9e2c4ef4bd0";
 /* MOVED AGAIN WITHOUT THE TAG MOVING, which is the other half of the rule
    above and is worth showing rather than only stating. xi-chrome.js changed a
    second time in the same unpushed run -- the Friends squad slot going from

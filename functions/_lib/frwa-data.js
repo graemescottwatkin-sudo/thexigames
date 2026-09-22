@@ -170,12 +170,20 @@ export async function judge(env, door, key) {
 
 /* EVERY GUESSABLE NAME, for the suggestion box. Names only: the accept list
    holds nicknames and aliases that would give cards away if listed in a picker
-   the player can read before guessing. */
+   the player can read before guessing.
+
+   AS [name, key] PAIRS, THE SHAPE FOOTBALL'S SENDS. The page is generated from
+   football's and its type-ahead reads each entry as [display name, folded
+   key] -- NAMES[i][1] is what it searches. This returned bare strings, so the
+   page searched the SECOND LETTER of every name ("Rachel Green"[1] is "a") and
+   the suggestion box never offered anything. Found reviewing the round screen
+   on 22 September 2026. The key is folded with the same fold the answers were
+   stored under, which is also the page's own. */
 export async function allNames(env) {
   const { results } = await env.DB.prepare(
     `SELECT name FROM fr_wa_card WHERE status = 'published' ORDER BY name`
   ).all();
-  return (results || []).map((r) => r.name);
+  return (results || []).map((r) => [r.name, fold(r.name)]);
 }
 
 /* ---- what a bought clue says ---------------------------------------------

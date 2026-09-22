@@ -168,18 +168,18 @@ function start() {
     return C[0][1];
   }
 
-  function renderClock() {
-    var m = displayMinute();
-    if (m === clock.shown) return;
-    clock.shown = m;
-    el.clockValue.textContent = m;
-    el.stripFill.style.width = Math.min(100, (m / MATCH_MINUTES) * 100) + '%';
-    el.stripFill.classList.toggle('late', m >= 60);
-    var base = worthAt(m);
-    if (base === null) { el.worthNow.textContent = '—'; return; }
-    var worth = Math.max(0, Math.round(base - state.pointsSpent));
+function renderClock() {
+    var total = LADDER.length || 3;
+    var seen = Math.min(Math.max(1, state.stage || 1), total);
+    var worth = Math.max(0, (MAX_SCORE || 10) - (state.pointsSpent || 0));
+    var key = seen + ':' + worth;
+    if (key === clock.shown) return;
+    clock.shown = key;
+    el.clockValue.textContent = seen;
+    el.stripFill.style.width = Math.min(100, (seen / total) * 100) + '%';
+    el.stripFill.classList.toggle('late', seen >= total);
     el.worthNow.textContent = worth;
-    el.worthNow.classList.toggle('low', worth <= 40);
+    el.worthNow.classList.toggle('low', worth <= 3);
   }
 
   function tick() {
@@ -285,7 +285,7 @@ function start() {
       o.tabIndex = on ? 0 : -1;
     });
     if (el.commitPick) {
-      el.commitPick.textContent = d.club + ' · ' + d.leave;
+      el.commitPick.textContent = 'Door ' + d.slot + ' \u00B7 ' + d.section;
     }
     if (el.playChoice) el.playChoice.disabled = false;
   }
@@ -350,7 +350,7 @@ function start() {
       b.setAttribute('aria-label', done
         ? (mine ? d.section + ' — the door you opened'
                 : d.section + ' — not yours today')
-        : d.section + ', from the ' + d.deck + ' deck');
+        : d.section + ', ' + (DECK_WORD[d.deck] || d.deck));
       b.innerHTML = '<span class="d-club">' + esc(d.section) + '</span>' +
         '<span class="d-year">' + esc(DECK_WORD[d.deck] || d.deck) + '</span>' +
         '<span class="d-cap">How deep it goes</span>' +
@@ -440,8 +440,10 @@ function start() {
        QuickFire's client by hand and would have thrown on the resume path, in
        strict mode, the moment anybody came back to a saved round. Caught by
        grepping for the name rather than by running it, which is luck. */
-    el.playClub.textContent = door.club;
-    el.playLeft.textContent = 'left in ' + door.leave;
+    el.playClub.textContent = door.section;
+    el.playLeft.textContent = 'Door ' + door.slot;
+    var stack1 = document.getElementById('clueStack');
+    if (stack1) stack1.innerHTML = '';
     if (el.playNums) el.playNums.innerHTML = '';
     el.clues.innerHTML = '';
     el.guessInput.value = '';
@@ -452,9 +454,12 @@ function start() {
     show('screenPlay');
     playsStart();
     startTicking();
-    /* The free rung again — replayed, charged nothing, and it brings the
-       minute and what the board is worth back with it. */
-    buyStage(1);
+    /* EVERY RUNG THAT WAS BOUGHT, in order, each replayed for nothing. */
+    var upTo = Math.max(1, state.stage || 1);
+    var chain = Promise.resolve();
+    for (var st = 1; st <= upTo; st++) {
+      (function (k) { chain = chain.then(function () { return buyStage(k); }); })(st);
+    }
   }
 
   function openDoor(door) {
@@ -471,8 +476,10 @@ function start() {
         state.finished = false;
         state.solved = false;
         save();
-        el.playClub.textContent = door.club;
-        el.playLeft.textContent = 'left in ' + door.leave;
+        el.playClub.textContent = door.section;
+        el.playLeft.textContent = 'Door ' + door.slot;
+        var stack0 = document.getElementById('clueStack');
+        if (stack0) stack0.innerHTML = '';
         el.clues.innerHTML = '';
         el.guessInput.value = '';
         el.guessGo.disabled = true;
@@ -490,43 +497,38 @@ function start() {
 
   /* ------------------------------------------------------------- the ladder */
 
-  function renderLadder() {
+function renderLadder() {
     el.ladder.innerHTML = '';
-    LADDER.forEach(function (rung) {
-      if (rung.stage <= state.stage) return;        // already taken
-      if (!rung.points) return;                     // the free first clue
+    var next = null;
+    LADDER.forEach(function (rung) { if (!next && rung.stage > state.stage) next = rung; });
+    if (next && !state.finished) {
       var b = document.createElement('button');
-      b.className = 'rung';
+      b.className = 'rung rung-next';
       b.type = 'button';
-      /* THE PRICE IS ON THE BUTTON, in points, before it is spent. That is the
-         whole argument for pricing substitutions in points rather than in
-         minutes: you can see what a clue costs without working out what ten
-         minutes is worth at the minute you happen to be at. */
-      /* AN ACCESSIBLE NAME ON THE CONTROL. The label lived only inside child
-         spans, so the accessibility tree announced a bare button — the price is
-         one attribute and the alternative is a control a screen reader cannot
-         name. */
       b.setAttribute('aria-label',
-        'Clue ' + (rung.sub + 1) + ': ' + rung.label + ', costs ' + rung.points + ' points');
-      b.innerHTML = '<span class="r-sub">Sub ' + esc(rung.sub) + '</span>' +
-        '<span class="r-label">' + esc(rung.label) + '</span>' +
-        '<span class="r-cost">−' + esc(rung.points) + '</span>';
-      b.disabled = state.finished;
-      b.addEventListener('click', function () { buyStage(rung.stage); });
+        'Ask a friend for clue ' + next.stage + ', costs ' + next.points + ' points');
+      b.innerHTML = '<span class="r-sub">Ask a friend</span>' +
+        '<span class="r-label">Clue ' + esc(next.stage) + ' of ' + (LADDER.length || 3) + '</span>' +
+        '<span class="r-cost">&minus;' + esc(next.points) + '</span>';
+      b.addEventListener('click', function () { buyStage(next.stage); });
       el.ladder.appendChild(b);
-    });
+    } else if (!state.finished) {
+      var none = document.createElement('p');
+      none.className = 'rung-none';
+      none.textContent = 'That was the last clue. Over to you.';
+      el.ladder.appendChild(none);
+    }
     el.giveUp.hidden = !!state.finished;
   }
 
-  function buyStage(stage) {
-    if (busy) return;
+function buyStage(stage) {
+    if (busy) return Promise.resolve();
     busy = true;
-    post('/api/whoami/whoami_fr/clue', { playId: state.playId, stage: stage })
+    return post('/api/whoami/whoami_fr/clue', { playId: state.playId, stage: stage })
       .then(function (r) {
         busy = false;
         state.stage = Math.max(state.stage, r.stage);
         state.pointsSpent = r.pointsSpent;
-        anchorClock(r.minute);
         renderClock();
         renderClue(r);
         renderLadder();
@@ -535,86 +537,27 @@ function start() {
       .catch(function (e) { busy = false; trouble(e); });
   }
 
-  function renderClue(r) {
-    var box = document.createElement('div');
-    box.className = 'clue';
-    var bits = ['<span class="c-label">' + esc(r.label) + '</span>'];
-
-    /* THE STARTING SPELL IS THE PROFILE, NOT A CLUE BOX. It is the one clue
-       every player gets, it is never bought, and the design leads with it
-       beside the silhouette — so it fills the panel and adds nothing to the
-       list below. Returning here is what keeps the two hint cards as the only
-       things under "Need another clue?"; drawn as a box as well it would be
-       the same fact twice on one screen.
-       THE FIELDS ARE THE SERVER'S. club, from, to, apps and goals come off
-       r.spell exactly as they always did; nothing here computes a year or a
-       total. */
-    if (r.spell) {
-      var s = r.spell;
-      if (el.playClub) el.playClub.textContent = s.club || '';
-      if (el.playLeft) {
-        el.playLeft.innerHTML = s.from
-          ? '<b>' + esc(s.from) + '</b>' + (s.to ? '<i>—</i><b>' + esc(s.to) + '</b>' : '')
-          : '';
-      }
-      if (el.playNums) {
-        var nums = '';
-        if (s.apps != null) {
-          nums += '<span class="pf-num"><b>' + esc(s.apps) + '</b>' +
-            (Number(s.apps) === 1 ? 'Appearance' : 'Appearances') + '</span>';
-        }
-        if (s.goals != null) {
-          nums += '<span class="pf-num"><b>' + esc(s.goals) + '</b>' +
-            (Number(s.goals) === 1 ? 'Goal' : 'Goals') + '</span>';
-        }
-        el.playNums.innerHTML = nums;
-      }
-      return;
-    }
-    if (r.spells && r.spells.length) {
-      /* THE CAREER AS A LADDER, one club a row, in the order it happened.
-         It printed as a single run-on line, and that is the clue the game is
-         built on: the SHAPE of a career is the puzzle, and a wall of text hides
-         it. Years left, club in the middle, appearances right — so a column of
-         spells can be scanned for the big one rather than read through.
-         AND THE DOOR'S OWN CLUB IS MARKED IN PLACE. Without it a player has to
-         hunt the line for the club they picked before they can read outward
-         from it, which is the one thing they are certain to want to do. The
-         SERVER decides which row is theirs; this page only draws it. */
-      var rows = r.spells.map(function (c) {
-        var years = (c.from || '') + (c.to && c.to !== c.from ? '–' + c.to : '');
-        var apps = c.apps == null ? ''
-          : c.apps + (Number(c.apps) === 1 ? ' app' : ' apps');
-        return '<span class="spell' + (c.mine ? ' mine' : '') +
-          (c.loan ? ' loan' : '') + '">' +
-          '<span class="sp-years">' + esc(years) + '</span>' +
-          '<span class="sp-club">' + esc(c.club) +
-            (c.loan ? '<span class="sp-loan">loan</span>' : '') + '</span>' +
-          '<span class="sp-apps">' + esc(apps) + '</span></span>';
-      }).join('');
-      bits.push('<span class="spells">' + rows + '</span>');
-    } else if (r.career) {
-      /* The pre-rendered string is still sent and is still the fallback: a
-         player row with no parsable clubs would otherwise show nothing at all
-         for the rung that was just paid for. */
-      bits.push('<span class="c-body">' + esc(r.career) + '</span>');
-    }
-    /* BORN <year>, NOT "<n> years old". The server stopped sending an age on
-       21 September 2026 because it had no way to know the man was dead — see
-       functions/_lib/wa-play.js for the whole reason. This reads birthYear and
-       nothing else, so `age` is GONE rather than merely unused: a field that is
-       no longer sent cannot resurrect the old wording through a stale page. */
-    if (r.birthYear != null || r.nationality) {
-      bits.push('<span class="c-body">' +
-        (r.birthYear != null ? 'Born ' + esc(r.birthYear) : '') +
-        (r.nationality ? (r.birthYear != null ? ' · ' : '') + esc(r.nationality) : '') +
-        (r.position ? ' · ' + esc(r.position) : '') + '</span>');
-    }
-    if (r.answer) {
-      bits.push('<span class="c-body answer">' + esc(r.answer) + '</span>');
-    }
-    box.innerHTML = bits.join('');
-    el.clues.appendChild(box);
+function renderClue(r) {
+    var stack = document.getElementById('clueStack');
+    if (!stack || !r || !r.text) return;
+    var n = Number(r.step) || Number(r.stage) || 1;
+    if (stack.querySelector('[data-step="' + n + '"]')) return;
+    var of = Number(r.of) || LADDER.length || 3;
+    var tier = n === 1 ? 'the hardest' : (n >= of ? 'the easiest' : 'getting warmer');
+    var li = document.createElement('li');
+    li.className = 'fclue';
+    li.setAttribute('data-step', n);
+    li.innerHTML =
+      '<span class="fc-n">Clue ' + n + ' of ' + of + ' &middot; ' + tier + '</span>' +
+      '<q class="fc-text">' + esc(r.text) + '</q>' +
+      (r.cited ? '<span class="fc-src">On record in an episode</span>' : '');
+    var before = null;
+    [].forEach.call(stack.children, function (c) {
+      if (!before && Number(c.getAttribute('data-step')) > n) before = c;
+    });
+    stack.insertBefore(li, before);
+    li.classList.add('fresh');
+    setTimeout(function () { li.classList.remove('fresh'); }, 900);
   }
 
   /* ---------------------------------------------------------- the guessing */
@@ -660,7 +603,7 @@ function start() {
     });
   }
 
-  function submitGuess() {
+function submitGuess() {
     if (busy || state.finished) return;
     var typed = el.guessInput.value.trim();
     if (!typed) return;
@@ -679,25 +622,31 @@ function start() {
         if (r.verdict === 'right') {
           state.finished = true;
           state.solved = true;
-          stopTicking();
-          anchorClock(r.minute);
           renderClock();
-          setFeedback('That is him — ' + r.score + ' points at ' + r.minute + "'.", 'goal');
+          setFeedback('That\u2019s them \u2014 ' + r.score +
+            (r.score === 1 ? ' point.' : ' points.'), 'goal');
           finish();
           return;
         }
-        /* A WRONG NAME COSTS NOTHING BUT THE CLOCK, which is already running.
-           The server sends the minute back with every verdict, so the readout
-           stays its number rather than this page's guess at it. */
-        if (r.minute != null) { anchorClock(r.minute); renderClock(); }
-        if (r.verdict === 'right-club') {
-          /* THE NEAR MISS. It says it was one and stops there — the server
-             sends no answer with it, because saying who it actually was would
-             end the game for the price of a wrong guess, with the door still
-             live for everyone else that day. */
-          setFeedback('He played there — but he is not the one behind this door.', 'near');
+        if (r.verdict === 'other') {
+          setFeedback('That\u2019s someone else in the deck \u2014 but not the one behind this door.', 'near');
+        } else if (r.verdict === 'ambiguous' && r.options && r.options.length) {
+          setFeedback('That could be more than one. Did you mean\u2026', 'near');
+          r.options.slice(0, 6).forEach(function (name) {
+            var o = document.createElement('button');
+            o.type = 'button';
+            o.className = 'sugg';
+            o.textContent = name;
+            o.addEventListener('click', function () {
+              el.guessInput.value = name;
+              el.suggest.innerHTML = '';
+              el.guessGo.disabled = false;
+              el.guessInput.focus();
+            });
+            el.suggest.appendChild(o);
+          });
         } else {
-          setFeedback('Not him.', 'miss');
+          setFeedback('Not them.', 'miss');
         }
         el.guessInput.value = '';
         el.guessInput.focus();
@@ -705,12 +654,12 @@ function start() {
       .catch(trouble);
   }
 
-  function renderTries() {
+function renderTries() {
     var n = state.guesses.length;
-    var near = state.guesses.filter(function (g) { return g.verdict === 'right-club'; }).length;
+    var near = state.guesses.filter(function (g) { return g.verdict === 'other'; }).length;
     el.tries.textContent = n
       ? n + (n === 1 ? ' name tried' : ' names tried') +
-        (near ? ', ' + near + ' who played there' : '')
+        (near ? ', ' + near + ' from elsewhere in the deck' : '')
       : '';
   }
 
@@ -732,45 +681,32 @@ function start() {
       });
   }
 
-  function showDone(r) {
+function showDone(r) {
     var solved = r ? r.solved : state.solved;
-    el.doneKicker.textContent = solved ? 'Got them' : 'That’s a wrap';
-    var html = '';
-    html += '<div class="verdict">' + (solved ? 'Solved' : 'Not this time') + '</div>';
+    var total = LADDER.length || 3;
+    var used = r && r.subsUsed != null ? r.subsUsed + 1 : Math.min(state.stage || 1, total);
+    var row = function (k, v) {
+      return '<div class="row"><span class="rowLabel">' + k + '</span><span>' + v + '</span></div>';
+    };
+    el.doneKicker.textContent = solved ? 'Got them' : 'That\u2019s a wrap';
+    var html = '<div class="verdict">' + (solved ? 'Solved' : 'Not this time') + '</div>';
     if (r && r.answer) {
       html += '<div class="bigname">' + esc(r.answer) + '</div>';
-      if (r.club) html += '<div class="row"><span class="rowLabel">Your door</span><span>' +
-        esc(r.club) + '</span></div>';
-      if (r.career) html += '<div class="career">' + esc(r.career) + '</div>';
-      if (r.article) html += '<a class="more" href="' + esc(r.article) +
-        '" target="_blank" rel="noopener">Read about him</a>';
+      if (r.section) html += '<div class="fw-door">Behind the <b>' + esc(r.section) + '</b> door</div>';
     }
-    html += '<div class="rows">';
-    if (r && typeof r.score === 'number') {
-      html += '<div class="row"><span class="rowLabel">Score</span><span>' +
-        r.score + ' of ' + MAX_SCORE + '</span></div>';
+    html += '<div class="fw-pips" aria-label="' + used + ' of ' + total + ' clues used">';
+    for (var i = 1; i <= total; i++) {
+      html += '<span class="fw-pip' + (i <= used ? ' on' : '') +
+        (solved && i === used ? ' won' : '') + '"></span>';
     }
-    if (r && r.minute != null) {
-      html += '<div class="row"><span class="rowLabel">Answered at</span><span>' +
-        r.minute + "'" + '</span></div>';
-    }
-    html += '<div class="row"><span class="rowLabel">Clues taken</span><span>' +
-      (r ? r.subsUsed : 0) + ' of ' + LADDER.filter(function (x) { return x.points; }).length +
-      (state.pointsSpent ? '  (−' + state.pointsSpent + ')' : '') + '</span></div>';
-    html += '<div class="row"><span class="rowLabel">Names tried</span><span>' +
-      (r ? r.guesses : state.guesses.length) + '</span></div>';
-    if (r && r.nearMisses) {
-      html += '<div class="row"><span class="rowLabel">Played there</span><span>' +
-        r.nearMisses + '</span></div>';
-    }
+    html += '</div><div class="rows">';
+    if (r && typeof r.score === 'number') html += row('Score', r.score + ' of ' + (MAX_SCORE || 10));
+    html += row('Clues used', used + ' of ' + total);
+    html += row('Names tried', r ? r.guesses : state.guesses.length);
+    if (r && r.nearMisses) html += row('Named someone else', r.nearMisses);
     html += '</div>';
     el.doneBody.innerHTML = html;
     el.shareText.value = shareTextFor(r, solved);
-    /* THE FAMILY'S SHARE ROW. The same buttons, the same platforms and the same
-       copy fallback every other game offers, from shared/xi-share.js — this
-       game had a bare "Copy result" and nothing to send it with. Mounted once:
-       the text is read when a button is pressed, not when the row is built, so
-       a later result does not need a remount. */
     var shareRow = document.getElementById("shareRow");
     if (window.XIShare && shareRow) {
       window.XIShare.mount(shareRow, {
@@ -781,18 +717,19 @@ function start() {
     show('screenDone');
   }
 
-  function shareTextFor(r, solved) {
-    /* NO NAME IN THE SHARE TEXT. Ten doors are still live for everybody else
-       today, and a result pasted into a group chat must not be a spoiler for
-       the other ten. The door and the clues taken say enough. */
+function shareTextFor(r, solved) {
+    var total = LADDER.length || 3;
+    var used = r && r.subsUsed != null ? r.subsUsed + 1 : Math.min(state.stage || 1, total);
+    var bar = '';
+    for (var i = 1; i <= total; i++) {
+      bar += i > used ? '\u2B1C' : (solved && i === used ? '\uD83D\uDFE9' : '\uD83D\uDFE8');
+    }
     return [
-      'WHO AM I XI',
-      'No. ' + BOARD.no + ' — ' + formatDate(BOARD.day),
+      'WHO AM I XI: FRIENDS',
+      'No. ' + BOARD.no + ' \u2014 ' + formatDate(BOARD.day),
       '',
-      (r && r.club ? r.club : '') + (solved ? ' — got him' : ' — no luck'),
-      (r && typeof r.score === 'number' ? r.score + '/' + MAX_SCORE : ''),
-      'Subs: ' + (r ? r.subsUsed : 0) +
-        (state.pointsSpent ? ' (−' + state.pointsSpent + ')' : ''),
+      bar + (solved ? '  got them' : '  no luck'),
+      (r && typeof r.score === 'number' ? r.score + '/' + (MAX_SCORE || 10) : ''),
       'Names tried: ' + (r ? r.guesses : state.guesses.length)
     ].join('\n');
   }
