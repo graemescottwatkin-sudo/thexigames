@@ -327,6 +327,21 @@ jobs:
           # build that is live rather than the one being proposed. Run it by
           # hand after a deploy.
           #   ->  node friends/crossword/live_check.mjs --expect v001a
+
+          # A WHOLE SITTING IN THE FRIENDS DECK, AND FOOTBALL'S BESIDE IT.
+          # wa-play.js was parameterised by game in two passes and the second
+          # left ${T(game, "guess")} inside two helpers with no `game` in
+          # scope. A free identifier is valid syntax, so `node --check` passed
+          # and a proof that opened a round and bought a rung passed too --
+          # neither helper is on that path. It would have thrown on the FIRST
+          # GUESS of every sitting in BOTH games. So this walks open, buy,
+          # guess wrong, guess right, finish and give up, and asserts which
+          # TABLES each deck's statements named: a Friends round written into
+          # wa_round would be judged against football's door for that slot.
+          node friends/whoami/round_test.mjs
+          # Named here and never run in CI, for the same reason as every other
+          # live_check: it reads the DEPLOYED site.
+          #   ->  node friends/whoami/live_check.mjs --expect v001a
           # And what leaves the server when a door is opened. Who Am I is the
           # hardest secrecy problem in this family so far, and the reason is
           # arithmetic: only ONE door is played per person per day and the other
@@ -569,6 +584,16 @@ jobs:
           # answer against the sentence it was read from, so a row served whole
           # would arrive solved.
           node friends/crossword/deploy_check.mjs
+          # THE SECOND FRIENDS GAME'S GATE. A gate nobody runs cannot refuse
+          # anything: Grid XI's was absent from this block for a day while the
+          # local sweep ran it and reported green, and the gap was invisible
+          # from both ends. When a gate is added it goes in BOTH places.
+          # It refuses the two decks bleeding into each other -- the wrong
+          # tables, the wrong endpoints, the wrong storage prefix, the wrong
+          # ladder -- and it refuses the game being FOUND while it is UNLISTED,
+          # including an address written into a COMMENT in shared/xi-chrome.js,
+          # which ships unminified to every page on the site.
+          node friends/whoami/deploy_check.mjs
 
   render:
     name: Sixteen viewports, real browser

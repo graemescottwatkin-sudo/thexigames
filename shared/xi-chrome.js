@@ -154,19 +154,26 @@
        calling this game UNLISTED, and the gates refuse the three disagreeing. */
     friends: [
       { n: 1,  status: "Unlisted" },
-      /* WHO AM I, FRIENDS — IN BUILD, SO IT HOLDS NO SHIRT. The two is where
-         the owner's ordering puts it, not a number it owns: "only a launched
-         game holds a number ... and moves down when a game ships past it". If a
-         different Friends game launches first, this slot moves down and nothing
-         else has to change.
+      /* WHO AM I, FRIENDS — LAUNCHED 22 September 2026 and UNLISTED, so it
+         takes the two: the next free number, which is what launching does.
 
-         A STATUS AND NOTHING ELSE, which is the same shape an UNLISTED game's
-         slot takes and for a stronger reason here: this file is downloaded by
-         every page on the site, so a name in it would be the site naming an
-         unreleased game in served markup — the thing chrome_test, aligned_test
-         and both live_checks exist to refuse. There is no href for the same
-         reason there is no page to point one at. */
-      { n: 2,  status: "In build" },
+         STILL NO NAME AND STILL NO HREF, and the slot did not change shape when
+         the game went live — only the word. That is the owner's ruling of
+         21 September: this file is downloaded by every page on the site, so an
+         href in it is the site STATING where the game is, which is the one
+         thing "not publicly visible" cannot allow. Be honest about what it
+         buys: the address is guessable, and this removes the site telling
+         anyone, not the reachability.
+
+         AND THAT IS WHY THE ADDRESS IS NOT WRITTEN IN THIS COMMENT EITHER.
+         The first draft of these lines spelled it out to explain the point,
+         and this file SHIPS UNMINIFIED -- so the comment was the site saying
+         the thing the missing href exists to avoid saying. The game's own gate
+         reads these bytes raw, comments included, and refused it.
+
+         The name AND the href both go in when functions/_lib/games.js stops
+         calling this game UNLISTED, and the gates refuse the three disagreeing. */
+      { n: 2,  status: "Unlisted" },
     ],
   };
 
@@ -1208,7 +1215,7 @@
                             is why aligned_test walks GAMES and fails when one of
                             them is missing here, rather than trusting anyone to
                             remember. */
-                         "xifc.", "xi."];
+                         "xifc.", "xifw.", "xi."];
   var RECORD_KEEP = [
     /* Identity. Wiping this would cut the player off from results already
        synced to their account, which clearing local history has no business

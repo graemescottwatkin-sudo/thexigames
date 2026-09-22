@@ -110,6 +110,18 @@ const MAST = {
 
      NO Answers TAB: this game has no answers page, and a tab to a 404 is worse
      than an absent tab. */
+  /* AND THE SECOND FRIENDS GAME. "Who Am I" and not "Who Am I XI: Friends",
+     for the reason stated just above: the masthead appends the XI and the theme
+     is already the first path segment.
+     NO Answers TAB, like its neighbour: this game has no answers page, and a
+     tab to a 404 is worse than an absent tab. Its clues are not a thing that
+     can be published a week late either — a card comes back at a new letter
+     three weeks on, so its sentences are still live. */
+  whoami_fr: {
+    name: "Who Am I", home: "/friends/whoami/",
+    nav: [["Today", "/friends/whoami/"], ["Archive", "/friends/whoami/archive/"],
+          ["How to play", "/friends/whoami/#how"]],
+  },
   crossword_fr: {
     name: "Crossword", home: "/friends/crossword/",
     nav: [["Today", "/friends/crossword/"], ["Archive", "/friends/crossword/archive/"],

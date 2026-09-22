@@ -69,6 +69,14 @@
     { id: "crossword_fr", key: "xifc.results", api: "/api/crossword_fr/daily",
       today: function (d) { return d.no; },
       done: function (r, t) { return r.no === t; } },
+    /* Who Am I: Friends. Keyed on the DAY, like football's and for the same
+       reason: a board is several doors and a person plays one of them, so the
+       day is what makes a result unique. Its own prefix, so a player who has
+       done one Who Am I has not done the other -- the two run on the same days,
+       which is exactly when a shared prefix would file both under one key. */
+    { id: "whoami_fr", key: "xifw.results.v1", api: "/api/whoami_fr/daily",
+      today: function (d) { return d.day; },
+      done: function (r, t) { return r.day === t; } },
   ];
 
   var byId = {};

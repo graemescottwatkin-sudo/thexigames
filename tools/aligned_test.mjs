@@ -104,6 +104,11 @@ const GAMES = [
      and the name carries its theme — both deliberate, and the reason this
      table has an id column at all. */
   { id: "crossword_fr", dir: "friends/crossword", name: "Crossword XI: Friends", prefix: "xifc" },
+  /* The second Friends game, launched 22 September 2026. Its storage prefix is
+     xifw and not xiwa: tools/build_friendswhoami.js rewrites it on the way
+     through, because a game that wrote football's prefix would read football's
+     saves as its own. */
+  { id: "whoami_fr", dir: "friends/whoami", name: "Who Am I XI: Friends", prefix: "xifw" },
 ];
 
 const workflow = read(".github/workflows/checks.yml");
@@ -680,6 +685,10 @@ t("the server's game list and this table agree", (() => {
        Scrambled do. That is the shape that put every word search row in with
        played_on NULL, so it is the one worth having a real row for. */
     crossword_fr: { no: 20, score: 100, correct: 11, kept: true, at: 1 },
+    /* The Friends deck's row is football's shape with its own game id: a day,
+       a door and a score. The DAY is what dates it and what keys it, so this
+       row is the one that would catch a prefix or a date field going missing. */
+    whoami_fr: { game: "whoami_fr", day: "2026-09-22", no: 20, slot: 2, solved: true, score: 6 },
   };
   {
     const { playedOn } = await import("../functions/_lib/games.js");
@@ -1032,7 +1041,14 @@ const SHARED_TAG = "v54";
    v53, which is this project's oldest fault in miniature: a measurement left
    standing after it stopped being true, in the comment that tells the next
    reader whether they may leave the tag alone. */
-const SHARED_HASH = "30b8d1a2c10f8aab";
+const SHARED_HASH = "c5ab780903f921ea";
+/* MOVED AGAIN WITHOUT THE TAG MOVING, which is the other half of the rule
+   above and is worth showing rather than only stating. xi-chrome.js changed a
+   second time in the same unpushed run -- the Friends squad slot going from
+   "In build" to "Unlisted" as the game launched. v54 is NOT live: origin/main
+   is still the commit before it and production is still serving v53, so v54 is
+   the version being PREPARED and bumping it again would burn a number for an
+   edit nobody has ever been served. */
 /* EVERY PAGE THAT LINKS THE SHARED LAYER, not the games alone. The hub, the
    two static pages and the unlaunched game all carry the chrome now, and the
    server-rendered shell writes the tag from a constant of its own — so a tag

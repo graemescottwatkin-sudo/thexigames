@@ -72,6 +72,19 @@
 /friends/crossword/js/*
   Cache-Control: public, max-age=31536000, immutable
 
+# WHO AM I XI: FRIENDS — the second game of the second theme, same three rules.
+/friends/whoami/
+  Cache-Control: no-store
+
+/friends/whoami/index.html
+  Cache-Control: no-store
+
+/friends/whoami/css/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/friends/whoami/js/*
+  Cache-Control: public, max-age=31536000, immutable
+
 # XI Word Search — same three rules as the crossword, one pair per game.
 /football/wordsearch/
   Cache-Control: no-store

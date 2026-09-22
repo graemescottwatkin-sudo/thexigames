@@ -54,9 +54,23 @@ export const FR_GIVE_UP = { label: "Tell me", reveals: ["answer"] };
  * The Friends deck has no clock at all. Its rule is the one the deck itself
  * states -- solve on the first clue of a round for 3, the second for 2, the
  * third for 1 -- and the only thing that costs you is asking for the next clue.
- * Scaled to a door worth ten, that is 10 / 6 / 3, which keeps the deck's 3:2:1
- * and makes eleven doors total 110: the number ruled for the Friends crossword,
- * so the two games of this theme are scored out of the same thing.
+ * Scaled to a door worth ten, that is 10 / 6 / 3, which keeps the deck's 3:2:1.
+ *
+ * AND THE 110 THIS ONCE CLAIMED WAS ARITHMETIC FROM A DOOR COUNT THAT HAD
+ * ALREADY CHANGED. It said ten a door "makes eleven doors total 110: the number
+ * ruled for the Friends crossword, so the two games of this theme are scored out
+ * of the same thing". This deck deals THREE doors, not eleven -- frwa-data.js
+ * sets DOORS = 3 and spends a paragraph on why eleven does not survive a deck of
+ * 103 cards -- and a sitting is ONE door in either game. So a Friends Who Am I
+ * daily is worth at most 10, against the Friends crossword's 110, and the two
+ * are not on one scale.
+ *
+ * THAT IS RECORDED RATHER THAN QUIETLY CORRECTED BY CHANGING THE NUMBERS,
+ * because which way it should be fixed is the owner's call and not this file's:
+ * a door could be worth 110/66/33, or the games could simply sit on different
+ * scales as football's 114-point door and its neighbours already do. The family
+ * season counts DAYS rather than points, so nothing is broken either way. What
+ * was broken was a comment reasoning from eleven doors in a three-door game.
  *
  * A TIME PENALTY WAS NOT ADDED, and that is deliberate rather than unfinished.
  * The deck is a party game read aloud; the pace is the table's, not the

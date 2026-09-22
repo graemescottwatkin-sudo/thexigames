@@ -73,6 +73,12 @@ export const PERMA_GAMES = {
      the ring does not run for ever and does not wrap — the day after the last
      one has no board and says so. */
   crossword_fr: { name: "Crossword XI: Friends", schedule: "ring" },
+  /* Who Am I XI: Friends, launched 22 September 2026. SCHEDULED by day, like
+     football's: fr_wa_board names the days that exist and there is no ring
+     behind it, so a number the calendar does not hold is not a board. The deck
+     is finite -- 292 rounds in the daily decks at three doors a day is 97 days
+     -- and the day after the last one has no board and says so. */
+  whoami_fr: { name: "Who Am I XI: Friends", schedule: "day" },
   wordsearch: { name: "Wordsearch XI", schedule: "day" },
   scrambled: { name: "Scrambled XI", schedule: "ring" },
   hilo: { name: "HiLo XI", schedule: "day" },
@@ -207,6 +213,13 @@ const SCHEDULE_TABLE = {
   wordsearch: "ws_schedule", hilo: "hl_schedule", grid: "gd_schedule",
   codeword: "cw_schedule", quickfire: "qf_daily", whoami: "wa_board",
   ballpark: "bp_schedule",
+  /* THE FRIENDS DECK'S OWN BOARD TABLE. Absent from this map a game's routes
+     exist and answer nothing: boardKeys has no table to ask, the catch below
+     reads the miss as "no boards", and the archive renders an empty page
+     rather than an error. That is exactly what happened here -- the game
+     launched with /friends/whoami/archive/ listing zero of its boards, found
+     by the archive suite and not by anything else. */
+  whoami_fr: "fr_wa_board",
 };
 
 /* WHICH COLUMN HOLDS THE DAY, and which rows count as real.
@@ -225,6 +238,10 @@ const SCHEDULE_TABLE = {
 const SCHEDULE_SHAPE = {
   quickfire: { day: "play_date", where: "status = 'published'" },
   whoami: { day: "play_date", where: "status = 'published'" },
+  /* The same shape as football's, because it is the same kind of table: a
+     board table keyed on play_date with a status that decides whether a row is
+     ever served -- not a schedule beside one. */
+  whoami_fr: { day: "play_date", where: "status = 'published'" },
 };
 const shapeOf = (game) => SCHEDULE_SHAPE[game] || { day: "day", where: null };
 

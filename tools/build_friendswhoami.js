@@ -27,6 +27,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+import { entryKey } from "../functions/_lib/games.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(HERE, "..");
@@ -34,6 +35,7 @@ const CHECK = process.argv.includes("--check");
 
 const read = (p) => fs.readFileSync(path.join(ROOT, p), "utf8");
 
+const GAME = "whoami_fr";
 const SRC = "football/whoami";
 const OUT = "friends/whoami";
 
@@ -156,17 +158,88 @@ function config() {
 function script() {
   let s = read(`${SRC}/js/game.js`);
 
-  /* THE API IS THIS GAME'S. Every call goes through one api() helper, so this
-     is one insertion rather than seven edits — and a call added to football's
-     client later goes through the same door. The namespaced form was added to
-     the whoami API on 22 September so a second deck could have the same server
-     rather than a second copy of its rules. */
-  s = once(s, '"/api/whoami/', '"/api/whoami/whoami_fr/', "the API base");
+  /* THE API IS THIS GAME'S, AND IT IS SEVEN CALLS RATHER THAN ONE.
+   *
+   * THIS SAID "every call goes through one api() helper, so this is one
+   * insertion rather than seven edits" AND USED once() TO PROVE IT. once()
+   * refuses unless it finds exactly one occurrence, it found exactly one, and
+   * it passed -- because it was looking for a DOUBLE-quoted `"/api/whoami/`
+   * and football's client writes exactly one of those, the daily. The other
+   * six are single-quoted: post('/api/whoami/play', ...) and its five
+   * siblings. There is no api() helper. The check confirmed the assumption
+   * that wrote it, which is the shape of vacuous check this project has found
+   * six of.
+   *
+   * WHAT IT WOULD HAVE SHIPPED, and it is not a cosmetic bug: the page would
+   * have read its BOARD from the Friends deck and done everything else against
+   * FOOTBALL's -- opening a round in wa_round, buying a footballer's spell,
+   * and being judged against whoever stood behind football's door for that
+   * slot. Separate round and guess tables were added to make exactly that
+   * unrepresentable on the server; a client addressing the wrong endpoints
+   * walks around them, because from the server's side it is simply a football
+   * player playing football.
+   *
+   * SO IT IS REWRITTEN BY PATH AND NOT BY QUOTE, and then counted BOTH WAYS:
+   * nothing may still address the legacy form, and as many namespaced calls
+   * must come out as there were calls going in. A prohibition on its own
+   * passes a file with no calls at all. */
+  const WANT = (read(`${SRC}/js/game.js`).match(/\/api\/whoami\/[a-z]+/g) || []).length;
+  if (WANT < 2) {
+    throw new Error('rewrite "the API base": found ' + WANT +
+      " whoami call(s) in football's client — that cannot be right, and a " +
+      "rewrite that finds nothing must not report success");
+  }
+  s = s.split("/api/whoami/").join("/api/whoami/whoami_fr/");
+
+  const stragglers = s.match(/\/api\/whoami\/(?!whoami_fr\/)[a-z]+/g) || [];
+  if (stragglers.length) {
+    throw new Error('rewrite "the API base": ' + stragglers.length +
+      " call(s) still address football's deck: " + [...new Set(stragglers)].join(", "));
+  }
+  const moved = s.match(/\/api\/whoami\/whoami_fr\/[a-z]+/g) || [];
+  if (moved.length !== WANT) {
+    throw new Error('rewrite "the API base": ' + WANT + " call(s) went in and " +
+      moved.length + " came out namespaced");
+  }
 
   /* IDENTITY and STORAGE. Each game keeps its own corner of localStorage and
      may never write another's. */
   s = s.split('"whoami"').join('"whoami_fr"').split("'whoami'").join("'whoami_fr'");
   s = s.split('"xiwa.').join('"xifw.').split("'xiwa.").join("'xifw.");
+
+  /* THE PLAY KEY, WHICH IS THE RESULT KEY, AND IT IS ASKED FOR RATHER THAN
+   * WRITTEN OUT.
+   *
+   * The client sends `boardKey: 'wa:' + BOARD.day` when it opens a play, and
+   * the server banks the result under entryKey(), which for this game is
+   * "frwa:<day>". Left alone, the generated client filed its plays under
+   * football's prefix -- and not merely under a DIFFERENT key from its own
+   * results, which would be bad enough: under the SAME key football's client
+   * uses for the same day. Both decks run every day, so that is a collision on
+   * day one, not a mismatch that shows up eventually.
+   *
+   * THE PREFIX COMES FROM games.js, so the client and the server cannot come to
+   * disagree about it. Writing "frwa:" here would be a second copy of a fact
+   * that already has a home, and a second copy is the thing this project traces
+   * every major bug back to. */
+  const KEY_PREFIX = String(entryKey(GAME, { day: "2026-09-22" }) || "").split(":")[0];
+  if (!KEY_PREFIX) {
+    throw new Error('rewrite "the play key": games.js gives this game no entry ' +
+      "key, so there is no prefix to file its plays under");
+  }
+  const KEY_RE = /boardKey:\s*(['"])[a-z]+:\1/g;
+  const sent = (s.match(KEY_RE) || []).length;
+  if (!sent) {
+    throw new Error('rewrite "the play key": the source client sends no ' +
+      "boardKey — a rewrite that finds nothing must not report success");
+  }
+  s = s.replace(KEY_RE, (m, q) => "boardKey: " + q + KEY_PREFIX + ":" + q);
+  const landed = (s.match(KEY_RE) || [])
+    .filter((m) => m.indexOf(KEY_PREFIX + ":") > -1).length;
+  if (landed !== sent) {
+    throw new Error('rewrite "the play key": ' + sent + " sent in and " + landed +
+      " came out under " + KEY_PREFIX + ":");
+  }
   s = s.split(`/${SRC}/`).join(`/${OUT}/`);
   s = s.replace(/var BUILD = "[^"]*"/, `var BUILD = "${TAG}"`);
   return s;

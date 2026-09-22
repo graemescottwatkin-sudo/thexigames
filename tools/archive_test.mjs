@@ -93,13 +93,24 @@ const RAN = {
      reads as "this game has no boards". */
   qf_daily: ranFor("quickfire"),
   wa_board: ranFor("whoami"),
+  /* THE FRIENDS DECK'S OWN BOARD TABLE, and it needs its own row for the same
+     reason it needs its own table: the two games run on the same days and
+     launched a week apart, so football's calendar is not this one's. */
+  fr_wa_board: ranFor("whoami_fr"),
 };
+/* THE LONGER NAME IS TESTED FIRST, AND THAT IS NOT TIDINESS. `/wa_board/`
+   matches `fr_wa_board` as a substring, so with the old order a Friends query
+   was answered with FOOTBALL's board days — a well-formed fixture answering the
+   wrong game's question, which is the quietest kind of wrong a stub can be.
+   Anchored on a word boundary as well, so a third table named `*_wa_board`
+   cannot reintroduce it by being added below rather than above. */
 const tableOf = (sql) => (/ws_schedule/.test(sql) ? "ws_schedule"
   : /hl_schedule/.test(sql) ? "hl_schedule"
   : /gd_schedule/.test(sql) ? "gd_schedule"
   : /cw_schedule/.test(sql) ? "cw_schedule"
   : /qf_daily/.test(sql) ? "qf_daily"
-  : /wa_board/.test(sql) ? "wa_board"
+  : /fr_wa_board/.test(sql) ? "fr_wa_board"
+  : /\bwa_board/.test(sql) ? "wa_board"
   : /bp_schedule/.test(sql) ? "bp_schedule" : null);
 const env = {
   DB: {

@@ -19,8 +19,13 @@ import { dailyKey, dailyDayKey, dailyNoForDay } from "./daily.js";
 
 /* crossword_fr is the Friends crossword, the first game of the second theme.
    Its ID is not its directory: it LIVES at friends/crossword, and
-   permalink.js owns that half. */
-export const GAMES = ["crossword", "wordsearch", "scrambled", "hilo", "vowels", "grid", "quickfire", "codeword", "whoami", "ballpark", "crossword_fr"];
+   permalink.js owns that half.
+
+   whoami_fr is the second, at friends/whoami. Its id could not be `whoami`
+   because football holds that one and an id maps to exactly one theme; the
+   SLUG is `whoami`, so the address still reads /friends/whoami/. Both are
+   UNLISTED: live, banked, streaked, and advertised nowhere. */
+export const GAMES = ["crossword", "wordsearch", "scrambled", "hilo", "vowels", "grid", "quickfire", "codeword", "whoami", "ballpark", "crossword_fr", "whoami_fr"];
 
 export const DEFAULT_GAME = "crossword";
 
@@ -95,6 +100,12 @@ export const LAUNCHED = {
      launchNumber..today for every game, which is why Vowels launched on board
      ten. functions/_lib/fr-board.js converts between that and the bank row. */
   crossword_fr: "2026-09-21",
+  /* Who Am I XI: Friends, 22 September 2026. Its calendar was dealt FROM this
+     day rather than from the day the deck was imported -- the generator refuses
+     to guess a start date, which is what stops this becoming Grid XI's
+     placeholder calendar, still open in CLAUDE.md because its schedule starts
+     on an import date and has to be re-dealt at launch. */
+  whoami_fr: "2026-09-22",
   /* Codeword XI took the seventh shirt on 14 September 2026 — the next free
      number, which is what launching does. Its queue starts the same day, so
      the launch day and board one are the same day and nothing counts from
@@ -148,12 +159,23 @@ export const LAUNCHED = {
  * So the exception is stated, once, and both gates ask it. */
 export const NO_SEASON = {
   crossword_fr: true,
+  /* The same exception for the same reason, and it is checked rather than
+     assumed: tools/build_friendswhoami.js drops the season script on the way
+     through, so friends/whoami/index.html loads no xi-season.js at all. A game
+     that posts plays with no season silently drops them from the device's
+     record -- which is the fault aligned_test's rule exists to catch, and why
+     an exception to it has to be STATED here rather than merely true. */
+  whoami_fr: true,
 };
 
 export const inSeason = (game) => !NO_SEASON[game];
 
 export const UNLISTED = {
   crossword_fr: true,
+  /* THE SECOND ONE, AND THE OWNER'S STANDING INSTRUCTION FOR THIS THEME: live,
+     but no public way in. Deleting a line here is the publication, and it turns
+     the tree red in three places at once so nothing is left half-done. */
+  whoami_fr: true,
 };
 
 /* Launched AND advertised, which is the question every list on the site is
@@ -343,6 +365,10 @@ export const LABELS = {
      and in search results. "Crossword XI" twice would be two links a reader
      cannot tell apart. */
   crossword_fr: "Crossword XI: Friends",
+  /* The theme is IN the name for the same reason crossword_fr's is: this game
+     shares its title with football's and the two would otherwise be two links a
+     reader cannot tell apart. */
+  whoami_fr: "Who Am I XI: Friends",
   wordsearch: "Wordsearch XI",
   scrambled: "Scrambled XI",
   vowels: "Vowels XI",
@@ -477,6 +503,20 @@ export function entryKey(game, row) {
        rather than left as a precedent, so the next game citing it cites a rule. */
     const d = String((row && (row.day || row.date || row.play_date)) || "");
     return /^\d{4}-\d{2}-\d{2}$/.test(d) ? "wa:" + d : null;
+  }
+  if (game === "whoami_fr") {
+    /* ITS OWN PREFIX, NEVER A COLUMN -- the rule this file states for every new
+       game. Keyed on the DAY for exactly football's reason: a board is several
+       doors and a person plays one of them, the others staying live for
+       everybody else, so the day is what makes a result unique for a player.
+       A PREFIX OF ITS OWN IS NOT COSMETIC HERE. Both decks key on a day, and
+       both run on the same days -- so sharing "wa:" would file a Friends result
+       and a football result for one Tuesday under one key, and the
+       first-banked-wins merge rule would silently throw the second away. That
+       is the collision Vowels and Scrambled were given separate prefixes to
+       avoid, and this pair would hit it on day one rather than eventually. */
+    const d = String((row && (row.day || row.date || row.play_date)) || "");
+    return /^\d{4}-\d{2}-\d{2}$/.test(d) ? "frwa:" + d : null;
   }
   if (game === "ballpark") {
     /* A Ballpark daily is addressed by its DAY. bp_schedule hands one board to
