@@ -1,29 +1,17 @@
-/* POST /api/whoami/guess — name him.
+/* POST /api/whoami/guess — name it, for the FOOTBALL deck, at the address
+ * it has always had.
  *
- * THREE OUTCOMES, and the middle one is why this cannot be a string comparison
- * on the page: naming somebody who really did play for that club is a NEAR MISS
- * rather than a mistake. Deciding that on the client needs the club's full
- * roster, and a roster is a candidate list for the door.
+ * The rules moved to functions/_lib/wa-endpoints.js on 22 September 2026, when
+ * the Who Am I API was namespaced by game so a second deck could have the same
+ * server instead of a second copy of it. Nothing about what this address does
+ * has changed, and nothing about it may: every live football client on every
+ * device is calling it right now, and a deploy that moved it would break the
+ * game for anybody who had not reloaded. It delegates, and it always will.
  *
- * NO ANSWER IN A WRONG RESPONSE, on either branch. A near miss says it was a
- * near miss and stops there — saying who it actually was would end the game for
- * the price of a wrong guess, and the door stays live for everybody else that
- * day.
+ * The same rules are reachable at /api/whoami/whoami/guess. Two addresses, one
+ * implementation — the same shape the crossword API took the same day.
  */
-import { hasDB, noStore } from "../../_lib/wadata.js";
-import { getRound, judgeGuess } from "../../_lib/wa-play.js";
+import { guessHandler } from "../../_lib/wa-endpoints.js";
+import { LEGACY_GAME } from "../../_lib/wa-registry.js";
 
-const NO = (msg = "no") => noStore({ error: msg }, 400);
-
-export async function onRequestPost({ request, env }) {
-  if (!hasDB(env)) return NO();
-  let body = {};
-  try { body = await request.json(); } catch (e) { body = {}; }
-
-  const round = await getRound(env, body.playId);
-  if (!round) return NO("no round");
-
-  const out = await judgeGuess(env, round, body.guess);
-  if (out.error) return NO(out.error);
-  return noStore(out);
-}
+export const onRequestPost = (ctx) => guessHandler(ctx, LEGACY_GAME);

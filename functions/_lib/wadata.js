@@ -220,6 +220,125 @@ export async function allNames(env) {
   return (results || []).map((r) => [r.name, r.search_key]);
 }
 
+/* ---- the play adapter ----------------------------------------------------
+ *
+ * WHAT A GAME MUST ANSWER FOR wa-play.js TO RUN A SITTING, and these five are
+ * the whole of it. wa-play.js held football's answers inline because there was
+ * one Who Am I; a second deck hides a CARD and deals written clues, so the
+ * answers differ while the sitting -- open a door, buy a rung, guess, finish --
+ * does not.
+ *
+ * NOTHING BELOW IS NEW BEHAVIOUR. clueBody is wa-play.js's, moved here
+ * unchanged, and the rest are the branches that surrounded its calls. This file
+ * already owns every other projection of a football row -- publicDoor,
+ * doorAnswer, playedFor -- so it is where they belong.
+ */
+
+/* WHAT A STAGE IS ALLOWED TO SAY, and nothing else leaves on its account.
+ *
+ * Built from the `reveals` names in the ladder rather than from a switch, so
+ * adding a rung is a config change. The player row is the whole row -- it has
+ * to be, to build any of this -- and this function is the only place that
+ * decides which parts of it are allowed out.
+ */
+export function clueBody(row, reveals, door) {
+  const out = {};
+  for (const what of reveals) {
+    if (what === "spell") {
+      /* THE DOOR'S OWN SPELL, and only that one. A player with six clubs has
+         six spells and five of them are the career by instalments. */
+      let clubs = [];
+      try { clubs = JSON.parse(row.clubs || "[]"); } catch (e) { clubs = []; }
+      const want = fold(door.club);
+      const spell = clubs.find((c) => fold(c.club) === want);
+      out.spell = spell
+        ? { club: door.club, from: spell.from, to: spell.to, apps: spell.apps, goals: spell.goals }
+        : { club: door.club };
+    } else if (what === "career") {
+      /* THE CAREER AS SPELLS, NOT AS A SENTENCE. It went out as club_history --
+         one pre-rendered string -- and the page printed it as a wall:
+         "2017 Paris Saint-Germain B (8) - 2017-2019 Lille II (8) - ...". The
+         SHAPE of a career is the puzzle, and a run-on line hides it: finding
+         the one big club in there takes real effort and none at all in a list.
+         Sending the spells costs nothing in secrecy -- it is the same
+         information, which is why it is the same rung -- and it lets the page
+         mark the door's own club IN PLACE, which is the thing a player is
+         actually looking for. `mine` is computed here rather than on the page
+         because the page folds names for a type-ahead and must not be the thing
+         that decides which spell is the door's. */
+      let spells = [];
+      try { spells = JSON.parse(row.clubs || "[]") || []; } catch (e) { spells = []; }
+      const want = fold(door.club);
+      out.spells = spells.map((c) => ({
+        club: c.club, from: c.from, to: c.to, apps: c.apps, goals: c.goals,
+        loan: !!c.loan, mine: fold(c.club) === want,
+      }));
+      out.career = row.club_history || null;
+      out.clubCount = Number(row.club_count) || 0;
+    } else if (what === "bio") {
+      /* THE BIRTH YEAR, AND NO AGE. THIS REVERSES AN EARLIER DECISION, so what
+         that decision said is recorded rather than deleted: it sent the AGE and
+         withheld the year, on the grounds that the year is the sharper clue,
+         and it computed the age on the server precisely so the page could not
+         be handed the year and asked not to look at it. That reasoning was
+         sound, and the clue is now deliberately sharper at the same ten points.
+         Owner's ruling, 21 September 2026. A reversed decision with its
+         original reasoning left standing beside it is how the next person
+         reverses it back.
+
+         WHAT FORCED IT. The bank has no death field, so an age was this year
+         minus the birth year whether or not the man was alive. It read "age 92"
+         for Dave Mackay, who died in 2015, and "age 30" for Diogo Jota, who
+         died in 2025 -- 109 deceased players in the bank, 75 of the 365 boards
+         carrying at least one. Removing the age does not CORRECT that: it
+         removes the arithmetic that produced it, so no later edit can bring it
+         back by forgetting that deceased players are a case.
+
+         A YEAR, NOT A DATE. wa_player holds birth_year and there is no birth
+         date in the bank, which is why the ladder says "year of birth" and must
+         not say D.O.B. -- a label promising a date is one somebody eventually
+         satisfies by inventing a 1 January. */
+      out.birthYear = Number(row.birth_year) || null;
+      out.nationality = row.nationality || null;
+      out.position = row.position || null;
+    } else if (what === "answer") {
+      out.answer = row.name;
+      out.career = row.club_history || null;
+      out.article = row.article || null;
+    }
+  }
+  return out;
+}
+
+/* WHAT A BOUGHT RUNG SAYS. The ladder row is passed whole rather than its
+   `reveals` alone, because the other deck reads a different field off it -- its
+   rungs are clue ONE, TWO and THREE of a round and it needs the number. */
+export async function reveal(env, door, stage) {
+  return clueBody(door, stage.reveals || [], door);
+}
+
+/* WHETHER A NAME IS THE ANSWER, and if not, whether it is the near miss.
+   `key` arrives folded, by the caller, with the same fold the bank stored --
+   one folding, not two agreeing. */
+export async function judge(env, door, key) {
+  if (key === fold(door.name)) return { solved: true, verdict: "right" };
+  const alsoPlayedThere = await playedFor(env, key, door.club);
+  return { solved: false, verdict: alsoPlayedThere ? "right-club" : "wrong" };
+}
+
+/* WHAT A SOLVED OR ABANDONED DOOR SAYS. Exactly what clueBody(["answer"])
+   produced when this was inline, which is what makes the move a move. */
+export function solveBody(door) {
+  return { answer: door.name, career: door.club_history || null,
+           article: door.article || null };
+}
+
+/* AND WHAT A CLOSED DOOR SAYS AT FINISH -- the same, plus the club, which is
+   the one field the finish response has always carried that a guess does not. */
+export function doorBody(door) {
+  return { ...solveBody(door), club: door.club };
+}
+
 /* DID THIS PLAYER EVER PLAY FOR THAT CLUB. The "right club, wrong player"
    answer, and it MUST be decided here: the alternative is sending the page the
    club's full roster, which is a candidate list for the door. */

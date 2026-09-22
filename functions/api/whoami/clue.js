@@ -1,28 +1,17 @@
-/* POST /api/whoami/clue — buy the next rung of the ladder.
+/* POST /api/whoami/clue — buy the next rung of the ladder, for the FOOTBALL deck, at the address
+ * it has always had.
  *
- * THE LADDER IS CONFIG, not a switch in here: football/whoami/js/config.js says
- * what each stage costs and what it is allowed to reveal, and wa-play.js reads
- * it. The owner is play-testing what a substitution should buy, and a ladder
- * baked into this route would make every answer to that a code change.
+ * The rules moved to functions/_lib/wa-endpoints.js on 22 September 2026, when
+ * the Who Am I API was namespaced by game so a second deck could have the same
+ * server instead of a second copy of it. Nothing about what this address does
+ * has changed, and nothing about it may: every live football client on every
+ * device is calling it right now, and a deploy that moved it would break the
+ * game for anybody who had not reloaded. It delegates, and it always will.
  *
- * A STAGE ALREADY PAID FOR IS SERVED AGAIN FOR NOTHING. A reload must not be a
- * second purchase — the shape of fault Codeword found in its own demo, where a
- * clock could be rewound for free.
+ * The same rules are reachable at /api/whoami/whoami/clue. Two addresses, one
+ * implementation — the same shape the crossword API took the same day.
  */
-import { hasDB, noStore } from "../../_lib/wadata.js";
-import { getRound, buyClue } from "../../_lib/wa-play.js";
+import { clueHandler } from "../../_lib/wa-endpoints.js";
+import { LEGACY_GAME } from "../../_lib/wa-registry.js";
 
-const NO = (msg = "no") => noStore({ error: msg }, 400);
-
-export async function onRequestPost({ request, env }) {
-  if (!hasDB(env)) return NO();
-  let body = {};
-  try { body = await request.json(); } catch (e) { body = {}; }
-
-  const round = await getRound(env, body.playId);
-  if (!round) return NO("no round");
-
-  const out = await buyClue(env, round, Number(body.stage));
-  if (out.error) return NO(out.error);
-  return noStore(out);
-}
+export const onRequestPost = (ctx) => clueHandler(ctx, LEGACY_GAME);

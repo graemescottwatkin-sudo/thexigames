@@ -1,25 +1,22 @@
-/* GET /api/whoami/archive — the boards that have been.
+/* GET /api/whoami/archive — the boards that have been, for the FOOTBALL deck, at the address
+ * it has always had.
  *
- * DAYS AND NUMBERS AND NOTHING ELSE. Not a club, not a door, not a count of
- * anything that could be read back to an answer. An archive index is the
- * easiest place in a game to publish tomorrow by accident — the word search did
- * exactly that on 6 September 2026, listing 233 boards out of a schedule that
- * held two years of inventory — and it is easy because the index feels like
- * metadata right up until you notice the metadata IS the board.
+ * The rules moved to functions/_lib/wa-endpoints.js on 22 September 2026, when
+ * the Who Am I API was namespaced by game so a second deck could have the same
+ * server instead of a second copy of it. Nothing about what this address does
+ * has changed, and nothing about it may: every live football client on every
+ * device is calling it right now, and a deploy that moved it would break the
+ * game for anybody who had not reloaded. It delegates, and it always will.
+ *
+ * The same rules are reachable at /api/whoami/whoami/archive. Two addresses, one
+ * implementation — the same shape the crossword API took the same day.
  */
-import { hasDB, noStore, today } from "../../_lib/wadata.js";
-import { archive, lastPlayableDay } from "../../_lib/wa-board.js";
+import { archiveHandler } from "../../_lib/wa-endpoints.js";
+import { LEGACY_GAME } from "../../_lib/wa-registry.js";
 
-export async function onRequestGet({ env }) {
-  if (!hasDB(env)) return noStore({ error: "no database binding", source: "none" }, 503);
-  let boards = [], last = null;
-  try {
-    boards = await archive(env);
-    last = await lastPlayableDay(env);
-  } catch (err) {
-    return noStore({ error: "query failed", detail: String(err), source: "d1" }, 500);
-  }
-  return noStore({ source: "d1", today: today(), lastDay: last, count: boards.length, boards });
-}
+export const onRequestGet = (ctx) => archiveHandler(ctx, LEGACY_GAME);
 
+/* HEAD IS THE SAME QUESTION WITH THE BODY THROWN AWAY, and it is asserted in
+   production by the live_check. Built from the GET rather than answered
+   separately, so the two cannot come to disagree about a status. */
 export const onRequestHead = onRequestGet;

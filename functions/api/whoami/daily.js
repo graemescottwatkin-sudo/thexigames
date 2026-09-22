@@ -1,78 +1,22 @@
-/* GET /api/whoami/daily — today's eleven doors, or a board that has been.
+/* GET /api/whoami/daily — today's doors, or a board that has been, for the FOOTBALL deck, at the address
+ * it has always had.
  *
- * WHAT A DOOR IS: a club and the year a player last left it. That is the whole
- * of what a browser gets, and the absence of everything else is the design
- * rather than an omission — publicDoor() in wadata.js drops player_id in one
- * place so a new caller cannot forget to.
+ * The rules moved to functions/_lib/wa-endpoints.js on 22 September 2026, when
+ * the Who Am I API was namespaced by game so a second deck could have the same
+ * server instead of a second copy of it. Nothing about what this address does
+ * has changed, and nothing about it may: every live football client on every
+ * device is calling it right now, and a deploy that moved it would break the
+ * game for anybody who had not reloaded. It delegates, and it always will.
  *
- * ONLY ONE DOOR IS PLAYED PER PERSON PER DAY and the other ten stay live for
- * everybody else, so a leak here spoils ten answers for every other player that
- * day rather than one answer for this one.
+ * The same rules are reachable at /api/whoami/whoami/daily. Two addresses, one
+ * implementation — the same shape the crossword API took the same day.
  */
-import { hasDB, getBoard, noStore, today } from "../../_lib/wadata.js";
-import { CURVE, MAX_SCORE, FULL_TIME } from "../../_lib/xi-score.js";
-import { MATCH_MINUTES, RATE_SECONDS, LADDER, GIVE_UP } from "../../_lib/wa-play.js";
-import { boardNoOf, boardByFamilyNo, playableDay, lastPlayableDay } from "../../_lib/wa-board.js";
+import { dailyHandler } from "../../_lib/wa-endpoints.js";
+import { LEGACY_GAME } from "../../_lib/wa-registry.js";
 
-export async function onRequestGet({ request, env }) {
-  if (!hasDB(env)) return noStore({ error: "no database binding", source: "none" }, 503);
+export const onRequestGet = (ctx) => dailyHandler(ctx, LEGACY_GAME);
 
-  const url = new URL(request.url);
-  const askedNo = url.searchParams.get("no");
-  const askedDay = url.searchParams.get("date");
-
-  let board = null, day = today();
-  try {
-    if (askedNo !== null) {
-      /* Anything that is not a positive integer is a 404 rather than a coerced
-         one: Number("") is 0 and Number("3x") is NaN, and both would otherwise
-         walk into the lookup as something. */
-      const no = /^\d+$/.test(askedNo) ? Number(askedNo) : -1;
-      board = await boardByFamilyNo(env, no, today());
-      if (board) day = board.date;
-    } else if (askedDay !== null) {
-      if (/^\d{4}-\d{2}-\d{2}$/.test(askedDay) && await playableDay(env, askedDay)) {
-        board = await getBoard(env, askedDay);
-        if (board) day = askedDay;
-      }
-    } else {
-      board = await getBoard(env);
-    }
-  } catch (err) {
-    return noStore({ error: "query failed", detail: String(err), source: "d1" }, 500);
-  }
-
-  /* ONE 404 FOR "not yet" AND "never was". A board that has not run must not be
-     distinguishable from one that does not exist, or the shape of the queue is
-     readable by asking for numbers until the answer changes. */
-  if (!board) {
-    return noStore({ error: "no board published for that day", date: today(), source: "d1" }, 404);
-  }
-
-  const no = boardNoOf(day);
-  return noStore({
-    source: "d1",
-    generatedAt: new Date().toISOString(),
-    /* THE SCORING RULE TRAVELS WITH THE BOARD, and it is not a secret — it is
-       the thing a player is entitled to know before they spend anything. The
-       page needs the curve to tick a live "worth now" readout, and the only
-       alternative to sending it is a second copy in the client that agrees
-       today and disagrees the first time anybody tunes one. Codeword has that
-       second copy; this does not.
-       The LADDER goes with it for the same reason: the page draws the prices,
-       and a price it invented would be a price the server did not charge. */
-    scoring: {
-      curve: CURVE, max: MAX_SCORE, fullTime: FULL_TIME,
-      matchMinutes: MATCH_MINUTES, rateSeconds: RATE_SECONDS,
-      ladder: LADDER.map((r) => ({ stage: r.stage, sub: r.sub,
-                                   points: r.points, label: r.label })),
-      giveUp: { label: GIVE_UP.label },
-    },
-    no, day,
-    lastDay: await lastPlayableDay(env),
-    isToday: day === today(),
-    board: { ...board, no, day },
-  });
-}
-
+/* HEAD IS THE SAME QUESTION WITH THE BODY THROWN AWAY, and it is asserted in
+   production by the live_check. Built from the GET rather than answered
+   separately, so the two cannot come to disagree about a status. */
 export const onRequestHead = onRequestGet;

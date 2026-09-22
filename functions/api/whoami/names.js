@@ -1,41 +1,22 @@
-/* GET /api/whoami/names — every name a player may type.
+/* GET /api/whoami/names — every name a player may type, for the FOOTBALL deck, at the address
+ * it has always had.
  *
- * THIS IS THE ANSWER SPACE, NOT AN ANSWER, and the distinction is the reason it
- * can be shipped whole. The same 3,146 names back all 365 boards, so holding
- * the list tells you nothing about today: it is the dictionary, not the puzzle.
- * A game that filtered it server-side per keystroke would be slower, no more
- * secret, and wrong on a type-ahead budget.
+ * The rules moved to functions/_lib/wa-endpoints.js on 22 September 2026, when
+ * the Who Am I API was namespaced by game so a second deck could have the same
+ * server instead of a second copy of it. Nothing about what this address does
+ * has changed, and nothing about it may: every live football client on every
+ * device is calling it right now, and a deploy that moved it would break the
+ * game for anybody who had not reloaded. It delegates, and it always will.
  *
- * CACHEABLE, WHICH NOTHING ELSE IN THIS GAME IS. It does not change between
- * days, so it is the one endpoint here that may sit in a cache — and it must,
- * because it is fetched on every visit and is the largest thing the page loads.
+ * The same rules are reachable at /api/whoami/whoami/names. Two addresses, one
+ * implementation — the same shape the crossword API took the same day.
  */
-import { hasDB, allNames } from "../../_lib/wadata.js";
+import { namesHandler } from "../../_lib/wa-endpoints.js";
+import { LEGACY_GAME } from "../../_lib/wa-registry.js";
 
-export async function onRequestGet({ env }) {
-  if (!hasDB(env)) {
-    return new Response(JSON.stringify({ error: "no database binding" }), {
-      status: 503,
-      headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
-    });
-  }
-  let names = [];
-  try { names = await allNames(env); }
-  catch (err) {
-    return new Response(JSON.stringify({ error: "query failed" }), {
-      status: 500,
-      headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
-    });
-  }
-  return new Response(JSON.stringify({ count: names.length, names }), {
-    headers: {
-      "Content-Type": "application/json; charset=utf-8",
-      /* An hour, because a name entering the bank should reach players the same
-         day without anybody clearing anything. */
-      "Cache-Control": "public, max-age=3600",
-      "X-Robots-Tag": "noindex",
-    },
-  });
-}
+export const onRequestGet = (ctx) => namesHandler(ctx, LEGACY_GAME);
 
+/* HEAD IS THE SAME QUESTION WITH THE BODY THROWN AWAY, and it is asserted in
+   production by the live_check. Built from the GET rather than answered
+   separately, so the two cannot come to disagree about a status. */
 export const onRequestHead = onRequestGet;

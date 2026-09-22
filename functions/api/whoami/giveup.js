@@ -1,29 +1,17 @@
-/* POST /api/whoami/giveup — leave the pitch.
+/* POST /api/whoami/giveup — leave the pitch, for the FOOTBALL deck, at the address
+ * it has always had.
  *
- * NOT A SUBSTITUTION, which is why it is not a rung of the ladder and not part
- * of /clue. There were three substitutions once and the third was this, taken
- * from the family's bench-of-three without asking what a third would buy; the
- * answer was nothing, because the spell, the career and the bio are everything
- * this game knows about a player that is not his name.
+ * The rules moved to functions/_lib/wa-endpoints.js on 22 September 2026, when
+ * the Who Am I API was namespaced by game so a second deck could have the same
+ * server instead of a second copy of it. Nothing about what this address does
+ * has changed, and nothing about it may: every live football client on every
+ * device is calling it right now, and a deploy that moved it would break the
+ * game for anybody who had not reloaded. It delegates, and it always will.
  *
- * IT ENDS THE BOARD AT NOTHING. That is an accounting rather than a penalty —
- * a board you were told the answer to scored nothing — and it is why giving up
- * carries no price: pricing it would make the reveal a cheap route to a number.
+ * The same rules are reachable at /api/whoami/whoami/giveup. Two addresses, one
+ * implementation — the same shape the crossword API took the same day.
  */
-import { hasDB, noStore } from "../../_lib/wadata.js";
-import { getRound, giveUp } from "../../_lib/wa-play.js";
+import { giveupHandler } from "../../_lib/wa-endpoints.js";
+import { LEGACY_GAME } from "../../_lib/wa-registry.js";
 
-const NO = (msg = "no") => noStore({ error: msg }, 400);
-
-export async function onRequestPost({ request, env }) {
-  if (!hasDB(env)) return NO();
-  let body = {};
-  try { body = await request.json(); } catch (e) { body = {}; }
-
-  const round = await getRound(env, body.playId);
-  if (!round) return NO("no round");
-
-  const out = await giveUp(env, round);
-  if (out.error) return NO(out.error);
-  return noStore(out);
-}
+export const onRequestPost = (ctx) => giveupHandler(ctx, LEGACY_GAME);

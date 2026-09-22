@@ -1,36 +1,17 @@
-/* POST /api/whoami/play — open a door.
+/* POST /api/whoami/play — open a door, for the FOOTBALL deck, at the address
+ * it has always had.
  *
- * Choosing a club IS the sitting: everything after it is measured against that
- * door, so the choice is recorded here rather than carried by the page.
+ * The rules moved to functions/_lib/wa-endpoints.js on 22 September 2026, when
+ * the Who Am I API was namespaced by game so a second deck could have the same
+ * server instead of a second copy of it. Nothing about what this address does
+ * has changed, and nothing about it may: every live football client on every
+ * device is calling it right now, and a deploy that moved it would break the
+ * game for anybody who had not reloaded. It delegates, and it always will.
  *
- * A PAST BOARD IS A REAL SITTING, not a practice mode — scored the same, banked
- * the same. The owner's standard is that boards which have gone can be selected
- * and played properly, and a second lesser code path for old boards would be a
- * second set of rules to keep in step.
+ * The same rules are reachable at /api/whoami/whoami/play. Two addresses, one
+ * implementation — the same shape the crossword API took the same day.
  */
-import { hasDB, today, noStore } from "../../_lib/wadata.js";
-import { playableDay } from "../../_lib/wa-board.js";
-import { openRound } from "../../_lib/wa-play.js";
+import { playHandler } from "../../_lib/wa-endpoints.js";
+import { LEGACY_GAME } from "../../_lib/wa-registry.js";
 
-const NO = (msg = "no") => noStore({ error: msg }, 400);
-
-export async function onRequestPost({ request, env }) {
-  if (!hasDB(env)) return NO();
-  let body = {};
-  try { body = await request.json(); } catch (e) { body = {}; }
-
-  /* WHICH DAY, checked against the table rather than believed. Without this a
-     round could be opened against next July's board and its doors answered one
-     at a time — the board-early leak from a different direction, since "was I
-     right" is most of a door. */
-  let day = today();
-  if (body.date !== undefined && body.date !== null) {
-    if (!/^\d{4}-\d{2}-\d{2}$/.test(String(body.date))) return NO("no such board");
-    if (!(await playableDay(env, String(body.date)))) return NO("no such board");
-    day = String(body.date);
-  }
-
-  const out = await openRound(env, day, body.slot);
-  if (out.error) return NO(out.error);
-  return noStore({ ...out, day });
-}
+export const onRequestPost = (ctx) => playHandler(ctx, LEGACY_GAME);

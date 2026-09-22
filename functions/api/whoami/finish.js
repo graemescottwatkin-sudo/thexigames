@@ -1,24 +1,17 @@
-/* POST /api/whoami/finish — what the sitting came to.
+/* POST /api/whoami/finish — what the sitting came to, for the FOOTBALL deck, at the address
+ * it has always had.
  *
- * Read from the rows this side wrote, never from anything the page reports.
- * Marking on the server and then accepting the result from the browser would be
- * the front door locked and the back door open.
+ * The rules moved to functions/_lib/wa-endpoints.js on 22 September 2026, when
+ * the Who Am I API was namespaced by game so a second deck could have the same
+ * server instead of a second copy of it. Nothing about what this address does
+ * has changed, and nothing about it may: every live football client on every
+ * device is calling it right now, and a deploy that moved it would break the
+ * game for anybody who had not reloaded. It delegates, and it always will.
  *
- * THE ANSWER IS INCLUDED ONLY ONCE THE DOOR IS CLOSED — solved, or given up.
- * Asking to "finish" a door still in play must not be a way to read it.
+ * The same rules are reachable at /api/whoami/whoami/finish. Two addresses, one
+ * implementation — the same shape the crossword API took the same day.
  */
-import { hasDB, noStore } from "../../_lib/wadata.js";
-import { getRound, finishRound } from "../../_lib/wa-play.js";
+import { finishHandler } from "../../_lib/wa-endpoints.js";
+import { LEGACY_GAME } from "../../_lib/wa-registry.js";
 
-const NO = (msg = "no") => noStore({ error: msg }, 400);
-
-export async function onRequestPost({ request, env }) {
-  if (!hasDB(env)) return NO();
-  let body = {};
-  try { body = await request.json(); } catch (e) { body = {}; }
-
-  const round = await getRound(env, body.playId);
-  if (!round) return NO("no round");
-
-  return noStore(await finishRound(env, round));
-}
+export const onRequestPost = (ctx) => finishHandler(ctx, LEGACY_GAME);

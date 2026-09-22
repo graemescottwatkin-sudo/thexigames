@@ -22,8 +22,29 @@ import { dailyDayKey, dailyNoForDay } from "./daily.js";
    is bounded at BOTH ends by it: `<= today` alone let three boards from before
    day one stay listed and playable. */
 import { LAUNCHED } from "./games.js";
-const FROM = () => LAUNCHED.whoami || "0000-01-01";
-import { hasDB, getBoard, today } from "./wadata.js";
+import { whoamiOf, LEGACY_GAME } from "./wa-registry.js";
+import { hasDB, today } from "./wadata.js";
+
+/* THE GAME'S OWN TABLE AND ITS OWN LAUNCH DAY.
+ *
+ * Both were football's, written in: the SQL named wa_board and the bound read
+ * LAUNCHED.whoami. A second Who Am I needs the same queries against a different
+ * table and a different first day, and a `game` argument is the smallest thing
+ * that can carry both. Omitted, it is football's, so the legacy routes call
+ * these exactly as they always did.
+ *
+ * AN UNKNOWN GAME IS REFUSED RATHER THAN DEFAULTED. Falling back to football
+ * would list one game's boards under another game's address, which is the
+ * quietest failure this file could have. */
+const of_ = (game) => whoamiOf(game || LEGACY_GAME);
+const BOARDS = (game) => {
+  const w = of_(game);
+  return w ? w.tables.board : null;
+};
+const FROM = (game) => {
+  const w = of_(game);
+  return (w && LAUNCHED[w.id]) || "0000-01-01";
+};
 
 export function boardNoOf(day) {
   return dailyNoForDay(String(day));
@@ -36,19 +57,23 @@ export function dayOfBoardNo(no) {
 /* A BOARD BY ITS FAMILY NUMBER, bounded by today. Without the bound,
    /football/whoami/daily/300 hands somebody next July's eleven doors — and
    unlike a crossword, those doors stay live for other players when they run. */
-export async function boardByFamilyNo(env, familyNo, now) {
-  if (!hasDB(env) || !Number.isInteger(familyNo) || familyNo < 1) return null;
+export async function boardByFamilyNo(env, familyNo, now, game) {
+  if (!of_(game) || !hasDB(env) || !Number.isInteger(familyNo) || familyNo < 1) return null;
   const day = dayOfBoardNo(familyNo);
   if (!day) return null;
   if (day > String(now || today())) return null;
-  return await getBoard(env, day);
+  /* THE GAME'S OWN READER: football resolves a board through wadata.getBoard
+     and Friends through frwa-data.getBoard. Both answer the same question and
+     neither knows the other exists. */
+  return await of_(game).data.getBoard(env, day);
 }
 
 /* Is this a day a player may open? Asked of the table rather than computed from
    a launch date, because "published" is a status a row carries and a date
    cannot answer it. */
-export async function playableDay(env, day) {
-  if (!hasDB(env) || !day) return false;
+export async function playableDay(env, day, game) {
+  const table = BOARDS(game);
+  if (!table || !hasDB(env) || !day) return false;
   /* BOUNDED AT BOTH ENDS. This asked only that the day had arrived, which was
      enough while the board table began on the day the game did. When Who Am I
      was re-dated to day one on 18 September 2026 its LAUNCHED moved and the
@@ -60,9 +85,9 @@ export async function playableDay(env, day) {
      ran. The bound is in the QUERY rather than in a filter after it, for the
      reason the archive below states. */
   const row = await env.DB.prepare(
-    "SELECT play_date FROM wa_board WHERE play_date = ? AND status = 'published' " +
+    `SELECT play_date FROM ${table} WHERE play_date = ? AND status = 'published' ` +
     "AND play_date <= ? AND play_date >= ?"
-  ).bind(String(day), today(), FROM()).first();
+  ).bind(String(day), today(), FROM(game)).first();
   return !!row;
 }
 
@@ -71,23 +96,25 @@ export async function playableDay(env, day) {
    accident, because the index feels like metadata right up until you notice the
    metadata IS the board. Nothing here is worth leaking even if the bound were
    wrong, and the bound is in the query rather than in a filter after it. */
-export async function archive(env, limit = 400) {
-  if (!hasDB(env)) return [];
+export async function archive(env, limit = 400, game) {
+  const table = BOARDS(game);
+  if (!table || !hasDB(env)) return [];
   const { results } = await env.DB.prepare(
-    "SELECT play_date FROM wa_board WHERE status = 'published' " +
+    `SELECT play_date FROM ${table} WHERE status = 'published' ` +
     "AND play_date <= ? AND play_date >= ? ORDER BY play_date DESC LIMIT ?"
-  ).bind(today(), FROM(), Math.max(1, Math.min(1000, Number(limit) || 400))).all();
+  ).bind(today(), FROM(game), Math.max(1, Math.min(1000, Number(limit) || 400))).all();
   return (results || []).map((r) => ({ day: r.play_date, no: boardNoOf(r.play_date) }));
 }
 
 /* The most recent published day at or before today — today's board when there
    is one, and the last one there was when there is not. A game that runs out of
    boards should show its last rather than a 404. */
-export async function lastPlayableDay(env) {
-  if (!hasDB(env)) return null;
+export async function lastPlayableDay(env, game) {
+  const table = BOARDS(game);
+  if (!table || !hasDB(env)) return null;
   const row = await env.DB.prepare(
-    "SELECT MAX(play_date) AS d FROM wa_board WHERE status = 'published' " +
+    `SELECT MAX(play_date) AS d FROM ${table} WHERE status = 'published' ` +
     "AND play_date <= ? AND play_date >= ?"
-  ).bind(today(), FROM()).first();
+  ).bind(today(), FROM(game)).first();
   return row && row.d ? String(row.d) : null;
 }
