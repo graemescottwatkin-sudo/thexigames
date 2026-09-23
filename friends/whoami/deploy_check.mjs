@@ -12,10 +12,15 @@
  * asset hash is the half that carries the law: changed bytes under a tag that
  * has not moved are refused.
  *
- * NOTHING HAS SHIPPED YET, so LAST_SHIPPED_ASSETS is null and SAYS SO. A
- * constant that stands for nothing is the sentinel fault — LAST_PRESENTED was
- * retired in v001v for exactly that — so the null is declared, the comparison
- * is skipped, and the skip is PRINTED rather than passing quietly.
+ * IT HAS SHIPPED: v001a went live on 23 Sep 2026, the day it launched, and
+ * post_deploy recorded it (51a27f9). Until then this paragraph said nothing
+ * had shipped and LAST_SHIPPED_ASSETS was null, with the comparison skipped
+ * and the skip printed. That was right for a game in build. It stayed in the
+ * header after launch, telling readers the tag law was not yet enforced when
+ * it was. The null branch went at the same time: a shipped game with no hash
+ * recorded is now a FAILURE, not a skip. Setting the constant back to null
+ * would otherwise switch off the half of the law that carries it, and the
+ * gate would still say 0 failed.
  *
  * WHAT THIS GAME IS. The Friends deck hides a CARD and deals three written
  * clues; football's hides a footballer and reveals his attributes. What they
@@ -50,9 +55,7 @@ const DIR = "friends/whoami";
 const SRC = "football/whoami";          // the game this one is generated from
 
 /* WHAT IS LIVE. Bump both after a deploy with tools/post_deploy.mjs, which
-   derives them from the live page rather than trusting anyone's memory.
-   v000z is the day before a first release: not v000, which aligned_test
-   refuses as a sentinel, and below v001 so the first ship moves past it. */
+   derives them from the live page rather than trusting anyone's memory. */
 const LAST_SHIPPED = "v001a";
 const LAST_SHIPPED_ASSETS = "c4584c7182017bbc";
 
@@ -114,19 +117,18 @@ t("LAST_SHIPPED is a real version, not a sentinel",
 t("the build tag never goes backwards", !!tag && tag >= LAST_SHIPPED,
   `now ${tag}, live ${LAST_SHIPPED}`);
 
-/* THE PAIRED HALF, AND THE SKIP IS ANNOUNCED. Once this game has shipped,
-   LAST_SHIPPED_ASSETS holds the hash of the bytes LAST_SHIPPED names and a
-   change under an unmoved tag is refused. Until then there is nothing to
-   compare against, and a comparison against nothing is the sentinel fault —
-   so it says it is not checking rather than reporting a pass. */
-if (LAST_SHIPPED_ASSETS === null) {
-  console.log("  --  the asset hash is NOT checked: nothing has shipped, so there " +
-              "is no live build to compare against. This is not a pass.");
-} else {
-  t("the game's own assets cannot change without its build tag moving",
-    tag > LAST_SHIPPED || ownAssetHash() === LAST_SHIPPED_ASSETS,
-    `assets ${ownAssetHash()}`);
-}
+/* THE PAIRED HALF. LAST_SHIPPED_ASSETS is the hash of the bytes LAST_SHIPPED
+   names, and a change under an unmoved tag is refused. The game has shipped,
+   so a missing hash is refused too: the pre-launch skip that allowed one is
+   gone (see the header), because a comparison against nothing is the
+   sentinel fault. */
+t("the live build's asset hash is recorded",
+  typeof LAST_SHIPPED_ASSETS === "string" && /^[0-9a-f]{16}$/.test(LAST_SHIPPED_ASSETS),
+  String(LAST_SHIPPED_ASSETS));
+t("the game's own assets cannot change without its build tag moving",
+  typeof LAST_SHIPPED_ASSETS === "string" &&
+    (tag > LAST_SHIPPED || ownAssetHash() === LAST_SHIPPED_ASSETS),
+  `assets ${ownAssetHash()}`);
 
 t("every asset the page pulls from this game carries the same tag", (() => {
   const own = [...markup.matchAll(/(?:src|href)="(?:css|js)\/[^"?]+\?v=([^"]*)"/g)]
