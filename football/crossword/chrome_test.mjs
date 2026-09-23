@@ -495,10 +495,13 @@ console.log("\nThe hub's assets resolve from BOTH of the addresses it is served 
   };
   for (const at of ["/", themeHubPath("football")]) {
     const doc = new JSDOM(html, { url: origin + at }).window.document;
+    const isLocal = (n) => new URL(n, origin + at).origin === origin;
+    const scripts = [...doc.querySelectorAll("script[src]")].map((s) => s.getAttribute("src"));
+    const sheets = [...doc.querySelectorAll('link[rel~="stylesheet"][href]')].map((l) => l.getAttribute("href"));
     const named = [
-      ...[...doc.querySelectorAll("script[src]")].map((s) => s.getAttribute("src")),
+      ...scripts, ...sheets,
       ...[...doc.querySelectorAll("link[href]")]
-        .filter((l) => /stylesheet|icon|preload|manifest/i.test(l.rel) && !/^data:/.test(l.getAttribute("href")))
+        .filter((l) => /icon|preload|manifest/i.test(l.rel) && !/^data:/.test(l.getAttribute("href")))
         .map((l) => l.getAttribute("href")),
       ...[...doc.querySelectorAll("img[src], source[src]")].map((s) => s.getAttribute("src")),
       /* Paths the page's script builds at run time: string literals naming a
@@ -509,10 +512,15 @@ console.log("\nThe hub's assets resolve from BOTH of the addresses it is served 
     ];
     const local = named.map((n) => new URL(n, origin + at)).filter((u) => u.origin === origin);
     const missing = local.filter((u) => !fs.existsSync(fileFor(u))).map((u) => u.pathname);
-    /* A pass over nothing is not a pass: the hub loads six shared files as
-       tags and two more from script, so fewer than eight means the scan went
-       blind rather than the page got better. */
-    t(`at ${at}: the scan found the hub's assets`, local.length >= 8, `${local.length} found`);
+    /* A pass over nothing is not a pass. NOT a total count: the hub also shows
+       ten game-card images, and a first draft floored the total at eight, so
+       with every stylesheet and script stripped the images alone cleared it.
+       What the bug took away was the page's own stylesheet and scripts, so the
+       scan must have reached at least one of each. */
+    const localSheets = sheets.filter(isLocal).length, localScripts = scripts.filter(isLocal).length;
+    t(`at ${at}: the scan reached the hub's own stylesheets and scripts`,
+      localSheets >= 1 && localScripts >= 1,
+      `${localSheets} stylesheets, ${localScripts} scripts, ${local.length} assets in all`);
     t(`at ${at}: every one of them is a file in the tree`, missing.length === 0,
       missing.length ? "missing: " + [...new Set(missing)].join(", ") : `${local.length} resolve`);
   }
