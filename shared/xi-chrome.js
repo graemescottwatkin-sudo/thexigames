@@ -488,6 +488,10 @@
 
   function signOut() {
     api("/api/auth/signout", {}).then(function () {
+      /* In the app, the plugin forgets the chosen account too, so the next
+         sign-in asks which one rather than quietly reusing it. */
+      var plugin = nativeGoogle();
+      if (plugin && plugin.signOut) { try { plugin.signOut().catch(function () {}); } catch (e) {} }
       acct.user = null;
       paintAccount();
       say("");
@@ -541,12 +545,72 @@
     } catch (e) { note.textContent = "Copy it by hand: " + code; }
   }
 
+  /* IN THE APP, GOOGLE SIGNS IN NATIVELY.
+     Google's web button cannot work inside the app's WebView: it opens Chrome,
+     the account is chosen THERE, and it is Chrome that ends up signed in,
+     because the two do not share cookies. The app stayed signed out; the
+     owner hit exactly that on 24 Sep 2026 ("logging into google doesn't seem
+     to work"). So inside the app the web library is never loaded at all. The
+     app's XiGoogleSignIn plugin (Android Credential Manager) asks for an ID
+     token for the SAME web client ID the server already checks, and that
+     token is posted to /api/auth/google exactly as the web button's is.
+     Detected by asking Capacitor, never the user agent. Outside the app
+     `nativeGoogle()` is null and everything below it behaves as it did. */
+  function nativeGoogle() {
+    try {
+      var cap = window.Capacitor;
+      if (!cap || !cap.isNativePlatform || !cap.isNativePlatform()) return null;
+      if (!cap.isPluginAvailable || !cap.isPluginAvailable("XiGoogleSignIn")) return null;
+      return (cap.Plugins && cap.Plugins.XiGoogleSignIn) || null;
+    } catch (e) { return null; }
+  }
+
+  /* The sign-in's answer, the same for both doors. */
+  function googleSignedIn(r) {
+    setUser(r.user, "google");
+    say("Signed in. Your results on this device are being saved to your account.");
+  }
+
+  var nativeBusy = false;
+  function nativeSignIn(plugin) {
+    if (nativeBusy) return;
+    nativeBusy = true;
+    say("");
+    plugin.signIn({ serverClientId: acct.googleClientId }).then(function (r) {
+      if (!r || !r.idToken) throw { code: "failed" };
+      /* The server's refusal is shown as the web button's is, and a network
+         failure the same way. Neither is the plugin's to explain. */
+      return api("/api/auth/google", { credential: r.idToken }).then(googleSignedIn, function (e) {
+        say(String(e && e.message || "Sign-in failed."));
+      });
+    }).catch(function (e) {
+      var code = e && e.code;
+      /* Closing the picker is a choice, not a fault: nothing is said. */
+      if (code === "cancelled") return;
+      if (code === "no-account") {
+        say("There is no Google account on this phone. A device code, below, links your devices without one.");
+        return;
+      }
+      /* Anything else is the plugin's own failure. Its message is for a log,
+         not a player. */
+      say("Google sign-in did not finish. Try again in a moment.");
+    }).then(function () { nativeBusy = false; }, function () { nativeBusy = false; });
+  }
+
   /* Google's button, into the sheet. Drawn when the sheet first opens, not at
      boot: most visitors never open it, and the script is not free. */
   function renderGoogle() {
     if (!sheet || !acct.accounts || !acct.googleClientId) return;
     var mount = sheet.querySelector(".xic-gsi");
     mount.innerHTML = "";
+    var plugin = nativeGoogle();
+    if (plugin) {
+      var b = el("button", "xic-gbtn", "Sign in with Google");
+      b.type = "button";
+      b.addEventListener("click", function () { nativeSignIn(plugin); });
+      mount.appendChild(b);
+      return;
+    }
     function draw() {
       if (!window.google || !window.google.accounts) return;
       if (!gsiReady) {
@@ -554,10 +618,7 @@
           client_id: acct.googleClientId,
           callback: function (resp) {
             api("/api/auth/google", { credential: resp.credential })
-              .then(function (r) {
-                setUser(r.user, "google");
-                say("Signed in. Your results on this device are being saved to your account.");
-              })
+              .then(googleSignedIn)
               .catch(function (e) { say(String(e && e.message || "Sign-in failed.")); });
           },
         });

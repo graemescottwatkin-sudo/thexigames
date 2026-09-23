@@ -360,6 +360,11 @@ a.xic-slot:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; 
 .xic-sub { font-size: 12.5px; color: var(--ink-faint); margin-bottom: 16px; text-align: left; }
 .xic-why { font-size: 14.5px; line-height: 1.55; color: var(--ink-soft); margin: 0 0 16px; }
 .xic-gsi { display: flex; justify-content: center; min-height: 44px; margin-bottom: 10px; }
+/* The app's own Google button (xi-chrome.js nativeGoogle): shaped like the one
+   Google's library draws on the web, so the sheet looks the same either way. */
+.xic-gbtn { min-height: 44px; padding: 0 22px; border-radius: var(--r-pill);
+  border: 1px solid var(--line); background: var(--card); color: var(--ink);
+  font: inherit; font-weight: 600; cursor: pointer; }
 .xic-small { font-size: 12.5px; color: var(--ink-faint); margin: 12px 0 0; line-height: 1.45; }
 .xic-small a { color: var(--pitch-ink); }
 .xic-msg:empty { display: none; }

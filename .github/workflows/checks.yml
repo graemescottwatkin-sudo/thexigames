@@ -335,6 +335,13 @@ jobs:
           # the Settings rows, a rotated token forgotten, and "clear my records"
           # keeping the switch. Seven sabotages proven caught.
           node tools/push_page_test.mjs
+          # GOOGLE SIGN-IN INSIDE THE APP. Google's web button opened Chrome and
+          # signed in CHROME, not the app (owner, 24 Sep 2026). In the app the
+          # chrome never loads Google's library and asks the app's
+          # XiGoogleSignIn plugin instead, posting its token exactly as the web
+          # credential is posted. Outside the app, unchanged. Seven sabotages
+          # proven caught.
+          node tools/signin_native_test.mjs
           # And what /api/crossword_fr/daily will and will not send. The route is
           # run for real against a stubbed D1 — which cannot prove the QUERY, so
           # the clause is the live_check's job — but does prove the binds, the
