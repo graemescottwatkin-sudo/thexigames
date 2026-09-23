@@ -17,7 +17,7 @@ import { hasDB } from "../../_lib/qfdata.js";
 import { getRound, serveQuestion } from "../../_lib/qf-play.js";
 import { PER_DAILY } from "../../_lib/qf-round.js";
 
-const NO = (msg = "no") => new Response(JSON.stringify({ error: msg }), {
+const NO = (msg = "no", extra) => new Response(JSON.stringify({ error: msg, ...(extra || {}) }), {
   status: 400,
   headers: {
     "Content-Type": "application/json; charset=utf-8",
@@ -39,7 +39,9 @@ export async function onRequestPost({ request, env }) {
   if (!Number.isInteger(idx) || idx < 1 || idx > PER_DAILY) return NO("no such question");
 
   const out = await serveQuestion(env, round, idx);
-  if (out.error) return NO(out.error);
+  /* `at` travels with a refusal to rewind, so the page can resume where the
+     round actually is. See serveQuestion. */
+  if (out.error) return NO(out.error, out.at ? { at: out.at } : null);
 
   return new Response(JSON.stringify(out), {
     headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },

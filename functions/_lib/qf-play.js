@@ -58,7 +58,14 @@ export async function serveQuestion(env, round, idx) {
   if (idx === at) {
     return { idx, startedMs: Number(round.question_ms), minute: minuteOf(round, now()), restamped: false };
   }
-  if (idx < at) return { error: "that question has already been played" };
+  /* AND SAYS WHERE THE ROUND IS, so a page that has fallen behind can catch
+     up instead of asking for the same question for ever. Found from the phone
+     app on 23 Sep 2026: a player who left mid-question came back to "THAT DID
+     NOT REACH US — TRY AGAIN" on every tap, for the rest of the day, because
+     the page's saved question was one behind the one this function had already
+     stamped. The refusal was right; it was simply a dead end. `at` is the
+     question this round is on, which is not a secret — the player has seen it. */
+  if (idx < at) return { error: "that question has already been played", at };
 
   const answered = await env.DB
     .prepare("SELECT idx FROM qf_answer WHERE play_id = ? AND idx = ?")

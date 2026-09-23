@@ -102,7 +102,9 @@ function server(board, opts = {}) {
     if (pathname === "/api/quickfire/next") {
       if (body.playId !== round.playId) return [400, { error: "no round" }];
       /* REFUSES A REWIND, like the real one. */
-      if (body.idx < round.servedIdx) return [400, { error: "that question has already been played" }];
+      if (body.idx < round.servedIdx) {
+        return [400, { error: "that question has already been played", at: round.servedIdx }];
+      }
       round.servedIdx = body.idx;
       return [200, { idx: body.idx, startedMs: Date.now(), minute: round.minute }];
     }
@@ -157,7 +159,9 @@ function server(board, opts = {}) {
 
 async function open(opts = {}) {
   const board = makeBoard();
-  const srv = server(board, opts);
+  /* opts.srv and opts.keep reopen the SAME round on a device that kept its
+     save — the only way to test coming back to a game that is half played. */
+  const srv = opts.srv || server(board, opts);
 
   const dom = new JSDOM(html, {
     url: "https://www.thexigames.com/football/quickfire/" + (opts.hash || ""),
@@ -175,6 +179,14 @@ async function open(opts = {}) {
      order of its own blocks is a suite that will one day be "fixed" by
      reordering them. */
   try { w.localStorage.clear(); } catch (e) { /* no storage, nothing to clear */ }
+  /* A DEVICE THAT KEPT ITS SAVE, carried in explicitly. Separate JSDOM windows
+     do NOT share localStorage here, whatever the note above assumed — the first
+     resume block written against that assumption passed by starting a FRESH
+     round (the stub reuses one round id) rather than by resuming, which proved
+     the forward jump and not the resume. opts.storage is what the device had. */
+  if (opts.storage) {
+    for (const [k, v] of Object.entries(opts.storage)) w.localStorage.setItem(k, v);
+  }
 
   w.fetch = (url, init) => {
     const u = String(url);
@@ -372,6 +384,104 @@ console.log("\n=== A link from the old game ===");
   t("and says why it is showing today instead",
     !doc.getElementById("challengeNote").hidden &&
     /older version/i.test(doc.getElementById("challengeNote").textContent));
+}
+
+/* ---- coming back to a half-played round ------------------------------- */
+
+/* THE BUG THESE EXIST FOR, found from the phone app on 23 Sep 2026: a player
+   who left mid-question came back to "THAT DID NOT REACH US — TRY AGAIN" on
+   every tap for the rest of the day. The page's saved question was behind the
+   one the server had already stamped, the server rightly refused to rewind,
+   and nothing moved either of them. */
+const SAVE_KEY = (w) => Object.keys(w.localStorage).find((k) => /^qfx\.daily/.test(k));
+const snapshot = (w) => {
+  const out = {};
+  for (let i = 0; i < w.localStorage.length; i++) {
+    const k = w.localStorage.key(i);
+    out[k] = w.localStorage.getItem(k);
+  }
+  return out;
+};
+const click = (w, el) => el.dispatchEvent(new w.Event("click", { bubbles: true }));
+const pick = (p, want) => [...p.doc.querySelectorAll("#options .option")].find((b) => b.textContent === want);
+const answer = async (p, want) => {
+  click(p.w, pick(p, want));
+  await settle(p.w);
+  await settle(p.w, p.w.QFX_CONFIG.INTER_QUESTION_MS + 30);   // past the pause
+};
+
+console.log("\n=== Leaving mid-question and coming back ===");
+{
+  const first = await open();
+  click(first.w, first.doc.getElementById("kickOff"));
+  await settle(first.w);
+  await answer(first, "Right1");
+  await answer(first, "Right2");
+  /* Question 3 is on screen and the server has stamped it. */
+  t("PRECONDITION: the server is on question 3", first.srv.round.servedIdx === 3,
+    String(first.srv.round.servedIdx));
+  const key = SAVE_KEY(first.w);
+  const saved = key ? JSON.parse(first.w.localStorage.getItem(key)) : null;
+  t("the page saved question 3 BEFORE the server was told, so it cannot lag",
+    !!saved && saved.index === 3, saved ? "saved index " + saved.index : "no save found");
+
+  /* THE STUCK SHAPE, forced: the device one question behind the server, on
+     question 2 with question 2 unanswered — as a save that never landed, or a
+     round begun as a guest and resumed signed in, can leave it. The page will
+     RESUME from this (index 2, a round id), not start afresh. */
+  saved.index = 2;
+  saved.results = saved.results.filter((r) => r.idx < 2);
+  const device = snapshot(first.w);
+  device[key] = JSON.stringify(saved);
+  first.w.close();
+
+  const back = await open({ srv: first.srv, storage: device });
+  t("it offers to RESUME, at the question the device had",
+    /Pick up at question 2 /.test(back.doc.getElementById("startBlurb").textContent),
+    back.doc.getElementById("startBlurb").textContent);
+  click(back.w, back.doc.getElementById("kickOff"));
+  await settle(back.w);
+  await settle(back.w);
+  t("resuming behind the server does not strand the player",
+    !/did not reach us/i.test(back.doc.getElementById("feedback").textContent),
+    back.doc.getElementById("feedback").textContent || "no feedback");
+  t("the page follows the server forward to question 3",
+    back.doc.getElementById("clue").textContent === "Question 3",
+    back.doc.getElementById("clue").textContent);
+  t("and no second round was opened to get there",
+    back.srv.calls.filter((c) => c.pathname === "/api/quickfire/play").length === 1);
+  await answer(back, "Right3");
+  t("and question 3 can be answered", back.srv.round.answers.has(3));
+}
+
+console.log("\n=== Answering, then leaving before the next question ===");
+{
+  const first = await open();
+  click(first.w, first.doc.getElementById("kickOff"));
+  await settle(first.w);
+  click(first.w, pick(first, "Right1"));
+  await settle(first.w);
+  /* Leave NOW, in the pause after an answer and before question 2 is served.
+     Closing the window stops its pause timer, which would otherwise serve
+     question 2 on the shared server in the middle of this test. */
+  const device = snapshot(first.w);
+  first.w.close();
+  const kept = (() => { const k = Object.keys(device).find((x) => /^qfx\.daily/.test(x)); return k ? JSON.parse(device[k]) : null; })();
+  t("PRECONDITION: question 1 was answered and question 2 never served",
+    first.srv.round.answers.has(1) && first.srv.round.servedIdx === 1 && !!kept,
+    kept ? `saved index ${kept.index}, ${kept.results.length} result(s)` : "no save on the device");
+
+  const back = await open({ srv: first.srv, storage: device });
+  t("the resume offers question 2, not the one just answered",
+    /Pick up at question 2 /.test(back.doc.getElementById("startBlurb").textContent),
+    back.doc.getElementById("startBlurb").textContent);
+  click(back.w, back.doc.getElementById("kickOff"));
+  await settle(back.w);
+  t("and serves question 2", back.doc.getElementById("clue").textContent === "Question 2",
+    back.doc.getElementById("clue").textContent);
+  t("without an error", !/did not reach us/i.test(back.doc.getElementById("feedback").textContent));
+  t("and without opening a second round",
+    back.srv.calls.filter((c) => c.pathname === "/api/quickfire/play").length === 1);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

@@ -288,6 +288,10 @@ console.log("\n=== Serving a question, which is what starts its clock ===");
   const back = await serveQuestion({ DB: db(served) }, served, 2);
   t("a question already gone by cannot be served again",
     !!back.error, back.error || "no refusal");
+  /* AND THE REFUSAL SAYS WHERE THE ROUND IS. Without it a page one question
+     behind has no way forward, which is how a player was stranded for a day. */
+  t("and the refusal names the question the round is on",
+    back.at === Number(served.question_idx), `at ${back.at}, round on ${served.question_idx}`);
 
   const answered = { ...base, question_idx: 4, question_ms: 5000 };
   const replay = await serveQuestion(

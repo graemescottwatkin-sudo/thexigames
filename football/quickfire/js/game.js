@@ -31,7 +31,7 @@
  * link so a friend could replay the exact eleven, and that is now a board
  * number in the fragment, which is shorter and does not describe the board.
  */
-var BUILD = "v001k";
+var BUILD = "v001l";
 
 (function bootstrap() {
   'use strict';
@@ -340,7 +340,14 @@ function start() {
   function post(path, body) {
     return window.QFX_API(path, body || {}).then(function (r) {
       return r.json().then(function (j) {
-        if (!r.ok) throw new Error((j && j.error) || ("HTTP " + r.status));
+        if (!r.ok) {
+          /* THE BODY TRAVELS WITH THE ERROR. A refusal can carry more than its
+             message — /next's says where the round is — and throwing only the
+             message threw that away. */
+          var err = new Error((j && j.error) || ("HTTP " + r.status));
+          err.body = j;
+          throw err;
+        }
         return j;
       });
     });
@@ -394,13 +401,30 @@ function start() {
     renderOptions(q);
     renderSubButton();
 
+    /* SAVED BEFORE THE SERVER IS TOLD, and the order is the fix. The server
+       stamps a question the moment /next reaches it, and it will not serve an
+       earlier one again. This saved nothing until the question was ANSWERED, so
+       a player who left in between came back one question behind the server —
+       refused on every tap, for the rest of the day. Saved first, the phone
+       can be ahead of the server (which serves it) but never behind. */
+    save();
+
     post('/api/quickfire/next', { playId: state.playId, idx: idx })
       .then(function (r) {
         anchorClock(r.minute);
         renderClock(displayMinute());
         startTicking();
       })
-      .catch(trouble);
+      .catch(function (e) {
+        /* AND IF THE PHONE IS BEHIND ANYWAY — a round started as a guest and
+           resumed signed in, a save that never landed — the server says where
+           the round is, and the page goes there. FORWARD ONLY: a refusal can
+           never send the page back to a question it has passed, so this cannot
+           loop. */
+        var at = e && e.body ? Number(e.body.at) : 0;
+        if (at > idx && at <= CONFIG.QUESTIONS_PER_DAILY) { serve(at); return; }
+        trouble(e);
+      });
   }
 
   function pick(option, button) {
@@ -957,6 +981,19 @@ function start() {
 
   restore();
 
+  /* RESUME AT THE FIRST QUESTION NOT YET ANSWERED, not the last one touched.
+     An answer saves with the index still on the ANSWERED question and the page
+     only moves on after a pause, so a player who left in that pause came back
+     to the question they had just answered — re-served by the server, then
+     refused the moment they picked. Worked out BEFORE deciding whether this is
+     a resume at all: a player who answered question 1 and left in the pause
+     was saved at index 1, which the check below reads as "not started", and
+     was offered a fresh round instead of the one they were in. */
+  var last = state.results.length ? state.results[state.results.length - 1].idx : 0;
+  if (last >= state.index) state.index = last + 1;
+  var allAnswered = state.results.length >= CONFIG.QUESTIONS_PER_DAILY;
+  if (state.index > CONFIG.QUESTIONS_PER_DAILY) state.index = CONFIG.QUESTIONS_PER_DAILY;
+
   if (state.completed) {
     showResults(null);
   } else if (state.index > 1 && state.playId) {
@@ -970,6 +1007,10 @@ function start() {
     el.kickOff.addEventListener('click', function () {
       show('screenGame');
       playsStart();
+      /* EVERY QUESTION ANSWERED BUT THE ROUND NEVER TOTALLED — the player left
+         in the pause after the eleventh. There is nothing left to serve; the
+         round is finished, so finish it. */
+      if (allAnswered) { finish(); return; }
       serve(state.index);
     });
   } else {
