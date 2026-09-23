@@ -53,8 +53,8 @@ const SRC = "football/whoami";          // the game this one is generated from
    derives them from the live page rather than trusting anyone's memory.
    v000z is the day before a first release: not v000, which aligned_test
    refuses as a sentinel, and below v001 so the first ship moves past it. */
-const LAST_SHIPPED = "v000z";
-const LAST_SHIPPED_ASSETS = null;       // nothing has shipped; see the header
+const LAST_SHIPPED = "v001a";
+const LAST_SHIPPED_ASSETS = "c4584c7182017bbc";
 
 let pass = 0, fail = 0;
 function t(name, ok, note) {
