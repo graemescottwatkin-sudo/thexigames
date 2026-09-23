@@ -12,7 +12,7 @@
  *
  *   node crossword/chrome_test.mjs        (from the repo root)
  */
-import { gameDir, themeHubFile } from "../../functions/_lib/permalink.js";
+import { gameDir, themeHubFile, themeHubPath } from "../../functions/_lib/permalink.js";
 import { GAMES, BUILT, LABELS } from "../../functions/_lib/games.js";
 import fs from "node:fs";
 import { JSDOM } from "jsdom";
@@ -472,6 +472,51 @@ t("and no game decides the theme for itself", (() => {
     return !/function themeCycle|function themeApply/.test(js);
   });
 })());
+
+console.log("\nThe hub's assets resolve from BOTH of the addresses it is served at");
+/* THE HUB IS ONE FILE WITH TWO ADDRESSES: functions/index.js serves it at the
+   root while football is the only listed theme, and it is served as a static
+   file at /football/. Everything above renders it at the root -- and at the
+   root a relative "shared/xi-chrome.js" resolves to /shared/, which exists.
+   At /football/ the same string resolves to /football/shared/, which does not,
+   so from 21 to 23 Sep 2026 the football hub at its own address loaded with no
+   stylesheet, no fonts and no chrome while every check here was green. Found by
+   the phone app, whose first screen that page is.
+   So the page is resolved at each address it is served from, and every asset
+   it names must land on a file in the tree. Two sources: the tags a browser
+   fetches on load, and the paths its own script injects later (the season
+   ladder loads two more on demand), which no tag shows. */
+{
+  const html = fs.readFileSync(themeHubFile("football"), "utf8").replace(/<!--[\s\S]*?-->/g, " ");
+  const origin = "https://www.thexigames.com";
+  const fileFor = (u) => {
+    const p = decodeURIComponent(u.pathname).replace(/^\//, "");
+    return p === "" || p.endsWith("/") ? p + "index.html" : p;
+  };
+  for (const at of ["/", themeHubPath("football")]) {
+    const doc = new JSDOM(html, { url: origin + at }).window.document;
+    const named = [
+      ...[...doc.querySelectorAll("script[src]")].map((s) => s.getAttribute("src")),
+      ...[...doc.querySelectorAll("link[href]")]
+        .filter((l) => /stylesheet|icon|preload|manifest/i.test(l.rel) && !/^data:/.test(l.getAttribute("href")))
+        .map((l) => l.getAttribute("href")),
+      ...[...doc.querySelectorAll("img[src], source[src]")].map((s) => s.getAttribute("src")),
+      /* Paths the page's script builds at run time: string literals naming a
+         .js or .css file. */
+      ...[...doc.querySelectorAll("script:not([src])")].flatMap((s) =>
+        [...s.textContent.replace(/\/\*[\s\S]*?\*\//g, " ")
+          .matchAll(/["']([^"'\s]*\.(?:js|css)(?:\?[^"'\s]*)?)["']/g)].map((m) => m[1])),
+    ];
+    const local = named.map((n) => new URL(n, origin + at)).filter((u) => u.origin === origin);
+    const missing = local.filter((u) => !fs.existsSync(fileFor(u))).map((u) => u.pathname);
+    /* A pass over nothing is not a pass: the hub loads six shared files as
+       tags and two more from script, so fewer than eight means the scan went
+       blind rather than the page got better. */
+    t(`at ${at}: the scan found the hub's assets`, local.length >= 8, `${local.length} found`);
+    t(`at ${at}: every one of them is a file in the tree`, missing.length === 0,
+      missing.length ? "missing: " + [...new Set(missing)].join(", ") : `${local.length} resolve`);
+  }
+}
 
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

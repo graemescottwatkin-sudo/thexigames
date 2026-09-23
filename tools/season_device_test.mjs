@@ -279,7 +279,9 @@ console.log("\nThe hub reads whichever branch it is on");
   t("the hub asks the server for the season",
     /fetch\(\s*"\/api\/season"/.test(code), "a comment naming it is not asking");
   t("and loads the one rule rather than restating it",
-    /<script src="shared\/xi-season\.js\?v=/.test(code) &&
+    /* Root-absolute since 23 Sep 2026: the hub is served at / and /football/,
+       and only an absolute path names the same file from both. */
+    /<script src="\/shared\/xi-season\.js\?v=/.test(code) &&
     code.indexOf("XISeason.season(") > -1,
     "the rule is imported by the server from the same file");
   /* The season block must not contain a date built on the device. The page
