@@ -195,8 +195,8 @@ and diagnose before anything ships. Never push past a red gate.
 - `results`/`plays` sanity via wrangler if relevant:
   `npx wrangler d1 execute crosswordxi --remote --command="..."`.
   **Never run a migration that is already applied** — `ALTER TABLE` is not
-  idempotent. Migration state: **001–045 all applied** (as of 23 Sep 2026 —
-  check production) — 035 (QuickFire text
+  idempotent. Migration state: **001–045 all applied; 046 written, NOT yet
+  applied** (as of 23 Sep 2026 — check production) — 035 (QuickFire text
   ids), 036 and 038 (Codeword and its rounds), 037 and 039 (QuickFire rounds
   and the wrong-pick penalty), 040 and 041 (Who Am I and its score) all landed
   between 13 and 15 Sep 2026 and this line still read "001–034" afterwards.
@@ -233,6 +233,13 @@ and diagnose before anything ships. Never push past a red gate.
   EXISTS`, so it is safe to re-run. The deck import that fills it followed
   and was checked too: 663 daily rows over 73 characters, and 0 daily rows
   without a matching clue.
+  046 (`push_device`, `push_outbox`, `push_run`: reminders on a phone, the
+  one place the site stores something for a player without an account, by
+  the owner's ruling of 23 Sep 2026) is written and NOT applied. Only
+  `CREATE ... IF NOT EXISTS`, so it is safe to re-run, and `push_test`
+  applies it twice to prove it. It must land before the push sender Worker
+  (`workers/push/`) is deployed; until it does, `/api/push/device` answers
+  500 and a challenge entry queues nothing, silently, by design.
   A STALE MIGRATION NUMBER IS THE MOST DANGEROUS FIGURE IN THIS FILE, because
   the sentence immediately before it tells you never to re-run an applied one
   and `ALTER TABLE` is not idempotent — so a reader trusting "034" could

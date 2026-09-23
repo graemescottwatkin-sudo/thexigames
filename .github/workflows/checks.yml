@@ -308,6 +308,20 @@ jobs:
           # deals daily letters. Regrouping the verified clues consecutively
           # instead of by stride keeps every count and turns this red.
           node tools/import_friendswhoami_test.mjs
+          # REMINDERS ON A PHONE, against REAL SQL: node:sqlite built from the
+          # repo's own migrations, so a dropped COALESCE or a WHERE that selects
+          # nobody turns this red where a stub would pass. The endpoint's
+          # refusals, three days of the sender's quarter-hour runs across five
+          # zones (the UTC+10 morning waits for the reset; no phone gets two
+          # mornings in one UTC day), the challenge queue, and a JWT that
+          # verifies. Twelve sabotages proven caught on 23 Sep 2026.
+          node tools/push_test.mjs
+          # And the page's half, in jsdom with the app's XiPush plugin faked:
+          # nothing loads on the web, nothing is offered by an app built without
+          # Firebase, the offer after a finished game, a zone and never a date,
+          # the Settings rows, a rotated token forgotten, and "clear my records"
+          # keeping the switch. Seven sabotages proven caught.
+          node tools/push_page_test.mjs
           # And what /api/crossword_fr/daily will and will not send. The route is
           # run for real against a stubbed D1 — which cannot prove the QUERY, so
           # the clause is the live_check's job — but does prove the binds, the

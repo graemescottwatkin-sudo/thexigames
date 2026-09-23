@@ -28,6 +28,10 @@
  */
 (function () {
   "use strict";
+  /* This file's own address, read while it runs, which is the only moment it
+     can be. Its ?v= is the page's shared tag, so anything loaded from here
+     carries the same one rather than a second copy of the number. */
+  var SELF = (document.currentScript && document.currentScript.src) || "";
 
   /* THE SQUAD. One list, and THREE states, not two.
        name + href  — released: named, linked, in the footer.
@@ -1010,6 +1014,21 @@
     });
   }
 
+  /* REMINDERS, INSIDE THE APP ONLY. The app puts its push plugin on
+     window.Capacitor; a browser has no such thing, fetches nothing, and the
+     site is unchanged. xi-push.js holds the whole feature. */
+  function loadPush() {
+    var cap = window.Capacitor;
+    if (!cap || !cap.Plugins || !cap.Plugins.XiPush || window.XIPush) return;
+    if (document.querySelector('script[data-xi-push]')) return;
+    var q = SELF.indexOf("?") === -1 ? "" : SELF.slice(SELF.indexOf("?"));
+    var sc = document.createElement("script");
+    sc.src = "/shared/xi-push.js" + q;
+    sc.async = true;
+    sc.setAttribute("data-xi-push", "");
+    document.head.appendChild(sc);
+  }
+
   function init() {
     if (!document.querySelector(".xic-drawer")) buildDrawer();
     Array.prototype.forEach.call(document.querySelectorAll(".xic-bar"), fillBar);
@@ -1018,6 +1037,7 @@
     });
     community();
     loadSession();
+    loadPush();
     /* WARMED HERE, so the synchronous check below has an answer by the time a
        human can click anything. Fired and not awaited: the chrome must not
        hold up a page for a question that only matters when a board is
@@ -1255,6 +1275,10 @@
     /* How it looks and plays. */
     "xi.theme", "fcw.theme", "fcw.pitch", "fcw.bank", "fcw.skip", "fcw.fxmode",
     "fcw.filter", "xiws.zoom", "xisc.zoom", "xihl.zoom",
+    /* Reminders on this phone, and the token the server knows it by. A setting,
+       not a record: clearing history must not leave a phone that still gets
+       notifications with no switch left to turn them off (xi-push.js). */
+    "xi.push.v1",
   ];
   function clearRecords() {
     var doomed = [], i, k;

@@ -232,14 +232,24 @@ console.log("\nReplaying a day");
   const owned = [...new Set(
     [...serverSrc.matchAll(/(?:FROM|INTO|UPDATE)[ 	]+([a-z_]{3,})/gi)]
       .map((m) => ({ tbl: m[1].toLowerCase(), at: m.index }))
+      /* An upsert's ON CONFLICT ... DO UPDATE SET names no table: "set" is
+         the clause, and the table it updates was already read from its
+         INSERT INTO. */
+      .filter(({ tbl }) => tbl !== "set")
       .filter(({ at }) => /user_id/.test(serverSrc.slice(at, at + 400)))
       .map(({ tbl }) => tbl))];
   /* KEPT ON PURPOSE, each with the reason it is not a record:
        sessions     — signing the player out is not clearing what they have done
        users        — the identity their own results are keyed to
        source_press — how they arrived, which they never chose
+       push_device  — a phone's reminder switches, not anything they played;
+                      clearing history must not silence a phone and leave no
+                      switch to turn it back on (xi.push.v1 is in the chrome's
+                      RECORD_KEEP for the same reason)
+       push_outbox  — a challenge result waiting for the sender's next run,
+                      gone within the quarter-hour and never a record
      Anything else that keys rows by player is a record and must be cleared. */
-  const KEPT = ["sessions", "users", "source_press"];
+  const KEPT = ["sessions", "users", "source_press", "push_device", "push_outbox"];
   const unaccounted = owned.filter((tbl) =>
     KEPT.indexOf(tbl) === -1 &&
     !new RegExp("DELETE FROM " + tbl + " WHERE user_id").test(src));

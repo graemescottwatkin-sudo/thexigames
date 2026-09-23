@@ -1,0 +1,23 @@
+# The push sender. Deployed on its own, never by Pages:
+#   npx wrangler deploy --config workers/push/wrangler.toml
+# The key is a secret, never a line in this file (see fcm.js):
+#   npx wrangler secret put FCM_SERVICE_ACCOUNT --config workers/push/wrangler.toml
+#
+# This file is served to the public with the rest of the Pages tree. Nothing
+# in it is secret: a database id is useless without the account's own token.
+
+name = "thexigames-push"
+main = "index.js"
+compatibility_date = "2026-09-01"
+
+# No address. Nothing calls this Worker; it only wakes on the cron.
+workers_dev = false
+preview_urls = false
+
+[triggers]
+crons = ["*/15 * * * *"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "crosswordxi"
+database_id = "57c3aaa2-dc3b-4149-8f22-44fe7e483b21"

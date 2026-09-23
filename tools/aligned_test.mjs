@@ -1026,13 +1026,14 @@ t("and no game writes the link itself", (() => {
   return guilty.length === 0;
 })(), "the href lives once, in shared/xi-chrome.js");
 
-const SHARED_TAG = "v54";
-/* The bytes that ship AS v54, AND THE TAG HAD TO MOVE FOR THEM.
-   v53 WAS LIVE -- checked against production, not assumed: every page on
-   www.thexigames.com was serving shared/*?v=v53 when xi-chrome.js gained the
-   Friends squad's second slot. Shared bytes changing under a tag that is live
-   is the one thing this pairing exists to refuse, so v53 -> v54 across every
-   page and site-page.js's constant.
+const SHARED_TAG = "v55";
+/* The bytes that ship AS v55, AND THE TAG HAD TO MOVE FOR THEM.
+   v54 WAS LIVE -- checked against production, not assumed: every page on
+   www.thexigames.com was serving shared/*?v=v54 when xi-chrome.js gained the
+   app-only reminders loader and xi-fulltime.js the xi:fulltime event (23 Sep
+   2026). Shared bytes changing under a tag that is live is the one thing
+   this pairing exists to refuse, so v54 -> v55 across every page and
+   site-page.js's constant.
    THE RULE IS NOT "bump on every edit". While a shared tag has NOT yet shipped
    it is still the version being prepared, and moving it once per edit would
    burn a number a minute; then only this hash moves. Which case you are in is
@@ -1041,7 +1042,7 @@ const SHARED_TAG = "v54";
    v53, which is this project's oldest fault in miniature: a measurement left
    standing after it stopped being true, in the comment that tells the next
    reader whether they may leave the tag alone. */
-const SHARED_HASH = "9e87b9e2c4ef4bd0";
+const SHARED_HASH = "9d7fb04f6ad24e68";
 /* MOVED AGAIN WITHOUT THE TAG MOVING, which is the other half of the rule
    above and is worth showing rather than only stating. xi-chrome.js changed a
    second time in the same unpushed run -- the Friends squad slot going from

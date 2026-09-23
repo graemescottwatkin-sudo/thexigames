@@ -41,6 +41,10 @@
      tell a player who finished on their phone that they had not. */
   function nextUp(target, opts) {
     var o = opts || {};
+    /* Said out loud for anything that wants to know a game has just ended.
+       xi-push.js offers reminders on it, inside the app. Nothing on the web
+       listens. */
+    try { document.dispatchEvent(new CustomEvent("xi:fulltime", { detail: { game: o.game || null } })); } catch (e) {}
     if (!target || !window.XIPlayed) return Promise.resolve(null);
 
     return XIPlayed.suggestNext(o.game).then(function (slot) {

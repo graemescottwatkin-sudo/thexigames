@@ -10,6 +10,7 @@ import { hasDB } from "../../_lib/db.js";
 import { currentUser, newId, csrfOk } from "../../_lib/auth.js";
 import { cleanName, validEntrantKey, accountDisplayName , entrantKeyFor } from "../../_lib/names.js";
 import { limited } from "../../_lib/limit.js";
+import { queueChallengeResult } from "../../_lib/push.js";
 
 export async function onRequestPost({ request, env }) {
   if (await limited(env, request, "chal-entry", 60, 3600))
@@ -22,7 +23,7 @@ export async function onRequestPost({ request, env }) {
   const id = /^[a-z0-9]{6,16}$/.test(String(body.id || "")) ? String(body.id) : null;
   if (!id) return bad("Unknown challenge.", 404);
   const c = await env.DB.prepare(
-    `SELECT id, theme_id, board_no, play_id FROM challenges WHERE id = ? AND hidden = 0`)
+    `SELECT id, theme_id, board_no, play_id, created_by FROM challenges WHERE id = ? AND hidden = 0`)
     .bind(id).first();
   if (!c) return bad("Unknown challenge.", 404);
   const board = await boardOfChallenge(env, c);
@@ -92,5 +93,14 @@ export async function onRequestPost({ request, env }) {
           play.srv_checks || 0, play.srv_check_alls || 0).run();
 
   const added = !!(res.meta && res.meta.changes);
+  /* The creator hears about it on their phone, if they asked to. Queued, not
+     sent: the key that sends is the Worker's alone (see _lib/push.js). Only a
+     NEW entry, so a replayed finish cannot notify twice. */
+  if (added) {
+    await queueChallengeResult(env, {
+      creatorId: c.created_by, entrantId: user && user.id, game: board.game,
+      challengeId: id, name, score: play.srv_score,
+    });
+  }
   return json({ ok: true, added, score: play.srv_score });
 }
