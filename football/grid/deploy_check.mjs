@@ -42,9 +42,7 @@ const read = (p) => fs.readFileSync(path.join(ROOT, p), "utf8");
 const has = (p) => fs.existsSync(path.join(ROOT, p));
 
 /* WHAT IS LIVE. Bump both after a deploy with tools/post_deploy.mjs, which
-   derives them from the live page rather than trusting anyone's memory.
-   v000z is the day before a first release: not v000, which aligned_test
-   refuses as a sentinel, and below v001 so the first ship moves past it. */
+   derives them from the live page rather than trusting anyone's memory. */
 const LAST_SHIPPED = "v002k";
 const LAST_SHIPPED_ASSETS = "07eacb0f488199dd";
 
@@ -81,18 +79,20 @@ t("LAST_SHIPPED is a real version, not a sentinel",
 t("the build tag never goes backwards", tag >= LAST_SHIPPED,
   `now ${tag}, live ${LAST_SHIPPED}`);
 const nowHash = ownAssetHash();
-/* THE PAIRING, with the one honest exception: nothing has shipped, so there is
-   no hash to compare against and no claim to make. Written as null rather than
-   as a made-up value, because a constant that stands for nothing is the
-   sentinel fault — and the moment the first release records a hash, this
-   becomes the check it is on every other game. */
+/* THE PAIRING. Grid XI has shipped: its first hash was recorded on 8 Sep 2026
+   (19711b8) and it launched on the 18th. Before that this check carried one
+   exception, a null hash for a game with nothing live, and that exception
+   outlived the launch by two weeks. Setting the constant back to null
+   would have passed on any tree whatever, switching off the paired half of
+   the tag law while the gate still read 0 failed. A missing hash is a failure
+   now, as it is on Friends Who Am I's gate (d4679e1). */
+t("the live build's asset hash is recorded",
+  typeof LAST_SHIPPED_ASSETS === "string" && /^[0-9a-f]{16}$/.test(LAST_SHIPPED_ASSETS),
+  String(LAST_SHIPPED_ASSETS));
 t("the game's own assets cannot change without its build tag moving",
-  LAST_SHIPPED_ASSETS === null
-    ? !!nowHash
-    : (nowHash === LAST_SHIPPED_ASSETS ? tag === LAST_SHIPPED : tag > LAST_SHIPPED),
-  LAST_SHIPPED_ASSETS === null
-    ? `nothing shipped yet; this tree hashes to ${nowHash}`
-    : (nowHash === LAST_SHIPPED_ASSETS ? "unchanged since the last ship" : `changed, and the tag moved ${LAST_SHIPPED} -> ${tag}`));
+  typeof LAST_SHIPPED_ASSETS === "string" &&
+    (nowHash === LAST_SHIPPED_ASSETS ? tag === LAST_SHIPPED : tag > LAST_SHIPPED),
+  nowHash === LAST_SHIPPED_ASSETS ? "unchanged since the last ship" : `changed, and the tag moved ${LAST_SHIPPED} -> ${tag}`);
 t("the build tag matches the one the script reports",
   (js.match(/var BUILD = "([^"]+)"/) || [])[1] === tag, tag);
 t("every asset the page pulls carries the same tag", (() => {

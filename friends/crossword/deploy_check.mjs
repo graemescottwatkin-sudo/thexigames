@@ -13,9 +13,11 @@
  * asset hash is the half that carries the law: changed bytes under a tag that
  * has not moved are refused.
  *
- * NOTHING HAS SHIPPED YET, so LAST_SHIPPED_ASSETS is null and says so, rather
- * than holding a made-up value. A constant that stands for nothing is the
- * sentinel fault, which is why LAST_PRESENTED was retired in v001v.
+ * IT HAS SHIPPED: its first hash was recorded on 21 Sep 2026 (13df83c), and
+ * v002b is live. This paragraph said nothing had shipped and the hash was
+ * null for two days after that stopped being true. Until then the asset check
+ * carried a null exception that passed on any tree whatever; it is gone, and a
+ * missing hash is a failure, as on Grid XI's and Friends Who Am I's gates.
  *
  * AND MOST OF THIS FILE IS ABOUT NOT BEING LAUNCHED. Grid XI's gate refuses the
  * things a LAUNCH would have to change, so a game cannot go live by drift; this
@@ -42,9 +44,7 @@ const GAME = "crossword_fr";
 const DIR = "friends/crossword";
 
 /* WHAT IS LIVE. Bump both after a deploy with tools/post_deploy.mjs, which
-   derives them from the live page rather than trusting anyone's memory.
-   v000z is the day before a first release: not v000, which aligned_test
-   refuses as a sentinel, and below v001 so the first ship moves past it. */
+   derives them from the live page rather than trusting anyone's memory. */
 const LAST_SHIPPED = "v002b";
 const LAST_SHIPPED_ASSETS = "fce2b19309a9ab57";
 
@@ -110,14 +110,14 @@ t("the build tag never goes backwards", tag >= LAST_SHIPPED,
   `now ${tag}, live ${LAST_SHIPPED}`);
 
 const nowHash = ownAssetHash();
+t("the live build's asset hash is recorded",
+  typeof LAST_SHIPPED_ASSETS === "string" && /^[0-9a-f]{16}$/.test(LAST_SHIPPED_ASSETS),
+  String(LAST_SHIPPED_ASSETS));
 t("the game's own assets cannot change without its build tag moving",
-  LAST_SHIPPED_ASSETS === null
-    ? !!nowHash
-    : (nowHash === LAST_SHIPPED_ASSETS ? tag === LAST_SHIPPED : tag > LAST_SHIPPED),
-  LAST_SHIPPED_ASSETS === null
-    ? `nothing shipped yet; this tree hashes to ${nowHash}`
-    : (nowHash === LAST_SHIPPED_ASSETS ? "unchanged since the last ship"
-                                       : `changed, ${LAST_SHIPPED} -> ${tag}`));
+  typeof LAST_SHIPPED_ASSETS === "string" &&
+    (nowHash === LAST_SHIPPED_ASSETS ? tag === LAST_SHIPPED : tag > LAST_SHIPPED),
+  nowHash === LAST_SHIPPED_ASSETS ? "unchanged since the last ship"
+                                  : `changed, ${LAST_SHIPPED} -> ${tag}`);
 t("the build tag matches the one the script reports",
   (js.match(/var BUILD = "([^"]+)"/) || [])[1] === tag, tag);
 t("every asset the page pulls from this game carries the same tag", (() => {
