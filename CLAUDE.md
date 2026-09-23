@@ -142,6 +142,14 @@ hub. A 301 there would have to be un-cached from every browser that ever saw it.
    happen. A recipe that prints two reds on a good tree is as dangerous as a
    green one that proves nothing — it teaches you which reds to ignore, and the
    next real one looks the same.
+   THE GENERATORS NO LONGER CARE, since 23 Sep 2026: they read text through
+   `tools/text.js`, which folds CRLF to LF on the way in, so `build_vowels`,
+   `build_scrambled`, `build_friendscrossword` and `build_friendswhoami` pass
+   `--check` on a Windows checkout and still refuse real drift. That was
+   measured on both kinds of archive, with drift appended to each output. Any
+   new generator that anchors on or compares text reads it through that module
+   too. The LF archive is still how to imitate a runner, because it has no
+   bank beside it; line endings are just no longer the reason.
    WHICH SUITES CANNOT RUN OFFLINE IS STATED ONCE, in the rules of evidence
    below. It was stated here as well until 14 Sep 2026; the two copies
    disagreed about `journey_test`, a sweep read this one, went green over 77

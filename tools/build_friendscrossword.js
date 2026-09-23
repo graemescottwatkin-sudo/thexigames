@@ -41,13 +41,15 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { readText, readTextIfExists } from "./text.js";
 import { fileURLToPath } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(HERE, "..");
 const CHECK = process.argv.includes("--check");
 
-const read = (p) => fs.readFileSync(path.join(ROOT, p), "utf8");
+/* Text as it ships, CRLF folded (tools/text.js). */
+const read = (p) => readText(path.join(ROOT, p));
 
 const SRC = "football/crossword";
 const OUT = "friends/crossword";
@@ -603,7 +605,7 @@ for (const [rel, make] of FILES) {
   }
 
   const at = path.join(ROOT, rel);
-  const have = fs.existsSync(at) ? fs.readFileSync(at, "utf8") : null;
+  const have = readTextIfExists(at);
   if (CHECK) {
     if (have === want) console.log(`  ok  ${rel}`);
     else { console.log(`REFUSED: ${rel} is not what ${SRC}/ produces. ` +

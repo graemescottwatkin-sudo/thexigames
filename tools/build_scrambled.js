@@ -28,6 +28,7 @@
 
 import fs from "fs";
 import path from "path";
+import { readText, readTextIfExists } from "./text.js";
 import { fileURLToPath } from "url";
 import {
   NAME_SHAPE, normalise, letterBag, enumerationOf, wordsOf,
@@ -1026,7 +1027,9 @@ export const SC_BOARDS = ${JSON.stringify(sample, null, 2)};
    something else entirely — a board hand-edited after the build, or a build
    nobody re-ran after editing an XI, is exactly the drift this catches. */
 if (CHECK_ONLY) {
-  const stored = fs.existsSync(DEST) ? fs.readFileSync(DEST, "utf8") : "";
+  /* CRLF folded (tools/text.js): the module is compared as content, so a
+     Windows checkout of an unchanged file is not "drift". */
+  const stored = readTextIfExists(DEST) || "";
   if (stored !== out) {
     console.error(`\n${path.relative(ROOT, DEST)} is NOT what these sources build.` +
       `\nRun: node tools/build_scrambled.js\n`);
