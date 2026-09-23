@@ -11,7 +11,9 @@
  * Football's Who Am I deals eleven doors and the player opens ONE -- "one door,
  * one sitting", as wa-play.js puts it. The eleven are a choice, not eleven
  * questions. Copying that shape here looked obvious and does not survive
- * contact with the deck:
+ * contact with the deck (figures measured 22 Sep 2026, before the deck grew
+ * and before dailies became verified-only -- the argument for three doors
+ * still holds, the numbers do not; the generator prints the current ones):
  *
  *   the deck holds 366 rounds (main 220, expert 72, locations 74)
  *   at 11 doors a day that is 33 days of content
@@ -76,6 +78,15 @@ const REST_DAYS = 21;                    // the deck's own three-week rule
  * play has missed no daily. The split is a product line, not a compromise --
  * which is the argument for doing it this way rather than excluding the next
  * three weeks and hoping nobody plays far enough ahead.
+ *
+ * REVERSED ON 23 SEPTEMBER 2026, AND RECORDED RATHER THAN DELETED. The owner
+ * ruled that endless play uses the FULL deck, and that dailies deal VERIFIED
+ * clues only. So endless play CAN now preview a daily, and the owner accepted
+ * that knowingly; the paragraphs above are the reasoning that ruling overturned,
+ * left standing so nobody reverses it back by accident. What survives: locations
+ * are still never dailies. They have no rows in fr_wa_daily_clue — the importer
+ * writes none for them — so this calendar cannot deal one even if a filter here
+ * were lost, and the assertion near the end still proves it.
  */
 const DAILY_DECKS = new Set(["main", "expert"]);
 
@@ -84,7 +95,10 @@ const DAILY_DECKS = new Set(["main", "expert"]);
  * READ FROM THE IMPORT, NOT FROM THE CORPUS. tools/import_friendswhoami.js has
  * already resolved depth, rounds and the banding; parsing the markdown again
  * here would be a second opinion about how many outings a card has. */
-const DECK_SQL = path.join(ROOT, "data", "fr-whoami-production.sql");
+/* --deck and --out exist for tools/import_friendswhoami_test.mjs, which runs
+   this against a synthetic deck and must never overwrite the real files. */
+const DECK_SQL = arg("--deck") ? path.resolve(arg("--deck"))
+  : path.join(ROOT, "data", "fr-whoami-production.sql");
 if (!fs.existsSync(DECK_SQL)) {
   console.log("REFUSED: data/fr-whoami-production.sql is not there.");
   console.log("         Run tools/import_friendswhoami.js first — this deals the deck it imported.");
@@ -141,10 +155,6 @@ if (!dailyCards.length) {
   process.exit(1);
 }
 
-const totalRounds = dailyCards.reduce((a, c) => a + c.rounds, 0);
-const maxDays = Math.floor(totalRounds / DOORS);
-const DAYS = Math.max(1, Math.min(Number(arg("--days")) || maxDays, maxDays));
-
 /* ---- deal ---------------------------------------------------------------- */
 
 /* THE LETTERS EACH CARD ACTUALLY HAS, READ FROM ITS CLUE ROWS.
@@ -178,7 +188,68 @@ for (const c of cards) {
   c.letters = got;
 }
 
-const state = new Map(dailyCards.map((c) => [c.id, { used: 0, lastDay: -Infinity, card: c }]));
+/* THE DAILY ROUNDS, FROM fr_wa_daily_clue — verified clues only, the owner's
+ * ruling of 23 September 2026. A card's DAILY letters are not its full letters:
+ * the daily card is the verified subset, banded by its own stride, so Ross has
+ * twelve full rounds and fewer daily ones. Read from the rows the importer
+ * wrote, exactly as the full letters are, and never re-derived here.
+ *
+ * EACH DAILY ROUND MUST HAVE ALL THREE STEPS, and the letters must run A, B, C
+ * with no gap — the importer assigns them in that order, and a round with a
+ * missing step is a round that shows a player two clues and sells a third that
+ * is not there. */
+const dailyOf = new Map();          // card_id -> Map(letter -> Set(step))
+const dailyRe = /INSERT INTO fr_wa_daily_clue \(card_id, round_letter, step, n\) VALUES \('([^']*)', '([A-Z])', (\d+), \d+\);/g;
+let dm;
+while ((dm = dailyRe.exec(sql))) {
+  if (!dailyOf.has(dm[1])) dailyOf.set(dm[1], new Map());
+  const byLetter = dailyOf.get(dm[1]);
+  if (!byLetter.has(dm[2])) byLetter.set(dm[2], new Set());
+  byLetter.get(dm[2]).add(Number(dm[3]));
+}
+if (!dailyOf.size) {
+  console.log("REFUSED: the import carries no fr_wa_daily_clue rows. Dailies are verified");
+  console.log("         clues only; an import from before that ruling cannot be dealt from.");
+  process.exit(1);
+}
+const ALPHA = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+for (const c of cards) {
+  const byLetter = dailyOf.get(c.id) || new Map();
+  const letters = [...byLetter.keys()].sort();
+  const want = ALPHA.slice(0, letters.length);
+  if (letters.join("") !== want) {
+    console.log(`REFUSED: card ${c.id}'s daily letters are ${letters.join("")}, not ${want}`);
+    process.exit(1);
+  }
+  for (const L of letters) {
+    const steps = [...byLetter.get(L)].sort().join("");
+    if (steps !== "123") {
+      console.log(`REFUSED: card ${c.id} daily round ${L} has steps ${steps}, not 123`);
+      process.exit(1);
+    }
+  }
+  c.dailyLetters = letters;
+  c.dailyRounds = letters.length;
+}
+
+/* LOCATIONS HAVE NO DAILY ROUNDS, and that is checked here as well as in the
+   importer, because it is the one property that stops a location being dealt. */
+const locDaily = reserved.filter((c) => c.dailyRounds > 0);
+if (locDaily.length) {
+  console.log(`REFUSED: ${locDaily.length} location card(s) carry daily rounds: ` +
+              locDaily.map((c) => c.id).join(", "));
+  process.exit(1);
+}
+
+/* A CHARACTER WITH FEWER THAN THREE VERIFIED CLUES HAS NO DAILY ROUND and is
+   left out of the calendar entirely; it is still played in endless play. */
+const dealable = dailyCards.filter((c) => c.dailyRounds > 0);
+const endlessOnly = dailyCards.filter((c) => c.dailyRounds === 0);
+const totalRounds = dealable.reduce((a, c) => a + c.dailyRounds, 0);
+const maxDays = Math.floor(totalRounds / DOORS);
+const DAYS = Math.max(1, Math.min(Number(arg("--days")) || maxDays, maxDays));
+
+const state = new Map(dealable.map((c) => [c.id, { used: 0, lastDay: -Infinity, card: c }]));
 const days = [];
 let short = null;
 
@@ -189,7 +260,7 @@ for (let d = 0; d < DAYS; d++) {
      REPRODUCIBLE -- the same deck and the same start date give the same days,
      which is what makes a regenerated calendar comparable to the live one. */
   const eligible = [...state.values()]
-    .filter((s) => s.used < s.card.rounds && d - s.lastDay > REST_DAYS)
+    .filter((s) => s.used < s.card.dailyRounds && d - s.lastDay > REST_DAYS)
     .sort((a, b) => (a.lastDay - b.lastDay) || String(a.card.id).localeCompare(String(b.card.id)));
 
   if (eligible.length < DOORS) { short = d; break; }
@@ -198,7 +269,7 @@ for (let d = 0; d < DAYS; d++) {
   days.push(picked.map((s, i) => ({
     slot: i + 1,
     cardId: s.card.id,
-    letter: s.card.letters[s.used],
+    letter: s.card.dailyLetters[s.used],
     name: s.card.name,
   })));
   for (const s of picked) { s.used += 1; s.lastDay = d; }
@@ -213,9 +284,12 @@ const dayKey = (i) => {
 };
 
 console.log(`  ${cards.length} cards in the deck`);
-console.log(`  daily:    ${dailyCards.length} cards, ${totalRounds} rounds, ${DOORS} doors a day`);
-console.log(`  reserved: ${reserved.length} cards, ` +
-            `${reserved.reduce((a, c) => a + c.rounds, 0)} rounds, for endless play only`);
+console.log(`  daily:    ${dealable.length} cards, ${totalRounds} verified rounds, ${DOORS} doors a day`);
+if (endlessOnly.length) {
+  console.log(`  endless only (fewer than 3 verified clues): ${endlessOnly.length} — ` +
+              endlessOnly.map((c) => c.name).join(", "));
+}
+console.log(`  locations: ${reserved.length} cards, never dailies`);
 console.log(`  dealt ${days.length} day(s): ${dayKey(0)} to ${dayKey(days.length - 1)}`);
 if (short !== null) {
   console.log(`  stopped at day ${short + 1}: fewer than ${DOORS} cards had both an ` +
@@ -240,9 +314,9 @@ if (breaches) { console.log("REFUSED: the rotation broke its own rest rule."); p
    outing and only letter A; dealing it at B would ask for clues that are not
    there, and the round would come up empty in front of a player. */
 const bad = [];
-for (const [, s] of state) if (s.used > s.card.rounds) bad.push(s.card.id);
+for (const [, s] of state) if (s.used > s.card.dailyRounds) bad.push(s.card.id);
 if (bad.length) { console.log("REFUSED: over-dealt: " + bad.join(", ")); process.exit(1); }
-console.log(`  cards fully retired: ${[...state.values()].filter((s) => s.used === s.card.rounds).length}`);
+console.log(`  cards fully retired: ${[...state.values()].filter((s) => s.used === s.card.dailyRounds).length}`);
 
 /* THE RESERVE IS ABSENT FROM THE CALENDAR, asserted rather than trusted to the
    filter above. If a location ever reached a door, endless play would start
@@ -272,7 +346,8 @@ days.forEach((doors, i) => {
   }
 });
 
-const OUT = path.join(ROOT, "data", "fr-whoami-calendar-production.sql");
+const OUT = arg("--out") ? path.resolve(arg("--out"))
+  : path.join(ROOT, "data", "fr-whoami-calendar-production.sql");
 fs.writeFileSync(OUT, out.join("\n") + "\n");
-console.log(`  wrote data/fr-whoami-calendar-production.sql`);
+console.log(`  wrote ${path.relative(ROOT, OUT).split(path.sep).join("/")}`);
 console.log(`  apply with: npx wrangler d1 execute crosswordxi --remote --file=data/fr-whoami-calendar-production.sql`);

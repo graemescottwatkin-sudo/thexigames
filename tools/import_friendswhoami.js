@@ -16,7 +16,7 @@
  * by the rule that covers every other one.
  *
  * THE DECK IS SECRET AND LIVES OUTSIDE THIS REPOSITORY, like every other bank
- * in this family. 1,098 clues and 351 answers are the whole game; a copy of
+ * in this family. Every clue and every answer is the whole game; a copy of
  * them on a public GitHub is the game given away. The corpus stays in
  * ..\..\Other\WhoAmI_Friends and only the generated SQL crosses, and only as
  * far as an ignored file.
@@ -166,6 +166,31 @@ for (const c of cards) {
     continue;
   }
 
+  /* THE DECK IS SAID TWICE, AND BOTH MUST AGREE. deckOf() reads the SECTION —
+     "Expert Pile" is expert, "Locations" is location, anything else is main —
+     so a renamed section would silently move its cards into the daily deck,
+     and for locations that breaks the rule that endless play's cards are not
+     dailies. The id says it too: E-numbers are expert, L-numbers locations,
+     plain numbers main. Refusing on disagreement guards the rename from this
+     end without pinning any MAIN section's name, so the deck can still add
+     one. The deck's own build refuses the same thing from its end (63d5d97). */
+  const idDeck = /^L\d/.test(String(c.id)) ? "location"
+               : /^E\d/.test(String(c.id)) ? "expert" : "main";
+  if (idDeck !== (DECK_OF[c.section] || "main")) {
+    faults.push(`${c.id} "${c.name}": its id says ${idDeck} but its section ` +
+      `"${c.section}" says ${DECK_OF[c.section] || "main"}`);
+  }
+
+  /* THE VERIFIED FLAG IS true OR ABSENT, and nothing else. It decides which
+     clues a DAILY may deal, so a "true" string or a stray number would be a
+     clue silently left out — or, worse, a truthiness check letting one in. */
+  (c.clues || []).forEach((cl, i) => {
+    if ("verified" in cl && typeof cl.verified !== "boolean") {
+      faults.push(`${c.id} "${c.name}": clue ${i + 1} has verified = ` +
+        `${JSON.stringify(cl.verified)}, which is neither true nor absent`);
+    }
+  });
+
   const accepts = (c.accept || []).map(fold).filter(Boolean);
   if (!accepts.length) {
     faults.push(`${c.id} "${c.name}": no accepted answer, so the card cannot be won`);
@@ -255,11 +280,14 @@ lines.push("-- carries every clue and every answer.");
    DB will return to its original state"), which is the property the wrapper
    was reaching for. No other importer in tools/ carries one; these two were
    written without looking. */
+lines.push("DELETE FROM fr_wa_daily_clue;");
 lines.push("DELETE FROM fr_wa_clue;");
 lines.push("DELETE FROM fr_wa_answer;");
 lines.push("DELETE FROM fr_wa_card;");
 
 let clueCount = 0, answerCount = 0;
+let dailyRounds = 0, dailyCards = 0, dailyRows = 0;
+const noDaily = [];
 for (const c of cards) {
   const depth = c.clues.length;
   const rounds = roundsFor(depth);
@@ -279,6 +307,36 @@ for (const c of cards) {
     clueCount++;
   }
 
+  /* THE DAILY ROUNDS: VERIFIED CLUES ONLY, the owner's ruling of 23 Sep 2026.
+   *
+   * The deck's rule, applied to the verified subset: take this card's verified
+   * clues in their original order, m of them; r = floor(m / 3); daily round k
+   * takes the k-th, (k + r)-th and (k + 2r)-th of those. It is the same stride
+   * as the full card's, so each daily round still reads hard to easy — the
+   * subset keeps the card's order. Leftover verified clues past 3r are dealt in
+   * endless play only.
+   *
+   * The flag is the deck's (`verified === true`; absent means not). This never
+   * rebuilds "verified" out of vs, src or q — the deck owns that rule, and its
+   * own app's "Verified only" switch reads the same flag.
+   *
+   * LOCATIONS GET NO DAILY ROWS AT ALL. They are never dealt as dailies, and a
+   * table that cannot hold them is a calendar that cannot deal them. */
+  if (deckName !== "location") {
+    const verified = [];
+    for (let i = 0; i < depth; i++) if (c.clues[i].verified === true) verified.push(i + 1);
+    const r = Math.floor(verified.length / 3);
+    for (let k = 0; k < r; k++) {
+      for (let s = 0; s < 3; s++) {
+        lines.push(
+          `INSERT INTO fr_wa_daily_clue (card_id, round_letter, step, n) VALUES (` +
+          `${q(c.id)}, ${q(LETTERS[k])}, ${s + 1}, ${verified[k + s * r]});`);
+        dailyRows++;
+      }
+    }
+    if (r) { dailyRounds += r; dailyCards++; } else noDaily.push(c.name);
+  }
+
   const seen = new Set();
   for (const [list, kind] of [[c.accept || [], "accept"], [c.find || [], "suggest"]]) {
     for (const raw of list) {
@@ -295,7 +353,12 @@ for (const c of cards) {
     }
   }
 }
-const OUT = path.join(ROOT, "data", "fr-whoami-production.sql");
+/* --out exists for tools/import_friendswhoami_test.mjs, which imports a
+   synthetic deck and must never overwrite the real file. */
+const OUT_ARG = process.argv.indexOf("--out");
+const OUT = OUT_ARG > -1 && process.argv[OUT_ARG + 1]
+  ? path.resolve(process.argv[OUT_ARG + 1])
+  : path.join(ROOT, "data", "fr-whoami-production.sql");
 const sql = lines.join("\n") + "\n";
 
 console.log(`  ${cards.length} cards, ${clueCount} clues, ${answerCount} answers`);
@@ -307,6 +370,13 @@ for (const c of cards) {
 console.log("  decks: " + Object.entries(byDeck).map(([k, v]) => `${k} ${v}`).join(", "));
 const cited = cards.reduce((a, c) => a + c.clues.filter((x) => x.vs === "ep").length, 0);
 console.log(`  clues with an episode located: ${cited}`);
+const flagged = cards.reduce((a, c) => a + c.clues.filter((x) => x.verified === true).length, 0);
+console.log(`  clues flagged verified: ${flagged}`);
+console.log(`  daily rounds (verified only): ${dailyRounds} from ${dailyCards} character card(s), ` +
+  `${dailyRows} rows — ${Math.floor(dailyRounds / 3)} days at three doors`);
+if (noDaily.length) {
+  console.log(`  no daily rounds, endless play only (${noDaily.length}): ${noDaily.join(", ")}`);
+}
 
 if (CHECK) {
   console.log("  the deck is gated, and nothing was written");

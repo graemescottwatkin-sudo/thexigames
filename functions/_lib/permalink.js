@@ -76,7 +76,8 @@ export const PERMA_GAMES = {
   /* Who Am I XI: Friends, launched 22 September 2026. SCHEDULED by day, like
      football's: fr_wa_board names the days that exist and there is no ring
      behind it, so a number the calendar does not hold is not a board. The deck
-     is finite -- 292 rounds in the daily decks at three doors a day is 97 days
+     is finite -- dailies deal VERIFIED clues only (owner, 23 Sep 2026), and
+     tools/build_friendswhoami_calendar.js prints how many days that makes
      -- and the day after the last one has no board and says so. */
   whoami_fr: { name: "Who Am I XI: Friends", schedule: "day" },
   wordsearch: { name: "Wordsearch XI", schedule: "day" },

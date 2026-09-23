@@ -100,12 +100,17 @@ export const LAUNCHED = {
      launchNumber..today for every game, which is why Vowels launched on board
      ten. functions/_lib/fr-board.js converts between that and the bank row. */
   crossword_fr: "2026-09-21",
-  /* Who Am I XI: Friends, 22 September 2026. Its calendar was dealt FROM this
+  /* Who Am I XI: Friends, 23 September 2026. Its calendar is dealt FROM this
      day rather than from the day the deck was imported -- the generator refuses
      to guess a start date, which is what stops this becoming Grid XI's
      placeholder calendar, still open in CLAUDE.md because its schedule starts
-     on an import date and has to be re-dealt at launch. */
-  whoami_fr: "2026-09-22",
+     on an import date and has to be re-dealt at launch.
+     MOVED FROM THE 22nd BY THE OWNER, the next day. It was registered as
+     launching on the 22nd, and nothing went live that day: the deck and its
+     calendar had not landed. A launch date the game never met would have made
+     board one an archive board on the morning anybody first saw it. This is the
+     day it goes live, and the calendar is dealt --from the same date. */
+  whoami_fr: "2026-09-23",
   /* Codeword XI took the seventh shirt on 14 September 2026 — the next free
      number, which is what launching does. Its queue starts the same day, so
      the launch day and board one are the same day and nothing counts from

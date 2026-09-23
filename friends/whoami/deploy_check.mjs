@@ -345,6 +345,27 @@ t("and says only THAT a source exists, never which episode",
 console.log("\nThe ladder, and the door count");
 
 t("three doors a day, not football's eleven", frwa.DOORS === 3, String(frwa.DOORS));
+
+/* A DAILY DOOR READS THE DAILY ROUNDS. Dailies deal verified clues only, by
+   the owner's ruling of 23 September 2026, and the rounds of the verified
+   subset live in fr_wa_daily_clue — a daily letter names one of THOSE, not the
+   full card's round of the same letter. Proved by EXECUTION: the reader is
+   called against a database that records what it was asked, because a grep for
+   the table name would pass on this comment. */
+const asked = [];
+const recorder = { prepare: (q) => { asked.push(q.replace(/\s+/g, " ")); const r = { first: async () => null, all: async () => ({ results: [] }) }; return { bind: () => r, ...r }; } };
+await frwa.clueAt({ DB: recorder }, "1", "A", 1);
+await frwa.stepsInRound({ DB: recorder }, "1", "A");
+t("a daily door's clue is read through fr_wa_daily_clue",
+  asked.length === 2 && asked.every((q) => /FROM fr_wa_daily_clue/.test(q)),
+  asked.map((q) => (q.match(/FROM (\w+)/) || [])[1]).join(", "));
+t("and the migration that creates that table is safe to re-run", (() => {
+  const f = "data/migrations/045-friends-whoami-daily.sql";
+  if (!has(f)) return false;
+  const code = read(f).split("\n").filter((l) => !/^\s*--/.test(l)).join("\n");
+  return /CREATE TABLE IF NOT EXISTS fr_wa_daily_clue/.test(code) &&
+         !/\b(ALTER|DROP|DELETE)\b/i.test(code);
+})(), "045: CREATE ... IF NOT EXISTS only");
 t("and the calendar generator deals the same number", (() => {
   const gen = read("tools/build_friendswhoami_calendar.js");
   return /export const DOORS = 3;/.test(gen);
@@ -374,7 +395,7 @@ t("and the generator that makes this one is committed",
 
 /* NO BOARD OR BANK FILE ANYWHERE IN THIS GAME'S DIRECTORY. The banks are
    secret and live outside the repo; a deck file committed here would publish
-   103 cards, 1,098 clues and every answer. */
+   every card, every clue and every answer. */
 t("no deck or bank file is committed anywhere in this game's directory", (() => {
   const bad = [];
   (function walk(d) {

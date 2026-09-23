@@ -52,23 +52,37 @@ const CARDS = [
   { id: "main-01", name: "Monica Geller", deck: "main", section: "Family & Relatives", depth: 12, rounds: 4 },
   { id: "exp-03", name: "Gunther", deck: "expert", section: "Jobs & Ambitions", depth: 6, rounds: 2 },
 ];
+/* THE DOORS ARE DAILIES, so their letters are DAILY letters — rounds of the
+   card's verified subset, from fr_wa_daily_clue — not full-card letters. */
 const DOORS = [
-  { play_date: DAY, slot: 1, card_id: "main-07", round_letter: "B" },
+  { play_date: DAY, slot: 1, card_id: "main-07", round_letter: "A" },
   { play_date: DAY, slot: 2, card_id: "main-01", round_letter: "A" },
   { play_date: DAY, slot: 3, card_id: "exp-03", round_letter: "A" },
 ];
-/* Clues for the door that is played, at its dealt letter. The first carries an
-   episode (vs = ep) and is the only one that may be shown as on record; the
-   other two use the deck's newer classes, which are NOT evidence. */
+/* THE FULL CARD, as fr_wa_clue holds it: twelve clues, full-card letters by
+   stride 4. Only n = 2, 6 and 10 are verified, and they form daily round A.
+   n = 1 is ALSO letter A step 1 — on the FULL card — and it is NOT verified.
+   That collision is deliberate: a server that read fr_wa_clue by the daily
+   letter would serve n = 1, and the assertions below would catch it. */
 const CLUE_TEXT = [
   "I once got a job I was wildly underqualified for, and I kept it.",
   "My father is a doctor with strong opinions about who I marry.",
   "I left a man at the altar and walked into a coffee house in a wedding dress.",
 ];
-const CLUES = [
-  { card_id: "main-07", round_letter: "B", step: 1, n: 2, text: CLUE_TEXT[0], vs: "ep", ep: "S1E01" },
-  { card_id: "main-07", round_letter: "B", step: 2, n: 6, text: CLUE_TEXT[1], vs: "trait", ep: null },
-  { card_id: "main-07", round_letter: "B", step: 3, n: 10, text: CLUE_TEXT[2], vs: "cast", ep: null },
+const UNVERIFIED = "Everybody says I was the prettiest girl at school.";
+const FULL = Array.from({ length: 12 }, (_, i) => {
+  const n = i + 1;
+  const text = n === 2 ? CLUE_TEXT[0] : n === 6 ? CLUE_TEXT[1] : n === 10 ? CLUE_TEXT[2]
+             : n === 1 ? UNVERIFIED : "Filler clue " + n + ".";
+  return { card_id: "main-07", n, round_letter: "ABCD"[i % 4], step: Math.floor(i / 4) + 1, text,
+           vs: n === 2 ? "ep" : n === 6 ? "trait" : n === 10 ? "cast" : "none",
+           ep: n === 2 ? "S1E01" : null };
+});
+const CLUES = FULL;
+const DAILY = [
+  { card_id: "main-07", round_letter: "A", step: 1, n: 2 },
+  { card_id: "main-07", round_letter: "A", step: 2, n: 6 },
+  { card_id: "main-07", round_letter: "A", step: 3, n: 10 },
 ];
 const ANSWERS = [
   { card_id: "main-07", answer: fold("Rachel Green"), kind: "accept" },
@@ -103,11 +117,22 @@ function makeDB() {
       return [{ slot: d.slot, round_letter: d.round_letter, card_id: c.id, name: c.name,
                 section: c.section, deck: c.deck, depth: c.depth, rounds: c.rounds }];
     }
-    if (/^SELECT n, step, text, vs, ep FROM fr_wa_clue WHERE card_id/.test(sql)) {
-      return CLUES.filter((c) => c.card_id === a[0] && c.round_letter === a[1] && c.step === Number(a[2]));
+    if (/^SELECT c\.n, d\.step, c\.text, c\.vs, c\.ep FROM fr_wa_daily_clue d JOIN fr_wa_clue c ON c\.card_id = d\.card_id AND c\.n = d\.n/.test(sql)) {
+      /* THE JOIN, re-applied in JS: the daily row picks n, the full card
+         supplies the sentence. */
+      const d = DAILY.find((x) => x.card_id === a[0] && x.round_letter === a[1] && x.step === Number(a[2]));
+      if (!d) return [];
+      const c = CLUES.find((x) => x.card_id === d.card_id && x.n === d.n);
+      return c ? [{ n: c.n, step: d.step, text: c.text, vs: c.vs, ep: c.ep }] : [];
     }
-    if (/^SELECT COUNT\(\*\) AS n FROM fr_wa_clue WHERE card_id/.test(sql)) {
-      return [{ n: CLUES.filter((c) => c.card_id === a[0] && c.round_letter === a[1]).length }];
+    if (/^SELECT COUNT\(\*\) AS n FROM fr_wa_daily_clue WHERE card_id/.test(sql)) {
+      return [{ n: DAILY.filter((x) => x.card_id === a[0] && x.round_letter === a[1]).length }];
+    }
+    /* THE FULL CARD'S LETTERS ARE ENDLESS PLAY'S. A daily door that reads them
+       has read the wrong table, and it must fail loudly rather than serve an
+       unverified clue under a verified round's name. */
+    if (/FROM fr_wa_clue WHERE card_id = \?1 AND round_letter/.test(sql)) {
+      throw new Error("a daily door read the FULL card's letters: " + sql.slice(0, 80));
     }
     if (/^SELECT a\.card_id, a\.kind, c\.name FROM fr_wa_answer/.test(sql)) {
       return ANSWERS.filter((x) => x.answer === a[0]).map((x) => ({ ...x, name: card(x.card_id).name }));
@@ -285,6 +310,8 @@ await openTheDoor(p, 1);
     /Clue 1 of 3 · the hardest/.test(p.text(p.w.document.querySelector("#clueStack .fclue .fc-n"))));
   t("and marked on record, because its vs is ep",
     !!p.w.document.querySelector("#clueStack .fclue .fc-src"));
+  t("it is the VERIFIED clue, not the unverified one at the same full-card letter",
+    !p.readable().includes(UNVERIFIED));
   t("the door is named on the card", p.text(p.w.document.querySelector(".pf-kicker")) === "Door 1 · Loves & Exes",
     p.text(p.w.document.querySelector(".pf-kicker")));
   t("worth now is ten, the door's ceiling", p.text(p.$("worthNow")) === "10", p.text(p.$("worthNow")));

@@ -34,7 +34,9 @@ import { fold, today } from "./wadata.js";
  * Copying that number here does not survive the deck: 366 rounds at eleven a
  * day is 33 days of content, and the deck's own three-week rest rule needs
  * 11 x 21 = 231 distinct cards in flight against 103 that exist.
- * At three the rule holds exactly and the character decks run 97 days.
+ * At three the rule holds. (Measured 22 Sep 2026 on the deck as it was; the
+ * deck has grown since and dailies now deal verified clues only, so the
+ * calendar generator's own output is the runway, not a number here.)
  *
  * getBoard REFUSES A DAY THAT IS NOT EXACTLY THIS, which is why the number
  * being wrong was not a cosmetic mistake: it sat at eleven while the calendar
@@ -94,30 +96,41 @@ export async function doorAnswer(env, date, slot) {
   return row || null;
 }
 
-/* ONE CLUE, AND ONLY THE ONE ASKED FOR.
+/* ONE CLUE, AND ONLY THE ONE ASKED FOR — FROM THE DAILY ROUNDS.
  *
  * A round deals a card at a LETTER, and the three clues of that outing are the
  * rows with that letter, in step order. Selected by (card, letter, step) rather
- * than by computing a clue number here: the number depends on the card's depth,
- * the importer has already done that arithmetic once, and doing it again in a
- * second place is how the two come to disagree about which clue is clue two.
- */
+ * than by computing a clue number here: the number depends on the card's
+ * verified clues, the importer has already done that arithmetic once, and
+ * doing it again in a second place is how the two come to disagree about which
+ * clue is clue two.
+ *
+ * THE LETTER IS A DAILY LETTER, since the owner's ruling of 23 September 2026
+ * that dailies deal verified clues only. Every door in fr_wa_door is a daily,
+ * and the calendar deals it from fr_wa_daily_clue, so its letter names a round
+ * of the VERIFIED subset — which is not the same round as that letter on the
+ * full card (fr_wa_clue.round_letter is endless play's). Reading fr_wa_clue by
+ * a daily letter would serve an unverified clue under a verified round's name.
+ * The daily table holds only the structure; the sentence is fetched from
+ * fr_wa_clue by n, so it is stored once. Endless play will read full rounds
+ * through its own reader when it is built. */
 export async function clueAt(env, cardId, letter, step) {
   const row = await env.DB.prepare(`
-    SELECT n, step, text, vs, ep
-    FROM fr_wa_clue
-    WHERE card_id = ?1 AND round_letter = ?2 AND step = ?3
+    SELECT c.n, d.step, c.text, c.vs, c.ep
+    FROM fr_wa_daily_clue d
+    JOIN fr_wa_clue c ON c.card_id = d.card_id AND c.n = d.n
+    WHERE d.card_id = ?1 AND d.round_letter = ?2 AND d.step = ?3
   `).bind(String(cardId), String(letter), Number(step)).first();
   return row || null;
 }
 
-/* HOW MANY CLUES THIS OUTING HAS. Three on a full card; a three-clue location
-   played at its only letter has one. Asked rather than assumed, because a
-   ladder that offers a third clue on a card that has two would sell something
-   that does not exist. */
+/* HOW MANY CLUES THIS OUTING HAS. Three for every daily round — the importer
+   writes none short — but asked rather than assumed, because a ladder that
+   offers a third clue on a round that has two would sell something that does
+   not exist. */
 export async function stepsInRound(env, cardId, letter) {
   const row = await env.DB.prepare(`
-    SELECT COUNT(*) AS n FROM fr_wa_clue WHERE card_id = ?1 AND round_letter = ?2
+    SELECT COUNT(*) AS n FROM fr_wa_daily_clue WHERE card_id = ?1 AND round_letter = ?2
   `).bind(String(cardId), String(letter)).first();
   return Number(row && row.n) || 0;
 }

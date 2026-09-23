@@ -32,7 +32,8 @@
  * catches a crash, the floor catches a block that goes quiet without crashing.
  * It is set BELOW the real count on purpose, by the number that can legitimately
  * skip — the board block skips every assertion on a day past the end of the
- * calendar, which this deck reaches after 97 days.
+ * calendar. How many days that is, the calendar generator prints when it
+ * deals; it is not written here, because it changed twice in two days.
  */
 import { gamePath } from "../../functions/_lib/permalink.js";
 
@@ -47,7 +48,7 @@ const GAME = "whoami_fr";
 const PATH = gamePath(GAME);
 /* MEASURED, NOT GUESSED. A complete run asserts 21; the board block is 7 of
    them and skips legitimately on a day past the end of the calendar, which
-   this deck reaches after 97 days. 21 - 7 = 14. Set to the exact count it
+   the calendar reaches when it runs out. 21 - 7 = 14. Set to the exact count it
    would flap the first time the deck runs out; left alone for five releases it
    stops being able to refuse anything, so it is REVIEWED when assertions are
    added rather than raised by reflex. */

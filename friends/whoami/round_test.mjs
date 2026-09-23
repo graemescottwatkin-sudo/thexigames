@@ -62,8 +62,12 @@ function makeEnv(fr) {
         if (/COUNT\(\*\) AS n FROM \w*wa_guess/.test(q)) return { n: guesses.length };
         if (/FROM fr_wa_door/.test(q)) return { ...FRIENDS_DOOR };
         if (/FROM wa_door/.test(q)) return { ...FOOTBALL_DOOR };
-        if (/COUNT\(\*\) AS n FROM fr_wa_clue/.test(q)) return { n: 3 };
-        if (/FROM fr_wa_clue/.test(q))
+        /* DAILY ROUNDS ARE READ THROUGH fr_wa_daily_clue, joined to the full
+           card for the sentence — verified clues only, since 23 Sep 2026. A
+           daily door reading fr_wa_clue by its letter is the wrong table, and
+           answers nothing here so the sitting fails rather than passing on it. */
+        if (/COUNT\(\*\) AS n FROM fr_wa_daily_clue/.test(q)) return { n: 3 };
+        if (/FROM fr_wa_daily_clue d JOIN fr_wa_clue c/.test(q))
           return { n: 5, step: a[2], text: "clue " + a[2], vs: "ep", ep: "S2E14" };
         if (/SELECT clubs FROM wa_player/.test(q)) return { clubs: FOOTBALL_DOOR.clubs };
         return null;

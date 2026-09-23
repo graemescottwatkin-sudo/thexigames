@@ -299,6 +299,15 @@ jobs:
           # that plant an answer in a served field go from red to GREEN, because
           # a mispaired scan cannot see the leak it exists to find.
           node tools/import_friendscrossword_test.mjs
+          # THE FRIENDS WHO AM I IMPORTER AND CALENDAR, run for real against a
+          # synthetic deck. Dailies deal VERIFIED clues only (owner, 23 Sep
+          # 2026), and three independent counts agreed on 151 daily rounds -- but
+          # a count cannot tell a right banding from a wrong one. This asserts
+          # which clue numbers land in which daily round, that locations and
+          # cards with too few verified clues get none, and that the calendar
+          # deals daily letters. Regrouping the verified clues consecutively
+          # instead of by stride keeps every count and turns this red.
+          node tools/import_friendswhoami_test.mjs
           # And what /api/crossword_fr/daily will and will not send. The route is
           # run for real against a stubbed D1 — which cannot prove the QUERY, so
           # the clause is the live_check's job — but does prove the binds, the

@@ -195,7 +195,8 @@ and diagnose before anything ships. Never push past a red gate.
 - `results`/`plays` sanity via wrangler if relevant:
   `npx wrangler d1 execute crosswordxi --remote --command="..."`.
   **Never run a migration that is already applied** — `ALTER TABLE` is not
-  idempotent. Migration state: **001–043 all applied** — 035 (QuickFire text
+  idempotent. Migration state: **001–044 all applied; 045 written, NOT yet
+  applied** (as of 23 Sep 2026 — check production) — 035 (QuickFire text
   ids), 036 and 038 (Codeword and its rounds), 037 and 039 (QuickFire rounds
   and the wrong-pick penalty), 040 and 041 (Who Am I and its score) all landed
   between 13 and 15 Sep 2026 and this line still read "001–034" afterwards.
@@ -217,6 +218,18 @@ and diagnose before anything ships. Never push past a red gate.
   else, so it is safe to re-run. The unique index is not decoration: the
   importer re-emits every board every run, and without it `INSERT OR REPLACE`
   would insert a second copy of board 1 rather than replacing it.
+
+  044 (Friends Who Am I: `fr_wa_card`, `fr_wa_clue`, `fr_wa_answer`,
+  `fr_wa_board`, `fr_wa_door`, `fr_wa_round`, `fr_wa_guess`) applied 22 Sep
+  2026 and verified from production: all seven tables present. Ten
+  `CREATE ... IF NOT EXISTS` and nothing else, so it is safe to re-run. It was
+  first run from the wrong folder and landed nowhere — `sqlite_master` said
+  NONE while the person running it believed it done — which is why "applied"
+  here means checked, not reported.
+  045 (`fr_wa_daily_clue`: the DAILY rounds, verified clues only, by the
+  owner's ruling of 23 Sep 2026) is written and NOT applied. One
+  `CREATE TABLE IF NOT EXISTS` and one `CREATE INDEX IF NOT EXISTS`, so it is
+  safe to re-run. It must land before the deck import that fills it.
   A STALE MIGRATION NUMBER IS THE MOST DANGEROUS FIGURE IN THIS FILE, because
   the sentence immediately before it tells you never to re-run an applied one
   and `ALTER TABLE` is not idempotent — so a reader trusting "034" could
