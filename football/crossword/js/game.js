@@ -286,7 +286,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v003y";
+  var BUILD = "v003z";
   try {
     window.CROSSWORDXI_BUILD = BUILD;
     console.log("Crossword XI build " + BUILD);
@@ -370,7 +370,13 @@
      mean the puzzle never completed at all. */
   var offline = false;
   function setOffline(state, why) {
-    if (offline === state) return;
+    /* Already offline, the reason can still change: the grid filling up
+       while there is no signal turns "cannot be checked" into "Full Time
+       will be called". */
+    if (offline === state) {
+      if (state && why && $("netStrip")) $("netStrip").textContent = why;
+      return;
+    }
     offline = state;
     document.body.classList.toggle("offline", state);
     var strip = $("netStrip");
@@ -429,7 +435,9 @@
              connection sends the player looking for a network problem that is
              not there. */
           if (err && err.offline) {
-            setOffline(true);
+            setOffline(true, gridFull()
+              ? "No connection \u2014 Full Time will be called when it returns"
+              : null);
             scheduleRetry();          // ...without waiting for a keystroke
           }
         }));
@@ -1403,9 +1411,15 @@
 
        reopenFullTime PAINTS ONLY. checkComplete is still the path for a board
        being finished now, and is still the only one that records. */
+    /* AND A RESTORED BOARD IS ASKED ABOUT. `verified` was reset with the rest
+       of the board above, and nothing asked the server again until the next
+       keystroke -- so a grid filled on a train and reopened on the platform
+       showed every square and no solved word, and checkComplete could never
+       pass. verifyNow asks, ends in checkComplete itself, and with no signal
+       falls into the retry and the "online" catch-up like any other ask. */
     if (restore) {
       if (complete) reopenFullTime();   // finished earlier: show the result again
-      else checkComplete();             // completed by the restore itself
+      else verifyNow();                 // completed by the restore itself, once the server agrees
     }
   }
   /* The icon shows what pressing it would do next: pause bars while showing,

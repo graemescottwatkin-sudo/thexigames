@@ -58,6 +58,12 @@ jobs:
           node football/crossword/frontend_test.mjs
           node football/crossword/viewport_test.mjs
           node football/crossword/save_test.mjs
+          # A grid finished with no signal reaches Full Time when the signal
+          # returns, once, and only if it is right. It found that a board
+          # RESTORED from its save was never verified at all until the next
+          # keystroke, so a grid filled on a train and reopened on the platform
+          # sat full, unsolved and silent (23 Sep 2026).
+          node football/crossword/offline_test.mjs
           node football/crossword/tabs_test.mjs
           node football/crossword/themes_ui_test.mjs
           # The club and theme pages are server-rendered and meant to be read
@@ -299,6 +305,13 @@ jobs:
           # that plant an answer in a served field go from red to GREEN, because
           # a mispaired scan cannot see the leak it exists to find.
           node tools/import_friendscrossword_test.mjs
+          # FRIENDS' CROSSWORD IS GENERATED FROM FOOTBALL'S, and nothing here ran
+          # the check that says so until 23 Sep 2026. The generator's own header
+          # said "the --check half of this file is in CI"; it was not, so a fix
+          # to football/crossword that was never regenerated into Friends would
+          # have shipped one game fixed and its twin not. Proven to refuse a
+          # drifted game.js and a stale tag before it went in.
+          node tools/build_friendscrossword.js --check
           # THE FRIENDS WHO AM I IMPORTER AND CALENDAR, run for real against a
           # synthetic deck. Dailies deal VERIFIED clues only (owner, 23 Sep
           # 2026), and three independent counts agreed on 151 daily rounds -- but
