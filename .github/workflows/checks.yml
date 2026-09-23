@@ -546,6 +546,14 @@ jobs:
           node football/codeword/play_test.mjs
           node football/codeword/round_test.mjs
           node football/codeword/resume_test.mjs
+          # A DROPPED CONNECTION MID-BOARD. One failed /mark used to latch the
+          # page's `asking` guard for the rest of the round, so no word was ever
+          # confirmed again; one failed /finish left a board over with no Full
+          # Time. Driven in jsdom against a server that destroys the socket:
+          # reconnect by the "online" event and by the timed retry alone, the
+          # retrying stopping once confirmed, a WRONG word never re-asked, and
+          # the whistle's verdict arriving once. Eight sabotages proven caught.
+          node football/codeword/offline_test.mjs
           # The importer's gate, on the committed sample — because there is no
           # bank on a runner and a check that passes when it finds no problems
           # also passes when it finds nothing at all.

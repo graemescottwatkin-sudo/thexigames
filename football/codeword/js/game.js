@@ -3,7 +3,7 @@
   /* THE BUILD, PAIRED WITH THE ?v= ON THIS FILE'S OWN SCRIPT TAG. A stale
      cached script is otherwise invisible: the page loads, the game runs, and
      it is yesterday's code. aligned_test asserts the two agree. */
-  var BUILD = "v001m";
+  var BUILD = "v001n";
   if (window.XIPlays && document.documentElement) {
     document.documentElement.setAttribute("data-build", BUILD);
   }
@@ -214,7 +214,9 @@ function boot(BOARD){
         body: JSON.stringify(body)
       }).then(function(r){ return r.ok ? r.json() : Promise.reject(r.status); })
         .then(then)
-        .catch(function(){ toast("Could not reach the referee"); if (fail) fail(); });
+        /* A caller with a failure path says its own thing: the two that retry
+           say it once, not every few seconds while they wait. */
+        .catch(function(){ if (fail) fail(); else toast("Could not reach the referee"); });
     }
     return {
       /* SAYS WHETHER IT ASKED, and that return value is load-bearing.
@@ -226,11 +228,15 @@ function boot(BOARD){
          the whole board silently. Found by writing the suite for the other two
          faults: the test completed a word before the round existed and no mark
          request ever went out. */
-      confirm: function(then){
+      /* AND SAYS WHEN IT FAILED. Without `fail` a dropped request never
+         called back, so refreshSolved's `asking` stayed true for the rest of
+         the round: one lost connection and no word was ever confirmed again,
+         however long the player kept typing. */
+      confirm: function(then, fail){
         if (!round) return false;
         post("mark", { playId: round.playId, guess: guess }, function(d){
           then(d.solved || []);
-        });
+        }, fail);
         return true;
       },
       wrongNumbers: function(then){
@@ -255,9 +261,9 @@ function boot(BOARD){
           then(d.letter, d.charged === false);
         });
       },
-      finish: function(then){
+      finish: function(then, fail){
         if (!round) return then(null);
-        post("finish", { playId: round.playId }, function(d){ then(d); });
+        post("finish", { playId: round.playId }, function(d){ then(d); }, fail);
       }
     };
   }
@@ -577,6 +583,39 @@ function boot(BOARD){
      the callback asks again rather than leaving the grid to trigger it, because
      a finished grid never changes again. */
   var asking = false, missed = false;
+
+  /* ---------- A dropped connection ----------
+     Marking and the whistle are the server's, so a train or a lift used to
+     cost the board: a word finished with no signal was never confirmed, and a
+     whistle blown with none never came back, leaving a board marked over with
+     no Full Time on it. Both are now OWED, and paid the moment the connection
+     returns -- the browser's "online" event, or a retry every few seconds,
+     because a phone on a wifi with no route out reports itself online.
+
+     OWED ONLY AFTER A FAILURE. A word the server marked wrong is not owed
+     anything: re-asking it on a timer would be the player's own letters being
+     re-submitted forever. And each retry is the same one request the player
+     would have made, so it costs nothing extra: /mark counts an ask only when
+     it confirms a new word, and /finish answers a second call with the result
+     of the first. The clock is the server's throughout, so minutes spent
+     without a signal count, as they would have with one. */
+  var markOwed = false, finishOwed = false, retryTimer = null;
+  var RETRY_MS = 5000;
+  function owed(){ return finishOwed || (markOwed && !over); }
+  function payOwed(){
+    if (finishOwed) { finishOwed = false; whistle(); return; }
+    if (markOwed && !over && !asking) refreshSolved();
+  }
+  function awaitConnection(){
+    if (retryTimer) return;
+    toast("No connection. This will be marked when it returns");
+    retryTimer = setInterval(function(){
+      if (!owed()) { clearInterval(retryTimer); retryTimer = null; return; }
+      payOwed();
+    }, RETRY_MS);
+  }
+  window.addEventListener("online", function(){ if (owed()) payOwed(); });
+
   function refreshSolved(){
     if (over) return;
     var ripe = SLOTS.some(function(w, i){
@@ -593,10 +632,15 @@ function boot(BOARD){
        calling back locks this function for the rest of the round. */
     if (oracle.confirm(function(done){
       asking = false;
+      markOwed = false;
       var fresh = done.some(function(i){ return !solvedWords[i]; });
       done.forEach(function(i){ solvedWords[i] = true; });
       if (fresh) paint();
       if (missed) { missed = false; refreshSolved(); }
+    }, function(){
+      asking = false;
+      markOwed = true;
+      awaitConnection();
     }) === false) {
       asking = false;
       /* THE ASK COULD NOT GO OUT BECAUSE THERE IS NO ROUND. Ask for one. If
@@ -975,7 +1019,13 @@ function boot(BOARD){
     // forged score and then letting the page post its own would be the front
     // door locked and the back door open, so the page displays what comes back
     // and computes only when there is nobody to ask.
-    oracle.finish(function(d){ recordResult(d); showFullTime(d); });
+    whistle();
+  }
+  /* The server's verdict, asked until it answers. A whistle that could not
+     reach the referee is owed, not lost. */
+  function whistle(){
+    oracle.finish(function(d){ finishOwed = false; recordResult(d); showFullTime(d); },
+      function(){ finishOwed = true; awaitConnection(); });
   }
 
   function showFullTime(fromServer){
