@@ -140,6 +140,28 @@ prove("an element id the page no longer has", "index.html",
   if (!caught) missed++;
 }
 
+/* A syntax error DEEP in a Function that has imports — the exact shape the old
+   per-file `node --check` passed, because Node saw `import`, decided "module"
+   and never parsed the body (24 Sep 2026: green over 199 files with this very
+   line in daily.js). The gate must name the check AND the file. Restored from
+   the original bytes in a finally, so a throw cannot leave it broken. */
+{
+  const rel = "functions/_lib/qfdata.js";
+  const target = path.join(DIR, "..", "..", rel);
+  const bytes = fs.readFileSync(target);
+  let out = "";
+  try {
+    fs.writeFileSync(target, Buffer.concat([bytes, Buffer.from("\nexport function probe() { return 1 +; }\n")]));
+    out = gate();
+  } finally {
+    fs.writeFileSync(target, bytes);
+  }
+  const caught = out.split("\n").some((l) =>
+    l.startsWith("FAIL") && l.includes("parses as an ES module") && l.includes("qfdata.js"));
+  console.log((caught ? "  ok  " : "MISS  ") + "a syntax error in the body of a Function that imports");
+  if (!caught) missed++;
+}
+
 const clean = gate().trim().endsWith("0 failed");
 console.log((clean ? "  ok  " : "MISS  ") + "and the untouched folder still passes");
 if (!clean) missed++;
