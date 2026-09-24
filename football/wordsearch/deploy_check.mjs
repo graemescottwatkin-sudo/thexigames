@@ -267,15 +267,53 @@ const fnFiles = [];
     fs.statSync(p).isDirectory() ? walk(p) : /\.js$/.test(f) && fnFiles.push(p);
   }
 })(fnDir);
-let parseFails = [];
-/* node --check per file: what the workflow runs, and closer to the Pages
-   bundler than any regex. */
-for (const f of fnFiles) {
-  try { execFileSync(process.execPath, ["--check", f], { stdio: "pipe" }); }
-  catch (e) { parseFails.push(path.relative(ROOT, f)); }
+/* ONE child parses every file as a MODULE, and executes none of them.
+
+   This was `node --check <file>` once per file until 24 Sep 2026, and it was
+   VACUOUS: the repo has no package.json, so a .js file has no declared type,
+   and Node's syntax detection sees `import` in a CommonJS parse, concludes
+   "this is ESM" and exits 0 WITHOUT PARSING THE BODY AS A MODULE. Measured on
+   Node 24.20: `return 1 +;` appended to functions/_lib/wsdata.js left this
+   gate green, 38 passed / 0 failed, "199 files" — the RUN-ME v154 fault above
+   is exactly what it could no longer see. It was also most of the gate's run
+   time: a process per file, 2m15s for the whole gate on Windows.
+
+   `new vm.SourceTextModule(source)` is the parse `node --input-type=module
+   --check` performs — both construct a ModuleWrap from the source text.
+   Construction parses; nothing links or evaluates unless asked, so no
+   Function's top level runs here. The API sits behind
+   --experimental-vm-modules; if it is ever gone the child exits non-zero and
+   this check FAILS saying so, rather than parsing nothing and passing.
+   QuickFire's gate carries the same check; each gate stands alone. */
+const PARSE_ALL = `
+const vm = require("node:vm"), fs = require("node:fs");
+if (typeof vm.SourceTextModule !== "function") {
+  console.error("vm.SourceTextModule is unavailable on node " + process.version);
+  process.exit(2);
 }
-t("every Functions file parses", parseFails.length === 0,
-  parseFails.join(", ") || `${fnFiles.length} files`);
+const files = JSON.parse(fs.readFileSync(0, "utf8"));
+const out = { parsed: 0, fails: [] };
+for (const f of files) {
+  try { new vm.SourceTextModule(fs.readFileSync(f, "utf8"), { identifier: f }); out.parsed++; }
+  catch (e) { out.fails.push([f, String(e && e.message)]); }
+}
+process.stdout.write(JSON.stringify(out));`;
+const parse = (() => {
+  try {
+    const raw = execFileSync(process.execPath, ["--experimental-vm-modules", "-e", PARSE_ALL],
+      { input: JSON.stringify(fnFiles), encoding: "utf8", stdio: ["pipe", "pipe", "pipe"] });
+    return JSON.parse(raw);
+  } catch (e) {
+    return { parsed: 0, fails: [], broke: `the parser did not run: exit=${e.status} ` +
+      JSON.stringify(String(e.stderr || e.message).trim().split("\n")[0]) };
+  }
+})();
+const parseFails = parse.fails.map(([f, why]) => `${path.relative(ROOT, f)} (${why})`);
+/* Positive as well as negative: every file walked was parsed, and the walk
+   found some. A child that parsed nothing reports no failures too. */
+t("every Functions file parses as an ES module, as the Pages bundler parses it",
+  !parse.broke && parseFails.length === 0 && fnFiles.length > 0 && parse.parsed === fnFiles.length,
+  parse.broke || parseFails.join(", ") || `${parse.parsed} of ${fnFiles.length} files`);
 t("every wordsearch import resolves to something the target exports", (() => {
   for (const f of fnFiles.filter((x) => x.includes("wordsearch") || x.includes("ws-"))) {
     const src = fs.readFileSync(f, "utf8");

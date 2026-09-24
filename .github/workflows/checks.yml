@@ -258,6 +258,10 @@ jobs:
           # before it could compute anything: the board travelled whole, and
           # the free-play route handed today's board over complete.
           node football/wordsearch/verified_test.mjs
+          # And the proof that the word search's gate can fail. It began with
+          # one case: its Functions parse check, which passed a syntax error in
+          # any file with an import until 24 Sep 2026.
+          node football/wordsearch/gate_test.mjs
           # The cross-game contract: what every game must have, checked
           # identically. Game three is a row in its GAMES table.
           node tools/aligned_test.mjs
