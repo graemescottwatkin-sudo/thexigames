@@ -229,17 +229,21 @@ body.locked>.app{flex:1 1 auto;min-height:0;width:100%;max-width:860px;
 body.locked .app>.screen:not([hidden]){flex:1 1 auto;min-height:0}
 
 body.locked #screenGame{overflow:hidden;container-type:size}
-body.locked #screenGame>*{flex:none}
+/* Everything but the clue keeps its own height. Not `>*` with the clue
+   set apart below: an id outranks the clue's class, so the clue was held at
+   its own height too and the spare height fell to the bottom of the screen as
+   dead space (a quarter of a 412x839 phone, seen on the Play build). */
+body.locked #screenGame>:not(.clue){flex:none}
 body.locked .strip{height:max(4px,.6cqh);margin-bottom:1.4cqh}
 body.locked .progress{font-size:clamp(14px,2.3cqh,22px)}
 body.locked .clock{font-size:clamp(30px,6cqh,64px);min-width:0}
 /* The clue has the room that is left, centred in it, and game.js shrinks it
    until it fits there: never cut off. */
 body.locked .clue{flex:1 1 auto;min-height:0;overflow:hidden;display:flex;align-items:center;
-  margin:1cqh 0;font-size:clamp(20px,min(6.4cqw,4.8cqh),52px)}
+  margin:1cqh 0;font-size:clamp(20px,min(8.4cqw,5.6cqh),56px)}
 body.locked .options{gap:max(8px,1.2cqh);margin:0 0 1.2cqh}
 body.locked .option{font-size:clamp(16px,min(4.8cqw,3.4cqh),32px);
-  min-height:max(var(--tap),8.5cqh);padding:1cqh 16px;border-radius:12px}
+  min-height:max(var(--tap),9.5cqh);padding:1cqh 16px;border-radius:12px}
 body.locked .feedback{margin:0 0 .8cqh;font-size:clamp(14px,2.2cqh,22px)}
 body.locked .subBtn{margin-top:0;min-height:max(var(--tap),6.5cqh);font-size:clamp(13px,2cqh,19px)}
 body.locked .scoreCluster{margin-top:1.2cqh}

@@ -295,6 +295,11 @@ jobs:
           # them. It runs offline against jsdom in about a second; it is not one
           # of the browser-job suites. Needs jsdom.
           node football/quickfire/journey_test.mjs
+          # A BOARD'S OWN ADDRESS OPENS THAT BOARD. /football/quickfire/daily/3
+          # served today's round under a link to No. 3 until 24 Sep 2026: the
+          # page read only a #b= fragment. Real functions, a real SQLite of
+          # made-up questions (tools/lock_fixtures.mjs), jsdom. Needs jsdom.
+          node football/quickfire/permalink_test.mjs
           # And the IMPORTER's two rules about repetition, which had no suite at
           # all until 14 September 2026. It is spawned rather than imported —
           # the file is a program that reads a bank and exits, so there is

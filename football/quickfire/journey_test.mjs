@@ -367,7 +367,11 @@ console.log("\n=== Boards that have been ===");
     srv.calls.some((c) => c.pathname === "/api/quickfire/archive"));
   const items = [...doc.querySelectorAll("#archiveList .archiveItem")];
   t("past boards are listed", items.length === 2, String(items.length));
-  t("each is addressed by its number", /#b=20/.test(items[0].getAttribute("href")),
+  /* By its OWN ADDRESS since 24 Sep 2026, /football/quickfire/daily/<no>, not
+     #b=<no> and a reload on a timer: in the app's WebView the reload could
+     land before the fragment and leave the page on today's board. See
+     permalink_test.mjs, which proves the page reads that address. */
+  t("each is addressed by its number", /\/football\/quickfire\/daily\/20$/.test(items[0].getAttribute("href")),
     items[0].getAttribute("href"));
   t("the list carries days and numbers and nothing else", (() => {
     /* An archive index is the easiest place in a game to publish tomorrow by

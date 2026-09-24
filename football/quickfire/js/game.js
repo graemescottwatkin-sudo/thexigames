@@ -31,7 +31,7 @@
  * link so a friend could replay the exact eleven, and that is now a board
  * number in the fragment, which is shorter and does not describe the board.
  */
-var BUILD = "v001m";
+var BUILD = "v001n";
 
 (function bootstrap() {
   'use strict';
@@ -55,7 +55,16 @@ var BUILD = "v001m";
      from them — there is no bank here to build from any more, so an old link
      opens today's Daily and says so rather than failing. */
   var hash = location.hash || "";
-  var askedNo = (/[#&]b=(\d+)/.exec(hash) || [])[1];
+  /* AND THE BOARD'S OWN ADDRESS, /football/quickfire/daily/<no>, which is
+     what the archive page, the sitemap and every other game use. This page
+     read only the fragment, so /daily/3 was served the page and the page
+     asked for TODAY'S board: a shared link to board 3 opened No. 7 headed
+     "Today's Daily" (found on the Play build, 24 Sep 2026). The path is read
+     through the family's one reader of it, as HiLo and the crossword do. The
+     fragment still wins where both are given: it is how a challenge link and
+     an old share say which board. */
+  var permaNo = window.XIChrome && window.XIChrome.permalink ? window.XIChrome.permalink.read() : null;
+  var askedNo = (/[#&]b=(\d+)/.exec(hash) || [])[1] || (/^\d+$/.test(permaNo || "") ? permaNo : undefined);
   var staleLink = /[#&]x=/.test(hash);
 
   var url = "/api/quickfire/daily" + (askedNo ? "?no=" + encodeURIComponent(askedNo) : "");
@@ -944,6 +953,13 @@ function start() {
 
   /* --------------------------------------------------------- the archive */
 
+  /* This game's /daily/<no>, from wherever the page is: its front page or a
+     board's own address. */
+  function boardHref(no) {
+    var base = location.pathname.replace(/\/daily(?:\/[^\/]*)?\/?$/, '/').replace(/\/?$/, '/');
+    return base + 'daily/' + encodeURIComponent(no);
+  }
+
   function openArchive() {
     el.archiveList.textContent = 'Loading…';
     show('screenArchive');
@@ -959,15 +975,15 @@ function start() {
         boards.forEach(function (b) {
           var a = document.createElement('a');
           a.className = 'archiveItem' + (b.day === DATA.day ? ' current' : '');
-          a.href = '#b=' + b.no;
+          /* THE BOARD'S ADDRESS, and an ordinary link to it. This was '#b=N'
+             and a reload on a timer, and in the app's WebView the reload could
+             land before the fragment did -- the tap left the page where it
+             was, still showing today's. A different board is a different
+             sitting with its own saved state, so it is a new page load, and a
+             real address is what makes that happen with nothing to race. */
+          a.href = boardHref(b.no);
           a.innerHTML = '<strong>No. ' + b.no + '</strong><span>' +
             escapeHtml(formatDate(b.day)) + '</span>';
-          a.addEventListener('click', function () {
-            /* A different board is a different sitting with a different saved
-               state, so the page is reloaded rather than rebuilt in place. The
-               fragment carries which one. */
-            setTimeout(function () { location.reload(); }, 0);
-          });
           el.archiveList.appendChild(a);
         });
       })

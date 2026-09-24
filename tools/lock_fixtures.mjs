@@ -53,7 +53,10 @@ const clueOf = (i, n) => {
 const LENGTHS = [150, 114, 30, 58, 90, 45, 120, 70, 24, 100, 60, 80, 40, 66];
 const OPTIONS = ["Wolverhampton Wanderers", "Brighton & Hove Albion", "Nottingham Forest FC", "Sheffield Wednesday"];
 
-export async function quickfireEnv(day) {
+/* `days` is one day or a list of them: each is published with the same
+   fixture questions, so a suite can open a past board as well as today's. */
+export async function quickfireEnv(days) {
+  const list = Array.isArray(days) ? days : [days];
   const { db, d1 } = await sqliteD1();
   const ins = db.prepare(`INSERT INTO qf_question (id, answer, answer_norm, answer_type, clue, status,
       option_1, option_2, option_3, option_4) VALUES (?, ?, ?, 'club', ?, 'verified', ?, ?, ?, ?)`);
@@ -62,8 +65,8 @@ export async function quickfireEnv(day) {
     const id = "FX" + String(i + 1).padStart(3, "0");
     const answer = OPTIONS[i % 4];
     ins.run(id, answer, answer.toLowerCase(), clueOf(i + 1, n), ...OPTIONS);
-    slot.run(day, i < 11 ? i + 1 : i - 10, id, i < 11 ? "xi" : "bench");
+    for (const day of list) slot.run(day, i < 11 ? i + 1 : i - 10, id, i < 11 ? "xi" : "bench");
   });
-  db.prepare("INSERT INTO qf_daily (play_date, status) VALUES (?, 'published')").run(day);
+  for (const day of list) db.prepare("INSERT INTO qf_daily (play_date, status) VALUES (?, 'published')").run(day);
   return { DB: d1 };
 }

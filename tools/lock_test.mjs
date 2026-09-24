@@ -339,11 +339,17 @@ function measureQuiz() {
   const offscreen = [...document.querySelectorAll("#options .option, #passQuestion, .scoreCluster, .matchHead")]
     .filter(vis).filter((e) => { const r = rect(e); return r.top < -1 || r.bottom > innerHeight + 1 || r.right > innerWidth + 1; }).length;
   const results = document.getElementById("screenResults");
+  /* THE SCREEN IS FILLED. Locked is not the same as fitted: the first build
+     locked the page with the clue held at its own height, and a quarter of a
+     phone sat empty under the score (seen on the Play build, 24 Sep 2026). */
+  const cluster = document.querySelector("#screenGame .scoreCluster");
+  const deadSpace = !game.hidden && cluster ? Math.round(rect(game).bottom - rect(cluster).bottom) : 0;
   return {
     locked: document.body.classList.contains("locked"),
     fulltime: document.body.classList.contains("fulltime"),
     scrollY: document.documentElement.scrollHeight - innerHeight,
     scrollX: document.documentElement.scrollWidth - innerWidth,
+    deadSpace,
     clueCut: !game.hidden && clue.scrollHeight > clue.clientHeight + 1,
     screenCut: !game.hidden && game.scrollHeight > game.clientHeight + 1,
     clueLen: clue.textContent.length, clueSize: getComputedStyle(clue).fontSize,
@@ -355,8 +361,9 @@ function measureQuiz() {
     vh: innerHeight,
   };
 }
-const quizOk = (m) => m.locked && m.scrollY <= 1 && m.scrollX <= 1 && !m.clueCut && !m.screenCut && m.offscreen === 0 && m.options === 4;
-const quizSay = (m) => `locked ${m.locked}, scroll ${m.scrollY}/${m.scrollX}, clue ${m.clueLen} chars at ${m.clueSize}${m.clueCut ? " CUT" : ""}, options ${m.options} at ${m.optionSize} (${m.optionH}px), off screen ${m.offscreen}${m.screenCut ? ", screen overflows" : ""}`;
+const quizOk = (m) => m.locked && m.scrollY <= 1 && m.scrollX <= 1 && !m.clueCut && !m.screenCut && m.offscreen === 0 && m.options === 4
+  && m.deadSpace <= 24;
+const quizSay = (m) => `locked ${m.locked}, scroll ${m.scrollY}/${m.scrollX}, clue ${m.clueLen} chars at ${m.clueSize}${m.clueCut ? " CUT" : ""}, options ${m.options} at ${m.optionSize} (${m.optionH}px), off screen ${m.offscreen}, empty below ${m.deadSpace}px${m.screenCut ? ", screen overflows" : ""}`;
 
 async function openQuiz(game, [name, viewport, touch]) {
   const context = await browser.newContext({ viewport, hasTouch: touch, isMobile: touch, deviceScaleFactor: 1 });
