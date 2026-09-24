@@ -172,9 +172,19 @@ for (const g of GAMES) {
     /shared\/xi-plays\.js/.test(html) &&
     (/XIPlays\.start\(/.test(js) || /\.XIPlays\.start\(/.test(js)) &&
     (/XIPlays\.end\(/.test(js) || /\.XIPlays\.end\(/.test(js) || /playEnd\(/.test(js)));
+  /* ANYWHERE IN A SELECTOR, not only at its start. The first form matched a
+     line beginning ".xic-", so `body.locked > .xic-foot {` -- a game styling
+     the chrome's footer from a descendant selector -- passed it (24 Sep 2026;
+     Scrambled's own gate caught it). Comments are stripped first, because
+     these sheets say in prose that they write no .xic- rules. */
+  const xicRules = css.replace(/\/\*[\s\S]*?\*\//g, "")
+    .split("{").slice(0, -1).map((chunk) => chunk.split("}").pop())
+    /* `header:not(.xic-bar)` names the chrome to leave it alone, which is the
+       opposite of styling it -- the crosswords' flex layout does exactly that. */
+    .filter((sel) => /\.xic-/.test(sel.replace(/:not\([^)]*\)/g, ""))).map((sel) => sel.trim());
   t("the game's own stylesheet defines no .xic- rules",
-    !/^\s*\.xic-[a-z-]+[^{]*\{/m.test(css),
-    "a game styling the chrome is a second chrome starting");
+    xicRules.length === 0,
+    xicRules.length ? xicRules.join(" | ") : "a game styling the chrome is a second chrome starting");
 
   console.log("Identity");
   const grab = (re) => ((html.match(re) || [])[1] || "")

@@ -748,6 +748,15 @@ jobs:
         env:
           BASE: http://127.0.0.1:8788/football/crossword/
         run: node football/crossword/journey_test.mjs
+      # THE PLAY SCREEN DOES NOT SCROLL (owner's ruling, 24 Sep 2026). Every
+      # locked game, every sample board, five sizes: no document scroll, cards
+      # of one size with none overlapping, clipped or off the pitch, Full Time
+      # locked too, and the large-text fallback unlocking rather than cutting
+      # anything off. It serves the tree itself with env {} -- sample boards,
+      # no database -- so it needs only this job's Chromium. It also refuses a
+      # game directory that is in none of its three lists.
+      - name: Locked play screens
+        run: node tools/lock_test.mjs
       # signin_test is NOT here, and cannot be. It needs a real database, a
       # configured GOOGLE_CLIENT_ID and a person to click the Google popup —
       # the popup is the point, because a stubbed one would test the stub and

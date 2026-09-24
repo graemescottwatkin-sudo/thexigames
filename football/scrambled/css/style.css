@@ -36,6 +36,10 @@ html, body {
 }
 
 .screen[hidden] { display: none; }
+/* The same for the two rows that are display:flex. Without this a flex rule
+   beats the browser's [hidden], so the bench stood open with nothing picked
+   and its Close button closed nothing -- on the live game until 24 Sep 2026. */
+.benchRow[hidden], .echo[hidden] { display: none; }
 
 /* ---- Pre-match ---------------------------------------------------------- */
 
@@ -221,7 +225,11 @@ html, body {
   font-size: clamp(12px, 3.4vw, 17px);
   letter-spacing: .06em;
   line-height: 1.15;
-  word-break: break-all;
+  /* Between words or not at all: game.js fitNames() shrinks a word that is
+     wider than its tile rather than letting it break in the middle. */
+  word-break: normal;
+  overflow-wrap: normal;
+  white-space: normal;
 }
 
 .slot .enum {
@@ -599,3 +607,224 @@ body.touch.playing #screenGame {
    Full Time card. */
 .ftChallenge { margin-top: 14px; }
 .ftChallenge:empty { display: none; }
+
+/* A consonant board lifts nothing, so its tiles give up the line that would
+   hold the lifted letters. */
+.pitch.bagless .slot .lifted { display: none; }
+/* The tile being read can carry a career; it is drawn over its neighbours
+   rather than under them. */
+.slot.picked { z-index: 2; }
+
+/* ---- THE PLAY SCREEN, LOCKED ----------------------------------------------
+
+   The owner's ruling, 24 Sep 2026, from the Play build: "id like the game to
+   fit on the screen in whole, much like the crossword, i.e. the screen is
+   fixed, so no scrolling needed" -- and then, for every size, "just change
+   the size of elements to scale up". So while a round is in play the page is
+   exactly the viewport: the bar, then the board, then the answer row and the
+   keys, and nothing below them to scroll to.
+
+   Everything that is not the round steps aside: the game's ident, its tabs,
+   the how-to-play, the footer and the pool line all said something the
+   landing already said. The score moves up beside the clock. The live table
+   goes beside the pitch where there is room for it and is not shown where
+   there is not, because a table under the keys is a table nobody can reach.
+
+   body.locked is set by game.js checkRoom() while a round is in play or at
+   Full Time, and only while the tiles fit: when they cannot -- a phone on its
+   side, or large system text -- it is taken off, every rule here stands down,
+   and the page scrolls as it always did. The landing is never locked.
+
+   The pitch fills what is left and the tiles scale with it -- sized in units
+   of the pitch (cqw, cqh), not the viewport, because the pitch is what they
+   have to fit in. */
+body.locked {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+body.locked > * { flex: none; }
+body.locked > footer { display: none; }
+body.locked > .app {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 4px 8px 0;
+}
+body.locked .app > * { flex: none; }
+body.locked .site-ident,
+body.locked .site-head,
+body.locked .how,
+body.locked .poolLine { display: none; }
+
+body.locked #screenGame {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding-bottom: 6px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto auto;
+  grid-template-areas:
+    "head score"
+    "pitch pitch"
+    "feedback feedback"
+    "echo echo"
+    "entry entry"
+    "bench bench";
+  column-gap: 12px;
+}
+body.locked .matchHead {
+  grid-area: head;
+  align-self: center;
+  margin: 0 2px 4px;
+  gap: 12px;
+  justify-content: flex-start;
+}
+body.locked .clock { font-size: 22px; }
+body.locked .scoreCluster {
+  grid-area: score;
+  align-self: center;
+  margin: 0 0 4px;
+  gap: 6px;
+}
+body.locked .scoreBox,
+body.locked .worthBox {
+  padding: 2px 8px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+body.locked .scoreBox .label,
+body.locked .worthBox .label { font-size: 9.5px; letter-spacing: .08em; }
+body.locked .scoreVal,
+body.locked .worthVal { font-size: 18px; }
+body.locked #tablePanel { display: none; }
+
+body.locked .pitchWrap {
+  grid-area: pitch;
+  min-height: 0;
+  container-type: size;
+  display: flex;
+  justify-content: center;
+}
+/* The pitch takes the whole of its cell, up to a landscape of 13:10: wider
+   than that and a formation's rows are strung out across a desk monitor with
+   the eye running end to end to read one line. Past it, centred. */
+body.locked .pitch {
+  aspect-ratio: auto;
+  height: 100%;
+  width: min(100%, 130cqh);
+  container-type: size;
+}
+body.locked .feedback { grid-area: feedback; min-height: 18px; margin: 4px 2px 2px; font-size: 13.5px; }
+body.locked .echo { grid-area: echo; margin: 0 2px 4px; }
+body.locked .benchRow { grid-area: bench; margin-top: 6px; padding: 8px; }
+
+/* The answer row and the keys are in the flow at the foot of the screen, not
+   fixed over it: the board is sized to what they leave, so there is nothing
+   underneath for them to cover. */
+body.locked .entry {
+  grid-area: entry;
+  position: static;
+  border: 0;
+  padding: 0;
+  background: none;
+}
+body.locked #screenGame { padding-bottom: 6px; }
+body.locked .osk { position: static; }
+
+/* The tiles, in units of the pitch. The clamps are the floor a phone can
+   read and the ceiling past which a tile stops getting easier to read and
+   starts crowding its row. */
+body.locked .slot {
+  /* ONE SIZE OF CARD. Every tile the same share of the pitch, whatever is
+     written on it; a name that needs two lines is fitted into the box by
+     game.js fitNames() rather than growing it. The tile being read is the
+     exception below: it carries a career, and is drawn over its row. */
+  height: 14cqh;
+  min-height: 0;
+  padding: .4cqh 3px .6cqh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-radius: clamp(6px, 1.4cqw, 14px);
+}
+/* The lifted line holds its height so a card does not jump as letters are
+   typed. A locked card is one height already and centres what it holds, so
+   the empty line is only a line of nothing the name needed. */
+body.locked .slot .lifted:empty { min-height: 0; }
+body.locked .slot:has(.hint),
+body.locked .slot:has(.clubs) { height: auto; min-height: 14cqh; overflow: visible; z-index: 3; }
+body.locked .slot .pos,
+body.locked .slot .enum { font-size: clamp(9px, min(2.8cqw, 2.8cqh), 18px); }
+body.locked .slot .letters,
+body.locked .slot .lifted { font-size: clamp(12px, min(5cqw, 5cqh), 36px); }
+body.locked .slot .hint,
+body.locked .slot .clubs { font-size: clamp(10px, min(2.6cqw, 2.2cqh), 16px); }
+
+/* Room beside the pitch: the table comes back, in a column of its own, and
+   scrolls inside that column if the season is longer than the screen. */
+/* FULL TIME, LOCKED. The board keeps its place and the result is a panel of
+   its own that scrolls inside itself -- the crossword's shape, where the
+   result opens beside the grid and the grid stays. On a phone the panel takes
+   the lower half and the board the upper; beside the board where there is
+   room. The table goes at Full Time: the result card says where the club
+   finished. */
+body.locked.fulltime #screenGame { padding-bottom: 4px; }
+body.locked.fulltime #tablePanel { display: none; }
+body.locked.fulltime .app > #screenResults {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 52%;
+  overflow: auto;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 8px 4px 12px;
+  border-top: 1px solid var(--line);
+}
+@media (min-width: 960px) {
+  body.locked.fulltime > .app {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 400px;
+    grid-template-rows: minmax(0, 1fr);
+    column-gap: 16px;
+  }
+  body.locked.fulltime .app > #screenGame { grid-column: 1; grid-row: 1; }
+  body.locked.fulltime .app > #screenResults {
+    grid-column: 2; grid-row: 1;
+    max-height: none;
+    height: 100%;
+    border-top: 0;
+    border-left: 1px solid var(--line);
+    padding: 4px 4px 16px 16px;
+  }
+}
+
+@media (min-width: 960px) {
+  body.locked:not(.fulltime) #screenGame {
+    grid-template-columns: minmax(0, 1fr) auto 300px;
+    grid-template-areas:
+      "head score table"
+      "pitch pitch table"
+      "feedback feedback table"
+      "echo echo table"
+      "entry entry table"
+      "bench bench table";
+  }
+  body.locked:not(.fulltime) #tablePanel {
+    display: block;
+    grid-area: table;
+    min-height: 0;
+    overflow: auto;
+    align-self: stretch;
+  }
+}

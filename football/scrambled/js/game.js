@@ -15,7 +15,7 @@
  *   - no practice. There is now an archive picker and a finals catalogue; what
  *     is still missing is a practice mode, which this game may never want.
  */
-var BUILD = "v002y";
+var BUILD = "v002z";
 
 (function () {
   "use strict";
@@ -831,6 +831,7 @@ var BUILD = "v002y";
       letters.textContent = rest;
     });
     paintEcho();
+    queueRoom();
   }
 
   /* THE PICKED TILE, ECHOED ABOVE THE BOX. On a phone the system keyboard
@@ -872,6 +873,11 @@ var BUILD = "v002y";
     if (state.over) defaultReading();
     var pitch = $("pitch");
     pitch.innerHTML = "";
+    /* A consonant board has no bag, so no tile ever lifts a letter: the line
+       that holds them is a line of nothing on every tile, and on a locked
+       screen a line is height the names need. */
+    pitch.classList.toggle("bagless", bagless());
+    var rows = rowsOf(state.board.slots);
     ["bottom", "top"].forEach(function (which) {
       var box = document.createElement("div");
       box.className = "box " + which;
@@ -882,8 +888,9 @@ var BUILD = "v002y";
       var el = document.createElement("button");
       el.type = "button";
       el.className = "slot";
-      el.style.left = (slot.x * 100) + "%";
+      el.style.left = (rows.x[slot.id] * 100) + "%";
       el.style.top = (bandY(slot.band) * 100) + "%";
+      el.style.width = rows.width[slot.band] + "%";
       el.dataset.slot = slot.id;
 
       var got = state.solved[slot.id];
@@ -1003,6 +1010,124 @@ var BUILD = "v002y";
        programmatic value change fires no input event. */
     paintTyped();
   }
+
+  /* WHERE EACH TILE STANDS, AND HOW WIDE IT MAY BE.
+     Every tile was 27% wide wherever it stood, and a back four stands at
+     0.2, 0.4, 0.6 and 0.8 -- twenty points apart. So four tiles 27 wide in a
+     row 20 apart overlapped by seven, and on the Play build (24 Sep 2026)
+     three midfielders' names sat on top of each other.
+     So a row now spreads its tiles evenly across the pitch -- the order is the
+     formation and is kept; a lone player keeps the spot the board gave him --
+     and EVERY tile is as wide as the busiest row allows, minus a margin, and
+     never wider than 30: four across makes every tile 23.5, the keeper's
+     included. One size of card, by the owner's word on 24 Sep 2026 ("make
+     the player cards always take up a consistent amount of the pitch"); a
+     keeper twice the width of his full-backs read as a different kind of
+     thing. */
+  function rowsOf(slots) {
+    var byBand = {};
+    slots.forEach(function (s) { (byBand[s.band] = byBand[s.band] || []).push(s); });
+    var out = { x: {}, width: {} };
+    var busiest = 1;
+    Object.keys(byBand).forEach(function (band) {
+      var row = byBand[band].slice().sort(function (a, b) { return a.x - b.x; });
+      var n = row.length;
+      row.forEach(function (s, i) { out.x[s.id] = n === 1 ? Number(s.x) : (i + 0.5) / n; });
+      busiest = Math.max(busiest, n);
+    });
+    var one = Math.max(12, Math.min(30, 100 / busiest - 1.5));
+    Object.keys(byBand).forEach(function (band) { out.width[band] = one; });
+    return out;
+  }
+
+  /* A NAME IS BROKEN BETWEEN ITS WORDS OR NOT AT ALL.
+     The letters used to break anywhere, so YANNICK BOLASIE wrapped inside a
+     word. Now a line breaks only at a space or a hyphen, and a word that is
+     still wider than its tile takes a smaller size until it fits -- which
+     only ever costs the one long name, not the whole board. */
+  /* AND A CARD IS ONE HEIGHT. On a locked screen every tile is the same box
+     (the stylesheet sets it), so a two-line name has to fit that box rather
+     than grow it: the name takes a smaller size until the card holds it. */
+  function fitNames() {
+    var pitch = $("pitch");
+    if (!pitch) return;
+    pitch.querySelectorAll(".slot").forEach(function (tile) {
+      tile.querySelectorAll(".letters, .lifted").forEach(function (el) {
+        el.style.fontSize = "";
+        if (!el.textContent || !el.clientWidth) return;
+        var size = parseFloat(getComputedStyle(el).fontSize) || 14;
+        var over = function () {
+          return el.scrollWidth > el.clientWidth + 1 || tile.scrollHeight > tile.clientHeight + 1;
+        };
+        while (over() && size > 9) {
+          size -= 1;
+          el.style.fontSize = size + "px";
+        }
+      });
+    });
+  }
+
+  /* THE PLAY SCREEN IS LOCKED, unless the board cannot fit it.
+     The owner's ruling, 24 Sep 2026: no scrolling while playing, at any
+     size. The stylesheet does the locking; this is the one way out of it. If
+     a tile still spills off the pitch or onto its neighbour after the names
+     are fitted -- a very short screen, or large system text -- the page goes
+     back to scrolling, because a board you can scroll to is better than one
+     you cannot read. The tile being read is excluded: it may carry a career
+     and is drawn above the others on purpose. */
+  function checkRoom() {
+    var body = document.body;
+    var pitch = $("pitch");
+    var want = !!pitch && (body.classList.contains("playing") || body.classList.contains("fulltime"));
+    body.classList.toggle("locked", want);
+    if (!want) { fitNames(); return; }
+    fitNames();
+    var box = pitch.getBoundingClientRect();
+    if (!box.height) return;
+    var tiles = [].slice.call(pitch.querySelectorAll(".slot"))
+      .filter(function (el) { return el.dataset.slot !== state.picked && el.dataset.slot !== state.reading; })
+      .map(function (el) { return el.getBoundingClientRect(); });
+    var spills = tiles.some(function (r) {
+      return r.top < box.top - 1 || r.bottom > box.bottom + 1 || r.left < box.left - 1 || r.right > box.right + 1;
+    });
+    var meets = tiles.some(function (a, i) {
+      return tiles.some(function (b, j) {
+        return j > i && a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1;
+      });
+    });
+    /* And a card that cannot hold its own name. Every card is one height with
+       its overflow hidden, so large text does not spill or overlap -- it is
+       cut off inside the card, which is the failure this whole check exists
+       to refuse. Found by tools/lock_test.mjs, not by eye. */
+    var clipped = [].slice.call(pitch.querySelectorAll(".slot")).some(function (el) {
+      if (el.querySelector(".clubs, .hint")) return false;
+      var name = el.querySelector(".letters");
+      return el.scrollHeight > el.clientHeight + 1 || (name && name.scrollWidth > name.clientWidth + 1);
+    });
+    if (spills || meets || clipped) { body.classList.remove("locked"); fitNames(); }
+    keepInside(pitch);
+  }
+  /* THE TILE BEING READ STAYS ON THE PITCH. It is the one card allowed to
+     grow -- it carries the clubs, or the career -- and it grows from its
+     centre, so the keeper's ran off the bottom of the pitch and was clipped.
+     Nudged back inside by exactly the overhang, and only that tile. */
+  function keepInside(pitch) {
+    var box = pitch.getBoundingClientRect();
+    pitch.querySelectorAll(".slot").forEach(function (el) {
+      el.style.marginTop = "";
+      if (!el.querySelector(".clubs, .hint")) return;
+      var r = el.getBoundingClientRect();
+      if (r.bottom > box.bottom - 2) el.style.marginTop = -(r.bottom - box.bottom + 4) + "px";
+      else if (r.top < box.top + 2) el.style.marginTop = (box.top - r.top + 4) + "px";
+    });
+  }
+  var roomQueued = false;
+  function queueRoom() {
+    if (roomQueued) return;
+    roomQueued = true;
+    (window.requestAnimationFrame || setTimeout)(function () { roomQueued = false; checkRoom(); });
+  }
+  window.addEventListener("resize", queueRoom);
 
   /* ---- the bench -------------------------------------------------------- */
 
@@ -1609,6 +1734,12 @@ var BUILD = "v002y";
        page somebody is reading takes a third of the screen for nothing. The
        crossword hides its own the same way while its landing is up. */
     document.body.classList.toggle("playing", id === "screenGame");
+    /* FULL TIME IS LOCKED TOO. The owner, 24 Sep 2026, on the first build of
+       the locked board: "once the game finishes it goes back to a full normal
+       screen". So the board stays where it was and the result opens beside it
+       (or under it, on a phone) in a panel of its own; see the stylesheet. */
+    document.body.classList.toggle("fulltime", full);
+    queueRoom();
   }
 
   /* ---- start ------------------------------------------------------------ */
