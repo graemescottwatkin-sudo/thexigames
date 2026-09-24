@@ -828,3 +828,16 @@ body.locked.fulltime .app > #screenResults {
     align-self: stretch;
   }
 }
+
+/* HOW TO PLAY, ON A LOCKED SCREEN. The bar's "How to play" goes to #how, and
+   while the play screen is locked that section is hidden with the rest of the
+   landing -- so the link did nothing mid-game (found 24 Sep 2026, the day the
+   screens were locked). As its target it opens over the game instead, a panel
+   the height of the screen that scrolls in itself, with the way back at the
+   top; leaving the target closes it. The page under it never scrolls. */
+.how-back{display:none}
+body.locked #how:target{display:block!important;position:fixed;inset:0;z-index:60;margin:0;max-width:none;
+  overflow:auto;overscroll-behavior:contain;background:var(--paper);padding:14px 16px 40px;box-sizing:border-box}
+body.locked #how:target .how-back{display:inline-flex;align-items:center;min-height:var(--tap,44px);padding:0 16px;
+  margin:0 0 10px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink);
+  font-family:var(--disp);font-weight:700;letter-spacing:.08em;text-transform:uppercase;text-decoration:none}

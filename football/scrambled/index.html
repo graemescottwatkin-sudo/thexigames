@@ -36,7 +36,7 @@
 <!-- The theme, stamped before first paint: light unless the player chose
      dark, decided in one shared place for every page of the family. -->
 <script src="/shared/xi-theme.js?v=v60"></script>
-<link rel="stylesheet" href="css/style.css?v=v002z">
+<link rel="stylesheet" href="css/style.css?v=v003">
 </head>
 <body>
 
@@ -292,6 +292,10 @@
        found on 7 September 2026. HiLo XI already had the right shape: the
        rules on the page, at #how, reachable from both. -->
   <section class="how" id="how">
+  <!-- On a locked play screen this section opens OVER the game when the bar's
+       "How to play" is used (the #how target), and this is the way back to
+       the board. Hidden everywhere else. -->
+  <a class="how-back" href="#play">Back to the game</a>
     <h2>How to play</h2>
     <p><b>Eleven names, scrambled.</b> A starting eleven, in the positions they
        played, with the letters of every surname shuffled. Solve them in any
@@ -381,8 +385,8 @@
 <!-- xi-played.js first: xi-fulltime.js asks it what has been played today. -->
 <script src="/shared/xi-played.js?v=v60"></script>
 <script src="/shared/xi-fulltime.js?v=v60"></script>
-<script src="js/config.js?v=v002z"></script>
-<script src="js/scoring.js?v=v002z"></script>
-<script src="js/game.js?v=v002z"></script>
+<script src="js/config.js?v=v003"></script>
+<script src="js/scoring.js?v=v003"></script>
+<script src="js/game.js?v=v003"></script>
 </body>
 </html>
