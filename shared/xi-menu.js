@@ -108,19 +108,26 @@
   if (document.readyState === "complete") setTimeout(nameTheAction, 300);
   else window.addEventListener("load", function () { setTimeout(nameTheAction, 300); });
 
-  try {
-    fetch("/api/season", { headers: { accept: "application/json" } })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (d) {
-        /* No day from the server means no answer, and there is no second place
-           to get one: the device's calendar is exactly what must not decide
-           this. Nothing is drawn, which is correct. */
-        if (!d || !d.today) return;
-        var dayGames = (d.account && d.dayGames) ? d.dayGames
-          : (window.XISeason ? window.XISeason.finishedDays() : []);
-        paintStreaks(dayGames, d.today);
-        paintSeason(d);
-      })
-      .catch(function () { /* a menu that cannot count still starts a game */ });
-  } catch (e) { /* likewise */ }
+  function askSeason() {
+    try {
+      fetch("/api/season", { headers: { accept: "application/json" } })
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (d) {
+          /* No day from the server means no answer, and there is no second place
+             to get one: the device's calendar is exactly what must not decide
+             this. Nothing is drawn, which is correct. */
+          if (!d || !d.today) return;
+          var dayGames = (d.account && d.dayGames) ? d.dayGames
+            : (window.XISeason ? window.XISeason.finishedDays() : []);
+          paintStreaks(dayGames, d.today);
+          paintSeason(d);
+        })
+        .catch(function () { /* a menu that cannot count still starts a game */ });
+    } catch (e) { /* likewise */ }
+  }
+  askSeason();
+  /* The device's guest season has just joined the account (xi-chrome.js), so
+     the account's answer has changed: ask again rather than show a streak the
+     account no longer agrees with. */
+  document.addEventListener("xi:season", askSeason);
 })();

@@ -64,6 +64,13 @@ jobs:
           # keystroke, so a grid filled on a train and reopened on the platform
           # sat full, unsolved and silent (23 Sep 2026).
           node football/crossword/offline_test.mjs
+          # PLAY THE SERVER NEVER SAW SURVIVES A REOPEN. The last push was held
+          # in memory only, so after a force-stop the account's kick-off copy
+          # (clock running, no letters) was always "newer" and replaced every
+          # letter typed since (Play build, 24 Sep 2026). Drives the real page
+          # through a force-stop and relaunch, and proves cross-device adoption
+          # still works. Five sabotages caught, one of them the original code.
+          node football/crossword/unpushed_test.mjs
           node football/crossword/tabs_test.mjs
           node football/crossword/themes_ui_test.mjs
           # The club and theme pages are server-rendered and meant to be read
@@ -342,6 +349,12 @@ jobs:
           # credential is posted. Outside the app, unchanged. Seven sabotages
           # proven caught.
           node tools/signin_native_test.mjs
+          # A GUEST'S SEASON JOINS THE ACCOUNT. The streak read "Not started"
+          # beside a one-day form after signing in (Play build, 24 Sep 2026):
+          # results moved to the account, season days did not. POST /api/season
+          # against real SQL, its refusals, and the chrome sending the device's
+          # record once an account is known. Eight sabotages caught.
+          node tools/season_join_test.mjs
           # And what /api/crossword_fr/daily will and will not send. The route is
           # run for real against a stubbed D1 — which cannot prove the QUERY, so
           # the clause is the live_check's job — but does prove the binds, the

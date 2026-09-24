@@ -286,7 +286,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v003z";
+  var BUILD = "v004";
   try {
     window.CROSSWORDXI_BUILD = BUILD;
     console.log("Crossword XI build " + BUILD);
@@ -669,6 +669,55 @@
   function stateKey() {
     return board && board.kind === "daily" && board.no ? "daily:" + board.no : null;
   }
+
+  /* ---- what the server has already acknowledged, kept with the board ----
+     THE FAULT (24 Sep 2026, found on the Play build). stateSyncedAt lived only
+     in memory, so after a force-stop or any reload it was "" and the account's
+     copy was always "newer". A copy pushed at kick-off (clock running, no
+     letters) passed the letters-or-time floor and replaced every letter typed
+     since: two answers typed on a train, app closed, reopened on the platform,
+     grid empty. The family's merge rule says unpushed local work survives; this
+     broke it on every reopen, offline or not, whenever the last push had not
+     landed (a kill inside the 2.5s debounce does it with the signal full on).
+
+     So each daily board has a record, fcw.v04.sync.daily.<no>, holding the SERVER's
+     stamp of the last push or adoption and a signature of the PLAY that stamp
+     covered. The signature is the play only: letters, reveals, checks, subs,
+     completion. Never the clock: the clock saves locally every few seconds, and
+     counting that would let a stale phone overwrite a newer iPad because it had
+     ticked since. A board with no .sync (saved before this) behaves as before. */
+  function playSig(rec) {
+    if (!rec) return "";
+    var L = rec.letters || {};
+    var sorted = function (a) { return (a || []).map(String).sort().join(","); };
+    return JSON.stringify([
+      Object.keys(L).sort().map(function (k) { return k + "=" + L[k]; }).join(","),
+      sorted(rec.revealedCells), sorted(rec.revealAnswerCells), sorted(rec.revealedEntries),
+      sorted(rec.subbedCells), rec.checks || 0, rec.checkAlls || 0, !!rec.complete,
+    ]);
+  }
+  /* Not under fcw.v04.daily., which the unfinished-board and finished-board
+     scans walk: this is not a board, and must never be read as one. */
+  function syncKey(no) { return "fcw.v04.sync.daily." + no; }
+  function readSync(no) {
+    try { return JSON.parse(localStorage.getItem(syncKey(no)) || "null"); } catch (e) { return null; }
+  }
+  function writeSync(no, stamp, rec) {
+    try { localStorage.setItem(syncKey(no), JSON.stringify({ syncedAt: String(stamp || ""), sig: playSig(rec) })); }
+    catch (e) {}
+  }
+  /* Play on this device the server has never acknowledged. False when there is
+     no record of any push: that device predates this and keeps the old rule. */
+  function unpushedPlay(no) {
+    var sync = readSync(no);
+    if (!sync || typeof sync.sig !== "string") return false;
+    /* An empty board has nothing to lose. Without this a board reset after a
+       push would count as unpushed for ever and never take another device's
+       journey again. */
+    var local = readSlot("daily", { kind: "daily", no: no });
+    if (!local || !Object.keys(local.letters || {}).length) return false;
+    return playSig(local) !== sync.sig;
+  }
   function pushStateSoon() {
     if (!account || !stateKey()) return;
     /* 2.5s after the last change — but with a MAX-WAIT: a player typing
@@ -697,8 +746,15 @@
       var probe = JSON.parse(snap);
       if (!Object.keys(probe.letters || {}).length && !probe.elapsed) return;
     } catch (e) { return; }
+    var no = board.no;
     apiAuth("/api/account/state", { game: "crossword", key: k, state: snap })
-      .then(function (r) { if (r && r.updatedAt) stateSyncedAt = r.updatedAt; })
+      .then(function (r) {
+        if (!r || !r.updatedAt) return;
+        stateSyncedAt = r.updatedAt;
+        /* The signature of what was SENT, not of the slot now: letters typed
+           while this was in flight stay unacknowledged, as they are. */
+        writeSync(no, r.updatedAt, probe);
+      })
       .catch(function (e) { accountNote("state push", e); });
   }
   function clearRemoteState(no) {
@@ -708,12 +764,27 @@
   }
   function pullState(no, then) {
     if (!account || !no) { then(null); return; }
+    /* THIS DEVICE HAS PLAY THE SERVER NEVER SAW: it is the newest thing there
+       is, so it is kept and sent, and the account's copy is not asked for. */
+    if (unpushedPlay(no)) {
+      then(null);
+      if (board && board.kind === "daily" && board.no === no) pushStateNow();
+      return;
+    }
     apiAuth("/api/account/state?game=crossword&key=daily:" + no)
       .then(function (r) {
         /* Adopt only what is NEWER than our own last push — server stamps on
-           both sides of the comparison, so two device clocks never meet. */
-        if (r && r.state && String(r.updatedAt || "") > String(stateSyncedAt || "")) {
+           both sides of the comparison, so two device clocks never meet. The
+           last push is the one remembered on this device, not only in this
+           page, so a reload no longer forgets it. */
+        var sync = readSync(no);
+        var since = String(stateSyncedAt || "");
+        if (sync && String(sync.syncedAt || "") > since) since = String(sync.syncedAt);
+        if (r && r.state && String(r.updatedAt || "") > since) {
           stateSyncedAt = r.updatedAt;
+          var snap = null;
+          try { snap = JSON.parse(r.state); } catch (e) {}
+          writeSync(no, r.updatedAt, snap);
           then(r.state);
         } else then(null);
       })

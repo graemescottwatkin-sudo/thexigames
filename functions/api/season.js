@@ -23,6 +23,8 @@
 import { utcDay } from "../_lib/daily.js";
 import { season, NO_SEASON_YET } from "../_lib/season.js";
 import { daysFor, seasonUser, hasDB, gamesFinishedOn, finishedDaysFor } from "../_lib/season-store.js";
+import { csrfOk } from "../_lib/auth.js";
+import { GAMES, LAUNCHED, inSeason } from "../_lib/games.js";
 
 const json = (body, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -84,4 +86,65 @@ export async function onRequestGet({ request, env }) {
        send it back to localStorage to find out. */
     todayGames,
   });
+}
+
+/* POST /api/season  { days: [{ day, s: [games started], f: [games finished] }] }
+ *
+ * A GUEST'S SEASON JOINS THE ACCOUNT. Found on the Play build, 24 Sep 2026:
+ * signed in, the crossword home read "Crossword streak: Not started" beside
+ * "Your form: 1 day run", with yesterday's board played. The form comes from
+ * results, which /api/account/migrate carries into the account at sign-in.
+ * The streak comes from season_play, which only /api/play writes, and only
+ * for a player who was ALREADY signed in. So everything played as a guest
+ * stayed on the device, and the account's season started from nothing the
+ * moment the player signed in: streak lost, W/D/L lost.
+ *
+ * What is sent is the device's own season record (shared/xi-season.js,
+ * xi.season.v1), which is exactly what the guest's streak was counted from.
+ * Its days were the server's: xi-plays.js writes them from /api/play's own
+ * answer. It is sent back up by a browser, so it is checked here the way a
+ * migrated result is: a real game that counts towards the season, launched
+ * by that day, no day in the future and none beyond the device's own window.
+ * Rows only ever gain: a start never removes a finish, and a day the account
+ * already holds is topped up, not replaced.
+ *
+ * Deliberately NOT derived from migrated results: a result carries its BOARD's
+ * day, so a past board played from the archive would be counted on the day it
+ * was set rather than the day it was played, inventing days nobody played.
+ */
+const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
+const MAX_DAYS = 200;                    // xi-season.js keeps 200 days on a device
+
+export async function onRequestPost({ request, env }) {
+  if (!csrfOk(request)) return json({ error: "Missing request header." }, 403);
+  if (!hasDB(env)) return json({ error: "Accounts are not configured." }, 503);
+  const user = await seasonUser(request, env);
+  if (!user) return json({ error: "Not signed in." }, 401);
+  let body;
+  try { body = await request.json(); } catch (e) { return json({ error: "Expected a JSON body." }, 400); }
+  const list = Array.isArray(body && body.days) ? body.days.slice(0, MAX_DAYS) : [];
+  const today = utcDay();
+  let added = 0, skipped = 0;
+  for (const d of list) {
+    const day = d && typeof d === "object" ? String(d.day || "") : "";
+    if (!DAY_RE.test(day) || day > today) { skipped++; continue; }
+    const started = Array.isArray(d.s) ? d.s.map(String) : [];
+    const finished = new Set(Array.isArray(d.f) ? d.f.map(String) : []);
+    /* A finish implies a start, as on the device. */
+    const games = [...new Set([...started, ...finished])].slice(0, GAMES.length);
+    for (const game of games) {
+      if (!GAMES.includes(game) || !inSeason(game) || !LAUNCHED[game] || LAUNCHED[game] > day) {
+        skipped++; continue;
+      }
+      const done = finished.has(game) ? 1 : 0;
+      await env.DB.prepare(
+        `INSERT INTO season_play (user_id, day, game, started_at, finished_at)
+              VALUES (?1, ?2, ?3, datetime('now'), CASE WHEN ?4 = 1 THEN datetime('now') ELSE NULL END)
+         ON CONFLICT(user_id, day, game)
+         DO UPDATE SET finished_at = COALESCE(season_play.finished_at, excluded.finished_at)`)
+        .bind(String(user.id), day, game, done).run();
+      added++;
+    }
+  }
+  return json({ ok: true, added, skipped });
 }

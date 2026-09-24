@@ -484,6 +484,27 @@
     acct.user = user || null;
     paintAccount();
     emit("xi:account", { type: "signin", user: acct.user, via: via });
+    sendSeason();
+  }
+
+  /* A GUEST'S SEASON JOINS THE ACCOUNT (functions/api/season.js says why). Sent
+     whenever an account is known, once per page and account: at sign-in, and
+     on the session load of every later visit, so a device that signed in
+     before this existed catches up without doing anything. The server only
+     ever adds, so sending twice is harmless. When it lands, xi:season tells
+     anything already showing a streak to ask again. */
+  var seasonSentFor = null;
+  function sendSeason() {
+    try {
+      if (!acct.user || !acct.user.id || seasonSentFor === acct.user.id) return;
+      if (!window.XISeason || typeof window.XISeason.record !== "function") return;
+      var days = window.XISeason.record();
+      if (!days.length) return;
+      seasonSentFor = acct.user.id;
+      api("/api/season", { days: days }).then(function (r) {
+        if (r && r.added) emit("xi:season", { added: r.added });
+      }).catch(function () { seasonSentFor = null; });
+    } catch (e) {}
   }
 
   function signOut() {
@@ -1073,6 +1094,7 @@
       acct.googleClientId = (d && d.googleClientId) || null;
       paintAccount();
       emit("xi:session", { user: acct.user, accounts: acct.accounts });
+      sendSeason();
     }).catch(function () {
       /* A failed session call is not a signed-out player; it is an unknown
          one. The controls stay hidden rather than offering a sign-in that may

@@ -152,9 +152,16 @@ for (const [name, js] of [["crossword", cw], ["wordsearch", ws]]) {
   /* Newest wins BY THE SERVER'S CLOCK: the comparison must be between two
      server-issued stamps, so Date.now() must appear nowhere in it. Device
      clocks meeting across a sync is the midnight bug wearing a new shirt. */
+  /* THE WHOLE FUNCTION, not its first 700 characters. The crossword's
+     pullState grew on 24 Sep 2026 (the sync record that survives a reload) and
+     the window stopped reaching its comparison. The rule it checks did not
+     change: the server's updatedAt against a stamp the server issued, and no
+     device clock anywhere in the function. */
   t(`${name}: adoption compares server stamps only`, (() => {
-    const m = js.match(/function pullState[\s\S]{0,700}?\n  \}/);
-    return !!m && /updatedAt[^\n]*stateSyncedAt/.test(m[0]) && !/Date\.now/.test(m[0]);
+    const start = js.indexOf("function pullState");
+    const end = js.indexOf("\n  function ", start + 1);
+    const body = start > -1 && end > start ? js.slice(start, end) : "";
+    return /String\(r\.updatedAt \|\| ""\) >/.test(body) && /stateSyncedAt/.test(body) && !/Date\.now/.test(body);
   })());
   t(`${name}: the push is debounced and flushed, not per-keystroke`,
     /statePushT = setTimeout\(pushStateNow, 2500\)/.test(js));

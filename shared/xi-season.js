@@ -253,6 +253,18 @@
       });
   }
 
+  /* The raw record, for sending to the account when this device signs in
+     (xi-chrome.js). Read here so the storage format is known in one place. */
+  function record() {
+    var all = readAll(), out = [];
+    Object.keys(all).filter(function (d) { return DAY.test(d); }).sort().forEach(function (d) {
+      var rec = all[d] || {};
+      var s = Array.isArray(rec.s) ? rec.s.slice() : [], f = Array.isArray(rec.f) ? rec.f.slice() : [];
+      if (s.length || f.length) out.push({ day: d, s: s, f: f });
+    });
+    return out;
+  }
+
   function noteStart(game, day) { return add(game, day, "s"); }
   function noteFinish(game, day) { return add(game, day, "f"); }
 
@@ -290,6 +302,7 @@
     season: season,
     streaks: streaks,
     finishedDays: finishedDays,
+    record: record,
     noteStart: noteStart,
     noteFinish: noteFinish,
     days: days,
