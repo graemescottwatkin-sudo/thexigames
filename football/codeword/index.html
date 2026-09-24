@@ -38,7 +38,7 @@
 <link rel="stylesheet" href="/shared/xi-share.css?v=v60">
 <link rel="stylesheet" href="/shared/xi-fulltime.css?v=v60">
 <script src="/shared/xi-theme.js?v=v60"></script>
-<link rel="stylesheet" href="css/style.css?v=v001o">
+<link rel="stylesheet" href="css/style.css?v=v001p">
 </head>
 <body>
 <!-- The bar and the footer are MOUNTED, not written: shared/xi-chrome.js fills
@@ -177,7 +177,7 @@
 <script src="/shared/xi-season.js?v=v60"></script>
 <script src="/shared/xi-plays.js?v=v60"></script>
 <script>XIChrome.init({ game: "codeword" });</script>
-<script src="js/game.js?v=v001o"></script>
+<script src="js/game.js?v=v001p"></script>
 <!-- THE SWITCH, and it is only a switch. The board loads and renders behind
      the landing exactly as it did before; this shows it. The game's own clock
      starts on the first interaction rather than on load, so nothing is running
@@ -236,6 +236,17 @@
   });
   if (ansClose) ansClose.addEventListener("click", function () { setAnswers(false); });
   if (hints) hints.addEventListener("click", function () { setAnswers(false); });
+
+  /* A BOARD'S OWN ADDRESS SAYS WHICH BOARD IT IS. game.js already loads board
+     N from /daily/N, but this card was written once as "Today's board", so a
+     link to board 4 offered board 4 under today's name (found in the app, 24
+     Sep 2026). The card now names the board the address asked for. */
+  var permaNo = (/\/daily\/(\d+)\/?$/.exec(location.pathname) || [])[1];
+  if (permaNo) {
+    var kick = document.getElementById("cwTodayKicker"), title = today.querySelector(".hc-title");
+    if (kick) kick.textContent = "BOARD #" + permaNo;
+    if (title) title.textContent = "Board #" + permaNo;
+  }
 
   today.addEventListener("click", function () {
     home.hidden = true;

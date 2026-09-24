@@ -5,7 +5,7 @@
      it is yesterday's code. aligned_test asserts the two agree, and until
      this game launched it had no BUILD at all — three of its assets were on
      three different tags, which is the same fault with nobody checking. */
-  var BUILD = "v001t";
+  var BUILD = "v001u";
   if (window.XIPlays && document.documentElement) {
     document.documentElement.setAttribute("data-build", BUILD);
   }
@@ -969,7 +969,22 @@
     show();
   }
 
-  $("homeDaily").addEventListener("click", function () { kickOff(null); });
+  /* A BOARD'S OWN ADDRESS OPENS THAT BOARD. /football/ballpark/daily/4 -- the
+     address the archive page and the sitemap give board 4 -- was served this
+     page, and the hero said "Today's eleven" and kicked off TODAY'S board: a
+     shared link to one board opened another (found in the app, 24 Sep 2026,
+     the same fault QuickFire had). The number is read through the family's one
+     reader of the path, the hero says which board it is, and Kick off plays
+     it. The server still decides whether that board counts. */
+  var permaNo = (function () {
+    var raw = window.XIChrome && window.XIChrome.permalink ? window.XIChrome.permalink.read() : null;
+    return /^\d+$/.test(raw || "") ? Number(raw) : null;
+  })();
+  if (permaNo) {
+    $("startKicker").textContent = "BOARD #" + permaNo;
+    $("startTitle").textContent = "Board #" + permaNo;
+  }
+  $("homeDaily").addEventListener("click", function () { kickOff(permaNo); });
 
   /* Today's banked result, if this device has one. Keyed on the DAY, which is
      what recordResult writes and what every other game in the family keys on. */
