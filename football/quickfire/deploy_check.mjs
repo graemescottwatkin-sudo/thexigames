@@ -54,8 +54,8 @@ const hasRoot = (f) => fs.existsSync(path.join(ROOT, f));
    the tag check compared every build against nothing — a tag law worn as a
    costume. QuickFire has never deployed, so this is the tag BELOW its first
    release rather than a placeholder: v001 is the first build that can pass. */
-const LAST_SHIPPED = "v001l";
-const LAST_SHIPPED_ASSETS = "af2071610f83e9f3";
+const LAST_SHIPPED = "v001m";
+const LAST_SHIPPED_ASSETS = "46255fd0a916803c";
 
 t("the game has its own index.html", has("index.html"));
 t("functions are shared at the repository root", hasRoot("functions/api/quickfire/daily.js"));
