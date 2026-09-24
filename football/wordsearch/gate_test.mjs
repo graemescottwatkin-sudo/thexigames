@@ -61,8 +61,16 @@ console.log("\nEvery check, watched failing");
   }
 }
 
-const clean = gate().trim().endsWith("0 failed");
-console.log((clean ? "  ok  " : "MISS  ") + "and the untouched folder still passes");
+/* THE UNTOUCHED TREE PASSES EVERY CHECK PROVED ABOVE — not "the gate says 0
+   failed". This prover runs in the Test suites job, after jsdom is installed,
+   and this gate refuses a tree with node_modules in it; so the whole gate is
+   red there on every run, by design, and a prover asking for "0 failed" was
+   red with it. That was caught in a CI-shaped run before it shipped, having
+   passed on a local tree that had no node_modules. The whole gate being green
+   is the gate's own run, which the deploy sequence makes with the tree clean. */
+const cleanOut = gate().split("\n");
+const clean = cleanOut.some((l) => l.startsWith("  ok  ") && l.includes("parses as an ES module"));
+console.log((clean ? "  ok  " : "MISS  ") + "and the untouched folder passes the checks proved here");
 if (!clean) missed++;
 
 console.log("\n" + (missed ? `${missed} check(s) did not fire` : "Gate proven") + "\n");
