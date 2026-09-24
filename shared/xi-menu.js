@@ -68,7 +68,7 @@
     }
     if (note) {
       note.textContent = d && d.inFlight
-        ? "Today is still open — it counts at midnight."
+        ? "Today is still open — it counts when the next puzzles arrive."
         : "Two games finished in a day is a win; one is a draw.";
     }
     box.hidden = false;

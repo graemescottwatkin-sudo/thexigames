@@ -84,6 +84,15 @@ console.log("The markup, with JavaScript off");
     d.querySelectorAll('a[href="/football/archive/"]').length >= 1);
   t("the reset line says the rule in UTC until the server has spoken",
     /00:00 UTC/.test(d.getElementById("resetLine").textContent));
+  /* A PUZZLE DAY ENDS AT THE RESET, NOT AT MIDNIGHT. The season panel said
+     "it counts at midnight" two screens below "New puzzles at 01:00 BST"
+     (Play build, 24 Sep 2026): in Britain in summer, and in most of the
+     world, midnight is not when the day ends. Asked of both places that
+     carried the sentence: the hub and the game menus' shared script. */
+  const menu = fs.readFileSync(path.join(ROOT, "shared", "xi-menu.js"), "utf8");
+  t("nothing tells a player the day counts at midnight",
+    !/counts at midnight/.test(HTML) && !/counts at midnight/.test(menu) &&
+    /counts when the next puzzles arrive/.test(HTML) && /counts when the next puzzles arrive/.test(menu));
 }
 
 /* ======================================================================
