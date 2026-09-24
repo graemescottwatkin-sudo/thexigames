@@ -425,7 +425,10 @@ body{margin:0;font-family:var(--body)}
 /* THE KEY, because the bands must not mean anything by colour alone. */
 .rs-key{list-style:none;margin:12px 0 0;padding:0;display:flex;flex-wrap:wrap;
   justify-content:center;gap:6px 16px;font-size:12px;color:var(--ink-soft)}
-.rs-key li{display:flex;align-items:center;gap:6px}
+/* No fill of its own. Each row carries its band's class (.z-1 ...) for the
+   chip, and .z-1 also paints a background -- so the whole row went dark green
+   with dark text on it, unreadable (found in the app, 25 Sep 2026). */
+.rs-key li{display:flex;align-items:center;gap:6px;background:none}
 .rs-key i{width:11px;height:11px;border-radius:2px;display:block}
 .rs-key .hit{color:var(--ink);font-weight:700}
 .rs-key .z-1 i{background:#1E6B45}.rs-key .z-2 i{background:#4E9370}
@@ -555,7 +558,14 @@ body.locked .tension{margin:.6cqh 0 0}
 body.locked .big{margin:1cqh 0 .6cqh; min-height:0}
 body.locked .big span{font-size:clamp(34px,9cqh,76px)}
 body.locked .big.empty span{font-size:clamp(14px,2.4cqh,19px)}
-body.locked .track{height:max(44px,7cqh); margin:.6cqh auto 0}
+/* FULL WIDTH, SAID. In the stage's flex column an auto side margin takes the
+   free space, so the track -- whose every child is absolutely positioned --
+   shrank to its content: none. The slider was 0px wide at every size from
+   24 Sep 2026, 23:00 until this, and nobody could place a guess. The end
+   labels collapsed the same way ("374879"). Width is stated; the 560px cap
+   still holds it to one sweep of the thumb. */
+body.locked .track{height:max(44px,7cqh); margin:.6cqh auto 0; width:100%; box-sizing:border-box}
+body.locked .ends{width:100%; box-sizing:border-box}
 body.locked .ends{margin:0 auto .8cqh}
 body.locked .verdict{margin:0 0 .8cqh; min-height:0}
 /* One row, not two: on a phone the buttons were full width each, stacked,
@@ -579,6 +589,18 @@ body.locked .rs-said b{font-size:clamp(16px,3cqh,24px)}
 body.locked .rs-key{margin-top:1cqh}
 body.locked .rs-facts{margin-bottom:1.2cqh}
 body.locked .rs-ends{margin-top:max(12px,2cqh)}
+/* THE MARKERS KEEP THEIR NAMES AND LOSE THEIR NUMBERS on a locked screen. The
+   guess and the answer are printed large just above, and the numbers on the
+   markers sat 52px up -- on top of those figures once the margins were
+   trimmed to fit a 360x640 phone (found in the app, 25 Sep 2026). A name and
+   the mark itself need 26px. */
+body.locked .rs-answer b,body.locked .rs-guess b{display:none}
+body.locked .rs-answer{top:-24px}
+body.locked .rs-guess{top:-26px}
+body.locked .rs-track.tight .rs-guess{top:-4px}
+body.locked .rs-track.tight .rs-guess span{display:none}
+body.locked .rs-track.tight .rs-guess i{height:14px;width:14px;border-radius:50%;border:3px solid var(--ink);background:var(--card);margin-top:2px}
+body.locked .rs-track.tight .rs-guess::after{display:none}
 /* The sentence under the result explains the band; on a locked screen it is
    set small rather than dropped, because it is the one line that says why
    the points are what they are. */

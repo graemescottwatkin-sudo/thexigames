@@ -549,7 +549,23 @@ function measureSlider() {
   const last = kids.length ? Math.max(...kids.map((e) => rect(e).bottom)) : rect(stage).top;
   const pad = parseFloat(getComputedStyle(stage).paddingBottom) || 0;
   const ftCard = document.querySelector("#ft .ftCard");
+  /* THE CONTROL HAS A SIZE. "On screen" was all this asked, and a track of
+     0px width is on screen: the slider was 0px wide at every size from the
+     lock's first release until found in the app (25 Sep 2026), with this
+     suite green throughout. Before the lock the track must be most of the
+     stage wide; after it, the result's markers must not sit on its figures,
+     and the legend's rows must carry no fill of their own. */
+  const track = document.getElementById("track");
+  const trackW = vis(track) ? Math.round(rect(track).width) : null;
+  const stageW = Math.round(rect(stage).width);
+  const facts = document.querySelector("#result .rs-facts");
+  const marks = [...document.querySelectorAll("#result .rs-answer, #result .rs-guess")].filter(vis);
+  const hit = (a, b) => a.left < b.right - 1 && b.left < a.right - 1 && a.top < b.bottom - 1 && b.top < a.bottom - 1;
+  const markOverFacts = vis(facts) ? marks.filter((m) => hit(rect(m), rect(facts))).length : 0;
+  const legendFilled = [...document.querySelectorAll("#result .rs-key li")].filter(vis)
+    .filter((li) => { const bg = getComputedStyle(li).backgroundColor; return bg && bg !== "rgba(0, 0, 0, 0)" && bg !== "transparent"; }).length;
   return {
+    trackW, stageW, markOverFacts, legendFilled,
     locked: document.body.classList.contains("locked"),
     scrollY: document.documentElement.scrollHeight - innerHeight,
     scrollX: document.documentElement.scrollWidth - innerWidth,
@@ -563,8 +579,9 @@ function measureSlider() {
     vh: innerHeight,
   };
 }
-const sliderOk = (m) => m.locked && m.scrollY <= 1 && m.scrollX <= 1 && !m.qCut && !m.stageCut && m.offscreen === 0 && m.deadSpace <= 24;
-const sliderSay = (m) => `locked ${m.locked}, scroll ${m.scrollY}/${m.scrollX}, question ${m.qLen} chars at ${m.qSize}${m.qCut ? " CUT" : ""}${m.stageCut ? ", stage overflows" : ""}, off screen ${m.offscreen}, empty below ${m.deadSpace}px`;
+const sliderOk = (m) => m.locked && m.scrollY <= 1 && m.scrollX <= 1 && !m.qCut && !m.stageCut && m.offscreen === 0 && m.deadSpace <= 24
+  && (m.trackW === null || m.trackW >= Math.min(300, m.stageW * 0.6)) && m.markOverFacts === 0 && m.legendFilled === 0;
+const sliderSay = (m) => `locked ${m.locked}, scroll ${m.scrollY}/${m.scrollX}, question ${m.qLen} chars at ${m.qSize}${m.qCut ? " CUT" : ""}${m.stageCut ? ", stage overflows" : ""}, off screen ${m.offscreen}, empty below ${m.deadSpace}px, track ${m.trackW === null ? "hidden" : m.trackW + "px of " + m.stageW}${m.markOverFacts ? ", markers ON the figures" : ""}${m.legendFilled ? ", legend rows filled" : ""}`;
 
 /* THE LONGEST QUESTION, made longer. The bank's longest question plus detail
    is 274 characters (measured 24 Sep 2026); the samples stop at 215. The
