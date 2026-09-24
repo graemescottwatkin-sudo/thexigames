@@ -1449,8 +1449,14 @@ var FCW = (function () {
     r.forEach(function (x) {
       scoreSum += x.score; timeSum += x.elapsedSeconds;
       if (out.bestScore === null || x.score > out.bestScore) out.bestScore = x.score;
-      if (out.bestFinish === null || x.position < out.bestFinish) out.bestFinish = x.position;
       if (out.fastestSeconds === null || x.elapsedSeconds < out.fastestSeconds) out.fastestSeconds = x.elapsedSeconds;
+      /* ONLY A POSITION THE RESULT CARRIES. A result pulled from the account
+         has none (the server stores no league position), and `undefined <
+         null` let the first such row set bestFinish to undefined, which
+         printed as "undefinedth" (Play build, 24 Sep 2026). A missing position
+         is not a finish: it counts towards nothing here. */
+      if (typeof x.position !== "number") return;
+      if (out.bestFinish === null || x.position < out.bestFinish) out.bestFinish = x.position;
       if (x.position === 1) out.titles++;
       if (x.position <= 4) out.topFour++;
       if (x.position <= 6) out.european++;

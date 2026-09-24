@@ -131,6 +131,17 @@
 
   function today() { return FCW.dailyNumber(); }
 
+  /* A DAILY'S NAME ON ITS OWN BOARD. The engine names every non-season daily
+     "Today's puzzle", which is only true of today's: the Play build showed
+     "TODAY'S PUZZLE · SAT, SEP 19" on a board five days old (24 Sep 2026).
+     Friendlies and matchdays keep their own labels; a past daily is called
+     what it is. The engine's label is left alone, because results and the
+     admin panel read it. */
+  function dailyLabel(no) {
+    var phase = FCW.dailyPhase(no);
+    return phase.phase === "daily" && no !== today() ? "Previous daily" : phase.label;
+  }
+
   /* The only writer of `board`, and of the play reference that goes with it.
 
      Every route that used to set a variable and call newPuzzle() calls this
@@ -286,7 +297,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v004a";
+  var BUILD = "v004b";
   try {
     window.CROSSWORDXI_BUILD = BUILD;
     console.log("Crossword XI build " + BUILD);
@@ -1318,7 +1329,7 @@
        newcomer they are late, and the date is what the calendar they came from
        was showing. */
     $("strapText").innerHTML = board.kind === "daily"
-      ? escapeHtml(FCW.dailyPhase(board.no).label) + " &middot; " +
+      ? escapeHtml(dailyLabel(board.no)) + " &middot; " +
         escapeHtml(FCW.dailyDate(board.no).toLocaleDateString(undefined,
           { weekday: "short", day: "numeric", month: "short" })) +
         /* Said out loud on the board itself. Once a board's answers page is
@@ -1444,12 +1455,14 @@
     $("startOverlay").classList.toggle("show", !started);
     if (!started) {
       $("kickMode").textContent = board.kind === "daily"
-        ? FCW.dailyPhase(board.no).label : "Practice puzzle";
+        ? dailyLabel(board.no) : "Practice puzzle";
       syncKickSelect();
       // Topic filters belong to Practice: the Daily is the same for everyone.
       $("filterBox").style.display = board.kind === "practice" ? "" : "none";
       $("kickNote").textContent = board.kind === "daily"
-        ? "Today's puzzle, the same for everyone. The clock starts at kick-off."
+        ? (board.no === today()
+            ? "Today's puzzle, the same for everyone. The clock starts at kick-off."
+            : "An earlier daily, the same board everyone had. The clock starts at kick-off.")
         : "The clock starts at kick-off.";
       if (board.kind === "practice") renderFilters(); else $("kickOffBtn").disabled = false;
     }
@@ -4616,7 +4629,12 @@
        is bounded. See capFinishedDailies. */
     capFinishedDailies();
     list.push(FCW.makeResultRecord({
-      date: FCW.localDateKey(), at: Date.now(), dailyNo: board.no, seed: seed,
+      /* THE BOARD'S OWN DAY, not the device's local one. Dated by the device,
+         daily 3 finished at 00:20 BST was filed as 21 Sep while the board is
+         20 Sep, and the account's played_on took the wrong day from it. The
+         server decides what day a board is; dailyDate is built from the same
+         epoch it uses. `at` keeps the moment it was actually finished. */
+      date: FCW.localDateKey(FCW.dailyDate(board.no)), at: Date.now(), dailyNo: board.no, seed: seed,
       /* So a verified rewrite can find its own row. recordThemed has carried
          this for the same reason; the daily never did, which is why the
          verified score could not replace the browser's. */
@@ -4817,15 +4835,29 @@
       return '<div class="stat"><b>' + escapeHtml(String(c[1])) + '</b><span>' +
         escapeHtml(c[0]) + '</span></div>';
     }).join("");
+    /* WHERE THIS HISTORY IS KEPT, said truthfully. It read "Saved on this
+       device only" to a player who was signed in and whose results were on the
+       account (Play build, 24 Sep 2026). */
+    var keptNote = $("statsKept");
+    if (keptNote) {
+      keptNote.textContent = account
+        ? "Saved to your account, so this history follows you to any device you sign in on. Practice puzzles are not counted."
+        : "Saved on this device only \u2014 clearing browser data, private browsing or switching device will lose this history. Sign in to keep it. Practice puzzles are not counted.";
+    }
     // Compact history, most recent first.
     var recent = results.slice().sort(function (a, b) { return b.dailyNo - a.dailyNo; }).slice(0, 20);
     $("historyEmpty").style.display = recent.length ? "none" : "";
     $("historyBody").innerHTML = recent.map(function (r) {
       return "<tr>" +
-        '<td class="dim">' + escapeHtml(r.date) + "</td>" +
+        /* THE BOARD'S OWN DAY, from its number, not the `date` a device once
+           wrote: that was the device's local day, so a board finished after
+           midnight in Britain was filed a day late and disagreed with the
+           calendar beside it (Play build, 24 Sep 2026). */
+        '<td class="dim">' + escapeHtml(typeof r.dailyNo === "number"
+          ? FCW.localDateKey(FCW.dailyDate(r.dailyNo)) : (r.date || "\u2014")) + "</td>" +
         '<td class="club">' + escapeHtml(r.club || "\u2014") + "</td>" +
         '<td class="dim">' + escapeHtml(r.season || "\u2014") + "</td>" +
-        '<td class="pos">' + FCW.ordinal(r.position) + "</td>" +
+        '<td class="pos">' + (typeof r.position === "number" ? FCW.ordinal(r.position) : "\u2014") + "</td>" +
         "<td>" + r.score + " pts</td>" +
         '<td class="dim">' + fmtClock(r.elapsedSeconds) + "</td>" +
         "</tr>";

@@ -76,6 +76,12 @@ jobs:
           # open; the owner signed in elsewhere and his 86 never left the phone
           # (24 Sep 2026). Proven to fail on the old boot path.
           node football/crossword/signin_elsewhere_test.mjs
+          # FOUR THINGS THE CROSSWORD SAID THAT WERE NOT TRUE (Play build, 24 Sep
+          # 2026): "undefinedth" for a result with no position, "saved on this
+          # device only" to a signed-in player, a result dated by the device's
+          # local day, and "Today's puzzle" on a board days old. Five sabotages
+          # caught.
+          node football/crossword/labels_test.mjs
           node football/crossword/tabs_test.mjs
           node football/crossword/themes_ui_test.mjs
           # The club and theme pages are server-rendered and meant to be read
