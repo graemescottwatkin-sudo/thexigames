@@ -132,8 +132,29 @@ server.listen(0, "127.0.0.1", async () => {
   });
   const w = dom.window, d = w.document;
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-  await wait(3000);
+  /* WAIT FOR THE THING, NOT FOR A NUMBER OF MILLISECONDS. Every guess was
+     followed by a fixed sleep, 600ms or 250ms, and a loaded machine loses that
+     race: the end row had not reached the server when it was read, and one
+     sweep of the full roster went red on it on 24 Sep 2026 while eight reruns
+     passed. Twelve copies at once turned half the suite red — a submit made
+     while the last was still in flight returns early and burns no turn, so
+     the loops that play the board out stopped short — and heavier load beat
+     the 3000ms boot sleep too, leaving no board to play at all. The page says
+     when it is ready (the document is complete, the board has arrived and the
+     play's start row has reached the server) and when a guess has settled
+     (state().busy clears when the server answers), so those are what is
+     waited on. The deadline is the guard against a wait that cannot end: a
+     condition that never comes true returns false, and the assertion after
+     it fails as it always would have. */
+  const until = async (ok, ms = 10000) => {
+    const end = Date.now() + ms;
+    while (!ok() && Date.now() < end) await wait(20);
+    return ok();
+  };
+  await until(() => d.readyState === "complete" && !!w.__grid && !!w.__grid.state().board &&
+    playPosts.some((r) => r && r.event === "start"), 30000);
   const G = w.__grid;
+  const settled = () => until(() => !G.state().busy);
   const cells = () => [...d.querySelectorAll("#gdBoard .gd-cell.on")];
   const letters = () => cells().map((c) => c.textContent.replace(/^\d+/, "").trim()).join("");
 
@@ -222,7 +243,7 @@ server.listen(0, "127.0.0.1", async () => {
     t("the typed letters appear in the slot row",
       [...d.querySelectorAll("#gdSlots .gd-slot")].filter((s) => s.textContent === "Z").length === e.len);
     G.submit();
-    await wait(600);
+    await settled();
     t("the guess cost a turn, and the count came from the server",
       d.getElementById("gdTurns").textContent === String(RULES.TURNS_START - 1),
       d.getElementById("gdTurns").textContent);
@@ -242,7 +263,7 @@ server.listen(0, "127.0.0.1", async () => {
     G.pick(0);
     e.answer.split("").forEach((ch) => G.type(ch));
     G.submit();
-    await wait(600);
+    await settled();
     const st = G.state();
     t("the entry is solved", st.solved[e.n] === true);
     t("the turn came back", d.getElementById("gdTurns").textContent === String(RULES.TURNS_START),
@@ -287,7 +308,7 @@ server.listen(0, "127.0.0.1", async () => {
       const typed = G.state().typed;
       for (let j = 0; j < typed.length; j++) if (!typed[j]) G.type(x.answer[j]);
       G.submit();
-      await wait(250);
+      await settled();
     }
     const st = G.state();
     /* AND NOW THE DIVIDERS ARE THERE. The other half of the rule: absent on an
@@ -345,6 +366,7 @@ server.listen(0, "127.0.0.1", async () => {
        `elapsed` is asserted only to be a number and not negative: jsdom plays
        a board in well under a second, so demanding it be positive would be a
        check that fails on a fast machine and passes on a slow one. */
+    await until(() => playPosts.some((r) => r && r.event === "end"));
     const ended = playPosts.filter((r) => r && r.event === "end");
     const last = ended[ended.length - 1] || null;
     t("the play's end says how far it got", !!last && last.solved === RULES.ENTRIES,
@@ -376,7 +398,7 @@ server.listen(0, "127.0.0.1", async () => {
       const typed = G.state().typed;
       for (let j = 0; j < typed.length; j++) if (!typed[j]) G.type("Q");
       G.submit();
-      await wait(250);
+      await settled();
     }
     t("the board ends when the server says the turns are gone", G.state().over === true,
       `turns ${G.state().turns}`);
@@ -452,7 +474,8 @@ server.listen(0, "127.0.0.1", async () => {
       },
     });
     const d2 = dom2.window.document;
-    await wait(2500);
+    await until(() => d2.readyState === "complete" && !!dom2.window.__grid &&
+      !!dom2.window.__grid.state().board, 30000);
     const ft2 = d2.getElementById("gdFullTime");
     t("a board this device finished opens on its Full Time card",
       !!ft2 && ft2.hidden === false, ft2 ? "hidden=" + ft2.hidden : "no #gdFullTime");
