@@ -33,7 +33,7 @@
 <!-- The theme, stamped before first paint: light unless the player chose
      dark, decided in one shared place for every page of the family. -->
 <script src="/shared/xi-theme.js?v=v60"></script>
-<link rel="stylesheet" href="css/style.css?v=v001s">
+<link rel="stylesheet" href="css/style.css?v=v001t">
 <!-- NO data-game ON <html>, DELIBERATELY. The accent palette lives in
      shared/xi-tokens.css, which every page of the site loads, and this game has
      not launched — naming it there would name it to everybody. QuickFire XI is
@@ -177,17 +177,24 @@
          <strong>The XI Games &middot; <span id="buildTag"></span></strong></p>
     </div>
 
-    <section class="how" id="how">
-      <h2>How to play</h2>
-      <p><b>Eleven numbers, one slider.</b> A capacity, a goals total, the year a rule came in, an attendance. Each question carries a line underneath that removes the ambiguity &mdash; which competitions, whose career, to the nearest what &mdash; so the only thing left to work out is the number.</p>
-      <p><b>Inside the ballpark is full marks.</b> How close you are is measured in <em>ballparks</em>: multiples of that question&rsquo;s own tolerance, so one ruler grades a crowd size and a transfer fee without either needing its own rule. Bang on is a quarter of a ballpark. The ladder for the question in play is on screen before you lock, never after.</p>
-      <p><b>The clock takes the rest.</b> Twenty seconds a question. The first ten are free &mdash; time to read it and reach the number &mdash; then the ten points fall a point a second. The ladder&rsquo;s share is taken from whatever the clock has left.</p>
-      <p><b>Three substitutions.</b> A wide miss spends one, and so does running out of time. Narrowing the range spends one too; once they are gone, narrowing costs four seconds of that question&rsquo;s clock instead. Three spent still wins; a fourth is a draw at best.</p>
-      <p><b>Some questions are graded harder.</b> Ages bunch so tightly that being roughly right is no achievement, so those are marked strict: right or a year out to score at all, and anything past that spends a substitution. The board tells you which ladder applies before you lock.</p>
-      <p><b>114 is the ceiling.</b> Eleven questions at ten is 110, and up to four bang-on bonuses carry it to 114.</p>
-    </section>
   </section>
 
+  <!-- HOW TO PLAY, BESIDE THE SCREENS rather than inside the landing, so it
+       can open over a locked play screen. On the landing it reads where it
+       always did. -->
+  <section class="how" id="how">
+  <!-- On a locked play screen this section opens OVER the game when the bar's
+       "How to play" is used (the #how target), and this is the way back to
+       the board. Hidden everywhere else. -->
+  <a class="how-back" href="#play">Back to the game</a>
+    <h2>How to play</h2>
+    <p><b>Eleven numbers, one slider.</b> A capacity, a goals total, the year a rule came in, an attendance. Each question carries a line underneath that removes the ambiguity &mdash; which competitions, whose career, to the nearest what &mdash; so the only thing left to work out is the number.</p>
+    <p><b>Inside the ballpark is full marks.</b> How close you are is measured in <em>ballparks</em>: multiples of that question&rsquo;s own tolerance, so one ruler grades a crowd size and a transfer fee without either needing its own rule. Bang on is a quarter of a ballpark. The ladder for the question in play is on screen before you lock, never after.</p>
+    <p><b>The clock takes the rest.</b> Twenty seconds a question. The first ten are free &mdash; time to read it and reach the number &mdash; then the ten points fall a point a second. The ladder&rsquo;s share is taken from whatever the clock has left.</p>
+    <p><b>Three substitutions.</b> A wide miss spends one, and so does running out of time. Narrowing the range spends one too; once they are gone, narrowing costs four seconds of that question&rsquo;s clock instead. Three spent still wins; a fourth is a draw at best.</p>
+    <p><b>Some questions are graded harder.</b> Ages bunch so tightly that being roughly right is no achievement, so those are marked strict: right or a year out to score at all, and anything past that spends a substitution. The board tells you which ladder applies before you lock.</p>
+    <p><b>114 is the ceiling.</b> Eleven questions at ten is 110, and up to four bang-on bonuses carry it to 114.</p>
+  </section>
   <section class="screen" id="screenGame" hidden>
     <div class="game">
 
@@ -364,7 +371,7 @@
 <!-- The rules, the same file the server grades with. It holds the ladders, the
      clock and what a substitution costs — and no answers, which is the whole
      arrangement: see the note at the top of it. -->
-<script src="js/rules.js?v=v001s"></script>
-<script src="js/game.js?v=v001s"></script>
+<script src="js/rules.js?v=v001t"></script>
+<script src="js/game.js?v=v001t"></script>
 </body>
 </html>

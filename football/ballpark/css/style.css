@@ -509,3 +509,105 @@ body{margin:0;font-family:var(--body)}
   .acts .kick.next{margin-left:0;width:100%}
   .grades summary{flex-direction:column;align-items:flex-start;gap:6px}
 }
+
+/* ---- THE LOCKED SCREEN ----------------------------------------------------
+
+   The owner's ruling, 24 Sep 2026: while playing, the page is the screen and
+   nothing scrolls, at every size, with the elements scaling up. body.locked
+   is set by game.js checkRoom() while the game screen is up, and taken off
+   when the question cannot fit (large text, a very short screen) -- then
+   every rule here stands down and the page scrolls as it did.
+
+   Under the bar: the scoreboard on one row, the pips, and the stage, which
+   has the rest. In the stage the question takes the spare height and game.js
+   shrinks it until it is whole; the value, the track and the buttons are
+   sized in units of the stage (cqw, cqh). After the lock the result stands in
+   for the value and the track, which it repeats. The eleven is a column of
+   its own where there is room, and on a phone the pips carry it. */
+body.locked{height:100vh; height:100dvh; overflow:hidden; display:flex; flex-direction:column}
+body.locked>*{flex:none}
+body.locked>footer{display:none}
+body.locked>.app{flex:1 1 auto; min-height:0; width:100%; box-sizing:border-box; display:flex; flex-direction:column;
+  padding:6px 10px 8px; margin:0}
+body.locked .app>:not(#screenGame){display:none}
+body.locked #screenGame{flex:1 1 auto; min-height:0; display:flex; flex-direction:column}
+body.locked .game{flex:1 1 auto; min-height:0; width:100%; max-width:1100px; margin:0 auto;
+  display:grid; grid-template-columns:minmax(0,1fr); grid-template-rows:auto auto minmax(0,1fr);
+  grid-template-areas:"board" "ladder" "stage"}
+
+body.locked .board{grid-area:board; grid-template-columns:repeat(5,minmax(0,1fr)); margin:0 0 6px}
+body.locked .board .bd-cell:last-child{grid-column:auto}
+body.locked .bd-cell{padding:5px 8px; gap:1px}
+body.locked .bd-l{font-size:9px; letter-spacing:.05em; white-space:nowrap; overflow:hidden; text-overflow:ellipsis}
+body.locked .bd-cell>b{font-size:clamp(18px,2.8vh,30px)}
+body.locked .bd-sub{display:none}
+body.locked .ladder{grid-area:ladder; margin:0 0 6px}
+body.locked .eleven{display:none}
+
+body.locked .stage{grid-area:stage; min-height:0; overflow:hidden; container-type:size;
+  display:flex; flex-direction:column; padding:10px 14px}
+body.locked .stage>:not(.q){flex:none}
+body.locked .eyebrow{display:none}
+body.locked .q{flex:1 1 auto; min-height:0; overflow:hidden; display:flex; flex-direction:column;
+  justify-content:center; margin:0; font-size:clamp(17px,min(6.2cqw,4.6cqh),40px); line-height:1.25}
+body.locked .q small{font-size:max(13px,.64em)}
+body.locked .tension{margin:.6cqh 0 0}
+body.locked .big{margin:1cqh 0 .6cqh; min-height:0}
+body.locked .big span{font-size:clamp(34px,9cqh,76px)}
+body.locked .big.empty span{font-size:clamp(14px,2.4cqh,19px)}
+body.locked .track{height:max(44px,7cqh); margin:.6cqh auto 0}
+body.locked .ends{margin:0 auto .8cqh}
+body.locked .verdict{margin:0 0 .8cqh; min-height:0}
+/* One row, not two: on a phone the buttons were full width each, stacked,
+   which is 50px of a locked screen spent on a gap between two buttons. */
+body.locked .acts{flex-wrap:nowrap}
+body.locked .acts .kick,body.locked .acts .ghostBtn{min-height:max(44px,6.5cqh); width:auto; flex:1 1 0;
+  justify-content:center; margin-left:0}
+body.locked .grades{margin-top:.8cqh; padding-top:.8cqh}
+/* After the lock the result says the guess, the answer and the distance on a
+   track of its own, so the value, the live track and the running tension
+   would be the same facts twice. */
+body.locked .stage:has(#result:not([hidden])) :is(.tension,.big,.track,.ends,.verdict,.grades){display:none}
+/* The guide stays before the lock -- a strict question shows its harsher terms
+   there, which is the point of it -- as one line: its heading and the way in. */
+body.locked .grades .gr-say{display:none}
+body.locked .grades summary{flex-direction:row; align-items:center}
+body.locked .result{margin:.4cqh 0 0}
+body.locked .rs-banner{padding:.8cqh 12px; margin:0 0 1cqh; gap:10px}
+body.locked .rs-icon{width:30px; height:30px}
+body.locked .rs-said b{font-size:clamp(16px,3cqh,24px)}
+body.locked .rs-key{margin-top:1cqh}
+body.locked .rs-facts{margin-bottom:1.2cqh}
+body.locked .rs-ends{margin-top:max(12px,2cqh)}
+/* The sentence under the result explains the band; on a locked screen it is
+   set small rather than dropped, because it is the one line that says why
+   the points are what they are. */
+body.locked .rs-why{margin-top:.8cqh; font-size:12.5px; line-height:1.35}
+body.locked .acts .kick.next{padding:8px 16px}
+
+/* Room beside the stage: the eleven comes back, in a column of its own that
+   scrolls inside itself if it must. */
+@media (min-width:960px){
+  body.locked .game{grid-template-columns:minmax(0,1fr) 300px; column-gap:16px;
+    grid-template-areas:"board board" "ladder ladder" "stage eleven"}
+  body.locked .eleven{display:block; grid-area:eleven; margin:0; min-height:0; overflow:auto; align-self:stretch}
+}
+
+/* Full Time is a card over the board. Its own height is capped at the screen
+   and it scrolls inside itself, so the page under it never has to. */
+.ftCard{max-height:100%; overflow:auto}
+
+/* HOW TO PLAY, ON A LOCKED SCREEN. The bar's "How to play" goes to #how, and
+   while the play screen is locked that section is hidden with the rest of the
+   landing -- so the link did nothing mid-game (found 24 Sep 2026, the day the
+   screens were locked). As its target it opens over the game instead, a panel
+   the height of the screen that scrolls in itself, with the way back at the
+   top; leaving the target closes it. The page under it never scrolls. */
+/* Its own column, now that it is not inside the landing screen. */
+.how{max-width:1080px;margin:0 auto;padding:8px 20px 40px;box-sizing:border-box}
+.how-back{display:none}
+body.locked #how:target{display:block!important;position:fixed;inset:0;z-index:60;margin:0;max-width:none;
+  overflow:auto;overscroll-behavior:contain;background:var(--paper);padding:14px 16px 40px;box-sizing:border-box}
+body.locked #how:target .how-back{display:inline-flex;align-items:center;min-height:var(--tap,44px);padding:0 16px;
+  margin:0 0 10px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink);
+  font-family:var(--disp);font-weight:700;letter-spacing:.08em;text-transform:uppercase;text-decoration:none}

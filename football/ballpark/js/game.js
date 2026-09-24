@@ -5,7 +5,7 @@
      it is yesterday's code. aligned_test asserts the two agree, and until
      this game launched it had no BUILD at all — three of its assets were on
      three different tags, which is the same fault with nobody checking. */
-  var BUILD = "v001s";
+  var BUILD = "v001t";
   if (window.XIPlays && document.documentElement) {
     document.documentElement.setAttribute("data-build", BUILD);
   }
@@ -283,6 +283,7 @@
     $("lock").hidden = false;
     $("narrow").disabled = false;
     slider.disabled = false;
+    queueRoom();
 
     /* THE CLOCK STARTS WHEN THE QUESTION IS SHOWN, and the server is told so
        here — it will not grade a question it was never told was open. Asking
@@ -459,7 +460,57 @@
           : "Your distance landed in a scoring band, but the clock had nothing "
             + "left to give.");
     $("result").hidden = false;
+    queueRoom();
   }
+
+  /* ---- the locked screen --------------------------------------------------
+
+     The owner's ruling, 24 Sep 2026: while playing, the page is the screen and
+     nothing scrolls, at every size, "just change the size of elements to scale
+     up". The stylesheet does the locking (body.locked); this sizes the one
+     thing whose length varies -- the question and its detail line, 274
+     characters at the longest in the bank (measured 24 Sep 2026) -- and is the
+     one way out.
+
+     THE QUESTION TAKES WHAT IS LEFT and shrinks until it fits there, so it is
+     never cut off. After the lock the result stands in for the value and the
+     track, and the question shrinks again if the result needs the room. If
+     even that fails -- a very short screen, large system text, the scoring
+     guide opened on a small phone -- the page goes back to scrolling, because
+     a question you can scroll to is better than one you cannot read. */
+  function fitQuestion() {
+    var q = $("q"), stage = document.querySelector("#screenGame .stage");
+    if (!q || !stage) return;
+    q.style.fontSize = "";
+    if (!document.body.classList.contains("locked")) return;
+    var over = function () {
+      return stage.scrollHeight > stage.clientHeight + 1 || q.scrollHeight > q.clientHeight + 1;
+    };
+    var size = parseFloat(getComputedStyle(q).fontSize) || 20;
+    while (over() && size > 14) { size -= 1; q.style.fontSize = size + "px"; }
+  }
+
+  function checkRoom() {
+    var body = document.body, screen = $("screenGame");
+    var want = !!screen && !screen.hidden;
+    body.classList.toggle("locked", want);
+    fitQuestion();
+    if (!want) return;
+    var stage = document.querySelector("#screenGame .stage"), q = $("q");
+    if (stage && (stage.scrollHeight > stage.clientHeight + 1 || q.scrollHeight > q.clientHeight + 1)) {
+      body.classList.remove("locked");
+      fitQuestion();
+    }
+  }
+  var roomQueued = false;
+  function queueRoom() {
+    if (roomQueued) return;
+    roomQueued = true;
+    (window.requestAnimationFrame || setTimeout)(function () { roomQueued = false; checkRoom(); });
+  }
+  window.addEventListener("resize", queueRoom);
+  /* Opening or closing the scoring guide changes the stage's height. */
+  if ($("grades")) $("grades").addEventListener("toggle", queueRoom);
 
   function settle(r) {
     var q = board.questions[step];
@@ -523,6 +574,7 @@
     $("next").hidden = false; $("next").disabled = false;
     $("next").focus();
     paint();
+    queueRoom();
 
     if (r.over) { fullTime(r); }
   }
@@ -750,6 +802,7 @@
       });
     }
     $("ft").hidden = false;
+    queueRoom();
     /* BANKED AT THE WHISTLE, after the score is settled and before anything
        else can go wrong. */
     recordResult();
@@ -954,6 +1007,7 @@
     $("screenStart").hidden = true;
     $("screenGame").hidden = false;
     $("ft").hidden = false;
+    queueRoom();
   }
 
   /* ONE WAY IN, whichever card was pressed. `no` is null for today and a board
