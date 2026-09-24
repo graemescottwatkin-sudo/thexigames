@@ -31,7 +31,7 @@
  * link so a friend could replay the exact eleven, and that is now a board
  * number in the fragment, which is shorter and does not describe the board.
  */
-var BUILD = "v001n";
+var BUILD = "v001o";
 
 (function bootstrap() {
   'use strict';

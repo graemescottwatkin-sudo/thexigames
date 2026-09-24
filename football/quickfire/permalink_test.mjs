@@ -98,7 +98,18 @@ async function open(at) {
       w.fetch = (u, o) => fetch(new URL(u, w.location.href), o);
     },
   });
-  await wait(3000);
+  /* UNTIL THE PAGE HAS ASKED FOR ITS BOARD AND DRAWN IT, not a fixed three
+     seconds. The first open of a run is a cold start -- the functions import,
+     the SQLite is built -- and in a full CI-shaped sweep it overran three
+     seconds and read the landing before the page had asked for anything
+     (24 Sep 2026). Fifteen is a ceiling, not a wait. */
+  const w = dom.window;
+  for (let i = 0; i < 150; i++) {
+    const date = (w.document.getElementById("startDate") || {}).textContent || "";
+    if (asked.length && /No\. \d+/.test(date)) break;
+    await wait(100);
+  }
+  await wait(300);
   return dom;
 }
 const txt = (d, id) => ((d.getElementById(id) || {}).textContent || "").trim();

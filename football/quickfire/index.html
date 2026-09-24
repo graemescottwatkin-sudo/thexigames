@@ -42,7 +42,7 @@
      the fault the shared layer exists to stop. -->
 <link rel="stylesheet" href="/shared/xi-landing.css?v=v60">
 <script src="/shared/xi-theme.js?v=v60"></script>
-<link rel="stylesheet" href="css/style.css?v=v001n">
+<link rel="stylesheet" href="css/style.css?v=v001o">
 </head>
 <body>
 
@@ -50,7 +50,7 @@
      shared/xi-chrome.js; only this game's own control is written here. -->
 <header class="xic-bar">
   <div class="xic-right">
-    <button class="xic-ghost" id="qfHowTo" data-optional>How to play</button>
+    <a class="xic-ghost" href="#how" data-optional>How to play</a>
   </div>
 </header>
 
@@ -167,6 +167,22 @@
     <button class="btn quiet" id="playAgain">Clear today's Daily and replay</button>
   </section>
 
+  <!-- HOW TO PLAY. The bar's "How to play" was a button with nothing behind it
+       from the day the game launched: no handler and no rules on the page.
+       Written 24 Sep 2026 in the owner's words -- "11 fast Qs" -- and kept that
+       short. The numbers are the rule's own (js/config.js): a 30-second
+       question plays 90 minutes, 100 points in the first ten falling to 36, a
+       wrong pick costs ten minutes, a sub costs 20. On a locked play screen it
+       opens over the game from the bar, with the way back at the top. -->
+  <section class="how" id="how">
+    <a class="how-back" href="#play">Back to the game</a>
+    <h2>How to play</h2>
+    <p><b>Eleven quick questions.</b> Pick one of the four answers.</p>
+    <p><b>Beat the clock.</b> Each question plays a 90-minute match in 30 seconds. Get it right early and it is worth more: 100 points in the first ten minutes, down to 36 near the end. Run out of time and it is nothing.</p>
+    <p><b>Wrong answer?</b> It costs ten minutes. Pick again.</p>
+    <p><b>Three subs.</b> Don't fancy a question? Sub it off for another, for 20 points.</p>
+  </section>
+
 </main>
 
 <!-- THE SHARED FOOTER, AT TOP LEVEL. It carries the family disclaimer. -->
@@ -177,9 +193,9 @@
 <!-- xi-played.js first: xi-fulltime.js asks it what has been played today. -->
 <script src="/shared/xi-played.js?v=v60"></script>
 <script src="/shared/xi-fulltime.js?v=v60"></script>
-<script src="js/config.js?v=v001n"></script>
+<script src="js/config.js?v=v001o"></script>
 <script src="/shared/xi-season.js?v=v60"></script>
 <script src="/shared/xi-plays.js?v=v60"></script>
-<script src="js/game.js?v=v001n"></script>
+<script src="js/game.js?v=v001o"></script>
 </body>
 </html>
