@@ -70,3 +70,34 @@ export async function quickfireEnv(days) {
   for (const day of list) db.prepare("INSERT INTO qf_daily (play_date, status) VALUES (?, 'published')").run(day);
   return { DB: d1 };
 }
+
+/* ---- Codeword ---------------------------------------------------------------
+ * A 13x13 board, the size of every board in the bank (measured 24 Sep 2026),
+ * with eleven entries: seven across on the even rows and four down on the
+ * first even columns, blocks on the odd rows between them. The letters are a
+ * fixture's, not an answer anybody is asked for. Returned RAW -- with rows,
+ * words and code -- so the page is served it through the real publicBoard(),
+ * which is what strips the solution. */
+export function codewordRawBoard(no, day) {
+  const N = 13;
+  const FILL = "FIXTUREBOARDSQUAREFOOTBALLCODEWORDMATCHPLAYGRID";
+  let k = 0;
+  const next = () => FILL[(k++) % FILL.length];
+  const grid = [];
+  for (let r = 0; r < N; r++) {
+    grid[r] = [];
+    for (let c = 0; c < N; c++) grid[r][c] = (r % 2 === 1 && c % 2 === 1) ? "." : next();
+  }
+  const rows = grid.map((row) => row.join(""));
+  const words = [];
+  for (let r = 0; r < N; r += 2) words.push([rows[r], r, 0, "a"]);
+  for (let c = 0; c < 8; c += 2) words.push([grid.map((row) => row[c]).join(""), 0, c, "d"]);
+  const ALPHA = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+  const code = {};
+  ALPHA.split("").forEach((l, i) => { code[l] = ((i * 7) % 26) + 1; });
+  return {
+    no, day, size: N, rows, code, words,
+    given: ["F", "O", "T"],
+    hints: words.map((w, i) => ({ sense: "Fixture entry " + (i + 1), cat: "Club", enum: String(w[0].length) })),
+  };
+}

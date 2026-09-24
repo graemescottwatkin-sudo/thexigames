@@ -6,9 +6,13 @@
  * screens its not needed, just change the size of elements to scale up"), and
  * the player cards "always take up a consistent amount of the pitch".
  *
- * TWO KINDS OF SCREEN. A PITCH (Scrambled, Vowels): eleven cards on a
+ * FIVE KINDS OF SCREEN. A PITCH (Scrambled, Vowels): eleven cards on a
  * formation. A QUIZ (QuickFire): a clue, four options and the controls, where
- * what varies is the length of the clue.
+ * what varies is the length of the clue. A SLIDER (Ballpark): a question, a
+ * value and a track, and after each lock a result that stands in for them. A
+ * DUEL (HiLo): two faces and a call, with the settled calls piling up above
+ * them in a panel that scrolls in itself. A CODEWORD: a square grid fitted to
+ * the height that is left, a key, a keypad and the answers in a panel.
  *
  * WHAT IT PROVES FOR A PITCH, in real Chromium, on every sample board, at five
  * sizes (three of them touch, with the family's keyboard up):
@@ -59,12 +63,15 @@ const LOCKED = {
   scrambled: { kind: "pitch", path: "/football/scrambled/", api: "/api/scrambled/daily", boards: [1, 2, 3, 4] },
   vowels: { kind: "pitch", path: "/football/vowels/", api: "/api/scrambled/daily", boards: [1, 2, 3, 4] },
   quickfire: { kind: "quiz", path: "/football/quickfire/" },
+  ballpark: { kind: "slider", path: "/football/ballpark/" },
+  hilo: { kind: "duel", path: "/football/hilo/" },
+  codeword: { kind: "codeword", path: "/football/codeword/" },
 };
 /* Not locked yet, by name, so the list of what is left is a fact in the tree
    and not a memory. Moving a game from here to LOCKED is its whole test. */
 const PENDING = {
-  "football/wordsearch": true, "football/hilo": true, "football/ballpark": true,
-  "football/grid": true, "football/codeword": true,
+  "football/wordsearch": true,
+  "football/grid": true,
   "football/whoami": true, "friends/whoami": true,
 };
 /* Locked already, and measured by their own browser suite. */
@@ -93,7 +100,21 @@ console.log("The roster");
 }
 
 /* ---- the server ----------------------------------------------------------- */
-const { quickfireEnv } = await import(pathToFileURL(path.join(ROOT, "tools", "lock_fixtures.mjs")).href);
+const { quickfireEnv, codewordRawBoard } = await import(pathToFileURL(path.join(ROOT, "tools", "lock_fixtures.mjs")).href);
+const { publicBoard: cwPublic } = await import(pathToFileURL(path.join(ROOT, "functions", "_lib", "cw-board.js")).href);
+/* Codeword refuses to run without a database, and its round endpoints write
+   to one, so the board is the fixture through the real publicBoard() and the
+   round is answered here -- the shapes are the ones its own journey suite
+   (football/codeword/round_test.mjs) answers with. Layout is what is under
+   test, not the round. */
+function codewordStub(what, body) {
+  if (what === "daily") return { board: cwPublic(codewordRawBoard(21, utcDay())) };
+  if (what === "play") return { playId: "lock-1", startedMs: Date.now(), rate: 3, scored: true, subsLeft: 3 };
+  if (what === "mark") return body && body.check ? { wrong: [], spentMinutes: 5 } : { solved: [] };
+  if (what === "reveal") return { letter: "A", subsLeft: 2, spentMinutes: 7, charged: true };
+  if (what === "finish") return { score: 100, result: "W" };
+  return {};
+}
 const { utcDay } = await import(pathToFileURL(path.join(ROOT, "functions", "_lib", "daily.js")).href);
 /* One reading of the day, handed to the fixture and (through the real
    functions) to the page, so the two cannot disagree across midnight. */
@@ -106,6 +127,14 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://127.0.0.1");
   const p = decodeURIComponent(url.pathname);
   try {
+    if (p.startsWith("/api/codeword/")) {
+      const chunks = [];
+      for await (const c of req) chunks.push(c);
+      let body = {};
+      try { body = chunks.length ? JSON.parse(Buffer.concat(chunks).toString("utf8")) : {}; } catch (e) {}
+      res.writeHead(200, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify(codewordStub(p.slice("/api/codeword/".length).split("/")[0], body)));
+    }
     if (p.startsWith("/api/")) {
       const file = path.join(ROOT, "functions", p.replace(/\/$/, "") + ".js");
       if (!fs.existsSync(file)) { res.writeHead(404, { "Content-Type": "application/json" }); return res.end("{}"); }
@@ -233,6 +262,31 @@ async function bannerOffLock(page, gameId, label) {
   t(`${label}: and on the landing, which scrolls, it is the full sentence`, !b.locked && b.long && !b.short, JSON.stringify(b));
 }
 
+/* HOW TO PLAY, MID-GAME. The bar's link goes to #how, which a locked screen
+   hides with the rest of the landing -- so it did nothing mid-game until it
+   opened as a panel over the game. It must open inside the screen, leave the
+   page unscrolled and locked under it, and close again from its own link. */
+async function howCheck(page, label) {
+  const opened = await page.evaluate(async () => {
+    location.hash = "#how";
+    await new Promise((r) => setTimeout(r, 250));
+    const h = document.getElementById("how"), r = h.getBoundingClientRect();
+    return { shown: getComputedStyle(h).display !== "none", top: Math.round(r.top), bottom: Math.round(r.bottom),
+      vh: innerHeight, back: !!h.querySelector(".how-back") && getComputedStyle(h.querySelector(".how-back")).display !== "none",
+      locked: document.body.classList.contains("locked"), scroll: document.documentElement.scrollHeight - innerHeight };
+  });
+  t(`${label}: "How to play" opens over the locked game, inside the screen, with a way back`,
+    opened.shown && opened.top >= 0 && opened.bottom <= opened.vh + 1 && opened.back && opened.locked && opened.scroll <= 1,
+    JSON.stringify(opened));
+  const closed = await page.evaluate(async () => {
+    document.querySelector("#how .how-back").click();
+    await new Promise((r) => setTimeout(r, 250));
+    return { shown: getComputedStyle(document.getElementById("how")).display !== "none",
+      locked: document.body.classList.contains("locked") };
+  });
+  t(`${label}: and "Back to the game" closes it`, !closed.shown && closed.locked, JSON.stringify(closed));
+}
+
 const ok = (m) => m.locked && m.scrollY <= 1 && m.scrollX <= 1 && m.overlaps === 0 && m.spill === 0 && m.clipped === 0
   && m.spread[0] <= 1 && m.spread[1] <= 1;
 const say = (m) => `locked ${m.locked}, scroll ${m.scrollY}/${m.scrollX}, overlaps ${m.overlaps}, spill ${m.spill}, clipped ${m.clipped}, tile ${m.tile} (spread ${m.spread}), pitch ${m.pitchH}`;
@@ -283,6 +337,11 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
     const page = await context.newPage();
     await page.goto(ORIGIN + game.path, { waitUntil: "networkidle" });
     await bannerOffLock(page, id, VIEWPORTS[1][0]);
+    await context.close();
+  }
+  {
+    const { page, context } = await open(game, 1, VIEWPORTS[1]);
+    await howCheck(page, VIEWPORTS[1][0]);
     await context.close();
   }
 
@@ -459,6 +518,438 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "q
       m.fulltime && m.locked && m.scrollY <= 1 && m.scrollX <= 1, `fulltime ${m.fulltime}, locked ${m.locked}, scroll ${m.scrollY}/${m.scrollX}`);
     t(`${vp[0]}: and the result is a panel inside the screen, scrolling in itself`,
       !!m.results && m.results[0] >= 0 && m.results[1] <= m.vh + 1, JSON.stringify(m.results));
+    await context.close();
+  }
+}
+
+/* ---- a slider ------------------------------------------------------------- */
+function measureSlider() {
+  const rect = (e) => e.getBoundingClientRect();
+  const vis = (e) => !!e && !e.hidden && getComputedStyle(e).display !== "none";
+  const stage = document.querySelector("#screenGame .stage");
+  const q = document.getElementById("q");
+  const offscreen = [...document.querySelectorAll("#lock, #next, #narrow, #track, .board, #result")]
+    .filter(vis).filter((e) => { const r = rect(e); return r.top < -1 || r.bottom > innerHeight + 1 || r.right > innerWidth + 1; }).length;
+  /* THE STAGE IS FILLED: what is below its last visible child is dead space. */
+  const kids = [...stage.children].filter(vis);
+  const last = kids.length ? Math.max(...kids.map((e) => rect(e).bottom)) : rect(stage).top;
+  const pad = parseFloat(getComputedStyle(stage).paddingBottom) || 0;
+  const ftCard = document.querySelector("#ft .ftCard");
+  return {
+    locked: document.body.classList.contains("locked"),
+    scrollY: document.documentElement.scrollHeight - innerHeight,
+    scrollX: document.documentElement.scrollWidth - innerWidth,
+    qCut: q.scrollHeight > q.clientHeight + 1,
+    stageCut: stage.scrollHeight > stage.clientHeight + 1,
+    qLen: q.textContent.length, qSize: getComputedStyle(q).fontSize,
+    offscreen,
+    deadSpace: Math.round(rect(stage).bottom - pad - last),
+    result: vis(document.getElementById("result")),
+    ft: vis(document.getElementById("ft")) && ftCard ? [Math.round(rect(ftCard).top), Math.round(rect(ftCard).bottom)] : null,
+    vh: innerHeight,
+  };
+}
+const sliderOk = (m) => m.locked && m.scrollY <= 1 && m.scrollX <= 1 && !m.qCut && !m.stageCut && m.offscreen === 0 && m.deadSpace <= 24;
+const sliderSay = (m) => `locked ${m.locked}, scroll ${m.scrollY}/${m.scrollX}, question ${m.qLen} chars at ${m.qSize}${m.qCut ? " CUT" : ""}${m.stageCut ? ", stage overflows" : ""}, off screen ${m.offscreen}, empty below ${m.deadSpace}px`;
+
+/* THE LONGEST QUESTION, made longer. The bank's longest question plus detail
+   is 274 characters (measured 24 Sep 2026); the samples stop at 215. The
+   first question of the board is padded to 290, in the response the page
+   reads, so the lock is proved on something harder than a player is served. */
+const PAD = " And a clause more, to make the question longer than any in the bank so far.";
+async function openSlider(game, [name, viewport, touch]) {
+  const context = await browser.newContext({ viewport, hasTouch: touch, isMobile: touch, deviceScaleFactor: 1 });
+  const page = await context.newPage();
+  await page.route("**/api/ballpark/daily*", async (route) => {
+    const res = await route.fetch();
+    const body = await res.json();
+    const q = body && body.board && body.board.questions && body.board.questions[0];
+    if (q) {
+      while ((q.question + (q.detail || "")).length < 290) q.question += PAD;
+      q.question = q.question.slice(0, 290 - (q.detail || "").length);
+    }
+    await route.fulfill({ response: res, json: body });
+  });
+  await page.goto(ORIGIN + game.path, { waitUntil: "networkidle" });
+  await page.click("#homeDaily");
+  await page.waitForFunction(() => (document.getElementById("q").textContent || "").length > 20, null, { timeout: 10000 });
+  await wait(500);
+  return { page, context };
+}
+/* A guess and the lock, as a player makes them: the slider moved, then Lock
+   it in, then the result. */
+async function guessAndLock(page) {
+  await page.evaluate(() => {
+    const s = document.getElementById("slider");
+    s.value = String(Math.round((Number(s.min) + Number(s.max)) / 2));
+    s.dispatchEvent(new Event("input", { bubbles: true }));
+  });
+  await page.waitForFunction(() => !document.getElementById("lock").disabled, null, { timeout: 5000 });
+  await page.click("#lock");
+  await page.waitForFunction(() => !document.getElementById("result").hidden || !document.getElementById("ft").hidden, null, { timeout: 10000 });
+  await wait(400);
+}
+
+for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "slider" && (!ONLY || k === ONLY))) {
+  console.log(`\n${id}: in play`);
+  for (const vp of VIEWPORTS) {
+    const { page, context } = await openSlider(game, vp);
+    const before = await page.evaluate(measureSlider);
+    t(`${vp[0]}: a question past the bank's longest -- locked, no scroll, question whole, the track and the buttons on screen`,
+      sliderOk(before) && before.qLen >= 285, sliderSay(before));
+    await guessAndLock(page);
+    const after = await page.evaluate(measureSlider);
+    t(`${vp[0]}: after the lock, the result fits the same screen with the question still whole`,
+      sliderOk(after) && after.result, sliderSay(after));
+    await context.close();
+  }
+
+  console.log(`\n${id}: the old-link banner`);
+  for (const vp of [VIEWPORTS[0], VIEWPORTS[1]]) {
+    const { page, context } = await openSlider(game, vp);
+    await bannerCheck(page, id, vp[0], sliderOk, sliderSay, measureSlider);
+    await context.close();
+  }
+  {
+    const { page, context } = await openSlider(game, VIEWPORTS[1]);
+    await howCheck(page, VIEWPORTS[1][0]);
+    await context.close();
+  }
+
+  console.log(`\n${id}: the way out, and back`);
+  {
+    const { page, context } = await openSlider(game, VIEWPORTS[1]);
+    const big = await page.evaluate(async () => {
+      const st = document.createElement("style");
+      st.id = "lock-test-big";
+      st.textContent = ".q small{font-size:60px!important}.big span{font-size:120px!important}";
+      document.head.appendChild(st);
+      dispatchEvent(new Event("resize"));
+      await new Promise((r) => setTimeout(r, 400));
+      return document.body.classList.contains("locked");
+    });
+    t("a question too large to fit unlocks the page rather than cutting it off", big === false, "locked " + big);
+    const back = await page.evaluate(async () => {
+      document.getElementById("lock-test-big").remove();
+      dispatchEvent(new Event("resize"));
+      await new Promise((r) => setTimeout(r, 400));
+      return document.body.classList.contains("locked");
+    });
+    t("and relocks when it goes", back === true, "locked " + back);
+    const fitted = await page.evaluate(async () => {
+      const st = document.createElement("style");
+      st.textContent = "body.locked .q{font-size:64px}";
+      document.head.appendChild(st);
+      dispatchEvent(new Event("resize"));
+      await new Promise((r) => setTimeout(r, 400));
+      const q = document.getElementById("q");
+      return { locked: document.body.classList.contains("locked"), cut: q.scrollHeight > q.clientHeight + 1,
+        size: parseFloat(getComputedStyle(q).fontSize) };
+    });
+    t("a question too big for its space is brought down until it is whole, and the page stays locked",
+      fitted.locked && !fitted.cut && fitted.size < 64, JSON.stringify(fitted));
+    await context.close();
+  }
+
+  console.log(`\n${id}: Full Time`);
+  for (const vp of [VIEWPORTS[1], VIEWPORTS[3]]) {
+    const { page, context } = await openSlider(game, vp);
+    for (let i = 0; i < 11; i++) {
+      if (await page.$eval("#ft", (e) => !e.hidden)) break;
+      await guessAndLock(page);
+      if (await page.$eval("#ft", (e) => !e.hidden)) break;
+      await page.click("#next");
+      await page.waitForFunction(() => document.getElementById("result").hidden || !document.getElementById("ft").hidden, null, { timeout: 10000 });
+      await wait(300);
+    }
+    await wait(500);
+    const m = await page.evaluate(measureSlider);
+    t(`${vp[0]}: Full Time is locked, the page does not scroll, and the card is inside the screen`,
+      m.locked && m.scrollY <= 1 && m.scrollX <= 1 && !!m.ft && m.ft[0] >= 0 && m.ft[1] <= m.vh + 1, sliderSay(m) + " | card " + JSON.stringify(m.ft));
+    await context.close();
+  }
+}
+
+/* ---- a duel --------------------------------------------------------------- */
+function measureDuel() {
+  const rect = (e) => e.getBoundingClientRect();
+  const vis = (e) => !!e && !e.hidden && getComputedStyle(e).display !== "none";
+  const stage = document.querySelector("#screenGame .stage");
+  const rows = document.getElementById("rows");
+  const live = document.getElementById("live");
+  const r = rect(rows);
+  const liveBox = vis(live) ? rect(live) : null;
+  const offscreen = [...document.querySelectorAll("#higher, #lower, #live, .dug .card:first-child")]
+    .filter(vis).filter((e) => { const b = rect(e); return b.top < -1 || b.bottom > innerHeight + 1 || b.right > innerWidth + 1; }).length;
+  const kids = [...stage.children].filter(vis);
+  const last = kids.length ? Math.max(...kids.map((e) => rect(e).bottom)) : rect(stage).top;
+  const pad = parseFloat(getComputedStyle(stage).paddingBottom) || 0;
+  const results = document.getElementById("screenResults");
+  const who = document.querySelector("#live .who");
+  return {
+    locked: document.body.classList.contains("locked"),
+    fulltime: document.body.classList.contains("fulltime"),
+    scrollY: document.documentElement.scrollHeight - innerHeight,
+    scrollX: document.documentElement.scrollWidth - innerWidth,
+    stageCut: stage.scrollHeight > stage.clientHeight + 1,
+    /* The live pair whole inside its panel: not scrolled past, not cut. */
+    liveWhole: !liveBox || (liveBox.top >= r.top - 1 && liveBox.bottom <= r.bottom + 1),
+    liveH: liveBox ? Math.round(liveBox.height) : 0,
+    whoSize: who ? getComputedStyle(who).fontSize : "-",
+    settled: document.querySelectorAll("#rows .duel.settled").length,
+    offscreen,
+    deadSpace: Math.round(rect(stage).bottom - pad - last),
+    results: vis(results) ? [Math.round(rect(results).top), Math.round(rect(results).bottom)] : null,
+    vh: innerHeight,
+  };
+}
+const duelOk = (m) => m.locked && m.scrollY <= 1 && m.scrollX <= 1 && !m.stageCut && m.liveWhole && m.offscreen === 0 && m.deadSpace <= 24;
+const duelSay = (m) => `locked ${m.locked}, scroll ${m.scrollY}/${m.scrollX}${m.stageCut ? ", stage overflows" : ""}, live pair ${m.liveH}px${m.liveWhole ? "" : " NOT WHOLE"}, names at ${m.whoSize}, ${m.settled} settled, off screen ${m.offscreen}, empty below ${m.deadSpace}px`;
+
+/* THE LONGEST OF EVERYTHING. Measured in the bank on 24 Sep 2026: a name of 41
+   characters, a context line of 77, a category of 53 and a subtitle of 101.
+   The served board is padded to those, in the response the page reads. */
+const longest = (t, n, fill) => { let v = String(t || ""); while (v.length < n) v += fill; return v.slice(0, n); };
+async function openDuel(game, [name, viewport, touch]) {
+  const context = await browser.newContext({ viewport, hasTouch: touch, isMobile: touch, deviceScaleFactor: 1 });
+  const page = await context.newPage();
+  await page.route("**/api/hilo/daily*", async (route) => {
+    /* The samples hold boards 1 and 2 and nothing for today, so board 1 is
+       served AS today's: the page plays it as the daily it opened for. */
+    const u = new URL(route.request().url());
+    u.search = "?no=1";
+    const res = await route.fetch({ url: u.href });
+    const body = await res.json();
+    if (body && body.board) { body.day = body.today; body.no = body.todayNo; }
+    const b = body && body.board;
+    if (b) {
+      b.category = longest(b.category, 53, " Club");
+      b.subtitle = longest(b.subtitle, 101, " and more");
+      for (const row of b.rows || b.chain || []) {
+        if (row.name) row.name = longest(row.name, 41, "-Longname");
+        if (row.context !== undefined) row.context = longest(row.context, 77, " and so on");
+      }
+    }
+    await route.fulfill({ response: res, json: body });
+  });
+  await page.goto(ORIGIN + game.path, { waitUntil: "networkidle" });
+  await page.click("#homeDaily");
+  /* Today's board starts from the hero with no cover; a board from anywhere
+     else waits on the cover's Kick off. Either way, play is on when the calls
+     are live. */
+  await page.waitForFunction(() => !document.getElementById("higher").disabled ||
+    !document.getElementById("kickCover").classList.contains("hidden"), null, { timeout: 10000 });
+  if (await page.$eval("#kickCover", (e) => !e.classList.contains("hidden"))) await page.click("#kickBtn");
+  await page.waitForFunction(() => !document.getElementById("higher").disabled, null, { timeout: 10000 });
+  await wait(500);
+  return { page, context };
+}
+/* One call, as a player makes it, and the next pair (or Full Time). */
+async function callOne(page) {
+  const before = await page.$$eval("#rows .duel.settled", (e) => e.length);
+  await page.click("#higher");
+  await page.waitForFunction((n) => document.querySelectorAll("#rows .duel.settled").length > n, before, { timeout: 10000 });
+  await page.waitForFunction(() => !document.getElementById("screenResults").hidden ||
+    !document.getElementById("nextRow").classList.contains("hidden") ||
+    !document.getElementById("higher").disabled, null, { timeout: 10000 });
+  if (await page.$eval("#nextRow", (e) => !e.classList.contains("hidden"))) await page.click("#nextBtn");
+  await wait(300);
+}
+
+for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "duel" && (!ONLY || k === ONLY))) {
+  console.log(`\n${id}: in play`);
+  for (const vp of VIEWPORTS) {
+    const { page, context } = await openDuel(game, vp);
+    const first = await page.evaluate(measureDuel);
+    t(`${vp[0]}: the longest names -- locked, no scroll, the live pair whole, the calls and the clock on screen`,
+      duelOk(first), duelSay(first));
+    for (let i = 0; i < 4; i++) await callOne(page);
+    const later = await page.evaluate(measureDuel);
+    t(`${vp[0]}: four calls later -- the settled rows scroll in their panel and the live pair is still whole`,
+      duelOk(later) && later.settled >= 4, duelSay(later));
+    await context.close();
+  }
+
+  console.log(`\n${id}: the old-link banner`);
+  for (const vp of [VIEWPORTS[0], VIEWPORTS[1]]) {
+    const { page, context } = await openDuel(game, vp);
+    await bannerCheck(page, id, vp[0], duelOk, duelSay, measureDuel);
+    await context.close();
+  }
+  {
+    const { page, context } = await openDuel(game, VIEWPORTS[1]);
+    await howCheck(page, VIEWPORTS[1][0]);
+    await context.close();
+  }
+
+  console.log(`\n${id}: the way out, and back`);
+  {
+    const { page, context } = await openDuel(game, VIEWPORTS[1]);
+    const big = await page.evaluate(async () => {
+      const st = document.createElement("style");
+      st.id = "lock-test-big";
+      st.textContent = ".ask{font-size:60px!important}.cat{font-size:70px!important}";
+      document.head.appendChild(st);
+      dispatchEvent(new Event("resize"));
+      await new Promise((r) => setTimeout(r, 400));
+      return document.body.classList.contains("locked");
+    });
+    t("a board too large to fit unlocks the page rather than cutting it off", big === false, "locked " + big);
+    const back = await page.evaluate(async () => {
+      document.getElementById("lock-test-big").remove();
+      dispatchEvent(new Event("resize"));
+      await new Promise((r) => setTimeout(r, 400));
+      return document.body.classList.contains("locked");
+    });
+    t("and relocks when it goes", back === true, "locked " + back);
+    await context.close();
+  }
+
+  console.log(`\n${id}: Full Time`);
+  for (const vp of [VIEWPORTS[1], VIEWPORTS[3]]) {
+    const { page, context } = await openDuel(game, vp);
+    for (let i = 0; i < 11; i++) {
+      if (await page.$eval("#screenResults", (e) => !e.hidden)) break;
+      await callOne(page);
+    }
+    await wait(600);
+    const m = await page.evaluate(measureDuel);
+    t(`${vp[0]}: Full Time is locked, the board stays and the page does not scroll`,
+      m.fulltime && m.locked && m.scrollY <= 1 && m.scrollX <= 1, duelSay(m));
+    t(`${vp[0]}: and the result is a panel inside the screen`,
+      !!m.results && m.results[0] >= 0 && m.results[1] <= m.vh + 1, JSON.stringify(m.results));
+    await context.close();
+  }
+}
+
+/* ---- a codeword ----------------------------------------------------------- */
+function measureCodeword() {
+  const rect = (e) => e.getBoundingClientRect();
+  const vis = (e) => !!e && !e.hidden && getComputedStyle(e).display !== "none";
+  const grid = document.getElementById("grid");
+  const g = rect(grid);
+  const n = Math.round(Math.sqrt(grid.children.length)) || 13;
+  const card = grid.closest(".card");
+  const keys = document.getElementById("keys");
+  const offscreen = [...document.querySelectorAll("#grid, #keys, #check, #reveal, #key, .cw-clockcard")]
+    .filter(vis).filter((e) => { const b = rect(e); return b.top < -1 || b.bottom > innerHeight + 1 || b.left < -1 || b.right > innerWidth + 1; }).length;
+  const pad = parseFloat(getComputedStyle(card).paddingBottom) || 0;
+  return {
+    locked: document.body.classList.contains("locked"),
+    scrollY: document.documentElement.scrollHeight - innerHeight,
+    scrollX: document.documentElement.scrollWidth - innerWidth,
+    square: Math.abs(g.width - g.height) <= 2,
+    cell: Math.round(g.width / n),
+    cardCut: card.scrollHeight > card.clientHeight + 1,
+    offscreen,
+    deadSpace: vis(keys) ? Math.round(rect(card).bottom - pad - rect(keys).bottom) : 0,
+    vh: innerHeight,
+  };
+}
+const cwOk = (m) => m.locked && m.scrollY <= 1 && m.scrollX <= 1 && m.square && m.cell >= 18 && !m.cardCut && m.offscreen === 0 && m.deadSpace <= 24;
+const cwSay = (m) => `locked ${m.locked}, scroll ${m.scrollY}/${m.scrollX}, grid ${m.square ? "square" : "NOT SQUARE"} at ${m.cell}px a square${m.cardCut ? ", board card overflows" : ""}, off screen ${m.offscreen}, empty below ${m.deadSpace}px`;
+
+async function openCodeword(game, [name, viewport, touch]) {
+  const context = await browser.newContext({ viewport, hasTouch: touch, isMobile: touch, deviceScaleFactor: 1 });
+  const page = await context.newPage();
+  await page.goto(ORIGIN + game.path, { waitUntil: "networkidle" });
+  await page.click("#cwToday");
+  await page.waitForFunction(() => document.querySelectorAll("#grid .cell").length >= 169, null, { timeout: 10000 });
+  await wait(500);
+  return { page, context };
+}
+
+for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "codeword" && (!ONLY || k === ONLY))) {
+  console.log(`\n${id}: in play`);
+  for (const vp of VIEWPORTS) {
+    const { page, context } = await openCodeword(game, vp);
+    const m = await page.evaluate(measureCodeword);
+    t(`${vp[0]}: locked, no scroll, a square grid of hittable squares, the key, the keys and the clock on screen`, cwOk(m), cwSay(m));
+    await context.close();
+  }
+
+  console.log(`\n${id}: the answers, on a phone`);
+  {
+    const { page, context } = await openCodeword(game, VIEWPORTS[1]);
+    const shut = await page.evaluate(() => getComputedStyle(document.getElementById("cwAnswers")).display);
+    t("the answers are not taking the screen until asked for", shut === "none", shut);
+    await page.click("#cwAnswersBtn");
+    await wait(200);
+    const open = await page.evaluate(() => {
+      const a = document.getElementById("cwAnswers"), r = a.getBoundingClientRect();
+      return { shown: getComputedStyle(a).display !== "none", top: Math.round(r.top), bottom: Math.round(r.bottom),
+        items: a.querySelectorAll("#hints li").length, scroll: document.documentElement.scrollHeight - innerHeight, vh: innerHeight };
+    });
+    t("opened, they are a panel inside the screen with all eleven", open.shown && open.top >= 0 && open.bottom <= open.vh + 1 && open.items === 11 && open.scroll <= 1, JSON.stringify(open));
+    await page.click("#hints li");
+    await wait(200);
+    const closed = await page.evaluate(() => getComputedStyle(document.getElementById("cwAnswers")).display);
+    t("and picking one closes the panel, to look at it on the grid", closed === "none", closed);
+    await context.close();
+  }
+
+  console.log(`\n${id}: the old-link banner`);
+  {
+    const { page, context } = await openCodeword(game, VIEWPORTS[1]);
+    await bannerCheck(page, id, VIEWPORTS[1][0], cwOk, cwSay, measureCodeword);
+    await context.close();
+  }
+  /* THE ONE CASE THAT DOES NOT FIT, said rather than hidden: a 360x640 phone
+     opened at an old board from a link. The grid is at its 18px floor there
+     already, and the banner's 45px would take it under; so the page must fall
+     back to scrolling -- whole, nothing cut -- rather than shrink the squares
+     past hitting. */
+  {
+    const { page, context } = await openCodeword(game, VIEWPORTS[0]);
+    const b = await page.evaluate(async () => {
+      window.XIChrome.permalink.aged("codeword", 4);
+      dispatchEvent(new Event("resize"));
+      await new Promise((r) => setTimeout(r, 400));
+      const g = document.getElementById("grid").getBoundingClientRect();
+      return { locked: document.body.classList.contains("locked"), cell: Math.round(g.width / 13) };
+    });
+    t("phone-360 with the old-link banner: falls back to scrolling rather than shrink the squares under 18px",
+      !b.locked && b.cell >= 18, JSON.stringify(b));
+    await context.close();
+  }
+
+  console.log(`\n${id}: the way out, and back`);
+  {
+    const { page, context } = await openCodeword(game, VIEWPORTS[1]);
+    const big = await page.evaluate(async () => {
+      const st = document.createElement("style");
+      st.id = "lock-test-big";
+      st.textContent = ".keys button{height:160px!important}";
+      document.head.appendChild(st);
+      dispatchEvent(new Event("resize"));
+      await new Promise((r) => setTimeout(r, 400));
+      return document.body.classList.contains("locked");
+    });
+    t("keys too large to leave the grid room unlock the page rather than shrink it past use", big === false, "locked " + big);
+    const back = await page.evaluate(async () => {
+      document.getElementById("lock-test-big").remove();
+      dispatchEvent(new Event("resize"));
+      await new Promise((r) => setTimeout(r, 400));
+      return document.body.classList.contains("locked");
+    });
+    t("and relocks when it goes", back === true, "locked " + back);
+    await context.close();
+  }
+
+  console.log(`\n${id}: Full Time`);
+  for (const vp of [VIEWPORTS[0], VIEWPORTS[3]]) {
+    const { page, context } = await openCodeword(game, vp);
+    /* The card is shown as the game shows it, by its class; what is under
+       test is where it sits, not how a round is won. */
+    const m = await page.evaluate(async () => {
+      document.getElementById("ft").classList.add("on");
+      await new Promise((r) => setTimeout(r, 200));
+      const r = document.querySelector("#ft .ftcard").getBoundingClientRect();
+      return { locked: document.body.classList.contains("locked"), scroll: document.documentElement.scrollHeight - innerHeight,
+        top: Math.round(r.top), bottom: Math.round(r.bottom), vh: innerHeight };
+    });
+    t(`${vp[0]}: the Full Time card sits inside the screen and the page does not scroll`,
+      m.locked && m.scroll <= 1 && m.top >= 0 && m.bottom <= m.vh + 1, JSON.stringify(m));
     await context.close();
   }
 }
