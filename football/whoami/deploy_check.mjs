@@ -331,21 +331,29 @@ console.log("\nAnd it IS launched, which every one of these makes true");
   })();
   t("the hub carries a card for it, found by its id",
     cardWhoami.length > 0, cardWhoami.length + " chars");
-  /* THE PICTURE, AND NOT MERELY A LINK TO THE HOME PAGE. Written as
-     `card.includes('href="/football/whoami/"')` first, which the TITLE link
-     satisfies just as well — so replacing the picture with a dead span left
-     this green under a name that says "picture". Proven by sabotage on
-     17 Sep 2026. It now demands an anchor to the home that WRAPS THE IMAGE. */
-  t("and gives it a card whose picture opens its home",
-    /<a[^>]+href="\/football\/whoami\/"[^>]*>\s*<img/.test(cardWhoami));
-  t("and a Play today that goes to the board, not back to the home page",
-    cardWhoami.includes('href="/football/whoami/?play=1"'),
-    "a plain compare, not a pattern: the ? in ?play=1 is a regex quantifier and "
-    + "was silently eaten writing this check, which then passed on the wrong thing");
-  t("and the play link names the game, for a screen reader",
-    /Play[\s\S]{0,120}Who\s*Am\s*I\s*XI/.test(cardWhoami) || cardWhoami.includes('aria-label="Play Who Am I XI today"'));
-  t("and an archive to open",
-    cardWhoami.includes('href="/football/whoami/archive/"'))    /* THE TABLE MOVED to shared/xi-played.js on 21 September 2026, out of
+  /* THE CARD, AS THE HUB REDESIGN OF 24 SEP 2026 MADE IT. It carried three
+     links (a picture to the home, a Play today straight to the board, and
+     its own Past puzzles) and each had a check here. The owner's decisions
+     changed all three. The card is ONE link to the game's home, because a
+     card must not start a clock. Previous dailies are ONE page for every
+     game, /football/archive/, rather than ten links. So the checks follow the
+     decisions rather than being deleted: one link, to the home, around the
+     picture; the name on it; nothing on it that starts a board; and the
+     archive reachable, proven by RUNNING the page the hub links to. */
+  const links = [...cardWhoami.matchAll(/<a\s[^>]*href="([^"]+)"/g)].map((m) => m[1]);
+  t("its card is ONE link, to its home",
+    links.length === 1 && links[0] === "/football/whoami/", links.join(" ") || "no link");
+  t("and that link carries the picture and the name",
+    /<a[^>]+href="\/football\/whoami\/"[^>]*>[\s\S]*<img[\s\S]*Who\s*Am\s*I\s*XI[\s\S]*<\/a>/.test(cardWhoami));
+  t("and nothing on it starts a board: a card must not start a clock",
+    !cardWhoami.includes("?play=1"), "a plain compare: ? is a regex quantifier");
+  {
+    const { themeArchiveRoute } = await import("../../functions/_lib/archive-page.js");
+    const page = await (await themeArchiveRoute({ env: {} }, "football")).text();
+    t("and its archive is reachable from the hub's Browse previous dailies",
+      hub.includes('href="/football/archive/"') && page.includes('href="/football/whoami/archive/"'),
+      "the hub links /football/archive/, and that page, run, lists Who Am I XI's archive");
+  }    /* THE TABLE MOVED to shared/xi-played.js on 21 September 2026, out of
        index.html, because the full-time panel needs the same fact and a
        second copy is this project's oldest fault. The hub reads it now, so
        this asks the file that HOLDS the row rather than the file that uses

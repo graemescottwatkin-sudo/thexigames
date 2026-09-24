@@ -31,7 +31,7 @@
  * window need an account to play, which is archive.js's rule, and the page
  * says so in the game's own words rather than restating the number.
  */
-import { PERMA_GAMES, boardKeys, permalinkPath, gamePath } from "./permalink.js";
+import { PERMA_GAMES, boardKeys, permalinkPath, gamePath, themeOf, themeHubPath } from "./permalink.js";
 import { isListed } from "./games.js";
 import { dailyDayKey } from "./daily.js";
 import { FREE_ARCHIVE_DAYS } from "./archive.js";
@@ -129,6 +129,57 @@ address, as soon as there are any.</p>
     game,
     body,
   }), { maxAge: 3600, noindex: hidden });
+}
+
+/* ---- the theme's archive: every game's previous dailies, one page ---------
+ *
+ * THE HUB'S "Browse previous dailies" LINK LANDS HERE (hub redesign, 24 Sep
+ * 2026). The old hub gave every card its own "Past puzzles" link; the new card
+ * is one link to the game, so the archives needed one door of their own rather
+ * than ten small ones. This page is that door: each listed game of the theme,
+ * how many boards it has and when its newest ran, and the way into its archive.
+ *
+ * LISTED GAMES ONLY, asked of isListed like every other surface. An unlisted
+ * game's archive is its most complete disclosure (see archiveIndex).
+ *
+ * ALPHABETICAL, NOT SHIRT ORDER. Shirt numbers live in shared/xi-chrome.js and
+ * nowhere else, and a server-side copy of the order would be the second place
+ * that CLAUDE.md forbids. LAUNCHED cannot stand in for it either: most games
+ * share the 18 Sep epoch reset. An index read by name is ordered by name.
+ *
+ * THE COUNTS ARE boardKeys', the same answer each game's own archive and the
+ * sitemap give, so this page cannot list a board those do not. Without a
+ * database there are no counts and the links still work. */
+export async function themeArchiveRoute({ env }, theme) {
+  const games = Object.keys(PERMA_GAMES)
+    .filter((g) => isListed(g) && themeOf(g) === theme)
+    .sort((a, b) => PERMA_GAMES[a].name.localeCompare(PERMA_GAMES[b].name));
+  const rows = [];
+  for (const g of games) {
+    const keys = await boardKeys(env, g);
+    const newest = keys.length ? partsOf(keys[keys.length - 1]) : null;
+    const count = keys.length
+      ? `${keys.length} board${keys.length === 1 ? "" : "s"}${newest ? " · newest " + esc(newest.full) : ""}`
+      : "Every board, each at its own address";
+    rows.push(`<li class="set"><a class="name" href="${esc(gamePath(g))}archive/">${esc(PERMA_GAMES[g].name)}</a>` +
+      `<span class="chips">${count}</span></li>`);
+  }
+  const hub = themeHubPath(theme);
+  const body = `<h1>Previous dailies</h1>
+<p class="sub">Every game's earlier boards, each at its own permanent address.
+Today and the ${FREE_ARCHIVE_DAYS} days behind it are open to everybody; older
+boards ask for a free account.</p>
+<ul>${rows.join("")}</ul>
+<a class="cta" href="${esc(hub)}">Today's games</a>`;
+  return htmlResponse(sitePage({
+    title: "Previous dailies — every XI Games board",
+    description: "Every earlier board of every XI Games football puzzle, newest first, " +
+      "each at its own permanent address.",
+    canonical: SITE + hub + "archive/",
+    current: hub + "archive/",
+    game: "hub",
+    body,
+  }), { maxAge: 3600 });
 }
 
 /* The whole route, for every game. A game's file under functions/football/

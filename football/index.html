@@ -1,21 +1,29 @@
 <!DOCTYPE html>
 <!--
-  The XI Games — hub.
+  The XI Games — the football hub.
 
-  The idea: the eleven games are a starting XI, so the page opens with a team
-  sheet rather than a grid of cards. Each game holds a squad number, live ones
-  are filled, the eight still to come are empty shirts. That turns an
-  incomplete roster from something to apologise for into the thing the brand is
-  about — you can see there will be eleven, and which eight are missing.
+  REDESIGNED 24 SEP 2026, to the owner's agreed brief (a design review he ran,
+  its four open questions answered by him in the MobileApp chat). The goal was
+  one thing: real, named games on the first phone screen. The old page opened
+  with a marketing hero, a tilted cover, a numbered team sheet with a dashed
+  eleventh shirt and two date-rotated featured cards, and the games started
+  most of a screen down. Now:
 
-  Why light: playfootball.games and footballgenius.app are both near-black with
-  screenshot thumbnails, and both truncate their own game names. Going light on
-  the paper the games already use separates us from both and matches what a
-  player sees when they arrive at a board.
+    a compact heading, and a short introduction only for a device with no
+      play history (shown to everyone when that cannot be read)
+    Today's XI as ONE collapsed row, "3 of 10 completed", opening to the ten
+      named shirts; no dashed eleventh, no "still to sign"
+    the date once, and when the next puzzles arrive in the reader's own time
+    ten artwork cards in shirt order, each ONE link to its game's home (the
+      owner's call: a card must not start a clock), "Play today" or
+      "✓ Completed" with muted art, never colour alone
+    one "Browse previous dailies" link, to /football/archive/
+    the season, then a short About with the rest behind a disclosure
 
-  Colour blocks not screenshots: a 60px screenshot of a crossword is grey mush.
-  A flat kit colour and one geometric mark reads at any size — the NYT lesson.
-  Kit colours rather than arbitrary pastels: claret, sky, forest, amber, chalk.
+  EVERYTHING WORKS WITHOUT JAVASCRIPT: every link is in the markup in shirt
+  order and nothing is built by script. Script only adds state: completion,
+  the count, the date, the reset time and hiding the intro for returning
+  players. It never claims "0 completed" when it could not read anything.
 -->
 <html lang="en-GB">
 <head>
@@ -122,25 +130,22 @@ body{
   font-family:var(--body);font-size:16px;line-height:1.5;
   -webkit-font-smoothing:antialiased;
 }
-.wrap{max-width:1100px;margin:0 auto;padding:0 20px}
+.wrap{max-width:1100px;margin:0 auto;padding:0 16px}
 
-/* ---------- the masthead, the hero and the cover ----------
-
-   WARM PAPER, DEEP GREEN, RESTRAINED GOLD. The family tokens stay the family's
-   — shared/xi-tokens.css paints ten games and this page must not repaint them
-   — so the editorial palette is declared HERE, on the hub, derived from the
-   shared greens where a shared green exists. --paper is the one substitution:
-   the family's is a cool #F4F5F2 and the approved design is warm, and that is
-   a property of this page rather than of the palette. */
+/* WARM PAPER, DEEP GREEN, RESTRAINED GOLD. The family tokens stay the family's
+   (shared/xi-tokens.css paints every game and this page must not repaint them),
+   so the hub's own palette is declared here, on the hub. */
 :root{
   --ed-paper:#F3F0E7;
   --ed-ink:#123E2C;
   --ed-soft:#55665B;
   --ed-rule:#D4D7C9;
   --ed-gold:#8B691B;
-  --ed-cover:#16482F;
-  --ed-cover-ink:#F4EAD0;
-  --ed-stamp:#F0E6C9;
+  /* THE CARD'S TITLE AREA IS DARK IN BOTH THEMES, so a name reads the same on
+     every kit colour above it. The brief's words: "a contrasting title area
+     preserves readability across kit colours". */
+  --card-foot:#15271F;
+  --card-foot-done:#2E3B35;
 }
 :root[data-theme="dark"]{
   --ed-paper:#18221E;
@@ -148,216 +153,108 @@ body{
   --ed-soft:#B8C4B9;
   --ed-rule:#384B3F;
   --ed-gold:#E4C865;
-  --ed-cover:#10301F;
-  --ed-cover-ink:#F4EAD0;
-  --ed-stamp:#E7DCBC;
+  --card-foot:#0E1A15;
+  --card-foot-done:#26312C;
 }
 body{background:var(--ed-paper);color:var(--ed-ink)}
 
-.hero{display:grid;grid-template-columns:1.6fr 1fr;gap:34px;align-items:center;
-  padding:30px 0 34px;border-bottom:1px solid var(--ed-rule);
-  background:none;border-radius:0;margin:0;color:inherit}
-.hero-kicker{font-family:var(--disp);font-weight:600;font-size:13px;
-  letter-spacing:.2em;text-transform:uppercase;color:var(--ed-soft);margin:0 0 14px}
-.hero h1{font-family:var(--disp);font-weight:700;
-  font-size:clamp(36px,5.3vw,62px);line-height:.96;letter-spacing:-.01em;
-  text-transform:uppercase;color:var(--ed-ink);margin:0 0 18px}
-.hero h1 em{font-style:normal;color:var(--ed-gold)}
-.hero .sub{margin:0 0 22px;font-size:15px;line-height:1.7;color:var(--ed-soft);max-width:44ch}
-/* One primary action, and it says where it goes. */
-.hero-go{display:inline-flex;align-items:center;gap:22px;min-height:44px;
-  padding:13px 18px;border-radius:3px;text-decoration:none;
-  background:var(--ed-ink);color:var(--ed-paper);
-  font-family:var(--body);font-weight:600;font-size:14px;
-  transition:background .12s ease,transform .12s ease}
-.hero-go:hover,.hero-go:focus-visible{background:var(--ed-gold);transform:translateY(-1px)}
+/* ---------- the heading ---------- */
+.hub-head{padding:16px 0 12px}
+.hub-head h1{font-family:var(--disp);font-weight:700;font-size:clamp(30px,8vw,44px);
+  line-height:1;text-transform:uppercase;margin:0;color:var(--ed-ink)}
+.hub-intro{margin:8px 0 0;font-size:15px;line-height:1.45;color:var(--ed-soft);max-width:52ch}
 
-/* THE COVER. Tilted, ruled inside, with a stamp for the date. Decoration —
-   aria-hidden — so the tilt costs a screen reader nothing. */
-.cover{position:relative;overflow:hidden;min-height:320px;padding:23px;
-  display:flex;flex-direction:column;justify-content:space-between;
-  background:var(--ed-cover);color:var(--ed-cover-ink);
-  transform:rotate(2deg);box-shadow:7px 7px 0 var(--ed-rule)}
-.cover::before{content:"";position:absolute;inset:12px;border:1px solid #ECD59355;
-  pointer-events:none}
-.cover p{margin:0;position:relative}
-.cover-label{font-size:10px;letter-spacing:.3em;text-transform:uppercase}
-.cover-xi{font-family:var(--disp);font-weight:700;font-size:clamp(90px,11vw,132px);
-  line-height:.8;color:var(--gold);text-align:center;margin:6px 0}
-/* THE STRAPLINE KEEPS OUT OF THE STAMP'S WAY. Given max-width:14ch it wrapped
-   to three lines and ran under the date; the stamp is absolutely positioned, so
-   it does not push anything and the collision was silent at some widths and not
-   others. The reserved gutter is the stamp's own room. */
-/* THE STRAPLINE AND THE STAMP CANNOT OVERLAP, BY CONSTRUCTION. The stamp was
-   absolutely positioned, so it pushed nothing and the strapline ran underneath
-   it — and two attempts to reserve room by hand (a max-width, then a padding
-   gutter) each fixed one width and broke another, silently, because nothing in
-   a layout tells you two boxes are on top of each other. They are siblings in
-   a flex row now: the stamp takes the room it needs and the text gets what is
-   left, at every width, without a number in this file guessing at it. */
-.cover-bottom{display:flex;align-items:flex-end;justify-content:space-between;
-  gap:14px;position:relative}
-.cover-foot{font-family:var(--disp);font-weight:600;font-size:17px;line-height:1.2;
-  letter-spacing:.06em;text-transform:uppercase;min-width:0}
-.cover-stamp{flex:0 0 auto;width:72px;padding:9px 6px;
-  background:var(--ed-stamp);color:var(--ed-cover);transform:rotate(-6deg);
-  font-family:var(--disp);font-weight:700;text-align:center;line-height:.85}
-.cover-stamp b{display:block;font-size:34px}
-.cover-stamp small{display:block;font-size:12px;letter-spacing:.14em}
-/* THE TILT IS MOTION TO SOMEBODY WHO ASKED FOR NONE. */
-@media (prefers-reduced-motion:reduce){
-  .cover{transform:none}
-  .cover-stamp{transform:none}
-}
-
-/* ---------- today's XI ----------
-
-   The three states of the roster, on one shelf: a game played today, a game
-   live and unplayed, a shirt nobody wears yet. Everything the strip counts is
-   still counted from the strip — the dashed shirts say how many are to sign,
-   the live ones are what the chrome test measures against the squad — so both
-   rows stay inside .xi-strip whatever the shelf looks like. */
-/* THE TEAM SHEET, EDITORIALISED. It is kept — it is the only place the page
-   shows what you have already played today, and the brief asks for live
-   progress to keep working — but it is a ruled line of numerals now rather
-   than a card, so it reads as a strapline under the masthead instead of
-   competing with the artwork below it. Everything counted from it is still
-   counted from it: the live shirts against the launched squad, the dashed
-   ones against what is still to sign. */
-.today{background:none;border:0;border-bottom:1px solid var(--ed-rule);
-  border-radius:0;padding:16px 0 14px;margin:0}
-.today-head{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;margin:0 0 8px}
-.today-head h2{font-family:var(--disp);font-weight:700;font-size:15px;
-  letter-spacing:.2em;text-transform:uppercase;color:var(--ed-soft);margin:0}
-.today-head .date{font-family:var(--disp);font-size:13px;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--ed-soft);margin:0;margin-left:auto}
-.xi-strip{display:flex;flex-direction:column;gap:10px}
-.strip-row{display:flex;flex-wrap:wrap;gap:8px}
+/* ---------- today's XI: one row, collapsed ----------
+   A native disclosure, so it opens and closes without script and a screen
+   reader announces it as one. Collapsed on arrival: its job is "3 of 10
+   completed" at a glance, and the ten named shirts are one tap away. */
+.today{border-top:1px solid var(--ed-rule);border-bottom:1px solid var(--ed-rule)}
+.today summary{display:flex;align-items:center;gap:12px;min-height:44px;
+  cursor:pointer;list-style:none;font-family:var(--disp)}
+.today summary::-webkit-details-marker{display:none}
+.today .t-label{font-weight:700;font-size:15px;letter-spacing:.14em;
+  text-transform:uppercase;color:var(--ed-ink)}
+.today .t-count{margin-left:auto;font-weight:600;font-size:15px;color:var(--pitch)}
+:root[data-theme="dark"] .today .t-count{color:var(--ed-gold)}
+.today summary::after{content:"";flex:0 0 auto;width:8px;height:8px;
+  border-right:2px solid var(--ed-soft);border-bottom:2px solid var(--ed-soft);
+  transform:rotate(45deg);margin:-4px 4px 0 0;transition:transform .15s ease}
+.today[open] summary::after{transform:rotate(-135deg);margin-top:4px}
+.today summary:focus-visible{outline:3px solid var(--gold);outline-offset:2px}
+.xi-strip{padding:2px 0 14px}
+/* Two rows of five on a phone: ten 44px targets in one row need 440px before
+   any spacing, which a phone does not have. One row where all ten fit. */
+.strip-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:8px}
+@media (min-width:760px){.strip-row{grid-template-columns:repeat(10,minmax(0,1fr))}}
 .shirt{font-family:var(--body);line-height:1;text-decoration:none}
-a.shirt{display:flex;align-items:center;gap:9px;min-height:44px;
-  padding:6px 14px 6px 6px;border:1px solid var(--ed-rule);border-radius:999px;
+a.shirt{display:flex;flex-direction:column;align-items:center;gap:5px;min-height:44px;
+  padding:7px 2px 6px;border:1px solid var(--ed-rule);border-radius:10px;
   background:transparent;color:var(--ed-ink);
-  transition:border-color .12s ease,transform .12s ease,background .12s ease}
-/* COLOUR IS EARNED, NOT DEFAULT. Every shirt wore its kit from the moment the
-   page loaded, so a strip of ten colours said nothing about what the player had
-   actually done — the two games finished today looked much like the eight that
-   had not. The kit is now what a FINISHED board pays out: unplayed shirts sit
-   in neutral and fill in as the day goes on, which is the whole point of a
-   strip you come back to.
-   THE KIT TRAVELS AS A CUSTOM PROPERTY, not as a background. Written inline as
-   `background:var(--kit-NN)` it beat every class rule underneath it and could
-   only have been overridden with !important; as `--kit` the markup still says
-   which colour this shirt wears — one fact, in one place, per the shirt rules
-   — and the stylesheet decides WHEN it is shown. */
-.shirt .dot{flex:0 0 auto;width:30px;height:30px;border-radius:50%;
+  transition:border-color .12s ease,background .12s ease}
+a.shirt:hover,a.shirt:focus-visible{border-color:var(--ed-soft)}
+/* COLOUR IS EARNED: the kit is what a finished board pays out, so an unplayed
+   shirt sits neutral. The kit travels as a custom property, so the markup says
+   which colour and the stylesheet says when. */
+.shirt .dot{flex:0 0 auto;width:28px;height:28px;border-radius:50%;
   display:flex;align-items:center;justify-content:center;
   background:var(--ed-rule);color:var(--ed-soft);
-  font-family:var(--disp);font-weight:700;font-size:15px;line-height:1;
-  transition:background .15s ease,color .15s ease}
-/* Played today: the shirt takes its kit. */
-.shirt.done .dot{background:var(--kit);color:#fff}
-/* The amber and sky kits are light: their numeral takes ink, like the cards.
-   Only once it is wearing one — a neutral dot keeps the soft ink above. */
-.shirt.done .dot.on-light{color:var(--ink)}
-/* THE NAMES COME OFF THE SHELF, NOT OUT OF THE PAGE. Ten named shirts wrapped
-   to two rows and pushed the cards below the fold; the cards name every game
-   anyway, a few centimetres further down. So the strip becomes the numbers it
-   always was underneath — and the label stays in the markup, because the
-   shirt's aria-label is the game's name and a screen reader still reads it.
-   Nothing that counts from this strip can tell the difference: the live and
-   dashed shirts are all still here, still classed, still countable. */
-.shirt .lbl{font-size:14px;font-weight:600;white-space:nowrap;
-  position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);
-  clip-path:inset(50%);white-space:nowrap}
-a.shirt{padding:4px;gap:0}
-.shirt.live:hover,.shirt.live:focus-visible{border-color:var(--ink-faint);
-  transform:translateY(-1px)}
-/* PLAYED TODAY. The tick is the state; the colour alone would be a second
-   thing to learn, and a tick is not a colour anybody has to be able to see. */
-.shirt.done{background:rgba(18,62,44,.10);border-color:var(--ed-ink)}
-.shirt.done .lbl::after{content:" \2713";color:var(--pitch);font-weight:700}
-.shirt.soon{display:flex;align-items:center;justify-content:center;
-  min-width:40px;height:34px;padding:0 12px;border-radius:999px;
-  border:1px dashed var(--line);color:var(--ink-faint);
-  font-family:var(--disp);font-weight:700;font-size:15px}
-.today .played{font-family:var(--disp);font-size:13px;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--ed-soft);margin:12px 0 0}
-.today .played b{color:var(--pitch);font-weight:700}
-
-/* ---------- the puzzles ---------- */
-.section{padding:30px 0 4px}
-.section h2.big{font-family:var(--disp);font-weight:700;
-  font-size:clamp(26px,4vw,38px);letter-spacing:.02em;text-transform:uppercase;
-  color:var(--ink);margin:0;line-height:1}
-.section .lede{margin:4px 0 18px;color:var(--ink-soft);font-size:15px}
-/* ---------- your daily line-up ----------
-
-   PRINTED EDITORIAL BLOCKS, not shadowed tiles: a hairline rule, a small
-   radius, and the weight carried by the artwork and the type rather than by
-   depth. Four columns; a FEATURED card spans two, so two of them fill the
-   first row exactly and the other eight fall into two rows of four.
-
-   THE FEATURE IS `order` AND `grid-column`, NOT A REBUILT LIST. The markup is
-   ten cards in shirt order and stays that way — so the tab order is the shirt
-   order, the page without script is complete, and promoting a card cannot
-   drop, duplicate or reorder any other. */
-.lineup{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:22px 20px}
-.gcard{display:flex;flex-direction:column;min-width:0}
-/* EVERY ART BOX IS 5:3, which is the artwork's own ratio. So nothing is
-   cropped, nothing is letterboxed, and the card never shows a seam between
-   the image's baked-in background and a CSS colour approximating it. The kit
-   colour sits underneath only for the moment before the image decodes. */
-.gcard-art{position:relative;display:block;aspect-ratio:5/3;overflow:hidden;
-  border-radius:4px;background:var(--kit);text-decoration:none}
-.gcard-art img{display:block;width:100%;height:100%;object-fit:cover}
-.gcard-num{position:absolute;top:10px;right:10px;width:26px;height:26px;
-  border-radius:50%;background:var(--ed-paper);color:var(--ed-ink);
-  display:flex;align-items:center;justify-content:center;
   font-family:var(--disp);font-weight:700;font-size:14px;line-height:1}
-.gcard-say{padding:12px 2px 0}
-.gcard h3{margin:0;font-family:var(--disp);font-weight:700;
-  font-size:21px;line-height:1.05;letter-spacing:.01em}
-.gcard-title{color:var(--ed-ink);text-decoration:none}
-.gcard-title:hover,.gcard-title:focus-visible{color:var(--ed-gold)}
-/* TWO LINES ALWAYS, EVEN WHEN ONE WILL DO. "Find the XI. Discover the bonus."
-   wraps to one line and "Eleven questions, four answers, one clock." to two, so
-   the row below them — the rule, Play, Past puzzles — sat at a different height
-   on every card. Reserving the space costs nothing on the long ones and lines
-   the whole grid up. In em so it follows the featured cards' larger type. */
-.gcard-say p{margin:6px 0 0;font-size:13px;line-height:1.5;color:var(--ed-soft);min-height:3em}
-.gcard-acts{margin:10px 0 0;padding-top:9px;border-top:1px solid var(--ed-rule);
-  display:flex;align-items:baseline;justify-content:space-between;gap:10px}
-.gcard-play{font-family:var(--body);font-weight:600;font-size:13px;
-  color:var(--ed-ink);text-decoration:none;min-height:24px}
-.gcard-play:hover,.gcard-play:focus-visible{color:var(--ed-gold)}
-.gcard-past{font-size:12px;color:var(--ed-soft);text-decoration:none;
-  border-bottom:1px solid transparent}
-.gcard-past:hover,.gcard-past:focus-visible{color:var(--ed-ink);
-  border-bottom-color:var(--ed-rule)}
-/* THE WHOLE CARD ANSWERS THE POINTER, but the LINKS are what the keyboard
-   reaches — three real destinations, each focusable, rather than one div with
-   a click handler. The art is tabindex=-1 and aria-hidden because the title
-   beside it goes to the same place and a screen reader should not hear it
-   twice. */
-.gcard-art:hover img{opacity:.94}
-:where(.gcard) a:focus-visible{outline:3px solid var(--ed-gold);outline-offset:3px}
+.shirt.done{background:rgba(18,62,44,.10);border-color:var(--ed-ink)}
+.shirt.done .dot{background:var(--kit);color:#fff}
+.shirt.done .dot.on-light{color:var(--ink)}
+.shirt .lbl{font-size:11px;font-weight:600;line-height:1.15;text-align:center;
+  white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+.shirt .lbl .xi{display:none}
+/* DONE IS SAID WITH A MARK, not with colour alone: a tick on the shirt. On the
+   dot rather than after the name, where it pushed a long name onto two lines. */
+.shirt .dot{position:relative}
+.shirt.done .dot::after{content:"\2713";position:absolute;right:-7px;bottom:-5px;
+  width:15px;height:15px;border-radius:50%;background:var(--pitch);color:#fff;
+  font-family:var(--body);font-size:9px;font-weight:700;
+  display:flex;align-items:center;justify-content:center;box-shadow:0 0 0 2px var(--ed-paper)}
 
-/* THE TWO FEATURED. Bigger art, bigger title, same card. */
-.gcard.lead{grid-column:span 2}
-.gcard.lead h3{font-size:29px}
-.gcard.lead .gcard-say p{font-size:14px}
-.gcard.lead .gcard-num{width:30px;height:30px;font-size:16px}
-.gcard.lead:nth-of-type(1){order:-2}
+.dayline{display:flex;justify-content:space-between;gap:4px 12px;flex-wrap:wrap;
+  margin:8px 0 0;font-size:13px;color:var(--ed-soft)}
+.dayline .d{font-weight:600;color:var(--ed-ink)}
 
-/* The date beside the heading, in text rather than baked into the cover. */
-.sec-head{display:flex;align-items:flex-end;justify-content:space-between;
-  gap:16px;flex-wrap:wrap;margin:0 0 20px}
-.sec-head .lede{margin:4px 0 0}
-.sec-date{font-family:var(--disp);font-weight:700;font-size:14px;
-  letter-spacing:.16em;text-transform:uppercase;color:var(--ed-soft);
-  margin:0 0 3px;white-space:nowrap}
-.section h2.big{color:var(--ed-ink)}
-.section .lede{color:var(--ed-soft)}
+/* ---------- today's games ----------
+   Two columns on a phone, more as the width allows, by card width rather
+   than by device. Every card is ONE link to its game's home. */
+.games{padding:18px 0 4px}
+.games h2{font-family:var(--disp);font-weight:700;font-size:22px;letter-spacing:.02em;
+  text-transform:uppercase;margin:0 0 12px;color:var(--ed-ink)}
+.lineup{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (min-width:640px){.lineup{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (min-width:880px){.lineup{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media (min-width:1060px){.lineup{grid-template-columns:repeat(5,minmax(0,1fr))}}
+.gcard{min-width:0}
+.gcard-link{position:relative;display:flex;flex-direction:column;height:100%;
+  border-radius:10px;overflow:hidden;text-decoration:none;color:#fff;
+  background:var(--card-foot);box-shadow:0 1px 0 var(--ed-rule)}
+/* The artwork keeps its own 5:3, scaled rather than cropped, so the puzzle
+   motif survives. */
+.gcard-art{display:block;aspect-ratio:5/3;background:var(--kit);overflow:hidden}
+.gcard-art img{display:block;width:100%;height:100%;object-fit:cover}
+/* THE SHIRT NUMBER IS ALWAYS VISIBLE, done or not. */
+.gcard-num{position:absolute;top:7px;right:7px;width:26px;height:26px;border-radius:50%;
+  background:#fff;color:#15271F;font-family:var(--disp);font-weight:700;font-size:14px;
+  display:flex;align-items:center;justify-content:center;box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.gcard-say{display:flex;flex-direction:column;gap:2px;padding:7px 10px 9px;flex:1 1 auto}
+.gcard-title{font-family:var(--disp);font-weight:700;font-size:19px;line-height:1.05}
+.gcard-act{font-size:12.5px;font-weight:600;color:rgba(255,255,255,.85)}
+.gcard-act::after{content:" \2192"}
+/* COMPLETED: a badge in words, muted art, and the title still fully legible.
+   Not a faded card: it still opens, and "never colour alone" is the brief. */
+.gcard-done{position:absolute;top:7px;left:7px;padding:4px 8px;border-radius:6px;
+  background:#fff;color:#1E6B45;font-size:12px;font-weight:700;line-height:1.2;
+  box-shadow:0 1px 2px rgba(0,0,0,.25)}
+.gcard.done .gcard-art img{filter:grayscale(.8);opacity:.7}
+.gcard.done .gcard-link{background:var(--card-foot-done)}
+.gcard-link:hover .gcard-title{text-decoration:underline;text-underline-offset:3px}
+.gcard-link:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.archive-link{margin:16px 0 0;font-weight:600;font-size:15px}
+.archive-link a{color:var(--pitch);text-underline-offset:3px}
+:root[data-theme="dark"] .archive-link a{color:var(--ed-gold)}
 .vh{position:absolute;width:1px;height:1px;overflow:hidden;
   clip:rect(0 0 0 0);clip-path:inset(50%);white-space:nowrap}
 
@@ -408,33 +305,13 @@ a.shirt{padding:4px;gap:0}
 .season .today-note{display:block;font-size:11px;letter-spacing:.1em;
   color:rgba(255,255,255,.5);margin:7px 0 0}
 
-/* ---------- the rest of the XI ----------
-
-   A line, not a grid of five dashed cards. The shirts nobody wears yet are
-   already on the shelf at the top as numbers; repeating them as cards gave a
-   page about six playable games a section about five that are not. What has to
-   stay is the way in to the game in TESTING, which the owner asked for: a
-   number, a status, no name, and nofollow. */
-.rest{padding:34px 0 4px;text-align:center}
-.rest-line{font-family:var(--disp);font-size:14px;letter-spacing:.18em;
-  text-transform:uppercase;color:var(--ink-faint);margin:0 0 14px;
-  display:flex;align-items:center;justify-content:center;gap:16px}
-.rest-line::before,.rest-line::after{content:"";height:1px;background:var(--line);
-  flex:1 1 auto;max-width:200px}
-.soon-grid{display:flex;justify-content:center;gap:10px;flex-wrap:wrap}
-
-/* THE TEASER, and it is the design's block rather than a list of promises.
-   Every figure in it is read off the team sheet. */
-.teaser{display:inline-flex;align-items:center;gap:16px;text-align:left;
-  padding:16px 26px 16px 20px;background:rgba(18,62,44,.06);
-  border-left:3px solid var(--ed-gold)}
-:root[data-theme="dark"] .teaser{background:rgba(255,255,255,.05)}
-.teaser-num{font-family:var(--disp);font-weight:700;font-size:46px;line-height:.9;
-  color:var(--ed-gold);margin:0}
-.teaser-say{font-family:var(--disp);font-weight:700;font-size:19px;
-  letter-spacing:.04em;text-transform:uppercase;color:var(--ed-ink);margin:0}
-.teaser-sub{font-size:13px;color:var(--ed-soft);margin:3px 0 0}
-.rest{padding:34px 0 4px;text-align:center}
+/* ---------- a game in testing ----------
+   Not a teaser and not a dashed eleventh shirt: the brief removed both. This is
+   only the way in to a game that is BUILT and not launched, when there is
+   one, which the owner asked for: a number, a status, no name, nofollow. An
+   empty grid renders nothing. */
+.soon-grid{display:flex;justify-content:center;gap:10px;flex-wrap:wrap;margin:20px 0 0}
+.soon-grid:empty{display:none}
 .soon-card{background:transparent;border:1px dashed var(--line);border-radius:999px;
   padding:7px 16px 7px 7px;display:inline-flex;align-items:center;gap:10px;
   min-height:44px}
@@ -452,124 +329,46 @@ a.soon-card:hover,a.soon-card:focus-visible{border-color:var(--ink-faint);transf
 a.soon-card .sq{opacity:.9}
 a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
 
-.about{max-width:640px;margin:36px auto 0;padding:0}
+/* ---------- about ---------- */
+.about{max-width:640px;margin:34px 0 0;padding:0}
 .about h2{font-family:var(--disp);
   font-weight:700;font-size:21px;letter-spacing:.04em;text-transform:uppercase;
   margin:0 0 10px}
 .about p{font-size:14.5px;line-height:1.65;margin:0 0 12px;color:var(--ink-soft)}
 .about a{color:var(--pitch);text-decoration:underline;text-underline-offset:2px}
+.about details summary{cursor:pointer;min-height:44px;display:flex;align-items:center;
+  font-weight:600;color:var(--ed-ink)}
 
 :focus-visible{outline:3px solid var(--gold);outline-offset:2px}
 @media (prefers-reduced-motion:reduce){*{transition:none!important}}
-/* THE LINE-UP AT EVERY WIDTH. Four columns become two, then one. A FEATURED
-   card spans the full row at every step, so it stays featured rather than
-   quietly becoming an ordinary card on a phone — which is what "everyone gets
-   the same challenge" has to mean on a small screen too. */
-@media (max-width:1000px){
-  .lineup{grid-template-columns:repeat(2,minmax(0,1fr));gap:20px 18px}
-  .gcard.lead{grid-column:span 2}
-  .gcard.lead h3{font-size:25px}
-}
-@media (max-width:620px){
-  .lineup{grid-template-columns:1fr;gap:26px}
-  .gcard.lead{grid-column:span 1}
-  .gcard.lead h3{font-size:23px}
-  .gcard h3{font-size:22px}
-}
-/* ONE SHELF WHERE ONE SHELF FITS. Above this width the eleven sit on a single
-   line, live games and unsigned numbers together, which is what a team sheet
-   looks like. Below it they stack into two rows rather than scrolling: a row
-   that scrolls sideways hides the games at the end of it, and the games are
-   the point of the page. */
-@media (min-width:901px){
-  .xi-strip{flex-direction:row;flex-wrap:wrap;align-items:center}
-}
-@media (max-width:700px){
-  /* THE COVER IS THE FIRST THING TO GO. It is decoration, it is the widest
-     thing on the page, and a tilted block with a shadow is what pushes a
-     phone into horizontal scroll. The date it carries is already beside the
-     line-up heading in text. */
-  .hero{grid-template-columns:1fr;gap:0;padding:22px 0 26px}
-  .cover{display:none}
-  .hero h1{font-size:clamp(32px,9vw,47px)}
-  /* THE LABELS STAY READABLE. Eleven cells across a phone gave each game 28
-     pixels, which is a glyph and not a name. Three across, the circle over the
-     name, and the "XI" dropped from the label because every one of them ends
-     in it — the full name is still the accessible name and the tooltip. */
-  /* The names came off the shelf at every width, so the three-across grid that
-     held them has nothing to hold: eleven numbers wrap onto two short lines by
-     themselves and the cards start most of a screen earlier. */
-  .strip-row{display:flex;flex-wrap:wrap;gap:8px}
-  .strip-row.soon-row{display:flex;flex-wrap:wrap}
-  a.shirt{flex-direction:row;gap:0;padding:4px;border-radius:999px;
-    min-width:0;text-align:center}
-  .shirt .xi{display:none}
-}
-@media (max-width:460px){
-  .cover-xi{font-size:84px}
-  .gcard-acts{flex-wrap:wrap}
-}
 </style>
 </head>
 <body>
 
 <!-- The shared bar, filled by shared/xi-chrome.js: the burger, the wordmark
      and the drawer with the squad, the same on the front door as in every
-     game. Sign-in lives in the drawer, so the front door no longer points
-     at an account page that does not exist. -->
+     game. -->
 <header class="xic-bar"></header>
 
-<div class="wrap">
+<main class="wrap">
 
-  <!-- THE BANNER. One line of what this is, and then the puzzles. The count is
-       not written down: it is read off the team sheet below, because "six
-       games" was "four games" eight weeks ago and a number typed into a
-       sentence is a number nobody updates. -->
-  <!-- ================= THE HERO =================
-
-       THE COVER IS HTML AND CSS, NOT AN IMAGE, so the date on it is the live
-       one and the type stays crisp on any screen. A picture of a date is a
-       date that goes stale silently — the whole reason this page reads its day
-       off /api/daily rather than the device.
-
-       The headline's second half takes the gold; everything else is the deep
-       green. aria-hidden on the cover: it is the masthead of a magazine that
-       does not exist, and the date beside the line-up says the same thing in
-       text a screen reader can use. -->
-  <section class="hero">
-    <div class="hero-say">
-      <p class="hero-kicker">The daily football puzzle club</p>
-      <h1>The beautiful game.<br>A different<br><em>kind of challenge.</em></h1>
-      <p class="sub">Eleven answers. <span id="liveCount">Eleven</span> games to find them.<br>
-         Your daily football fix starts here.</p>
-      <!-- THE LABEL NAMES THE GAME IT OPENS. It is written here as the first
-           game in shirt order so the button is never empty and never lies
-           before the script runs; the rotation rewrites both the label and the
-           href together, never one without the other. -->
-      <a class="hero-go" id="heroGo" href="/football/crossword/?play=1">
-        <span id="heroGoLabel">Start with Crossword</span>
-        <span aria-hidden="true">&#8599;</span>
-      </a>
-    </div>
-    <div class="cover" aria-hidden="true">
-      <p class="cover-label">Today&#8217;s edition</p>
-      <p class="cover-xi">XI</p>
-      <div class="cover-bottom">
-        <p class="cover-foot">A fresh challenge.<br>Every single day.</p>
-        <p class="cover-stamp"><b id="coverDay">17</b><small id="coverMon">SEP</small></p>
-      </div>
-    </div>
+  <section class="hub-head">
+    <h1>Daily football puzzles</h1>
+    <!-- FOR A NEWCOMER. Hidden by the script below for a device that has played
+         before; shown to everyone when that cannot be read, because a returning
+         player reading one line is cheaper than a newcomer missing it. The
+         count is the number of shirts in Today's XI, and the script re-reads it
+         there, so it cannot drift from the squad. -->
+    <p class="hub-intro" id="hubIntro"><span id="liveCount">Ten</span> games. Eleven answers each.
+       A fresh challenge every day. Free to play.</p>
   </section>
 
-  <!-- THE TEAM SHEET. Three states on one shelf: played today, live and
-       unplayed, and a shirt nobody wears yet. Both rows stay inside .xi-strip —
-       the page counts the dashed shirts to say how many are still to sign, and
-       the chrome test counts the live ones against the launched squad. -->
-  <section class="today">
-    <div class="today-head">
-      <h2>Today's XI</h2>
-      <p class="date" id="sheetDate">Today</p>
-    </div>
+  <!-- TODAY'S XI, AS ONE ROW. "View games" until the device's record has been
+       read, then "N of 10 completed": never "0 completed" on a guess. The ten
+       shirts inside are the launched squad in shirt order; an unlaunched shirt
+       appears nowhere on this page. -->
+  <details class="today" id="todayXI">
+    <summary><span class="t-label">Today&#8217;s XI</span><span class="t-count" id="xiCount">View games</span></summary>
     <div class="xi-strip">
       <div class="strip-row">
         <a class="shirt live" id="shirt1" href="/football/crossword/" title="Crossword XI" aria-label="Crossword XI">
@@ -590,200 +389,115 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
         <a class="shirt live" id="shirt6" href="/football/grid/" title="Grid XI" aria-label="Grid XI">
           <span class="dot" style="--kit:var(--kit-06)" aria-hidden="true">6</span>
           <span class="lbl">Grid<span class="xi"> XI</span></span></a>
-        <!-- Codeword XI launched 14 September 2026 and took the seventh, the
-             next free number. The unsigned shirts below lose one from the top
-             rather than the roster growing a twelfth. -->
         <a class="shirt live" id="shirt7" href="/football/codeword/" title="Codeword XI" aria-label="Codeword XI">
           <span class="dot" style="--kit:var(--kit-07)" aria-hidden="true">7</span>
           <span class="lbl">Codeword<span class="xi"> XI</span></span></a>
-        <!-- QuickFire XI launched 15 September 2026 on the eighth, the next
-             free number, and keeps the purple it was already wearing — a kit
-             belongs to the game, not to the number. -->
         <a class="shirt live" id="shirt8" href="/football/quickfire/" title="QuickFire XI" aria-label="QuickFire XI">
           <span class="dot" style="--kit:var(--kit-08)" aria-hidden="true">8</span>
           <span class="lbl">QuickFire<span class="xi"> XI</span></span></a>
-        <!-- Who Am I XI launched 15 September 2026 on the ninth, the next free
-             number, and keeps the teal it was already wearing. -->
         <a class="shirt live" id="shirt9" href="/football/whoami/" title="Who Am I XI" aria-label="Who Am I XI">
           <span class="dot" style="--kit:var(--kit-09)" aria-hidden="true">9</span>
           <span class="lbl">Who Am I<span class="xi"> XI</span></span></a>
-        <!-- Ballpark XI took the tenth on 16 September 2026, the next free
-             number, and keeps the slate it was already wearing. Its LAUNCHED
-             date is 26 August, not today: it had been serving at its own
-             address since the family epoch without holding a shirt, and dating
-             the launch later would have hidden twenty-one boards that ran. -->
         <a class="shirt live" id="shirt10" href="/football/ballpark/" title="Ballpark XI" aria-label="Ballpark XI">
           <span class="dot" style="--kit:var(--kit-10)" aria-hidden="true">10</span>
           <span class="lbl">Ballpark<span class="xi"> XI</span></span></a>
       </div>
-      <div class="strip-row soon-row">
-        <span class="shirt soon" title="Not out yet">11</span>
-      </div>
     </div>
-    <p class="played" id="playedLine"><span id="toSign">Five</span> still to sign</p>
-  </section>
+  </details>
+  <!-- THE DATE ONCE, AND WHEN THE NEXT SET ARRIVES. Both from the server's day
+       (/api/daily), the reset shown in the reader's own time with its zone;
+       the fallback states the rule in UTC, which is always true. -->
+  <p class="dayline"><span class="d" id="sheetDate">Today&#8217;s puzzles</span>
+     <span id="resetLine">New puzzles daily at 00:00 UTC</span></p>
 
-  <!-- ================= YOUR DAILY LINE-UP =================
-
-       TEN CARDS, ALWAYS ALL TEN, ALWAYS IN SHIRT ORDER IN THE MARKUP. Two of
-       them are FEATURED on any given day and the other eight are compact, and
-       that is a CSS state applied to this same list rather than a different
-       list — so the page without JavaScript is not a broken page, it is ten
-       games in shirt order, every link live. Nothing here is built by script.
-
-       WHICH TWO IS DECIDED BY THE PUZZLE DATE, NOT BY THE DEVICE. See the
-       rotation block at the foot of this file. -->
-  <section class="section lineup-sec">
-    <div class="sec-head">
-      <div>
-        <h2 class="big">Your daily line-up</h2>
-        <p class="lede">Pick your puzzle. Everyone gets the same challenge.</p>
-      </div>
-      <p class="sec-date" id="lineDate">Today</p>
-    </div>
-
+  <section class="games" aria-labelledby="gamesHead">
+    <h2 id="gamesHead">Today&#8217;s games</h2>
+    <!-- TEN CARDS, IN SHIRT ORDER, IN THE MARKUP. Each is one link to its
+         game's home: a card must not start a clock (the owner's call, 24 Sep
+         2026). No featured pair and no rotation: the grid is the choice. -->
     <div class="lineup" id="lineup">
       <article class="gcard" data-game="crossword" style="--kit:var(--kit-01)">
-        <a class="gcard-art" href="/football/crossword/" tabindex="-1" aria-hidden="true">
-          <img src="/assets/games/crossword.jpg?v=a1" alt="" width="1200" height="720" loading="lazy" decoding="async">
-          <span class="gcard-num">1</span>
+        <a class="gcard-link" href="/football/crossword/">
+          <span class="gcard-art"><img src="/assets/games/crossword.jpg?v=a1" alt="" width="1200" height="720" loading="lazy" decoding="async"></span>
+          <span class="gcard-num" aria-label="Shirt 1">1</span>
+          <span class="gcard-done" hidden>&#10003; Completed</span>
+          <span class="gcard-say"><span class="gcard-title">Crossword XI</span><span class="gcard-act">Play today</span></span>
         </a>
-        <div class="gcard-say">
-          <h3><a class="gcard-title" href="/football/crossword/">Crossword XI</a></h3>
-          <p>Eleven clues. One football crossword.</p>
-        </div>
-        <p class="gcard-acts">
-          <a class="gcard-play" href="/football/crossword/?play=1">Play <span aria-hidden="true">&#8599;</span><span class="vh"> Crossword XI today</span></a>
-          <a class="gcard-past" href="/football/crossword/archive/">Past puzzles<span class="vh"> &#8212; Crossword XI</span></a>
-        </p>
       </article>
       <article class="gcard" data-game="wordsearch" style="--kit:var(--kit-02)">
-        <a class="gcard-art" href="/football/wordsearch/" tabindex="-1" aria-hidden="true">
-          <img src="/assets/games/wordsearch.jpg?v=a1" alt="" width="1200" height="720" loading="lazy" decoding="async">
-          <span class="gcard-num">2</span>
+        <a class="gcard-link" href="/football/wordsearch/">
+          <span class="gcard-art"><img src="/assets/games/wordsearch.jpg?v=a1" alt="" width="1200" height="720" loading="lazy" decoding="async"></span>
+          <span class="gcard-num" aria-label="Shirt 2">2</span>
+          <span class="gcard-done" hidden>&#10003; Completed</span>
+          <span class="gcard-say"><span class="gcard-title">Wordsearch XI</span><span class="gcard-act">Play today</span></span>
         </a>
-        <div class="gcard-say">
-          <h3><a class="gcard-title" href="/football/wordsearch/">Wordsearch XI</a></h3>
-          <p>Find the XI. Discover the bonus.</p>
-        </div>
-        <p class="gcard-acts">
-          <a class="gcard-play" href="/football/wordsearch/?play=1">Play <span aria-hidden="true">&#8599;</span><span class="vh"> Wordsearch XI today</span></a>
-          <a class="gcard-past" href="/football/wordsearch/archive/">Past puzzles<span class="vh"> &#8212; Wordsearch XI</span></a>
-        </p>
       </article>
       <article class="gcard" data-game="scrambled" style="--kit:var(--kit-03)">
-        <a class="gcard-art" href="/football/scrambled/" tabindex="-1" aria-hidden="true">
-          <img src="/assets/games/scrambled.jpg?v=a1" alt="" width="1200" height="720" loading="lazy" decoding="async">
-          <span class="gcard-num">3</span>
+        <a class="gcard-link" href="/football/scrambled/">
+          <span class="gcard-art"><img src="/assets/games/scrambled.jpg?v=a1" alt="" width="1200" height="720" loading="lazy" decoding="async"></span>
+          <span class="gcard-num" aria-label="Shirt 3">3</span>
+          <span class="gcard-done" hidden>&#10003; Completed</span>
+          <span class="gcard-say"><span class="gcard-title">Scrambled XI</span><span class="gcard-act">Play today</span></span>
         </a>
-        <div class="gcard-say">
-          <h3><a class="gcard-title" href="/football/scrambled/">Scrambled XI</a></h3>
-          <p>Untangle eleven player names.</p>
-        </div>
-        <p class="gcard-acts">
-          <a class="gcard-play" href="/football/scrambled/?play=1">Play <span aria-hidden="true">&#8599;</span><span class="vh"> Scrambled XI today</span></a>
-          <a class="gcard-past" href="/football/scrambled/archive/">Past puzzles<span class="vh"> &#8212; Scrambled XI</span></a>
-        </p>
       </article>
       <article class="gcard" data-game="hilo" style="--kit:var(--kit-04)">
-        <a class="gcard-art" href="/football/hilo/" tabindex="-1" aria-hidden="true">
-          <img src="/assets/games/hilo.jpg?v=a1" alt="" width="1200" height="720" loading="lazy" decoding="async">
-          <span class="gcard-num">4</span>
+        <a class="gcard-link" href="/football/hilo/">
+          <span class="gcard-art"><img src="/assets/games/hilo.jpg?v=a1" alt="" width="1200" height="720" loading="lazy" decoding="async"></span>
+          <span class="gcard-num" aria-label="Shirt 4">4</span>
+          <span class="gcard-done" hidden>&#10003; Completed</span>
+          <span class="gcard-say"><span class="gcard-title">HiLo XI</span><span class="gcard-act">Play today</span></span>
         </a>
-        <div class="gcard-say">
-          <h3><a class="gcard-title" href="/football/hilo/">HiLo XI</a></h3>
-          <p>Eleven higher-or-lower calls.</p>
-        </div>
-        <p class="gcard-acts">
-          <a class="gcard-play" href="/football/hilo/?play=1">Play <span aria-hidden="true">&#8599;</span><span class="vh"> HiLo XI today</span></a>
-          <a class="gcard-past" href="/football/hilo/archive/">Past puzzles<span class="vh"> &#8212; HiLo XI</span></a>
-        </p>
       </article>
       <article class="gcard" data-game="vowels" style="--kit:var(--kit-05)">
-        <a class="gcard-art" href="/football/vowels/" tabindex="-1" aria-hidden="true">
-          <img src="/assets/games/vowels.jpg?v=a1" alt="" width="1200" height="720" loading="lazy" decoding="async">
-          <span class="gcard-num">5</span>
+        <a class="gcard-link" href="/football/vowels/">
+          <span class="gcard-art"><img src="/assets/games/vowels.jpg?v=a1" alt="" width="1200" height="720" loading="lazy" decoding="async"></span>
+          <span class="gcard-num" aria-label="Shirt 5">5</span>
+          <span class="gcard-done" hidden>&#10003; Completed</span>
+          <span class="gcard-say"><span class="gcard-title">Vowels XI</span><span class="gcard-act">Play today</span></span>
         </a>
-        <div class="gcard-say">
-          <h3><a class="gcard-title" href="/football/vowels/">Vowels XI</a></h3>
-          <p>Put the missing vowels back.</p>
-        </div>
-        <p class="gcard-acts">
-          <a class="gcard-play" href="/football/vowels/?play=1">Play <span aria-hidden="true">&#8599;</span><span class="vh"> Vowels XI today</span></a>
-          <a class="gcard-past" href="/football/vowels/archive/">Past puzzles<span class="vh"> &#8212; Vowels XI</span></a>
-        </p>
       </article>
       <article class="gcard" data-game="grid" style="--kit:var(--kit-06)">
-        <a class="gcard-art" href="/football/grid/" tabindex="-1" aria-hidden="true">
-          <img src="/assets/games/grid.jpg?v=a1" alt="" width="1200" height="720" loading="lazy" decoding="async">
-          <span class="gcard-num">6</span>
+        <a class="gcard-link" href="/football/grid/">
+          <span class="gcard-art"><img src="/assets/games/grid.jpg?v=a1" alt="" width="1200" height="720" loading="lazy" decoding="async"></span>
+          <span class="gcard-num" aria-label="Shirt 6">6</span>
+          <span class="gcard-done" hidden>&#10003; Completed</span>
+          <span class="gcard-say"><span class="gcard-title">Grid XI</span><span class="gcard-act">Play today</span></span>
         </a>
-        <div class="gcard-say">
-          <h3><a class="gcard-title" href="/football/grid/">Grid XI</a></h3>
-          <p>Eleven names. Shared letters.</p>
-        </div>
-        <p class="gcard-acts">
-          <a class="gcard-play" href="/football/grid/?play=1">Play <span aria-hidden="true">&#8599;</span><span class="vh"> Grid XI today</span></a>
-          <a class="gcard-past" href="/football/grid/archive/">Past puzzles<span class="vh"> &#8212; Grid XI</span></a>
-        </p>
       </article>
       <article class="gcard" data-game="codeword" style="--kit:var(--kit-07)">
-        <a class="gcard-art" href="/football/codeword/" tabindex="-1" aria-hidden="true">
-          <img src="/assets/games/codeword.jpg?v=a1" alt="" width="1200" height="720" loading="lazy" decoding="async">
-          <span class="gcard-num">7</span>
+        <a class="gcard-link" href="/football/codeword/">
+          <span class="gcard-art"><img src="/assets/games/codeword.jpg?v=a1" alt="" width="1200" height="720" loading="lazy" decoding="async"></span>
+          <span class="gcard-num" aria-label="Shirt 7">7</span>
+          <span class="gcard-done" hidden>&#10003; Completed</span>
+          <span class="gcard-say"><span class="gcard-title">Codeword XI</span><span class="gcard-act">Play today</span></span>
         </a>
-        <div class="gcard-say">
-          <h3><a class="gcard-title" href="/football/codeword/">Codeword XI</a></h3>
-          <p>Every letter is a number.</p>
-        </div>
-        <p class="gcard-acts">
-          <a class="gcard-play" href="/football/codeword/?play=1">Play <span aria-hidden="true">&#8599;</span><span class="vh"> Codeword XI today</span></a>
-          <a class="gcard-past" href="/football/codeword/archive/">Past puzzles<span class="vh"> &#8212; Codeword XI</span></a>
-        </p>
       </article>
       <article class="gcard" data-game="quickfire" style="--kit:var(--kit-08)">
-        <a class="gcard-art" href="/football/quickfire/" tabindex="-1" aria-hidden="true">
-          <img src="/assets/games/quickfire.jpg?v=a1" alt="" width="1200" height="720" loading="lazy" decoding="async">
-          <span class="gcard-num">8</span>
+        <a class="gcard-link" href="/football/quickfire/">
+          <span class="gcard-art"><img src="/assets/games/quickfire.jpg?v=a1" alt="" width="1200" height="720" loading="lazy" decoding="async"></span>
+          <span class="gcard-num" aria-label="Shirt 8">8</span>
+          <span class="gcard-done" hidden>&#10003; Completed</span>
+          <span class="gcard-say"><span class="gcard-title">QuickFire XI</span><span class="gcard-act">Play today</span></span>
         </a>
-        <div class="gcard-say">
-          <h3><a class="gcard-title" href="/football/quickfire/">QuickFire XI</a></h3>
-          <p>Eleven questions, four answers, one clock.</p>
-        </div>
-        <p class="gcard-acts">
-          <a class="gcard-play" href="/football/quickfire/?play=1">Play <span aria-hidden="true">&#8599;</span><span class="vh"> QuickFire XI today</span></a>
-          <a class="gcard-past" href="/football/quickfire/archive/">Past puzzles<span class="vh"> &#8212; QuickFire XI</span></a>
-        </p>
       </article>
       <article class="gcard" data-game="whoami" style="--kit:var(--kit-09)">
-        <a class="gcard-art" href="/football/whoami/" tabindex="-1" aria-hidden="true">
-          <img src="/assets/games/whoami.jpg?v=a1" alt="" width="1200" height="720" loading="lazy" decoding="async">
-          <span class="gcard-num">9</span>
+        <a class="gcard-link" href="/football/whoami/">
+          <span class="gcard-art"><img src="/assets/games/whoami.jpg?v=a1" alt="" width="1200" height="720" loading="lazy" decoding="async"></span>
+          <span class="gcard-num" aria-label="Shirt 9">9</span>
+          <span class="gcard-done" hidden>&#10003; Completed</span>
+          <span class="gcard-say"><span class="gcard-title">Who Am I XI</span><span class="gcard-act">Play today</span></span>
         </a>
-        <div class="gcard-say">
-          <h3><a class="gcard-title" href="/football/whoami/">Who Am I XI</a></h3>
-          <p>Eleven club doors, one hidden player behind each.</p>
-        </div>
-        <p class="gcard-acts">
-          <a class="gcard-play" href="/football/whoami/?play=1">Play <span aria-hidden="true">&#8599;</span><span class="vh"> Who Am I XI today</span></a>
-          <a class="gcard-past" href="/football/whoami/archive/">Past puzzles<span class="vh"> &#8212; Who Am I XI</span></a>
-        </p>
       </article>
       <article class="gcard" data-game="ballpark" style="--kit:var(--kit-10)">
-        <a class="gcard-art" href="/football/ballpark/" tabindex="-1" aria-hidden="true">
-          <img src="/assets/games/ballpark.jpg?v=a1" alt="" width="1200" height="720" loading="lazy" decoding="async">
-          <span class="gcard-num">10</span>
+        <a class="gcard-link" href="/football/ballpark/">
+          <span class="gcard-art"><img src="/assets/games/ballpark.jpg?v=a1" alt="" width="1200" height="720" loading="lazy" decoding="async"></span>
+          <span class="gcard-num" aria-label="Shirt 10">10</span>
+          <span class="gcard-done" hidden>&#10003; Completed</span>
+          <span class="gcard-say"><span class="gcard-title">Ballpark XI</span><span class="gcard-act">Play today</span></span>
         </a>
-        <div class="gcard-say">
-          <h3><a class="gcard-title" href="/football/ballpark/">Ballpark XI</a></h3>
-          <p>Eleven questions with a number for an answer. Close enough counts.</p>
-        </div>
-        <p class="gcard-acts">
-          <a class="gcard-play" href="/football/ballpark/?play=1">Play <span aria-hidden="true">&#8599;</span><span class="vh"> Ballpark XI today</span></a>
-          <a class="gcard-past" href="/football/ballpark/archive/">Past puzzles<span class="vh"> &#8212; Ballpark XI</span></a>
-        </p>
       </article>
     </div>
+    <p class="archive-link"><a href="/football/archive/">Browse previous dailies <span aria-hidden="true">&#8594;</span></a></p>
   </section>
 
   <!-- ONE SEASON, AND IT IS THE FAMILY'S. Not a game's: each game keeps its
@@ -812,92 +526,38 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
     <p class="season-year" id="seasonYear"></p>
   </div>
 
-  <section class="section rest">
-    <!-- A LINE, NOT A GRID OF FIVE DASHED CARDS. The shirts nobody wears yet
-         are already on the shelf at the top, as numbers; repeating them as
-         cards gave a page about six playable games a whole section about five
-         that are not.
+  <div class="soon-grid"></div>
 
-         What stays is the way IN to the game in testing, which the owner asked
-         for: built and playable, not launched. It is a number and a status —
-         never a name — and it is marked nofollow so the route in does not
-         become an announcement to a crawler.
-
-         Numbers only, no names. Two reasons. The roster reads as a squad being
-         assembled rather than a list of promises, which is the whole point of
-         the shirts above. And an indexed page naming five unreleased games
-         hands the roadmap to playfootball.games and footballgenius.app, both
-         of which ship regularly and already hold the names two of these were
-         built under.
-
-         QUICKFIRE XI TOOK THE EIGHT ON 15 SEP 2026, so the tail moved down one
-         again and the squad lost an unsigned slot rather than growing a
-         twelfth. ONE game is in testing now and it does not hold a shirt: it
-         sits on the first number no launched game wears, which is the owner's
-         ordering of what is next rather than anything the number means. -->
-    <!-- THE TEASER IS DERIVED, NOT TYPED. The big numeral is the first shirt
-         nobody wears, the count is the games that are live, and both are read
-         off the team sheet above — so the day an eleventh game launches this
-         block reports "no more to come" rather than promising a twelfth that
-         the squad has no room for. Hidden entirely when nothing is to sign. -->
-    <div class="teaser" id="teaser">
-      <p class="teaser-num" id="teaserNum" aria-hidden="true">11</p>
-      <div>
-        <p class="teaser-say" id="teaserSay">One more for the squad.</p>
-        <p class="teaser-sub"><span id="toSignProse">Ten</span> games to play.
-           The next one is on its way.</p>
-      </div>
-    </div>
-    <div class="soon-grid">
-      <!-- NOTHING IS IN TESTING. Ballpark XI was the last one and it launched
-           on 16 September 2026, taking the tenth shirt — so the dashed card
-           that stood here has gone and the game has a real card above, under
-           Out now, with its name on it.
-           THE GRID IS LEFT IN PLACE RATHER THAN DELETED because the state it
-           renders is a real one that will come round again: the next game to
-           reach testing gets a card here, a number and a status and no name.
-           An empty grid renders nothing, so a reader sees no gap. -->
-    </div>
-  </section>
-
-  <!-- AT THE BOTTOM, AND THAT IS THE POINT OF IT.
-
-       This sat between the team sheet and the games, so the first thing
-       under the shirts was four paragraphs and the games were below the
-       fold. Somebody arriving wants today's puzzle, not the rules of the
-       competition.
-
-       It is not deleted, because it is what the page RANKS for — 134
-       crawlable words was a business card, not a page — and a search visitor
-       reads it after the games rather than instead of them, which is the
-       right way round for both of them.
-
-       Names only released games: the roster's unreleased squad numbers stay
-       squad numbers, here and everywhere. -->
+  <!-- AT THE BOTTOM, AND IT IS WHAT THE PAGE RANKS FOR. Short and family-wide
+       on top; the longer account behind a native disclosure, still in the
+       served HTML, so a crawler reads all of it and a phone shows two lines.
+       Names only released games. -->
   <section class="about">
-    <h2>Daily football puzzles, one for every shirt</h2>
-    <p>The XI Games is a squad of eleven football puzzle games, built one
-       shirt at a time. Every game in the family follows the same rules of
-       the competition: eleven answers a day, scored out of 114 &mdash; the
-       points available across a 38-match season &mdash; with wins, draws and
-       losses that build a league table of your own season.</p>
-    <p><a href="/football/crossword/">Crossword XI</a> wears the number one shirt: a
-       daily football crossword with eleven clues drawn from the history of
-       the game &mdash; title winners, transfers, grounds, nicknames and the
-       players everyone half-remembers. The clock starts when the board opens
-       and doesn&rsquo;t stop, three substitutions stand between you and a
-       reveal, and the same board goes to everyone, every day. Yesterday&rsquo;s
-       counts if you finish it before midnight; the rest of the archive is
-       always there for a friendly.</p>
-    <p>The shirts still to be filled are being worked on. Each new game joins
-       the same season, the same account, and the same team sheet above.</p>
+    <h2>About The XI Games</h2>
+    <p>The daily football puzzle club. Ten different ways to test your football
+       knowledge, with eleven answers in each game and a fresh set of puzzles
+       every day, the same for everyone.</p>
+    <details>
+      <summary>More about how it works</summary>
+      <p>Every game in the family follows the same rules of the competition:
+         eleven answers a day, scored out of 114 &mdash; the points available
+         across a 38-match season &mdash; with wins, draws and losses that build
+         a league table of your own season. Finish two games in a day and it is
+         a win; one is a draw.</p>
+      <p><a href="/football/crossword/">Crossword XI</a> wears the number one
+         shirt: a daily football crossword with eleven clues drawn from the
+         history of the game &mdash; title winners, transfers, grounds,
+         nicknames and the players everyone half-remembers. Every game keeps its
+         earlier boards at their own addresses, in
+         <a href="/football/archive/">previous dailies</a>.</p>
+      <p>No account is needed to play. Signing in keeps your results and your
+         season on every device you use.</p>
+    </details>
   </section>
 
-</div>
+</main>
 
-<!-- The shared footer, built by shared/xi-chrome.js from the one squad list
-     and the one page list, so the front door's footer and every game's are
-     the same footer. -->
+<!-- The shared footer, built by shared/xi-chrome.js. -->
 <footer class="xic-foot"></footer>
 <script src="/shared/xi-season.js?v=v58"></script>
 <script src="/shared/xi-chrome.js?v=v58"></script>
@@ -907,312 +567,115 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
 <script src="/shared/xi-played.js?v=v58"></script>
 
 <script>
-/* Progressive enhancement only: everything above renders complete without
-   this. The shirt state is read the same way the game itself decides "played
-   today" — its own record in this origin's storage, keyed by the daily number
-   the SERVER says is today. The epoch is deliberately not duplicated here:
-   the hub asking /api/daily for the number is one network call, while a
-   second copy of the epoch in a second file is how the client and server
-   disagreed about dates in the first place. */
+/* Progressive enhancement only: everything above is complete without this.
+   It adds the state the markup cannot know: which games this player has
+   finished today, the count, the day, when the next puzzles arrive, and
+   whether this device has played before. */
 (function () {
-  /* THE DATE IS THE SERVER'S, and it was the device's until 8 September 2026.
-     An independent review opened the hub and the crossword in the same session
-     and read "Tuesday 8 September" on one and "Mon 7 Sept" on the other — a
-     UK evening after local midnight and before UTC midnight, which is an hour
-     of every summer night. The hub was naming a day whose boards did not
-     exist yet.
-     The device's date is drawn first so the line is never empty, and the
-     server's replaces it when /api/daily answers — the same call the shirt
-     state below already makes, so this costs nothing extra. Its `day` is the
-     UTC day the boards are keyed by. */
-  /* ================= THE DAILY FEATURE =================
-
-     TWO OF THE TEN ARE FEATURED, AND WHICH TWO IS A PROPERTY OF THE PUZZLE
-     DATE. Not of the visitor, not of the visit, not of the device clock — the
-     same pair for everybody on a given board day, which is the whole promise
-     the line under the heading makes.
-
-     FIVE DAYS, TEN GAMES, EACH FEATURED EXACTLY ONCE PER CYCLE. The pairs are
-     written down because the thing they encode cannot be derived: they pair
-     word games against trivia and quick against slow, and "contrast" is a
-     judgement, not an arithmetic. Everything ELSE about the rotation is
-     derived — which games exist, what order the rest sit in, whether a named
-     game is still live — so the only thing this table can be wrong about is
-     taste.
-
-     THE EPOCH IS FIXED AND WRITTEN HERE. 18 September 2026 is day 0 — the day
-     the whole family reset to day 1 for the first public post, so the rotation
-     and the board numbering start together rather than a day apart. Move this
-     and every day in history re-pairs; it is not a value to tune.
-     THE ORDER OF THE PAIRS IS EDITORIAL. QuickFire leads day one at the
-     owner's request, in place of Wordsearch; every game still appears exactly
-     once per cycle, which is the property the suite actually enforces. */
-  var FEATURE_EPOCH = "2026-09-18";
-  var FEATURE_CYCLE = [
-    ["quickfire", "hilo"],
-    ["crossword", "wordsearch"],
-    ["scrambled", "ballpark"],
-    ["vowels", "whoami"],
-    ["grid", "codeword"]
-  ];
-  function dayNumber(day) {
-    var p = String(day || "").split("-");
-    if (p.length !== 3) return null;
-    var at = Date.UTC(+p[0], +p[1] - 1, +p[2]);
-    var e = FEATURE_EPOCH.split("-");
-    var from = Date.UTC(+e[0], +e[1] - 1, +e[2]);
-    if (isNaN(at)) return null;
-    return Math.round((at - from) / 86400000);
-  }
-  /* AND IT MUST WORK BEFORE THE EPOCH. A negative remainder in JavaScript is
-     negative, so a board day earlier than the epoch — an archive link, a clock
-     set wrong, the epoch moved forward — would index the array with -2 and
-     feature nothing at all. The page would then show ten compact cards and no
-     feature, silently. */
-  function cycleIndex(day) {
-    var n = dayNumber(day);
-    if (n === null) return null;
-    return ((n % FEATURE_CYCLE.length) + FEATURE_CYCLE.length) % FEATURE_CYCLE.length;
-  }
-  /* THE CARDS IN THE PAGE ARE THE ONE LIST OF WHICH GAMES EXIST. The cycle
-     names ids; if an id is not on the page — a game renamed, withdrawn, or a
-     table edited without the markup — it is SKIPPED and the next card in shirt
-     order takes the place. So the page cannot show a game twice, cannot lose
-     one, and cannot feature a card that is not there. Two is a maximum, not a
-     promise: nine games on the page means one feature, and that is honest. */
-  function feature(day) {
-    var all = [].slice.call(document.querySelectorAll("#lineup .gcard"));
-    if (!all.length) return;
-    /* BOUNDS-CHECKED RATHER THAN TRUSTED. cycleIndex is guarded, but this line
-       is reached from inside a try and from inside a .then().catch(), so if it
-       ever DID index off the end the throw would be swallowed and the page
-       would silently keep the pair computed from the device's day — the one
-       outcome this whole block exists to prevent, arriving as a silence.
-       Proven: with the guard in cycleIndex removed, the page kept featuring
-       the device's pair and every count-based check still passed. */
-    var i = cycleIndex(day);
-    var pair = (i !== null && i >= 0 && i < FEATURE_CYCLE.length) ? FEATURE_CYCLE[i] : null;
-    var want = pair ? pair.slice() : [];
-    var picked = [];
-    want.forEach(function (id) {
-      for (var k = 0; k < all.length; k++) {
-        if (all[k].getAttribute("data-game") === id && picked.indexOf(all[k]) < 0) {
-          picked.push(all[k]); return;
-        }
-      }
-    });
-    /* A named game that has gone: fill from shirt order rather than show one
-       feature where the design has two. */
-    for (var k = 0; picked.length < Math.min(2, all.length) && k < all.length; k++) {
-      if (picked.indexOf(all[k]) < 0) picked.push(all[k]);
-    }
-    all.forEach(function (c) { c.classList.remove("lead"); c.style.order = ""; });
-    picked.forEach(function (c, n) { c.classList.add("lead"); c.style.order = String(n - 10); });
-    /* THE HERO'S LABEL AND ITS DESTINATION MOVE TOGETHER OR NOT AT ALL. A
-       button reading one game's name and opening another's board is worse
-       than a button that never changed. */
-    var first = picked[0];
-    var go = document.getElementById("heroGo");
-    var lab = document.getElementById("heroGoLabel");
-    var title = first && first.querySelector(".gcard-title");
-    if (go && lab && first && title) {
-      var id = first.getAttribute("data-game");
-      go.setAttribute("href", "/football/" + id + "/?play=1");
-      lab.textContent = "Start with " + title.textContent.replace(/\s*XI$/, "");
-    }
-  }
-
-  var MONTHS = ["January", "February", "March", "April", "May", "June", "July",
-                "August", "September", "October", "November", "December"];
-  var DAYS = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
-  var SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-  var MON3 = ["JAN", "FEB", "MAR", "APR", "MAY", "JUN",
-              "JUL", "AUG", "SEP", "OCT", "NOV", "DEC"];
+  "use strict";
+  var WORDS = ["none", "one", "two", "three", "four", "five", "six",
+               "seven", "eight", "nine", "ten", "eleven"];
+  function upper(w) { return w.charAt(0).toUpperCase() + w.slice(1); }
   function put(id, text) {
     try { var e = document.getElementById(id); if (e) e.textContent = text; } catch (x) {}
   }
-  function showDate(text) { put("sheetDate", text); }
-  /* THE COVER'S STAMP AND THE LINE-UP'S DATE ARE THE SAME DAY THE BOARDS ARE.
-     Both are written from one ISO day rather than each calling a formatter,
-     because two formatters is two answers about what a Tuesday is — the fault
-     this file's date line already carries a paragraph about. */
-  function showDay(day) {
-    var p = String(day || "").split("-");
-    if (p.length !== 3) return;
-    var at = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2]));
-    if (isNaN(at.getTime())) return;
-    put("lineDate", SHORT[at.getUTCDay()] + " " + Number(p[2]) + " " + MON3[+p[1] - 1]);
-    put("coverDay", String(Number(p[2])));
-    put("coverMon", MON3[+p[1] - 1]);
-  }
+
+  /* ---- HOW MANY GAMES: the shirts in Today's XI, counted, not written ---- */
+  var SHIRTS = document.querySelectorAll(".xi-strip a.shirt");
+  put("liveCount", upper(WORDS[SHIRTS.length] || String(SHIRTS.length)));
+
+  /* ---- THE DAY IS THE SERVER'S ------------------------------------------
+     The date line and the reset time come from /api/daily's `day`, the UTC
+     day the boards are keyed by. The device's clock decides nothing here; it
+     only formats the next reset in the reader's own time. */
+  var SHORT = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  var MON3 = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+              "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
   function fromServerDay(day) {
-    /* Built from the string's own parts. A Date made from an ISO day is UTC
-       midnight, and any formatter that applies a timezone moves it to the day
-       before — the same trap the archive pages document. */
+    /* Built from the string's own parts: a Date made from an ISO day is UTC
+       midnight, and a formatter that applies a timezone moves it to the day
+       before, which is the trap the archive pages document. */
     var p = String(day || "").split("-");
     if (p.length !== 3) return null;
     var at = new Date(Date.UTC(+p[0], +p[1] - 1, +p[2]));
     if (isNaN(at.getTime())) return null;
-    return DAYS[at.getUTCDay()] + " " + Number(p[2]) + " " + MONTHS[+p[1] - 1];
+    return SHORT[at.getUTCDay()] + " " + Number(p[2]) + " " + MON3[+p[1] - 1];
   }
-  /* THE PROVISIONAL DAY IS THE DEVICE'S UTC DAY, NOT ITS LOCAL ONE. The long
-     date line below may use the local one — it is prose and it is replaced a
-     moment later — but the ROTATION must not, because a device in Auckland
-     reading its local day would feature tomorrow's pair and a device in Los
-     Angeles yesterday's, and "everyone gets the same challenge" would be
-     false for most of the planet for most of the day. toISOString() is UTC by
-     definition, so the only window in which it can disagree with the server
-     is the few seconds either side of midnight, and /api/daily closes that. */
-  function deviceUtcDay() {
-    try { return new Date().toISOString().slice(0, 10); } catch (e) { return null; }
+  /* The instant the NEXT board day begins, in the reader's time and zone:
+     "New puzzles at 01:00 BST". Anything the runtime cannot format keeps the
+     fallback in the markup, which states the rule in UTC. */
+  function resetFor(day) {
+    var p = String(day || "").split("-");
+    if (p.length !== 3) return null;
+    var next = Date.UTC(+p[0], +p[1] - 1, +p[2] + 1);
+    if (isNaN(next)) return null;
+    try {
+      var t = new Date(next).toLocaleTimeString("en-GB",
+        { hour: "2-digit", minute: "2-digit", timeZoneName: "short" });
+      return t ? "New puzzles at " + t : null;
+    } catch (e) { return null; }
   }
-  try {
-    var d = new Date();
-    showDate(d.toLocaleDateString("en-GB", { weekday: "long", day: "numeric", month: "long" }));
-  } catch (e) {}
-  try { var provisional = deviceUtcDay(); if (provisional) { showDay(provisional); feature(provisional); } } catch (e) {}
   try {
     fetch("/api/daily", { headers: { accept: "application/json" } })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (j) {
-        var named = j && j.day ? fromServerDay(j.day) : null;
-        if (named) showDate(named);
-        if (j && j.day) { showDay(j.day); feature(j.day); }
+        if (!j || !j.day) return;
+        var named = fromServerDay(j.day);
+        if (named) put("sheetDate", named);
+        var reset = resetFor(j.day);
+        if (reset) put("resetLine", reset);
       })
       .catch(function () {});
   } catch (e) {}
-  /* HOW MANY SHIRTS ARE STILL EMPTY, counted from the strip rather than
-     written down. It was the word "nine" in three places — the roll-call, the
-     line under it and the prose below — and releasing the third game left all
-     three saying nine when the answer had become eight. The strip is the only
-     thing that knows, so it is the thing asked. */
-  var WORDS = ["none", "one", "two", "three", "four", "five", "six",
-               "seven", "eight", "nine", "ten", "eleven"];
-  function stillToSign() {
-    var left = document.querySelectorAll(".xi-strip .shirt.soon").length;
-    return WORDS[left] || String(left);
-  }
-  function upper(w) { return w.charAt(0).toUpperCase() + w.slice(1); }
 
-  (function () {
-    var n = stillToSign();
-    var a = document.getElementById("toSign");
-    if (a) a.textContent = upper(n);
-    /* AND HOW MANY THERE ARE TO PLAY, counted the same way and for the same
-       reason: the banner says "six games" and it said "four games" eight weeks
-       ago. A number typed into a sentence is a number nobody updates. */
-    /* THE WHOLE SQUAD, NOT ONLY THE SIGNED PART. This counted a.shirt.live and
-       the line read "Ten ways to find them" — true about what is playable
-       today and not what the club IS. The owner's call: the sentence counts
-       the eleven, the unsigned shirt included, because eleven is the promise
-       the name makes and the strip already shows that shirt as a number
-       waiting rather than a game anybody can open.
-       STILL COUNTED FROM THE STRIP rather than written down, which is the
-       reason this function exists: the word "nine" was typed into three
-       sentences once and releasing a game left all three wrong. Adding the
-       unsigned shirt changes WHICH shirts are counted, not where the number
-       comes from — so the day an eleventh game launches, .soon becomes .live
-       and the total does not move. */
-    var live = document.querySelectorAll(".xi-strip a.shirt.live").length +
-               document.querySelectorAll(".xi-strip .shirt.soon").length;
-    var c = document.getElementById("liveCount");
-    if (c) c.textContent = upper(WORDS[live] || String(live));
-    var b = document.getElementById("toSignProse");
-    if (b) b.textContent = upper(WORDS[live] || String(live));
-
-    /* THE TEASER SPEAKS FOR THE SQUAD AS IT IS. The numeral is the first shirt
-       nobody wears — read off the sheet, not counted forward from a ten that
-       will stop being true — and when there is nothing left to sign the block
-       goes rather than promising a twelfth shirt the squad has no room for.
-       The brief asks for exactly this: keep the teaser only while the eleventh
-       game is genuinely upcoming. */
-    var soon = document.querySelectorAll(".xi-strip .shirt.soon");
-    var teaser = document.getElementById("teaser");
-    if (teaser) {
-      if (!soon.length) {
-        teaser.hidden = true;
-      } else {
-        var first = String(soon[0].textContent || "").replace(/[^0-9]/g, "");
-        var num = document.getElementById("teaserNum");
-        var say = document.getElementById("teaserSay");
-        if (num && first) num.textContent = first;
-        if (say) {
-          say.textContent = soon.length === 1 ? "One more for the squad."
-            : upper(WORDS[soon.length] || String(soon.length)) + " more for the squad.";
-        }
-      }
-    }
-  })();
-
-  /* FIVE live shirts, each judged by its own game's record against its own
-     server's idea of today — the crossword by dailyNo, the word search and
-     HiLo by day string, Scrambled and Vowels by board number. The roll-call
-     line is composed from whichever answered, so one API being down never
-     blanks the others' results.
-     It said "three" while there were four, and covered four while there were
-     five: Vowels XI launched and its shirt never went done, because a block
-     that repeats itself once per game is a block somebody adds four of and
-     forgets the fifth. tools/aligned_test.mjs now derives the list from the
-     squad and refuses a live game this block does not judge. */
+  /* ---- WHAT THIS PLAYER HAS FINISHED TODAY ------------------------------
+     THE PROBE IS shared/xi-played.js's, joined to the squad in xi-chrome.js:
+     each game's own results, judged against its own server's idea of today,
+     plus what the account says. One statement of "played today" for the hub
+     and the full-time panel alike. */
   try {
-    var played = [];
-    var settle = function () {
-      if (!played.length) return;
-      played.sort();
-      /* "1, 2 and 3", not "1 and 2 and 3": the last pair takes the "and",
-         everything before it takes a comma. */
-      var bold = played.map(function (n) { return "<b>" + n + "</b>"; });
-      var names = bold.length < 2 ? bold.join("")
-        : bold.slice(0, -1).join(", ") + " and " + bold[bold.length - 1];
-      document.getElementById("playedLine").innerHTML =
-        names + " played today " + String.fromCharCode(183) + " " + stillToSign() + " still to sign";
-    };
-    var markDone = function (id, title) {
+    var played = [], answered = 0, settled = 0;
+    /* A shirt and its card together: the shirt fills with its kit, and the card
+       says "✓ Completed" in words over muted artwork, its link unchanged: the
+       game's home shows the finished board. */
+    var markDone = function (id, title, game) {
       var el = document.getElementById(id);
-      el.classList.remove("live"); el.classList.add("done");
-      el.title = title + " \u2014 played today";
+      if (el) {
+        el.classList.remove("live"); el.classList.add("done");
+        el.title = title + " \u2014 completed today";
+      }
+      var card = document.querySelector('.gcard[data-game="' + game + '"]');
+      if (!card) return;
+      card.classList.add("done");
+      var badge = card.querySelector(".gcard-done");
+      if (badge) badge.hidden = false;
+      var act = card.querySelector(".gcard-act");
+      if (act) act.textContent = "View today\u2019s result";
+      var link = card.querySelector(".gcard-link");
+      if (link) link.setAttribute("aria-label", title + " \u2014 completed today, view the result");
     };
-    /* ---- THE GAMES, ONCE ----------------------------------------------
-       This was five blocks, one per game, each with its own fetch, its own
-       key and its own match — five copies of one idea, extended by hand. On
-       the day Vowels XI launched there were four of them for five live games,
-       so its shirt never dimmed and the roll-call never counted it.
-
-       They differ in exactly four ways, and those are the columns. Adding a
-       sixth game is a row; tools/aligned_test.mjs already refuses a hub that
-       does not judge every live game, so a row that is forgotten is caught
-       rather than shipped.
-
-       `today` reads the server's idea of today out of that game's own daily
-       payload — the crossword counts matchdays, the word search and HiLo
-       schedule by date, Scrambled and Vowels share a ring — and `done` asks
-       that game's own results list whether today's board is in it. The two
-       cypher games share a daily number and never a board, so each reads its
-       OWN key: a player who has done one has not done the other. */
-    /* THE TABLE MOVED TO shared/xi-played.js ON 21 SEPTEMBER 2026, and this is
-       the whole of what is left of it. It held ten games, each with the
-       localStorage key its results live under, the endpoint that says what
-       today's board is, and a done(row, today) probe — and it was the only
-       statement of "what counts as played" anywhere on the site.
-
-       It moved because the full-time panel needs the same fact to suggest a
-       game you have not started, and the alternative was a second copy. A value
-       stored twice is what this project traces every major bug back to; this
-       one would have drifted the first time a game changed how it records a
-       result, and the hub would have kept lighting a shirt the panel thought
-       was unplayed.
-
-       THE NAMES AND SHIRT NUMBERS ARE STILL THE SQUAD'S. xi-played.js holds the
-       probe and nothing else; list() joins it to xi-chrome.js's squad, which is
-       already the one statement of what a game is called and where it lives.
-       This asks for FOOTBALL explicitly rather than taking the reader's theme:
-       it is the football hub's shirts being lit here, not the shirts of
-       whichever theme somebody arrived from. */
+    /* THE COUNT, ONLY WHEN IT IS KNOWN. Written once every game has answered
+       or failed, and only if at least one could be judged; otherwise the row
+       keeps "View games" rather than claiming a 0 it never read. */
+    var count = function () {
+      if (!answered) return;
+      put("xiCount", played.length + " of " + SHIRTS.length + " completed");
+    };
     var GAMES = (window.XIPlayed && XIPlayed.list("football")) || [];
     var listOf = (window.XIPlayed && XIPlayed.listOf) ||
       function () { return []; };
 
-    /* WHAT THE ACCOUNT SAYS, ASKED ONCE FOR ALL FIVE. The shirts were lit from
+    /* A DEVICE THAT HAS PLAYED BEFORE IS NOT A NEWCOMER. Its own season record
+       (xi-season.js) or any game's results say so, read from this device; the
+       introduction goes. Nothing readable, and it stays: a returning player
+       reading one line costs less than a newcomer missing it. */
+    try {
+      var seen = (window.XISeason && XISeason.record && XISeason.record().length > 0) ||
+        GAMES.some(function (g) { return listOf(g.key).length > 0; });
+      if (seen) { var intro = document.getElementById("hubIntro"); if (intro) intro.hidden = true; }
+    } catch (e) {}
+
+    /* WHAT THE ACCOUNT SAYS, ASKED ONCE FOR ALL OF THEM. The shirts were lit from
        localStorage alone, which is device-local by construction: a player
        signed in on a phone and a laptop saw HiLo and Vowels lit on one and
        dark on the other, and the dark one then offered today's board a second
@@ -1235,12 +698,13 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
           if (t === undefined || t === null) return;
           var done = listOf(g.key).some(function (r) { return r && g.done(r, t); }) ||
             !!(account && account.games.indexOf(g.id) !== -1);
+          answered++;
           if (!done) return;
-          markDone("shirt" + g.n, g.name);
+          markDone("shirt" + g.n, g.name, g.id);
           played.push(g.n);
-          settle();
         })
-        .catch(function () { /* one API down never blanks the others */ });
+        .catch(function () { /* one API down never blanks the others */ })
+        .then(function () { if (++settled === GAMES.length) count(); });
     });
   } catch (e) {}
 

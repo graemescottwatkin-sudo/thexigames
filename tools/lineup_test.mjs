@@ -1,328 +1,224 @@
-/* tools/lineup_test.mjs — the hub's daily feature rotation.
+/* tools/lineup_test.mjs — the football hub, as the redesign of 24 Sep 2026
+ * made it.
  *
  *   node tools/lineup_test.mjs
  *
- * WHY THIS EXISTS. The front door features two of the ten games and which two
- * is a property of the PUZZLE DATE. That sentence has two ways to be quietly
- * wrong and neither shows on the page:
+ * WHAT THE HUB PROMISES, and each promise is a check here:
+ *   - every live game, in shirt order, as ONE link to its home, in the markup:
+ *     the page works with JavaScript off (the brief's rule), and no card starts
+ *     a clock (the owner's call)
+ *   - Today's XI as one collapsed disclosure, no unlaunched shirt anywhere
+ *   - the date once and the next reset, both from the SERVER's day, the reset
+ *     shown in the reader's zone ("New puzzles at 01:00 BST")
+ *   - completion from each game's own record: "✓ Completed" in words over muted
+ *     art, the count "N of 10 completed", and never a "0 completed" it could not
+ *     read
+ *   - the newcomer's introduction, hidden for a device that has played before
+ *   - one "Browse previous dailies" link
  *
- *   - a game could be featured AND still listed among the compact eight, so it
- *     appears twice and another appears not at all. Nothing on screen says so;
- *     you would have to count ten cards by eye, every day.
- *   - the pair could be derived from the DEVICE clock rather than the board
- *     day, and every check run in Britain would pass while a player in
- *     Auckland saw tomorrow's pair. This site has already shipped that exact
- *     fault once — the hub named "Tuesday 8 September" while the crossword
- *     said Monday, because the date came from the device.
- *
- * So this runs the REAL page, in jsdom, with /api/daily stubbed to a day of
- * this suite's choosing, and reads the DOM that results. It does not
- * re-implement the rotation: a test that re-implements the rule it is checking
- * agrees with itself and proves nothing. CLAUDE.md: "Regexes cannot count and
- * cannot catch rule-bugs. Anything about ordering must EXECUTE the real code."
- *
- * THE DAY IS HANDED TO BOTH SIDES rather than computed twice. Every case here
- * names an ISO day as a fixture and the page is told that day; nothing in this
- * file asks what day it is today, so the suite cannot disagree with itself
- * across a midnight — the rule the clock-sensitive suites in this repo already
- * follow.
+ * It replaces the suite for the old hub's daily feature rotation, which the
+ * redesign removed with the hero and the featured pair. The old file's rules
+ * about DAYS still hold and are kept: the day is handed to the page as a
+ * fixture and never read from this machine's clock, and the zone is set as a
+ * fixture (process.env.TZ) where the zone is what is being proved.
  */
-/* The football hub moved to football/index.html on 21 Sep 2026, when the
-   root became the theme picker. Asked, never assembled: see permalink.js. */
+process.env.TZ = "Europe/London";
+
 import { themeHubFile } from "../functions/_lib/permalink.js";
+import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { JSDOM } from "jsdom";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
-const HTML = fs.readFileSync(path.join(ROOT, themeHubFile("football")), "utf8");
-
-/* THE CYCLE AND ITS EPOCH ARE READ FROM THE PAGE, not restated here. They were
-   restated, and when the family reset to day 1 on 18 September 2026 and the
-   owner asked for QuickFire to lead instead of Wordsearch, five assertions went
-   red for a change they were never about — each one naming a pair that was
-   simply no longer the pair. A suite that has to be edited every time an
-   editorial decision changes is a suite that eventually gets edited into
-   agreeing with a broken rotation.
-   What is PINNED below is the one thing that is a decision rather than a
-   derivation: day 0 is QuickFire and HiLo, because that is what the owner asked
-   for on launch day. Everything else is computed, so it follows the page. */
-const HUB = fs.readFileSync(path.join(ROOT, themeHubFile("football")), "utf8");
-const SPEC_EPOCH = (HUB.match(/FEATURE_EPOCH = "([0-9-]+)"/) || [])[1];
-const SPEC_CYCLE = [...(HUB.match(/FEATURE_CYCLE = \[([\s\S]*?)\];/) || [, ""])[1]
-  .matchAll(/\["([a-z]+)",\s*"([a-z]+)"\]/g)].map((m) => [m[1], m[2]]);
-const DAY_MS = 86400000;
-function pairFor(iso) {
-  const [y, m, d] = iso.split("-").map(Number);
-  const [ey, em, ed] = SPEC_EPOCH.split("-").map(Number);
-  const n = Math.round((Date.UTC(y, m - 1, d) - Date.UTC(ey, em - 1, ed)) / DAY_MS);
-  return SPEC_CYCLE[((n % SPEC_CYCLE.length) + SPEC_CYCLE.length) % SPEC_CYCLE.length];
-}
-const dayAfter = (iso, k) => new Date(Date.parse(iso + "T00:00:00Z") + k * DAY_MS)
-  .toISOString().slice(0, 10);
+const HUB_FILE = themeHubFile("football");
+const HTML = fs.readFileSync(path.join(ROOT, HUB_FILE), "utf8");
 
 let pass = 0, fail = 0;
 const t = (name, ok, note) => {
   if (ok) { pass++; console.log(`  ok  ${name}${note ? "  — " + note : ""}`); }
-  else { fail++; console.log(`  !!  ${name}${note ? "  — " + note : ""}`); }
+  else { fail++; console.log(`FAIL  ${name}${note ? "  — " + note : ""}`); }
 };
+const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 
-/* The page as a player gets it, with the server answering one chosen day.
-   Every other call it makes answers 204, so a game's "played today" probe
-   cannot throw and cannot be mistaken for the daily. */
-async function pageOn(day) {
-  const dom = new JSDOM(HTML, {
-    runScripts: "dangerously",
-    url: "https://www.thexigames.com/",
-    pretendToBeVisual: true,
-    beforeParse(win) {
-      win.fetch = (u) => {
-        const url = String(u);
-        if (url.indexOf("/api/daily") === 0 || url.indexOf("/api/daily") > -1) {
-          return Promise.resolve({
-            ok: true, status: 200,
-            json: () => Promise.resolve({ day, dailyNo: 23 }),
-          });
-        }
-        return Promise.resolve({ ok: false, status: 204, json: () => Promise.resolve(null) });
-      };
-      /* localStorage is where the played-today state is read from; an empty one
-         is a player who has played nothing, which is the state under test. */
-      win.matchMedia = win.matchMedia || (() => ({ matches: false, addEventListener() {}, addListener() {} }));
+/* ======================================================================
+   1. THE MARKUP, before any script runs
+   ====================================================================== */
+console.log("The markup, with JavaScript off");
+{
+  const d = new JSDOM(HTML).window.document;
+  const shirts = [...d.querySelectorAll(".xi-strip a.shirt")];
+  const cards = [...d.querySelectorAll("#lineup .gcard")];
+  t("ten cards and ten shirts, in the file, not built by script",
+    cards.length === 10 && shirts.length === 10, `${cards.length} cards, ${shirts.length} shirts`);
+  const shirtIds = shirts.map((s) => (s.getAttribute("href").match(/^\/football\/([a-z]+)\/$/) || [])[1]);
+  const nums = shirts.map((s) => Number(s.querySelector(".dot").textContent));
+  t("the shirts run 1 to 10", nums.every((n, i) => n === i + 1), nums.join(","));
+  t("the cards are in shirt order: the same games, the same order, as the shirts",
+    cards.map((c) => c.getAttribute("data-game")).join() === shirtIds.join(), shirtIds.join(" "));
+  const oneLink = cards.filter((c) => {
+    const links = [...c.querySelectorAll("a")];
+    return links.length === 1 && links[0].getAttribute("href") === "/football/" + c.getAttribute("data-game") + "/";
+  });
+  t("every card is ONE link, to its own game's home", oneLink.length === 10, `${oneLink.length} of 10`);
+  t("no card starts a board: nothing links ?play=1", !HTML.includes("?play=1"));
+  t("every card shows its shirt number and its name",
+    cards.every((c, i) => c.querySelector(".gcard-num").textContent.trim() === String(i + 1) &&
+      /XI$/.test(c.querySelector(".gcard-title").textContent.trim())));
+  t("every card's completed badge is in the markup and hidden until it is true",
+    cards.every((c) => { const b = c.querySelector(".gcard-done"); return b && b.hidden && /Completed/.test(b.textContent); }));
+  const today = d.getElementById("todayXI");
+  t("Today's XI is one native disclosure, collapsed on arrival",
+    !!today && today.tagName === "DETAILS" && !today.open && /Today.s XI/.test(today.querySelector("summary").textContent));
+  t("and it claims no count before anything has been read",
+    d.getElementById("xiCount").textContent.trim() === "View games");
+  t("no unlaunched shirt anywhere: no dashed eleven, no 'still to sign'",
+    !d.querySelector(".shirt.soon") && !/still to sign/i.test(d.body.textContent));
+  t("no hero and no rotating feature",
+    !d.querySelector(".hero, #heroGo, .cover, .gcard.lead") && !/FEATURE_CYCLE/.test(HTML));
+  const word = (d.getElementById("liveCount") || {}).textContent || "";
+  const WORDS = ["none", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven"];
+  t("the introduction's count is the number of shirts", word.toLowerCase() === WORDS[shirts.length], word);
+  t("one link to every game's previous dailies",
+    d.querySelectorAll('a[href="/football/archive/"]').length >= 1);
+  t("the reset line says the rule in UTC until the server has spoken",
+    /00:00 UTC/.test(d.getElementById("resetLine").textContent));
+}
+
+/* ======================================================================
+   2. THE BEHAVIOUR, with the shared scripts and a stubbed server
+   ====================================================================== */
+const TYPES = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript",
+  ".jpg": "image/jpeg", ".png": "image/png", ".svg": "image/svg+xml" };
+let DAY = "2026-09-23", NO = 6, apiDown = false;
+const server = http.createServer((req, res) => {
+  const url = new URL(req.url, "http://x");
+  const json = (o, s = 200) => { res.writeHead(s, { "Content-Type": "application/json" }); res.end(JSON.stringify(o)); };
+  if (url.pathname.startsWith("/api/")) {
+    if (url.pathname === "/api/auth/session") return json({ user: null, googleClientId: null });
+    if (url.pathname === "/api/season") return json({ account: false, today: DAY });
+    /* Every game's daily answers with a payload every probe can read its
+       "today" from: the ring games read a number, the scheduled ones a day. */
+    if (apiDown) return json({ error: "down" }, 500);
+    return json({ day: DAY, dailyNo: NO, today: NO, no: NO });
+  }
+  const rel = url.pathname === "/football/" ? "/" + HUB_FILE : url.pathname;
+  const file = path.join(ROOT, rel);
+  if (!file.startsWith(ROOT) || !fs.existsSync(file) || fs.statSync(file).isDirectory()) { res.writeHead(404); return res.end(); }
+  res.writeHead(200, { "Content-Type": TYPES[path.extname(file)] || "application/octet-stream" });
+  res.end(fs.readFileSync(file));
+});
+await new Promise((r) => server.listen(0, "127.0.0.1", r));
+const origin = "http://127.0.0.1:" + server.address().port;
+
+async function hub(storage = {}) {
+  const dom = await JSDOM.fromURL(origin + "/football/", {
+    runScripts: "dangerously", resources: "usable", pretendToBeVisual: true,
+    beforeParse(w) {
+      w.fetch = (u, o) => fetch(new URL(u, w.location.href), o);
+      w.matchMedia = w.matchMedia || (() => ({ matches: false, addEventListener() {}, addListener() {} }));
+      for (const k in storage) w.localStorage.setItem(k, JSON.stringify(storage[k]));
     },
   });
-  /* Let the stubbed promise chain settle. Two turns: the fetch resolves on one
-     and the .then that writes the DOM runs on the next. */
-  await new Promise((r) => setTimeout(r, 0));
-  await new Promise((r) => setTimeout(r, 0));
+  await new Promise((r) => dom.window.addEventListener("load", r));
+  await wait(800);
   const d = dom.window.document;
-  const cards = [...d.querySelectorAll("#lineup .gcard")];
-  return {
-    dom,
-    ids: cards.map((c) => c.getAttribute("data-game")),
-    /* IN PICK ORDER, NOT DOM ORDER. The markup stays in shirt order on purpose,
-       so collecting the featured cards by document position puts HiLo (shirt 4)
-       before QuickFire (shirt 8) whatever the rotation chose — which made the
-       hero, that opens the FIRST PICKED game, look like it disagreed with its
-       own pair. `order` is what the page sets to express the choice, so it is
-       what this reads. */
-    lead: cards.filter((c) => c.classList.contains("lead"))
-      .sort((a, b) => Number(a.style.order || 0) - Number(b.style.order || 0))
-      .map((c) => c.getAttribute("data-game")),
-    /* Visual order, which is what a player actually reads: `order` decides it,
-       and the DOM stays in shirt order on purpose. */
-    shown: cards
-      .map((c) => ({ id: c.getAttribute("data-game"), o: Number(c.style.order || 0) }))
-      .sort((a, b) => a.o - b.o)
-      .map((x) => x.id),
-    heroHref: (d.getElementById("heroGo") || {}).getAttribute?.("href") || null,
-    heroLabel: (d.getElementById("heroGoLabel") || {}).textContent || null,
-    lineDate: (d.getElementById("lineDate") || {}).textContent || null,
-    coverDay: (d.getElementById("coverDay") || {}).textContent || null,
-  };
+  const card = (g) => d.querySelector(`.gcard[data-game="${g}"]`);
+  return { dom, d, card, text: (id) => (d.getElementById(id) || {}).textContent || "" };
 }
 
-console.log("The markup is complete before any of this runs");
+console.log("\nThe day and the reset, from the server's day, in the reader's zone");
 {
-  const d = new JSDOM(HTML).window.document;
-  const cards = [...d.querySelectorAll("#lineup .gcard")];
-  t("ten cards are in the file, not built by script", cards.length === 10, cards.length + " cards");
-  /* THE NO-SCRIPT PAGE IS NOT A BROKEN PAGE. Without JavaScript nothing is
-     featured, and that must still be ten games in shirt order with live links
-     rather than an empty grid. */
-  t("none is featured until the day is known",
-    cards.every((c) => !c.classList.contains("lead")));
-  t("they are in shirt order in the markup",
-    cards.map((c) => c.querySelector(".gcard-num").textContent.trim()).join(",") ===
-    "1,2,3,4,5,6,7,8,9,10");
-  const bad = cards.filter((c) => {
-    const id = c.getAttribute("data-game");
-    return ![...c.querySelectorAll("a[href]")].every((a) =>
-      a.getAttribute("href").indexOf("/football/" + id + "/") === 0);
+  DAY = "2026-09-23"; NO = 6;
+  let h = await hub();
+  t("the date is the server's day, once", h.text("sheetDate") === "Wed 23 Sep", h.text("sheetDate"));
+  t("the reset is the next board day, in British Summer Time", h.text("resetLine") === "New puzzles at 01:00 BST", h.text("resetLine"));
+  h.dom.window.close();
+  DAY = "2026-12-01"; NO = 75;
+  h = await hub();
+  t("and in winter, at midnight GMT", h.text("resetLine") === "New puzzles at 00:00 GMT", h.text("resetLine"));
+  t("the date follows the server's day, not this machine's", h.text("sheetDate") === "Tue 1 Dec", h.text("sheetDate"));
+  h.dom.window.close();
+}
+
+console.log("\nA newcomer, and nothing played");
+{
+  DAY = "2026-09-23"; NO = 6; apiDown = false;
+  const h = await hub();
+  t("the introduction is shown", !h.d.getElementById("hubIntro").hidden);
+  t("the count says 0 of 10: every game was read, and nothing is done", h.text("xiCount") === "0 of 10 completed", h.text("xiCount"));
+  t("no card is marked completed", !h.d.querySelector(".gcard.done"));
+  h.dom.window.close();
+}
+
+console.log("\nA returning player who has finished two games today");
+{
+  DAY = "2026-09-23"; NO = 6; apiDown = false;
+  const h = await hub({
+    "fcw.results.v1": [{ dailyNo: 6, complete: true, score: 86 }],
+    "xihl.results": [{ day: "2026-09-23", score: 70 }],
   });
-  t("every link on a card goes to that card's own game", bad.length === 0,
-    bad.length ? bad.map((c) => c.getAttribute("data-game")).join(", ") : "10 cards");
-  /* The brief asks for keyboard-reachable cards. The art is deliberately NOT
-     reachable — it duplicates the title's destination — so the count is the
-     title, the play link and the archive link. */
-  const reach = cards.map((c) =>
-    [...c.querySelectorAll("a[href]")].filter((a) => a.getAttribute("tabindex") !== "-1").length);
-  t("each card offers three keyboard destinations", reach.every((n) => n === 3),
-    reach.join(","));
+  t("the introduction is hidden: this device has played before", h.d.getElementById("hubIntro").hidden);
+  const done = [...h.d.querySelectorAll(".gcard.done")].map((c) => c.getAttribute("data-game"));
+  t("exactly those two cards are completed", done.join() === "crossword,hilo", done.join());
+  const c = h.card("crossword");
+  t("in words, not colour alone: the badge shows and the action says so",
+    !c.querySelector(".gcard-done").hidden && c.querySelector(".gcard-act").textContent === "View today’s result");
+  t("and the card still opens its game's home, where the result is",
+    c.querySelector("a").getAttribute("href") === "/football/crossword/");
+  t("the shirts in Today's XI agree", h.d.getElementById("shirt1").classList.contains("done") &&
+    h.d.getElementById("shirt4").classList.contains("done") && !h.d.getElementById("shirt2").classList.contains("done"));
+  t("the count reads 2 of 10 completed", h.text("xiCount") === "2 of 10 completed", h.text("xiCount"));
+  t("and the disclosure is still collapsed", !h.d.getElementById("todayXI").open);
+  h.dom.window.close();
 }
 
-console.log("\nTHE CASE IT EXISTS FOR: every game appears exactly once, every day");
+console.log("\nNothing can be read");
 {
-  /* Fifteen consecutive days — three full turns of the five-day cycle — so a
-     pair that repeats early, a game that is never featured, and an index that
-     drifts by one per cycle all show up here rather than in a month's time. */
-  const seen = Object.create(null);
-  let dupes = [], missing = [], wrongCount = [], leadsFirst = [];
-  for (let i = 0; i < 15; i++) {
-    const day = new Date(Date.UTC(2026, 8, 17 + i)).toISOString().slice(0, 10);
-    const r = await pageOn(day);
-    const set = new Set(r.shown);
-    if (set.size !== r.shown.length) dupes.push(day);
-    if (r.shown.length !== 10) missing.push(day + " has " + r.shown.length);
-    if (r.lead.length !== 2) wrongCount.push(day + " featured " + r.lead.length);
-    if (r.shown.slice(0, 2).sort().join(",") !== r.lead.slice().sort().join(","))
-      leadsFirst.push(day + ": reads " + r.shown.slice(0, 2).join("+") +
-                      " but features " + r.lead.join("+"));
-    r.lead.forEach((id) => { seen[id] = (seen[id] || 0) + 1; });
-  }
-  t("no game is ever shown twice on one day", dupes.length === 0, dupes.join(", ") || "15 days");
-  t("all ten are shown every day", missing.length === 0, missing.join(", ") || "15 days");
-  t("exactly two are featured every day", wrongCount.length === 0,
-    wrongCount.join(", ") || "15 days");
-  /* AND THE FEATURED PAIR IS WHAT A PLAYER READS FIRST. Featuring is a CSS
-     `order`, so a card can carry .lead — bigger art, bigger title — and still
-     sit in the middle of the grid. Counting the cards does not see that: this
-     check passed with the `order` assignment deleted, because the right two
-     were still marked and all ten were still present. */
-  t("the featured pair leads the page a player actually reads", leadsFirst.length === 0,
-    leadsFirst.join(", ") || "15 days");
-  const names = Object.keys(seen).sort();
-  t("across three cycles every game is featured, and equally often",
-    names.length === 10 && names.every((k) => seen[k] === 3),
-    names.map((k) => k + ":" + seen[k]).join(" "));
+  apiDown = true;
+  const h = await hub({ "fcw.results.v1": [{ dailyNo: 6, complete: true }] });
+  t("the count is not claimed: it stays 'View games', never '0 completed'",
+    h.text("xiCount") === "View games", h.text("xiCount"));
+  t("and no card is marked on a guess", !h.d.querySelector(".gcard.done"));
+  h.dom.window.close();
+  apiDown = false;
 }
 
-console.log("\nThe pair is the board day's, and only the board day's");
-{
-  const a = await pageOn(SPEC_EPOCH);
-  const b = await pageOn(SPEC_EPOCH);
-  t("the same day gives the same pair", a.lead.join(",") === b.lead.join(","), a.lead.join(" + "));
-  t("day 0 of the cycle is the documented pair",
-    a.lead.join(",") === "quickfire,hilo", a.lead.join(" + "));
-  const next = await pageOn(dayAfter(SPEC_EPOCH, 1));
-  t("the next board day gives a different pair",
-    next.lead.join(",") !== a.lead.join(","), next.lead.join(" + "));
-  const roundTrip = await pageOn(dayAfter(SPEC_EPOCH, SPEC_CYCLE.length));
-  t("five days on, the cycle comes back round",
-    roundTrip.lead.join(",") === a.lead.join(","), roundTrip.lead.join(" + "));
-  /* MIDNIGHT IS THE POINT. 23:59:59 on the 17th and 00:00:01 on the 18th are
-     the same two ISO days the server would send, so the pair must flip exactly
-     there and nowhere else — and it must flip for everyone at the same instant
-     because the day came from the server, not from a clock in a timezone. */
-  t("the change happens at the board rollover, not at a local midnight",
-    (await pageOn(SPEC_EPOCH)).lead.join(",") === pairFor(SPEC_EPOCH).join(",") &&
-    (await pageOn(dayAfter(SPEC_EPOCH, 1))).lead.join(",") === pairFor(dayAfter(SPEC_EPOCH, 1)).join(","));
-  /* A DAY BEFORE THE EPOCH. JavaScript's % returns a negative for a negative
-     operand, so an unguarded index reaches FEATURE_CYCLE[-2], throws, and the
-     throw is swallowed by the catch around this call — leaving the page showing
-     the pair it computed from the DEVICE's day.
-     COUNTING TWO FEATURED CARDS DOES NOT CATCH THAT, and this check did exactly
-     that on its first draft: it passed with the guard deleted, because two
-     cards were still featured — the wrong two. So it names the pair. */
-  t("a board day before the epoch features THAT day's pair, not the device's",
-    (await pageOn(dayAfter(SPEC_EPOCH, -3))).lead.join(",") === pairFor(dayAfter(SPEC_EPOCH, -3)).join(","));
-  t("and so does one years before it",
-    (await pageOn("2020-01-01")).lead.join(",") === pairFor("2020-01-01").join(","));
-}
+server.close();
 
-console.log("\nThe hero opens the game it names");
+/* ======================================================================
+   3. WHERE "BROWSE PREVIOUS DAILIES" GOES
+   ====================================================================== */
+console.log("\n/football/archive/, run");
 {
-  for (const day of [0, 1, 2, 3, 4].map((k) => dayAfter(SPEC_EPOCH, k))) {
-    const r = await pageOn(day);
-    const first = r.lead[0];
-    /* BOTH HALVES, AND THE LABEL IS TAKEN FROM THE CARD RATHER THAN FROM A
-       TABLE HERE. A name written down in this file would be a second place a
-       game is named, and it would keep passing after the card was renamed —
-       which is the drift these suites exist to catch, not to enshrine.
-       This assertion was `A && B || A` on its first draft, which collapses to
-       A: the href was checked and the label was not, under a name that claimed
-       both. A check's name must not be broader than its behaviour. */
-    const card = r.dom.window.document.querySelector(`.gcard[data-game="${first}"]`);
-    const expect = "Start with " + card.querySelector(".gcard-title").textContent.replace(/\s*XI$/, "");
-    t(`${day}: names and opens the same game`,
-      r.heroHref === `/football/${first}/?play=1` && r.heroLabel === expect,
-      `${r.heroLabel} -> ${r.heroHref}`);
-  }
-}
-
-console.log("\nThe date on the page is the board's date");
-{
-  const r = await pageOn("2026-12-25");
-  t("the line-up's date follows the server's day", /25/.test(r.lineDate) && /DEC/.test(r.lineDate),
-    r.lineDate);
-  t("the cover's stamp follows it too", r.coverDay === "25", r.coverDay);
-}
-
-console.log("\n=== The strip earns its colour ===");
-{
-  /* EVERY SHIRT WORE ITS KIT FROM THE MOMENT THE PAGE LOADED, so ten colours
-     said nothing about what the player had done — the two games finished today
-     looked much like the eight that had not. Colour is what a FINISHED board
-     pays out now, and the strip fills in as the day goes on.
-     THE KIT TRAVELS AS --kit, NOT AS A BACKGROUND. Inline `background:` beats
-     every class rule underneath it and could only have been overridden with
-     !important, so an inline background on a dot is the fault returning
-     whatever the stylesheet says. */
-  const d = new JSDOM(HTML).window.document;
-  const dots = [...d.querySelectorAll(".shirt .dot")];
-  t("every shirt's dot carries its kit as a custom property",
-    dots.length === 10 && dots.every((el) =>
-      /--kit:\s*var\(--kit-\d\d\)/.test(el.getAttribute("style") || "")),
-    `${dots.length} dots`);
-  t("and none of them paints itself unconditionally",
-    dots.every((el) => !/background\s*:/.test(el.getAttribute("style") || "")),
-    "an inline background cannot be undone by a class");
-  /* AND THE STYLESHEET GIVES THE COLOUR ONLY TO A FINISHED SHIRT. Asserted on
-     the rule rather than on a rendered colour, because jsdom does not resolve
-     custom properties through a cascade — what can be proved here is which
-     selector the payout hangs off, and that is the thing that would regress. */
-  const paints = HUB.match(/\.shirt\.done\s+\.dot\s*\{[^}]*\}/);
-  t("the kit is paid out to a played shirt and to no other",
-    !!paints && /background\s*:\s*var\(--kit\)/.test(paints[0]),
-    paints ? paints[0].replace(/\s+/g, " ") : "no .shirt.done .dot rule at all");
-  t("and an unplayed dot has a neutral fill of its own",
-    /\.shirt \.dot\{[^}]*background:var\(--ed-rule\)/.test(HUB.split(String.fromCharCode(10)).join("")),
-    "otherwise an unplayed shirt is a hole in the strip");
-}
-
-console.log("\n=== The strapline counts the whole squad ===");
-{
-  /* IT COUNTED ONLY THE PLAYABLE ONES and read "Ten ways to find them", which
-     was true about today and not about what the club is. The owner's call: the
-     line counts eleven, the unsigned shirt included, because eleven is the
-     promise the name makes — and the strip shows that shirt as a number
-     waiting rather than a game anybody can open, so nothing is claimed to be
-     playable that is not.
-     THE NUMBER IS NEVER WRITTEN DOWN. That is the whole point of the helper it
-     comes from: the word "nine" was once typed into three sentences and
-     releasing a game left all three wrong. What is asserted here is that the
-     markup's static fallback agrees with the strip, and that the script counts
-     BOTH classes — so when the eleventh game launches and .soon becomes .live,
-     the total does not move. */
-  const d = new JSDOM(HTML).window.document;
-  const live = d.querySelectorAll(".xi-strip a.shirt.live").length;
-  const soon = d.querySelectorAll(".xi-strip .shirt.soon").length;
-  const WORDS = ["none", "one", "two", "three", "four", "five", "six",
-                 "seven", "eight", "nine", "ten", "eleven"];
-  const want = WORDS[live + soon] || String(live + soon);
-  const el = d.getElementById("liveCount");
-  t("the strip holds a whole squad of eleven", live + soon === 11,
-    live + " playable, " + soon + " waiting");
-  t("and the line printed before any script agrees with it",
-    !!el && el.textContent.toLowerCase() === want,
-    el ? el.textContent : "no #liveCount");
-  /* AND IT IS DERIVED, not typed. Both classes must be counted, or the number
-     drops by one the day the eleventh shirt is signed. */
-  t("the count is read off the strip, both classes",
-    /querySelectorAll\("\.xi-strip a\.shirt\.live"\)\.length/.test(HUB) &&
-    /querySelectorAll\("\.xi-strip \.shirt\.soon"\)\.length/.test(HUB),
-    "a number typed into a sentence is a number nobody updates");
-  /* READ OFF THE RENDERED SENTENCE, NOT THE SOURCE. Written against HUB first
-     and it failed on the comment three lines above the code it guards, which
-     quotes the old wording to explain why it changed. A check that greps the
-     file reads the prose as well as the program — this project's own rule —
-     so it asks the paragraph the visitor actually sees. */
-  const sub = d.querySelector(".hero-say .sub");
-  t("and the sentence says games rather than ways",
-    !!sub && /games to find them/.test(sub.textContent) &&
-    !/ways to find them/.test(sub.textContent),
-    sub ? sub.textContent.replace(/\s+/g, " ").trim() : "no .sub");
+  const { themeArchiveRoute } = await import("../functions/_lib/archive-page.js");
+  const { PERMA_GAMES, gamePath, themeOf } = await import("../functions/_lib/permalink.js");
+  const { isListed } = await import("../functions/_lib/games.js");
+  const r = await themeArchiveRoute({ env: {} }, "football");
+  const page = await r.text();
+  const listed = Object.keys(PERMA_GAMES).filter((g) => isListed(g) && themeOf(g) === "football");
+  const hidden = Object.keys(PERMA_GAMES).filter((g) => !isListed(g));
+  t("it answers 200, and it is a page a crawler may index", r.status === 200 && !/noindex/.test(page));
+  t("it links every listed football game's own archive",
+    listed.length >= 10 && listed.every((g) => page.includes(`href="${gamePath(g)}archive/"`)), `${listed.length} games`);
+  t("and never an unlisted game, by address or by name",
+    hidden.length > 0 && hidden.every((g) => !page.includes(gamePath(g)) && !page.includes(PERMA_GAMES[g].name)),
+    hidden.join(", "));
+  /* THE CHECK ABOVE PASSES FOR A REASON THAT IS NOT THE GUARD: today's
+     unlisted games are all Friends ones, and the theme filter drops those
+     first. So a FOOTBALL game is made unlisted, through the real UNLISTED
+     table that isListed reads, and the page is run again. */
+  const games = await import("../functions/_lib/games.js");
+  games.UNLISTED.ballpark = true;
+  let again = "";
+  try { again = await (await themeArchiveRoute({ env: {} }, "football")).text(); }
+  finally { delete games.UNLISTED.ballpark; }
+  t("an unlisted FOOTBALL game is left off too: the page asks isListed itself",
+    !again.includes("/football/ballpark/") && !again.includes("Ballpark XI") && again.includes("/football/hilo/archive/"));
+  const { onRequestGet: sitemap } = await import("../functions/sitemap.xml.js");
+  const xml = await (await sitemap({ env: {}, request: new Request("https://www.thexigames.com/sitemap.xml") })).text();
+  t("the sitemap offers it", xml.includes("https://www.thexigames.com/football/archive/"));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

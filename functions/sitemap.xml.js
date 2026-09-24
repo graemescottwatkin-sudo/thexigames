@@ -95,7 +95,12 @@ const STATIC = [
    asked for, not remembered: the list above already went a whole game out of
    date once, and the sitemap was the file that had to be fixed. Daily,
    because a board joins each of these every morning. */
-const ARCHIVES = () => LISTED_GAMES().map((g) => [gamePath(g) + "archive/", "daily", "0.7"]);
+const ARCHIVES = () => [
+  ...LISTED_GAMES().map((g) => [gamePath(g) + "archive/", "daily", "0.7"]),
+  /* And each theme's own index of them, the hub's "Browse previous dailies".
+     A theme appears once it has a listed game, from the same list. */
+  ...[...new Set(LISTED_GAMES().map(themeOf))].map((t) => [themeHubPath(t) + "archive/", "daily", "0.6"]),
+];
 
 /* A board's own address for every game, in one place — and that place is
    permalink.js, which is also where the route decides whether it will serve
