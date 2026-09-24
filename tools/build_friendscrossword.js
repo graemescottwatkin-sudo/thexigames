@@ -56,7 +56,7 @@ const OUT = "friends/crossword";
 
 /* THE TAG LIVES HERE, because it is written into three generated files and a
    number kept in three places disagrees with itself. Bump here, regenerate. */
-const TAG = "v002e";
+const TAG = "v002f";
 
 /* THE SHARED LAYER'S TAG, read from the source page rather than restated. It
    has its own plain vN lifecycle and moves without this game's tag moving, so a

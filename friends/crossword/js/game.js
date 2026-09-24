@@ -297,7 +297,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v002e";
+  var BUILD = "v002f";
   try {
     window.CROSSWORDXI_BUILD = BUILD;
     console.log("Crossword XI build " + BUILD);
@@ -6197,7 +6197,7 @@
        is an option, and a tip that opens by diagnosing a problem the player has
        not noticed invents one. */
     $("fxTipText").textContent =
-      "Follow word zooms to the answer you are typing, one at a time.";
+      "Fit word zooms to the answer you are typing, one at a time.";
     box.hidden = false;
   }
   function closeTip(remember) {
@@ -6904,7 +6904,10 @@
   function fxLabel() {
     var b = $("fxFit");
     if (!b) return;
-    b.textContent = fxMode === "board" ? "Follow word"
+    /* A PAIR, SAID AS ONE. "Follow word" and "Fit board" named the same idea
+       two ways; the owner, 24 Sep 2026: "fit board/word or something else
+       fitting". Fit board shows the whole board, Fit word the answer in hand. */
+    b.textContent = fxMode === "board" ? "Fit word"
       : fxMode === "word" ? "Fit board" : "Fit board";
   }
 

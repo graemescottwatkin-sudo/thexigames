@@ -2299,6 +2299,29 @@ body.flex-layout .nudge-row{
 @media (max-width:859px){
   body.flex-layout .clues-block{display:none}
 }
+/* AN iPAD HELD UPRIGHT GETS EVERY CLUE, UNDER THE BOARD. The owner, 24 Sep
+   2026: the bigger screens are "upscaled versions with maybe a little change
+   in the layout", and for a tablet upright, "lets try all clues under board".
+   Beside the board, as at 860px and up, a 340px panel would take the squares of
+   a 15x15 from about 54px to 32px on an iPad Air; under it, the board frame
+   gives up height instead and the board pans inside it, so the squares keep
+   their reading size. Across and Down side by side, in a panel that scrolls in
+   itself and follows the clue you are on (game.js scrolls it only when the
+   panel can scroll). The current clue still sits by the keys. Portrait only,
+   and 600px wide or more: a phone keeps its one clue. */
+@media (min-width:600px) and (max-width:859px) and (orientation:portrait){
+  body.flex-layout .clues-block{
+    display:block;order:1;flex:0 0 34%;min-height:0;
+    overflow-y:auto;overscroll-behavior:contain;
+    border-top:1px solid var(--line);margin:0;padding:4px 12px 10px;
+    max-width:none;width:auto;
+  }
+  body.flex-layout .clues-block .clues{grid-template-columns:1fr 1fr;gap:18px;max-width:none;margin-top:0}
+  body.flex-layout .clues-head{display:none}
+  body.flex-layout .clue-col h2{
+    position:sticky;top:-4px;background:var(--paper);z-index:1;padding:6px 0 4px;margin:0;
+  }
+}
 
 /* The frame. touch-action:none because pan and pinch are handled in script;
    left to the browser it would scroll the page instead. */
@@ -2367,18 +2390,17 @@ body.flex-layout .fx-zoom{display:flex}
 body.flex-layout .fx-fit{display:block}
 
 /* ============ FOCUS THE ACTIVE ANSWER ============
-   Everything outside the current entry is hidden, and that costs nothing.
+   The answer in hand is the focus; the rest of the board steps back but stays.
 
-   The first version dimmed instead, on the reasoning that crossing letters are
-   the main solving aid and must stay visible. That reasoning was wrong: a
-   crossing letter lives in a cell that belongs to BOTH entries, so it is part
-   of the active word and never leaves. What disappears is only the cells the
-   active word does not touch, and those say nothing about the clue in hand.
-
-   Blocked squares are already transparent, so the board simply becomes the one
-   answer sitting on the turf. */
+   This HID every cell outside the entry, on the reasoning that a crossing
+   letter belongs to both entries and so never leaves. True, and it still
+   looked wrong: the owner, 24 Sep 2026, "it looks strange if its just a single
+   word" -- one answer floating on the turf reads as a broken board, not a
+   focused one. So the other cells are dimmed, not removed, and they can still
+   be tapped: "then you can select them manually". Tapping one makes it the
+   answer in hand, and the view follows it. */
 body.flex-layout.focus-word .cell:not(.in-word){
-  opacity:0;pointer-events:none;
+  opacity:.4;
 }
 body.flex-layout.focus-word .cell{transition:opacity var(--t-fast) var(--ease-in)}
 
