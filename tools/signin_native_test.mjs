@@ -105,6 +105,16 @@ for (const [label, cap] of [["Capacitor that is not native", { native: false }],
   await openSheet(p);
   t("in the app, Google's library is never loaded", !p.doc.querySelector(GIS));
   t("the app's own button is there instead", !!gbtn(p) && /Google/.test(gbtn(p).textContent));
+  /* GOOGLE'S "G", in Google's four colours, as its branding guidelines ask
+     and as the web button shows; the Play review looks at this button. Hidden
+     from screen readers, so the button's name is still just the words. */
+  const mark = gbtn(p) && gbtn(p).querySelector("svg.xic-gmark");
+  const fills = mark ? [...mark.querySelectorAll("path")].map((x) => (x.getAttribute("fill") || "").toUpperCase()).sort() : [];
+  t("the button carries Google's G in its own four colours",
+    JSON.stringify(fills) === JSON.stringify(["#34A853", "#4285F4", "#EA4335", "#FBBC05"]), fills.join(" "));
+  t("the G is hidden from screen readers and the name is the words alone",
+    !!mark && mark.getAttribute("aria-hidden") === "true" && gbtn(p).textContent.trim() === "Sign in with Google",
+    JSON.stringify(gbtn(p) && gbtn(p).textContent));
   gbtn(p).click();
   await settle();
   t("pressing it asks the plugin once, for the WEB client id",
