@@ -286,7 +286,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v004";
+  var BUILD = "v004a";
   try {
     window.CROSSWORDXI_BUILD = BUILD;
     console.log("Crossword XI build " + BUILD);
@@ -3111,8 +3111,17 @@
        in — so somebody already signed in, opening the site on a second device,
        never fetched anything and saw an empty history. That is precisely the
        case this was built for. Here it runs whenever a session exists, which
-       is every visit on every device. */
-    if (account) pullAccountResults();
+       is every visit on every device.
+
+       AND THE PUSH TOO, push first, as afterSignIn does. Until 24 Sep 2026
+       this device's results went up only from afterSignIn, which runs only
+       when the sign-in happens WITH A CROSSWORD PAGE OPEN. The account sheet
+       is on every page. The owner signed in on another one, and his guest 86
+       on daily 6 never left the phone; a reinstall then wiped the only copy.
+       Every other game in the family already pushes on every signed-in load.
+       /api/account/migrate skips what the account already has, so a repeat
+       costs a request and changes nothing. */
+    if (account) pushResults().then(pullAccountResults);
   }).catch(function () { renderAccount(); });
 
   /* ---------- How far people get ----------

@@ -71,6 +71,11 @@ jobs:
           # through a force-stop and relaunch, and proves cross-device adoption
           # still works. Five sabotages caught, one of them the original code.
           node football/crossword/unpushed_test.mjs
+          # A GUEST'S RESULTS REACH THE ACCOUNT HOWEVER THE PLAYER SIGNED IN.
+          # The crossword pushed only when the sign-in happened with its own page
+          # open; the owner signed in elsewhere and his 86 never left the phone
+          # (24 Sep 2026). Proven to fail on the old boot path.
+          node football/crossword/signin_elsewhere_test.mjs
           node football/crossword/tabs_test.mjs
           node football/crossword/themes_ui_test.mjs
           # The club and theme pages are server-rendered and meant to be read
