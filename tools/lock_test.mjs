@@ -149,6 +149,15 @@ const server = http.createServer(async (req, res) => {
       res.writeHead(out.status, Object.fromEntries(out.headers));
       return res.end(Buffer.from(await out.arrayBuffer()));
     }
+    /* A board's own address, as production's permalinkRoute serves it: the
+       game's page with a <base> so its relative assets resolve. */
+    const perma = /^\/(football|friends)\/([a-z]+)\/daily\/\d+\/?$/.exec(p);
+    if (perma) {
+      const page = path.join(ROOT, perma[1], perma[2], "index.html");
+      const html = fs.readFileSync(page, "utf8").replace("<head>", `<head><base href="/${perma[1]}/${perma[2]}/">`);
+      res.writeHead(200, { "Content-Type": TYPES[".html"] });
+      return res.end(html);
+    }
     let file = path.join(ROOT, p);
     if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, "index.html");
     if (!fs.existsSync(file)) { res.writeHead(404); return res.end(); }
@@ -462,6 +471,11 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "q
   for (const vp of [VIEWPORTS[0], VIEWPORTS[1]]) {
     const { page, context } = await openQuiz(game, vp);
     await bannerCheck(page, id, vp[0], quizOk, quizSay, measureQuiz);
+    await context.close();
+  }
+  {
+    const { page, context } = await openQuiz(game, VIEWPORTS[1]);
+    await howCheck(page, VIEWPORTS[1][0]);
     await context.close();
   }
 
@@ -950,6 +964,123 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "c
     });
     t(`${vp[0]}: the Full Time card sits inside the screen and the page does not scroll`,
       m.locked && m.scroll <= 1 && m.top >= 0 && m.bottom <= m.vh + 1, JSON.stringify(m));
+    await context.close();
+  }
+}
+
+/* ---- a board's own address -------------------------------------------------
+   /football/<game>/daily/<no> is what the archive pages and the sitemap give a
+   board. Found in the app on 24 Sep 2026: Ballpark's served the page and it
+   kicked off TODAY'S board under "Today's eleven", and Codeword's loaded the
+   right board under a card that said "Today's board". QuickFire had the first
+   fault until v001n (football/quickfire/permalink_test.mjs). The landing must
+   name the board, and starting must ask the server for that number. */
+if (!ONLY || ONLY === "ballpark" || ONLY === "codeword") {
+  console.log(`\na board's own address`);
+  for (const [game, start, kicker, api] of [
+    ["ballpark", "#homeDaily", "#startKicker", "/api/ballpark/daily"],
+    ["codeword", "#cwToday", "#cwTodayKicker", "/api/codeword/daily"],
+  ]) {
+    const context = await browser.newContext({ viewport: VIEWPORTS[1][1], hasTouch: true, isMobile: true, deviceScaleFactor: 1 });
+    const page = await context.newPage();
+    const asked = [];
+    page.on("request", (r) => { const u = new URL(r.url()); if (u.pathname === api) asked.push(u.search); });
+    await page.goto(ORIGIN + `/football/${game}/daily/3`, { waitUntil: "networkidle" });
+    const said = await page.$eval(kicker, (e) => e.textContent.trim());
+    await page.click(start);
+    await wait(1500);
+    t(`${game}: /daily/3 names board 3 on its landing, not today's`, /3/.test(said) && !/today/i.test(said), said);
+    t(`${game}: and what it plays is board 3, asked of the server by number`, asked.some((q) => /[?&]no=3\b/.test(q)), JSON.stringify(asked));
+    await context.close();
+  }
+}
+
+/* ---- the crossword's clues, by size --------------------------------------
+   The crossword was locked before this suite existed and render_test measures
+   its board; what is proved here is the owner's layout rule of 24 Sep 2026 --
+   the bigger screens are "upscaled versions with maybe a little change in the
+   layout": a phone has the one clue under the board, a big screen has every
+   clue to the right, and an iPad held upright has every clue UNDER the board
+   ("lets try all clues under board"), without the squares shrinking to fit. */
+async function openCrossword([name, viewport, touch]) {
+  const context = await browser.newContext({ viewport, hasTouch: touch, isMobile: touch, deviceScaleFactor: 1 });
+  const page = await context.newPage();
+  await page.goto(ORIGIN + "/football/crossword/", { waitUntil: "networkidle" });
+  const via = page.locator("#dailyBtn");
+  if (await via.count()) await via.evaluate((el) => el.click());
+  await page.waitForSelector("#kickOffBtn:not([disabled])", { timeout: 12000 });
+  await page.click("#kickOffBtn");
+  await page.waitForFunction(() => !document.querySelector("#startOverlay")?.classList.contains("show"), null, { timeout: 8000 });
+  await wait(800);
+  return { page, context };
+}
+function measureClues() {
+  const vis = (e) => !!e && getComputedStyle(e).display !== "none" && e.getBoundingClientRect().height > 0;
+  const r = (e) => e.getBoundingClientRect();
+  const block = document.getElementById("cluesBlock"), wrap = document.querySelector(".grid-wrap");
+  const cell = [...document.querySelectorAll(".cell")].find((c) => vis(c) && !c.classList.contains("block"));
+  const b = vis(block) ? r(block) : null, w = r(wrap);
+  return {
+    shown: vis(block),
+    under: !!b && b.top >= w.bottom - 1,
+    right: !!b && b.left >= w.right - 1,
+    inside: !!b && b.top >= 0 && b.bottom <= innerHeight + 1,
+    lists: block ? block.querySelectorAll(".clue-col").length : 0,
+    items: block ? block.querySelectorAll("li").length : 0,
+    cell: cell ? Math.round(r(cell).width) : 0,
+    nowClue: vis(document.getElementById("nowClue")),
+    scroll: document.documentElement.scrollHeight - innerHeight,
+  };
+}
+if (!ONLY || ONLY === "crossword") {
+  console.log(`\ncrossword: the clues, by size`);
+  for (const [label, viewport] of [["ipad-air upright", { width: 820, height: 1180 }], ["ipad upright", { width: 768, height: 1024 }]]) {
+    const { page, context } = await openCrossword([label, viewport, true]);
+    const m = await page.evaluate(measureClues);
+    t(`${label}: every clue, under the board, in a panel inside the screen, and the page does not scroll`,
+      m.shown && m.under && m.inside && m.lists >= 2 && m.items >= 10 && m.scroll <= 1, JSON.stringify(m));
+    t(`${label}: the squares keep their reading size (32px or more) and the current clue is still by the keys`,
+      m.cell >= 32 && m.nowClue, JSON.stringify({ cell: m.cell, nowClue: m.nowClue }));
+    await context.close();
+  }
+  {
+    const { page, context } = await openCrossword(VIEWPORTS[1]);
+    const m = await page.evaluate(measureClues);
+    t("phone-412: the one clue under the board, and no list", !m.shown && m.nowClue, JSON.stringify(m));
+    /* FIT WORD KEEPS THE BOARD. It hid every cell outside the answer in hand,
+       and the owner, 24 Sep 2026: "it looks strange if its just a single
+       word ... then you can select them manually". The rest is dimmed, still
+       there and still tappable, and tapping one makes it the answer in hand. */
+    const fw = await page.evaluate(async () => {
+      const inWord = document.body.classList.contains("focus-word");
+      const other = [...document.querySelectorAll(".cell")].find((c) =>
+        !c.classList.contains("block") && !c.classList.contains("in-word") && c.getBoundingClientRect().width > 0);
+      if (!other) return { inWord, other: false };
+      const cs = getComputedStyle(other);
+      other.setAttribute("data-lock-test", "1");
+      const r = other.getBoundingClientRect();
+      return { inWord, other: true, opacity: Number(cs.opacity), taps: cs.pointerEvents !== "none",
+        label: (document.getElementById("fxFit") || {}).textContent,
+        x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
+    });
+    /* A REAL TAP at the square's place on the screen, not a click dispatched
+       from script: a script click reaches a cell with pointer-events:none and
+       would pass the very rule this is here to refuse. */
+    if (fw.other) {
+      await page.touchscreen.tap(fw.x, fw.y);
+      await wait(400);
+      fw.nowInWord = await page.$eval("[data-lock-test]", (c) => c.classList.contains("in-word") || c.classList.contains("active"));
+    }
+    t("phone-412: in Fit word the rest of the board is dimmed, not hidden, and can be tapped",
+      fw.inWord && fw.other && fw.opacity > 0.2 && fw.opacity < 1 && fw.taps, JSON.stringify(fw));
+    t("phone-412: tapping a dimmed square makes its answer the one in hand", fw.nowInWord, JSON.stringify(fw));
+    t("phone-412: the button names the other half of the pair, Fit board", fw.label === "Fit board", String(fw.label));
+    await context.close();
+  }
+  {
+    const { page, context } = await openCrossword(VIEWPORTS[3]);
+    const m = await page.evaluate(measureClues);
+    t("desktop: every clue, to the right of the board", m.shown && m.right && m.inside && m.lists >= 2, JSON.stringify(m));
     await context.close();
   }
 }
