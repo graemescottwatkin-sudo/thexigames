@@ -201,6 +201,38 @@ async function open(game, board, [name, viewport, touch]) {
   return { page, context };
 }
 
+/* THE OLD-LINK BANNER, on a locked screen and off one. It is the shared
+   chrome's, inserted under the bar when a page is opened at an old board, and
+   every pixel of it is a pixel the board does not get: as a sentence it took
+   114px of a 412x860 phone. Locked, it must be one line with the short
+   wording; on a page that scrolls, the sentence. Raised here through the
+   chrome's own public call, exactly as each game raises it. */
+async function bannerCheck(page, gameId, label, okFn, sayFn, measureFn) {
+  const b = await page.evaluate(async (g) => {
+    window.XIChrome.permalink.aged(g, 4);
+    dispatchEvent(new Event("resize"));
+    await new Promise((r) => setTimeout(r, 400));
+    const box = document.querySelector(".xic-aged");
+    const vis = (sel) => { const e = box && box.querySelector(sel); return !!e && getComputedStyle(e).display !== "none"; };
+    return { there: !!box, h: box ? Math.round(box.getBoundingClientRect().height) : 0,
+      short: vis(".xic-aged-short"), long: vis(".xic-aged-long"),
+      text: box ? (box.querySelector(".xic-aged-short") || {}).textContent : "" };
+  }, gameId);
+  const m = await page.evaluate(measureFn);
+  t(`${label}: an old-link banner on the locked screen is one short line, and the screen still fits`,
+    b.there && b.short && !b.long && b.h <= 50 && /4 days old/.test(b.text || "") && okFn(m), JSON.stringify(b) + " | " + sayFn(m));
+}
+async function bannerOffLock(page, gameId, label) {
+  const b = await page.evaluate(async (g) => {
+    window.XIChrome.permalink.aged(g, 4);
+    await new Promise((r) => setTimeout(r, 200));
+    const box = document.querySelector(".xic-aged");
+    const vis = (sel) => { const e = box && box.querySelector(sel); return !!e && getComputedStyle(e).display !== "none"; };
+    return { locked: document.body.classList.contains("locked"), short: vis(".xic-aged-short"), long: vis(".xic-aged-long") };
+  }, gameId);
+  t(`${label}: and on the landing, which scrolls, it is the full sentence`, !b.locked && b.long && !b.short, JSON.stringify(b));
+}
+
 const ok = (m) => m.locked && m.scrollY <= 1 && m.scrollX <= 1 && m.overlaps === 0 && m.spill === 0 && m.clipped === 0
   && m.spread[0] <= 1 && m.spread[1] <= 1;
 const say = (m) => `locked ${m.locked}, scroll ${m.scrollY}/${m.scrollX}, overlaps ${m.overlaps}, spill ${m.spill}, clipped ${m.clipped}, tile ${m.tile} (spread ${m.spread}), pitch ${m.pitchH}`;
@@ -237,6 +269,20 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
     await wait(300);
     const m = await page.evaluate(measure);
     t(`${vp[0]}: typing "${word}" keeps the page locked and every card whole`, ok(m), say(m));
+    await context.close();
+  }
+
+  console.log(`\n${id}: the old-link banner`);
+  for (const vp of [VIEWPORTS[0], VIEWPORTS[1]]) {
+    const { page, context } = await open(game, 1, vp);
+    await bannerCheck(page, id, vp[0], ok, say, measure);
+    await context.close();
+  }
+  {
+    const context = await browser.newContext({ viewport: VIEWPORTS[1][1], hasTouch: true, isMobile: true });
+    const page = await context.newPage();
+    await page.goto(ORIGIN + game.path, { waitUntil: "networkidle" });
+    await bannerOffLock(page, id, VIEWPORTS[1][0]);
     await context.close();
   }
 
@@ -343,6 +389,13 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "q
     const next = await page.evaluate(measureQuiz);
     t(`${vp[0]}: the next, shorter clue -- the same, and no smaller than the long one`,
       quizOk(next) && next.clueLen < long.clueLen && parseFloat(next.clueSize) >= parseFloat(long.clueSize), quizSay(next));
+    await context.close();
+  }
+
+  console.log(`\n${id}: the old-link banner`);
+  for (const vp of [VIEWPORTS[0], VIEWPORTS[1]]) {
+    const { page, context } = await openQuiz(game, vp);
+    await bannerCheck(page, id, vp[0], quizOk, quizSay, measureQuiz);
     await context.close();
   }
 

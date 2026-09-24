@@ -304,6 +304,17 @@ a.xic-slot:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; 
   border: 0; background: none; color: var(--ink-soft); cursor: pointer;
 }
 .xic-aged-x:hover { color: var(--ink); }
+/* On a locked play screen the banner is one line: every pixel it takes is a
+   pixel the board does not get (measured on a 412x860 phone: 114px as a
+   sentence, 45px as a line, and the cards 54px tall against 64). The long
+   wording is for pages that scroll. body.locked is the family's class for a
+   play screen fitted to the viewport; see tools/lock_test.mjs. */
+.xic-aged-short { display: none; }
+body.locked .xic-aged { flex-wrap: nowrap; gap: 10px; padding: 0 4px 0 14px; font-size: 13px; }
+body.locked .xic-aged-long { display: none; }
+body.locked .xic-aged-short {
+  display: inline; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; min-width: 0;
+}
 
 /* ---- the account and the settings ----------------------------------------
    The crossword's sheet and menu, moved here so every game has them. The

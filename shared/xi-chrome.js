@@ -1429,8 +1429,16 @@
     if (!bar || !bar.parentNode) return;
     var box = el("div", "xic-aged");
     var says = days === 1 ? "yesterday's puzzle" : "a puzzle from " + days + " days ago";
-    box.innerHTML = '<span>You followed a link to ' + says +
-      '. It is yours to play, and it does not count towards a run.</span>';
+    /* TWO WORDINGS OF ONE FACT. The sentence is for a page that scrolls; on a
+       locked play screen (body.locked, the owner's ruling of 24 Sep 2026) it
+       wrapped to three lines and took 114px of a 412x860 phone -- the height
+       the board is sized from. There the short one stands in, on one line:
+       the same two facts, how old and that it does not count, and the same
+       way to today's. xi-chrome.css chooses between them. */
+    var short = (days === 1 ? "Yesterday's puzzle" : days + " days old") + " \u00b7 doesn't count towards a run";
+    box.innerHTML = '<span class="xic-aged-long">You followed a link to ' + says +
+      '. It is yours to play, and it does not count towards a run.</span>' +
+      '<span class="xic-aged-short">' + short + '</span>';
     var go = el("a", "xic-aged-go", "Play today's");
     /* THE GAME'S PATH, ASKED OF THE SQUAD. This built "/" + game + "/daily",
        which was the address until the games moved under a theme and is
