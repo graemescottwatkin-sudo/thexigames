@@ -18,8 +18,8 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { gamePath } from "../../functions/_lib/permalink.js";
-import { LAUNCHED } from "../../functions/_lib/games.js";
+import { gamePath, themeOf } from "../../functions/_lib/permalink.js";
+import { LAUNCHED, GAMES, isListed } from "../../functions/_lib/games.js";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 
@@ -150,9 +150,16 @@ console.log(`\n${SITE}\n`);
   const hub = await fetch(HUB + "/");
   const html = await hub.text();
   t("the hub is served", hub.ok, `HTTP ${hub.status}`);
-  t("and it shows eleven shirts",
-    (html.match(/class="shirt/g) || []).length === 11,
-    `${(html.match(/class="shirt/g) || []).length} found`);
+  /* ONE SHIRT PER LISTED FOOTBALL GAME, and none for a game that is not out.
+     This said "eleven shirts" and counted the dashed unlaunched one too; the hub
+     redesign of 24 Sep 2026 removed that shirt by the owner's decision, and the
+     number is now derived from games.js rather than written here, because a
+     count in a check is a measurement that goes stale at the next launch. */
+  const listed = GAMES.filter((g) => isListed(g) && themeOf(g) === "football").length;
+  const shirts = (html.match(/class="shirt /g) || []).length;
+  t("and it shows one shirt per listed football game",
+    shirts === listed && listed >= 10, `${shirts} shirts, ${listed} listed`);
+  t("and no shirt for a game that is not out", !/class="shirt soon/.test(html));
   /* The roster must not name unreleased games — two of them are built under
      names live competitors already hold. */
   /* Word Search left this list when shirt 2 went live — a released game's
