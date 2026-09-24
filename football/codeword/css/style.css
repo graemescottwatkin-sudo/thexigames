@@ -135,3 +135,92 @@ button{font:inherit;color:inherit;cursor:pointer}
 .ftcard .row .btn{flex:1;justify-content:center}
 .toast{position:fixed;left:50%;bottom:20px;transform:translateX(-50%);background:var(--ink);color:var(--paper);padding:8px 14px;border-radius:999px;font-family:var(--disp);letter-spacing:.1em;text-transform:uppercase;font-size:13px;opacity:0;transition:opacity 180ms;pointer-events:none}
 .toast.on{opacity:1}
+
+/* ---- THE LOCKED SCREEN ----------------------------------------------------
+   The owner's ruling, 24 Sep 2026: while playing, the page is the screen and
+   nothing scrolls, at every size, with the elements scaling up. body.locked
+   is set by the page's script while the board is up, and taken off when the
+   squares would be too small to hit or the board card cannot hold its parts.
+
+   On a phone, one column: the clock with Check and Reveal and the way into
+   the answers, the key as a strip of thirteen, then the board card -- the
+   grid fitted square to what is left, the readout and the keys. The answers
+   open as a panel of their own. Where there is room the side column comes
+   back beside the board and holds everything, scrolling in itself if it must.
+   The grid's letters are sized from its own square (cqmin), so a larger
+   screen gets a larger board rather than more paper. */
+body.locked{height:100vh;height:100dvh;overflow:hidden;display:flex;flex-direction:column}
+body.locked>*{flex:none}
+body.locked>footer{display:none}
+body.locked>#cwGame{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+body.locked #cwGame>main.game{flex:1 1 auto;min-height:0;width:100%;max-width:1180px;margin:0 auto;
+  padding:6px 10px 8px;display:flex;flex-direction:column;gap:6px;align-items:stretch}
+body.locked .game>section{display:contents}
+body.locked .game>section>.card{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;padding:8px}
+body.locked .gridbox{flex:1 1 auto;min-height:0;container-type:size;display:flex;align-items:center;justify-content:center}
+body.locked .grid{width:min(100cqw,100cqh)}
+body.locked .cell{font-size:calc(min(100cqw,100cqh) / var(--n,13) * .56)}
+body.locked .cell .n{font-size:calc(min(100cqw,100cqh) / var(--n,13) * .26)}
+body.locked .cell .pencil{font-size:calc(min(100cqw,100cqh) / var(--n,13) * .4)}
+body.locked .readout{margin-top:6px;min-height:0}
+body.locked .keys{margin-top:6px}
+body.locked .keys button{height:clamp(30px,4.6vh,52px)}
+.cw-answers-btn,.cw-answers-close{display:none}
+
+@media (max-width:860px){
+  body.locked .game>section>.card{order:3}
+  body.locked .game>aside{display:contents!important}
+  body.locked .cw-clockcard{order:1;padding:6px 10px;display:grid;grid-template-columns:auto 1fr auto;
+    grid-template-areas:"clock subs subs" "acts acts acts";align-items:center;gap:4px 10px}
+  body.locked .cw-clockcard h2{display:none}
+  body.locked .cw-clockcard .clock{grid-area:clock;gap:12px;justify-content:flex-start}
+  body.locked .cw-clockcard .clock .min{font-size:28px}
+  body.locked .cw-clockcard .clock .worth{text-align:left}
+  body.locked .cw-clockcard .clock .worth b{font-size:22px}
+  body.locked .cw-clockcard .subs{grid-area:subs;margin:0;justify-content:flex-end}
+  body.locked .cw-clockcard .acts{grid-area:acts;margin:0;display:flex;gap:6px}
+  body.locked .cw-clockcard .acts .btn{flex:1 1 0;min-height:40px;padding:4px 8px;font-size:12.5px;letter-spacing:.04em;
+    flex-direction:column;justify-content:center;gap:0;border-radius:10px}
+  body.locked .cw-clockcard .acts .btn small{font-size:10.5px}
+  body.locked .cw-answers-btn{display:flex}
+  body.locked .cw-keycard{order:2;padding:4px 6px}
+  body.locked .cw-keycard h2,body.locked .cw-keycard .alpha{display:none}
+  body.locked .key{grid-template-columns:repeat(13,minmax(0,1fr));gap:2px}
+  body.locked .key div{padding:1px 0}
+  body.locked .key div .kn{font-size:8.5px}
+  body.locked .key div .kl{font-size:14px;min-height:15px}
+  body.locked .game .note,body.locked .cw-answers{display:none}
+  body.locked.cw-answers-open .cw-answers{display:block;position:fixed;left:0;right:0;bottom:0;max-height:72%;
+    overflow:auto;z-index:30;border-radius:14px 14px 0 0;box-shadow:0 -10px 30px rgba(0,0,0,.25)}
+  body.locked.cw-answers-open .cw-answers-close{display:block;float:right;min-height:40px;padding:0 14px;
+    border:1px solid var(--line);border-radius:999px;background:var(--card);font-family:var(--disp);
+    font-weight:700;letter-spacing:.08em;text-transform:uppercase}
+}
+/* A SHORT PHONE (360x640 and the like): the grid is what needs the height, so
+   the strips above it give theirs. The cost under Check and Reveal is dropped
+   here and only here -- at this height it wrapped each button to three lines
+   and left the squares 12px wide, too small to hit. */
+@media (max-width:860px) and (max-height:700px){
+  body.locked .cw-clockcard{padding:4px 8px;gap:2px 8px}
+  body.locked .cw-clockcard .clock .min{font-size:22px}
+  body.locked .cw-clockcard .clock .worth b{font-size:18px}
+  body.locked .cw-clockcard .clock .worth span{font-size:9px}
+  body.locked .cw-clockcard .acts .btn{min-height:34px}
+  body.locked .cw-clockcard .acts .btn small{display:none}
+  body.locked .cw-clockcard .acts .btn{font-size:11px;letter-spacing:.02em;white-space:nowrap;padding:2px 4px}
+  body.locked .cw-clockcard .clock .min small{font-size:12px}
+  body.locked .cw-keycard{padding:2px 4px}
+  body.locked .key div .kl{font-size:12px;min-height:13px}
+  body.locked .readout{margin-top:3px}
+  body.locked .readout b,body.locked .readout span{font-size:12px}
+  body.locked .keys{margin-top:4px;gap:3px}
+}
+@media (min-width:861px){
+  body.locked #cwGame>main.game{display:grid;grid-template-columns:minmax(0,1fr) 300px;grid-template-rows:minmax(0,1fr);gap:16px}
+  body.locked .game>section>.card{grid-column:1;grid-row:1}
+  body.locked .game>aside{grid-column:2;grid-row:1;overflow:auto;min-height:0}
+}
+
+/* Full Time is a card over the board, capped at the screen and scrolling in
+   itself, so the page under it never has to. */
+.ftcard{max-height:100%;overflow:auto}

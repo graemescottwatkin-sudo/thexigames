@@ -38,7 +38,7 @@
 <link rel="stylesheet" href="/shared/xi-share.css?v=v60">
 <link rel="stylesheet" href="/shared/xi-fulltime.css?v=v60">
 <script src="/shared/xi-theme.js?v=v60"></script>
-<link rel="stylesheet" href="css/style.css?v=v001n">
+<link rel="stylesheet" href="css/style.css?v=v001o">
 </head>
 <body>
 <!-- The bar and the footer are MOUNTED, not written: shared/xi-chrome.js fills
@@ -102,20 +102,22 @@
 <main class="wrap game">
   <section>
     <div class="card">
-      <div class="grid" id="grid" role="grid" aria-label="The board"></div>
+      <!-- The box the grid is fitted to on a locked screen: as large as the
+           height and the width both allow, and square. -->
+      <div class="gridbox"><div class="grid" id="grid" role="grid" aria-label="The board"></div></div>
       <div class="readout"><b id="rNum"></b><span id="rHint">Tap a square to select its number</span></div>
       <div class="keys" id="keys"></div>
     </div>
   </section>
 
   <aside style="display:flex;flex-direction:column;gap:14px;min-width:0">
-    <div class="card">
+    <div class="card cw-keycard">
       <h2>The key</h2>
       <div class="key" id="key"></div>
       <div class="alpha" id="alpha"></div>
     </div>
 
-    <div class="card">
+    <div class="card cw-clockcard">
       <h2>Match clock</h2>
       <div class="clock">
         <div class="min"><span id="minute">0</span><small>'</small></div>
@@ -126,10 +128,15 @@
         <button class="btn" id="check">Check grid <small>+5 minutes</small></button>
         <button class="btn" id="reveal">Reveal a number <small>1 sub, +7 minutes</small></button>
         <button class="btn" id="whistle" hidden>Blow the final whistle <small>end it here</small></button>
+        <!-- On a locked phone screen the answers are a panel of their own,
+             opened from here; everywhere else they are in the column and
+             this button is not shown. -->
+        <button class="btn cw-answers-btn" id="cwAnswersBtn" type="button" aria-controls="cwAnswers" aria-expanded="false">Answers <small id="cwAnswersN"></small></button>
       </div>
     </div>
 
-    <div class="card">
+    <div class="card cw-answers" id="cwAnswers">
+      <button class="cw-answers-close" id="cwAnswersClose" type="button">Close</button>
       <h2>Answers</h2>
       <div class="prog"><b id="solved">0</b><span>of 11 locked</span></div>
       <ul class="hints" id="hints"></ul>
@@ -170,7 +177,7 @@
 <script src="/shared/xi-season.js?v=v60"></script>
 <script src="/shared/xi-plays.js?v=v60"></script>
 <script>XIChrome.init({ game: "codeword" });</script>
-<script src="js/game.js?v=v001n"></script>
+<script src="js/game.js?v=v001o"></script>
 <!-- THE SWITCH, and it is only a switch. The board loads and renders behind
      the landing exactly as it did before; this shows it. The game's own clock
      starts on the first interaction rather than on load, so nothing is running
@@ -184,6 +191,52 @@
   var game = document.getElementById("cwGame");
   var today = document.getElementById("cwToday");
   if (!home || !game || !today) return;
+  /* ---- the locked screen --------------------------------------------------
+
+     The owner's ruling, 24 Sep 2026: while playing, the page is the screen and
+     nothing scrolls, at every size, with the elements scaling up. The
+     stylesheet does the locking (body.locked); this sets it while the board is
+     up, tells the grid its size, and is the one way out: if the squares would
+     be too small to hit (under 18px) or the board card cannot hold the grid,
+     the readout and the keys, the page goes back to scrolling. Here and not in
+     game.js, which is the producing side's file; this is page furniture. */
+  var gridEl = document.getElementById("grid");
+  function checkRoom() {
+    var body = document.body;
+    var want = !game.hidden;
+    body.classList.toggle("locked", want);
+    if (!want || !gridEl) return;
+    var n = Math.round(Math.sqrt(gridEl.children.length)) || 13;
+    gridEl.style.setProperty("--n", n);
+    var card = gridEl.closest(".card");
+    var cell = gridEl.getBoundingClientRect().width / n;
+    if (cell < 18 || (card && card.scrollHeight > card.clientHeight + 1)) body.classList.remove("locked");
+  }
+  var queued = false;
+  function queueRoom() {
+    if (queued) return;
+    queued = true;
+    (window.requestAnimationFrame || setTimeout)(function () { queued = false; checkRoom(); });
+  }
+  window.addEventListener("resize", queueRoom);
+  new MutationObserver(queueRoom).observe(game, { attributes: true, attributeFilter: ["hidden"] });
+
+  /* The answers panel, on a locked phone screen. Picking an answer closes it:
+     the point of picking one is to look at it on the grid. */
+  var ansBtn = document.getElementById("cwAnswersBtn"), ansClose = document.getElementById("cwAnswersClose");
+  var hints = document.getElementById("hints"), solvedN = document.getElementById("solved");
+  function setAnswers(open) {
+    document.body.classList.toggle("cw-answers-open", open);
+    if (ansBtn) ansBtn.setAttribute("aria-expanded", open ? "true" : "false");
+  }
+  if (ansBtn) ansBtn.addEventListener("click", function () {
+    var n = document.getElementById("cwAnswersN");
+    if (n && solvedN) n.textContent = solvedN.textContent + " of 11";
+    setAnswers(!document.body.classList.contains("cw-answers-open"));
+  });
+  if (ansClose) ansClose.addEventListener("click", function () { setAnswers(false); });
+  if (hints) hints.addEventListener("click", function () { setAnswers(false); });
+
   today.addEventListener("click", function () {
     home.hidden = true;
     game.hidden = false;
