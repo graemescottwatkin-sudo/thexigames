@@ -13,7 +13,7 @@
  * limitation but the design: their season is their device's, computed from
  * what their browser already holds, and the server never learns they played.
  */
-import { GAMES } from "./games.js";
+import { GAMES, NO_SEASON } from "./games.js";
 import { utcDay } from "./daily.js";
 import { currentUser } from "./auth.js";
 
@@ -60,20 +60,31 @@ export async function noteFinish(env, user, game, now) {
 
 /* The days this account has played, newest first, as the rule wants them:
    { day, started, finished }. A day is one row here however many games are in
-   it, which is what makes "finished 2 or more" countable. */
+   it, which is what makes "finished 2 or more" countable.
+
+   ONLY THE SEASON'S GAMES. A NO_SEASON game still writes its rows -- the
+   Friends crossword asks playedTodayHas("crossword_fr") so a second device
+   cannot play today's board twice, and its streak is read from them -- so the
+   exclusion belongs here, where the rows become a season, and not at the
+   write. Until 24 Sep 2026 it was nowhere: a day on which a signed-in player
+   finished only the Friends crossword counted as a played day in the football
+   season, while the device's own season (which Friends pages never load)
+   did not count it. Two answers about one Tuesday. */
+const OUTSIDE = Object.keys(NO_SEASON).filter((g) => NO_SEASON[g]);
 export async function daysFor(env, user, limit = 120) {
   if (!hasDB(env) || !user || !user.id) return [];
+  const outside = OUTSIDE.length ? `AND game NOT IN (${OUTSIDE.map(() => "?").join(", ")})` : "";
   try {
     const { results } = await env.DB.prepare(
       `SELECT day,
               COUNT(*) AS started,
               SUM(CASE WHEN finished_at IS NOT NULL THEN 1 ELSE 0 END) AS finished
          FROM season_play
-        WHERE user_id = ?
+        WHERE user_id = ? ${outside}
         GROUP BY day
         ORDER BY day DESC
         LIMIT ?`)
-      .bind(String(user.id), Math.max(1, Math.min(400, Number(limit) || 120))).all();
+      .bind(String(user.id), ...OUTSIDE, Math.max(1, Math.min(400, Number(limit) || 120))).all();
     return (results || []).map((r) => ({
       day: r.day, started: Number(r.started) || 0, finished: Number(r.finished) || 0,
     }));

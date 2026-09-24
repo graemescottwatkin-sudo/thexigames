@@ -136,6 +136,43 @@ const YESTERDAY = dayBefore(TODAY);
 }
 
 /* ======================================================================
+   1b. A GAME OUTSIDE THE SEASON WRITES ROWS AND COUNTS NO DAYS
+   The Friends crossword writes season_play on purpose: playedTodayHas asks it
+   so a second device cannot play today twice, and its streak reads it. What
+   it must not do is make a day in the football season. Found 24 Sep 2026: the
+   owner's account held a crossword_fr row for a day the season then counted.
+   ====================================================================== */
+{
+  const store = await lib("functions/_lib/season-store.js");
+  db.exec(`INSERT INTO users (id, provider, provider_id, email, display_name) VALUES ('u-fr', 'google', 'g2', NULL, 'Fr');
+           INSERT INTO sessions (id, user_id, expires_at) VALUES ('s-fr', 'u-fr', '2099-01-01T00:00:00Z');`);
+  const FR = { id: "u-fr" };
+  const outside = games.GAMES.filter((g) => !games.inSeason(g));
+  t("there is a game outside the season to test with", outside.length >= 1, outside.join(", "));
+  const onlyFr = dayBefore(dayBefore(YESTERDAY));
+  const mixed = dayBefore(YESTERDAY);
+  const at = (d) => Date.parse(d + "T12:00:00Z");
+  for (const g of outside) await store.noteFinish(env, FR, g, at(onlyFr));
+  await store.noteFinish(env, FR, outside[0], at(mixed));
+  await store.noteStart(env, FR, "crossword", at(mixed));
+  const written = db.prepare("SELECT COUNT(*) AS n FROM season_play WHERE user_id = 'u-fr'").get().n;
+  t("the rows are still written (the played-today check needs them)", written === outside.length + 2, String(written));
+
+  const days = await store.daysFor(env, FR);
+  t("a day with only games outside the season is not a season day",
+    !days.some((d) => d.day === onlyFr), JSON.stringify(days));
+  const m = days.find((d) => d.day === mixed);
+  t("and on a mixed day only the season's games are counted",
+    !!m && m.started === 1 && m.finished === 0, JSON.stringify(m));
+
+  const got = await (await season.onRequestGet({ request: req("GET", undefined, { cookie: "s-fr" }), env })).json();
+  t("so the account's season has one day, not two", got.season && got.season.played === 1, JSON.stringify(got.season));
+  const fin = (got.dayGames || []).find((d) => d.day === onlyFr);
+  t("while the day's finishes are still reported by name, for the game's own streak",
+    !!fin && outside.every((g) => fin.games.includes(g)), JSON.stringify(fin));
+}
+
+/* ======================================================================
    2. THE PAGE
    ====================================================================== */
 {
