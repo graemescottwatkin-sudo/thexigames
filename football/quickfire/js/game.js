@@ -31,7 +31,7 @@
  * link so a friend could replay the exact eleven, and that is now a board
  * number in the fragment, which is shorter and does not describe the board.
  */
-var BUILD = "v001l";
+var BUILD = "v001m";
 
 (function bootstrap() {
   'use strict';
@@ -292,7 +292,63 @@ function start() {
       b.addEventListener('click', function () { pick(option, b); });
       el.options.appendChild(b);
     });
+    queueRoom();
   }
+
+  /* ---- the locked screen ------------------------------------------------
+
+     The owner's ruling, 24 Sep 2026: the play screen fits the screen with no
+     scrolling, at every size, "just change the size of elements to scale up".
+     The stylesheet does the locking (body.locked); this sizes the one thing
+     whose length varies -- the clue, and at a pinch the four -- and is the one
+     way out of it.
+
+     THE CLUE TAKES WHAT IS LEFT and shrinks until it fits there: the bank's
+     longest is 114 characters, measured 24 Sep 2026, and a clue is never cut
+     off. If it still cannot fit, the options come down a size. And if even
+     that fails -- a very short screen, or large system text -- the page goes
+     back to scrolling, because a question you can scroll to is better than one
+     you cannot read. Full Time is locked too, with the result scrolling inside
+     its own panel. */
+  function fitQuestion() {
+    var clue = el.clue;
+    if (!clue || !el.options) return;
+    var opts = el.options.querySelectorAll('.option');
+    clue.style.fontSize = '';
+    Array.prototype.forEach.call(opts, function (b) { b.style.fontSize = ''; });
+    if (!document.body.classList.contains('locked') || el.screenGame.hidden) return;
+    var screen = el.screenGame;
+    var over = function () {
+      return screen.scrollHeight > screen.clientHeight + 1 || clue.scrollHeight > clue.clientHeight + 1;
+    };
+    var size = parseFloat(getComputedStyle(clue).fontSize) || 24;
+    while (over() && size > 15) { size -= 1; clue.style.fontSize = size + 'px'; }
+    var osize = opts.length ? (parseFloat(getComputedStyle(opts[0]).fontSize) || 16) : 16;
+    while (over() && osize > 13) {
+      osize -= 1;
+      Array.prototype.forEach.call(opts, function (b) { b.style.fontSize = osize + 'px'; });
+    }
+  }
+
+  function checkRoom() {
+    var body = document.body;
+    var want = body.classList.contains('playing') || body.classList.contains('fulltime');
+    body.classList.toggle('locked', want);
+    if (!want || !body.classList.contains('playing')) { fitQuestion(); return; }
+    fitQuestion();
+    var screen = el.screenGame;
+    if (screen.scrollHeight > screen.clientHeight + 1 || el.clue.scrollHeight > el.clue.clientHeight + 1) {
+      body.classList.remove('locked');
+      fitQuestion();
+    }
+  }
+  var roomQueued = false;
+  function queueRoom() {
+    if (roomQueued) return;
+    roomQueued = true;
+    (window.requestAnimationFrame || setTimeout)(function () { roomQueued = false; checkRoom(); });
+  }
+  window.addEventListener('resize', queueRoom);
 
   function lockOptions() {
     Array.prototype.forEach.call(el.options.querySelectorAll('.option'), function (b) {
@@ -851,6 +907,11 @@ function start() {
       .forEach(function (id) {
         if (el[id]) el[id].hidden = (id !== screenId);
       });
+    /* The round and its result are locked to the screen; the landing and the
+       archive are pages and scroll. See checkRoom(). */
+    document.body.classList.toggle('playing', screenId === 'screenGame');
+    document.body.classList.toggle('fulltime', screenId === 'screenResults');
+    queueRoom();
   }
 
   /* HOW FAR PEOPLE GET, through the family's helper, on the same two events

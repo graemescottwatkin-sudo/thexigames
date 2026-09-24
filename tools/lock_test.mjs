@@ -6,8 +6,12 @@
  * screens its not needed, just change the size of elements to scale up"), and
  * the player cards "always take up a consistent amount of the pitch".
  *
- * WHAT IT PROVES, in real Chromium, for every game in LOCKED, on every sample
- * board, at five sizes (three of them touch, with the family's keyboard up):
+ * TWO KINDS OF SCREEN. A PITCH (Scrambled, Vowels): eleven cards on a
+ * formation. A QUIZ (QuickFire): a clue, four options and the controls, where
+ * what varies is the length of the clue.
+ *
+ * WHAT IT PROVES FOR A PITCH, in real Chromium, on every sample board, at five
+ * sizes (three of them touch, with the family's keyboard up):
  *   - the page is locked (body.locked) and the document does not scroll,
  *     either way;
  *   - no tile overlaps another, none spills off the pitch, and every tile is
@@ -21,9 +25,17 @@
  * ELSEWHERE. A registry that a new game is simply absent from reports a pass
  * for the game it never reached.
  *
+ * AND FOR A QUIZ, at the same five sizes, on a clue longer than any in the
+ * bank: locked, no document scroll, the clue whole (never cut off), every
+ * option and the controls on screen; a short clue the same; Full Time locked
+ * with the result scrolling inside its panel; and the same way out.
+ *
  * It serves the tree itself -- static files, and functions/api/<path>.js run
- * with env {} so every game falls back to its committed sample boards -- so it
- * needs Chromium and nothing else: no wrangler, no database, no seeding.
+ * with env {} so Scrambled and Vowels fall back to their committed sample
+ * boards, and QuickFire (which refuses to run on samples, by design) gets a
+ * real SQLite built from the repo's migrations and seeded with made-up
+ * questions by tools/lock_fixtures.mjs. So it needs Chromium and nothing else:
+ * no wrangler, and nothing from production.
  *
  *   node tools/lock_test.mjs            (from the repo root; needs playwright)
  */
@@ -44,14 +56,15 @@ if (!chromium) { t("playwright is available", false, "npm install -D playwright"
 
 /* ---- which games, and where each one's lock is proved -------------------- */
 const LOCKED = {
-  scrambled: { path: "/football/scrambled/", api: "/api/scrambled/daily", boards: [1, 2, 3, 4] },
-  vowels: { path: "/football/vowels/", api: "/api/scrambled/daily", boards: [1, 2, 3, 4] },
+  scrambled: { kind: "pitch", path: "/football/scrambled/", api: "/api/scrambled/daily", boards: [1, 2, 3, 4] },
+  vowels: { kind: "pitch", path: "/football/vowels/", api: "/api/scrambled/daily", boards: [1, 2, 3, 4] },
+  quickfire: { kind: "quiz", path: "/football/quickfire/" },
 };
 /* Not locked yet, by name, so the list of what is left is a fact in the tree
    and not a memory. Moving a game from here to LOCKED is its whole test. */
 const PENDING = {
   "football/wordsearch": true, "football/hilo": true, "football/ballpark": true,
-  "football/grid": true, "football/codeword": true, "football/quickfire": true,
+  "football/grid": true, "football/codeword": true,
   "football/whoami": true, "friends/whoami": true,
 };
 /* Locked already, and measured by their own browser suite. */
@@ -80,6 +93,12 @@ console.log("The roster");
 }
 
 /* ---- the server ----------------------------------------------------------- */
+const { quickfireEnv } = await import(pathToFileURL(path.join(ROOT, "tools", "lock_fixtures.mjs")).href);
+const { utcDay } = await import(pathToFileURL(path.join(ROOT, "functions", "_lib", "daily.js")).href);
+/* One reading of the day, handed to the fixture and (through the real
+   functions) to the page, so the two cannot disagree across midnight. */
+const QF_ENV = await quickfireEnv(utcDay());
+const envFor = (p) => (p.startsWith("/api/quickfire/") ? QF_ENV : {});
 const TYPES = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript",
   ".json": "application/json", ".png": "image/png", ".svg": "image/svg+xml", ".webp": "image/webp",
   ".ico": "image/x-icon", ".woff2": "font/woff2" };
@@ -97,7 +116,7 @@ const server = http.createServer(async (req, res) => {
       for await (const c of req) chunks.push(c);
       const request = new Request(url.href, { method: req.method, headers: req.headers,
         body: req.method === "GET" || req.method === "HEAD" || !chunks.length ? undefined : Buffer.concat(chunks) });
-      const out = await fn({ request, env: {}, params: {}, waitUntil() {}, next() {} });
+      const out = await fn({ request, env: envFor(p), params: {}, waitUntil() {}, next() {} });
       res.writeHead(out.status, Object.fromEntries(out.headers));
       return res.end(Buffer.from(await out.arrayBuffer()));
     }
@@ -188,7 +207,7 @@ const say = (m) => `locked ${m.locked}, scroll ${m.scrollY}/${m.scrollX}, overla
 
 /* LOCK_ONLY=<id> narrows a run to one game, for proving a sabotage fast. */
 const ONLY = process.env.LOCK_ONLY || "";
-for (const [id, game] of Object.entries(LOCKED).filter(([k]) => !ONLY || k === ONLY)) {
+for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "pitch" && (!ONLY || k === ONLY))) {
   console.log(`\n${id}: in play`);
   for (const vp of VIEWPORTS) {
     for (const board of game.boards) {
@@ -260,6 +279,125 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k]) => !ONLY || k === O
     t(`${vp[0]}: Full Time is locked, the board stays and nothing scrolls`,
       m.fulltime && ok(m), say(m));
     t(`${vp[0]}: and the result is a panel inside the screen`,
+      !!m.results && m.results[0] >= 0 && m.results[1] <= m.vh + 1, JSON.stringify(m.results));
+    await context.close();
+  }
+}
+
+/* ---- a quiz ---------------------------------------------------------------- */
+function measureQuiz() {
+  const rect = (e) => e.getBoundingClientRect();
+  const game = document.getElementById("screenGame");
+  const clue = document.getElementById("clue");
+  const vis = (e) => e && getComputedStyle(e).display !== "none";
+  const offscreen = [...document.querySelectorAll("#options .option, #passQuestion, .scoreCluster, .matchHead")]
+    .filter(vis).filter((e) => { const r = rect(e); return r.top < -1 || r.bottom > innerHeight + 1 || r.right > innerWidth + 1; }).length;
+  const results = document.getElementById("screenResults");
+  return {
+    locked: document.body.classList.contains("locked"),
+    fulltime: document.body.classList.contains("fulltime"),
+    scrollY: document.documentElement.scrollHeight - innerHeight,
+    scrollX: document.documentElement.scrollWidth - innerWidth,
+    clueCut: !game.hidden && clue.scrollHeight > clue.clientHeight + 1,
+    screenCut: !game.hidden && game.scrollHeight > game.clientHeight + 1,
+    clueLen: clue.textContent.length, clueSize: getComputedStyle(clue).fontSize,
+    options: document.querySelectorAll("#options .option").length,
+    optionSize: vis(document.querySelector(".option")) ? getComputedStyle(document.querySelector(".option")).fontSize : "-",
+    optionH: vis(document.querySelector(".option")) ? Math.round(rect(document.querySelector(".option")).height) : 0,
+    offscreen,
+    results: results && !results.hidden ? [Math.round(rect(results).top), Math.round(rect(results).bottom), results.scrollHeight > results.clientHeight] : null,
+    vh: innerHeight,
+  };
+}
+const quizOk = (m) => m.locked && m.scrollY <= 1 && m.scrollX <= 1 && !m.clueCut && !m.screenCut && m.offscreen === 0 && m.options === 4;
+const quizSay = (m) => `locked ${m.locked}, scroll ${m.scrollY}/${m.scrollX}, clue ${m.clueLen} chars at ${m.clueSize}${m.clueCut ? " CUT" : ""}, options ${m.options} at ${m.optionSize} (${m.optionH}px), off screen ${m.offscreen}${m.screenCut ? ", screen overflows" : ""}`;
+
+async function openQuiz(game, [name, viewport, touch]) {
+  const context = await browser.newContext({ viewport, hasTouch: touch, isMobile: touch, deviceScaleFactor: 1 });
+  const page = await context.newPage();
+  await page.goto(ORIGIN + game.path, { waitUntil: "networkidle" });
+  await page.click("#kickOff");
+  await page.waitForSelector("#options .option", { timeout: 10000 });
+  await wait(500);
+  return { page, context };
+}
+/* Answer the question on screen and wait for the next one (or Full Time). */
+async function answerOne(page) {
+  const before = await page.$eval("#progress", (e) => e.textContent);
+  await page.click("#options .option:not([disabled])");
+  await page.waitForFunction((b) => !document.getElementById("screenResults").hidden ||
+    (document.getElementById("progress").textContent !== b && document.querySelector("#options .option:not([disabled])")), before, { timeout: 15000 });
+  await wait(300);
+}
+
+for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "quiz" && (!ONLY || k === ONLY))) {
+  console.log(`\n${id}: in play`);
+  for (const vp of VIEWPORTS) {
+    const { page, context } = await openQuiz(game, vp);
+    const long = await page.evaluate(measureQuiz);
+    t(`${vp[0]}: the longest clue -- locked, no scroll, clue whole, four options and the controls on screen`,
+      quizOk(long) && long.clueLen >= 140, quizSay(long));
+    /* The next question, shorter, on the same screen: the clue's size is set
+       afresh per question, not left at whatever the long one needed. */
+    await answerOne(page);
+    const next = await page.evaluate(measureQuiz);
+    t(`${vp[0]}: the next, shorter clue -- the same, and no smaller than the long one`,
+      quizOk(next) && next.clueLen < long.clueLen && parseFloat(next.clueSize) >= parseFloat(long.clueSize), quizSay(next));
+    await context.close();
+  }
+
+  console.log(`\n${id}: the way out, and back`);
+  {
+    const { page, context } = await openQuiz(game, VIEWPORTS[1]);
+    const big = await page.evaluate(async () => {
+      const st = document.createElement("style");
+      st.id = "lock-test-big";
+      st.textContent = ".option{font-size:44px!important;padding:40px!important}.clue{min-height:500px!important}";
+      document.head.appendChild(st);
+      dispatchEvent(new Event("resize"));
+      await new Promise((r) => setTimeout(r, 400));
+      return document.body.classList.contains("locked");
+    });
+    t("a question too large to fit unlocks the page rather than cutting it off", big === false, "locked " + big);
+    const back = await page.evaluate(async () => {
+      document.getElementById("lock-test-big").remove();
+      dispatchEvent(new Event("resize"));
+      await new Promise((r) => setTimeout(r, 400));
+      return document.body.classList.contains("locked");
+    });
+    t("and relocks when it goes", back === true, "locked " + back);
+    /* THE FIT, made to work. The longest clue in the fixture fits at its
+       stylesheet size at every size above, so none of those checks needs the
+       shrink at all. Here the clue starts far too big for its box: the page
+       must bring it down until it is whole, and stay locked while it does. */
+    const fitted = await page.evaluate(async () => {
+      const st = document.createElement("style");
+      st.id = "lock-test-huge-clue";
+      st.textContent = "body.locked .clue{font-size:72px}";
+      document.head.appendChild(st);
+      dispatchEvent(new Event("resize"));
+      await new Promise((r) => setTimeout(r, 400));
+      const c = document.getElementById("clue");
+      return { locked: document.body.classList.contains("locked"), cut: c.scrollHeight > c.clientHeight + 1,
+        size: parseFloat(getComputedStyle(c).fontSize) };
+    });
+    t("a clue too big for its box is brought down until it is whole, and the page stays locked",
+      fitted.locked && !fitted.cut && fitted.size < 72, JSON.stringify(fitted));
+    await context.close();
+  }
+
+  console.log(`\n${id}: Full Time`);
+  for (const vp of [VIEWPORTS[1], VIEWPORTS[3]]) {
+    const { page, context } = await openQuiz(game, vp);
+    for (let i = 0; i < 11; i++) {
+      if (!(await page.$eval("#screenResults", (e) => e.hidden))) break;
+      await answerOne(page);
+    }
+    await wait(500);
+    const m = await page.evaluate(measureQuiz);
+    t(`${vp[0]}: Full Time is locked and the page does not scroll`,
+      m.fulltime && m.locked && m.scrollY <= 1 && m.scrollX <= 1, `fulltime ${m.fulltime}, locked ${m.locked}, scroll ${m.scrollY}/${m.scrollX}`);
+    t(`${vp[0]}: and the result is a panel inside the screen, scrolling in itself`,
       !!m.results && m.results[0] >= 0 && m.results[1] <= m.vh + 1, JSON.stringify(m.results));
     await context.close();
   }

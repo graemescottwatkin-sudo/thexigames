@@ -1,0 +1,69 @@
+/* tools/lock_fixtures.mjs — databases for tools/lock_test.mjs, built from the
+ * repo's own migrations in node:sqlite and seeded with MADE-UP content.
+ *
+ * WHY A GAME NEEDS ONE. Scrambled and Vowels fall back to committed sample
+ * boards when no database is bound. QuickFire does not, on purpose: an unbound
+ * binding must look broken, not like a working game running on samples
+ * (functions/_lib/qfdata.js). So the only way to put a QuickFire round on a
+ * screen without production is a real schema with rows in it.
+ *
+ * NOTHING HERE IS FROM THE BANK. The questions are fixtures, labelled as such,
+ * sized from the bank's measured extremes (24 Sep 2026: the longest verified
+ * clue is 114 characters, the longest option 17) and pushed past them, so the
+ * lock is proved against something harder than anything a player is served.
+ */
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+
+const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+
+async function sqliteD1() {
+  const sqlite = await import("node:sqlite");
+  const db = new sqlite.DatabaseSync(":memory:");
+  const dir = path.join(ROOT, "data", "migrations");
+  for (const f of fs.readdirSync(dir).filter((f) => /^\d{3}-.*\.sql$/.test(f)).sort()) {
+    try { db.exec(fs.readFileSync(path.join(dir, f), "utf8")); } catch (e) { /* ALTERs the base already has */ }
+  }
+  const d1 = {
+    prepare(sql) {
+      const make = (args) => ({
+        bind: (...a) => make(a),
+        first: async () => db.prepare(sql).get(...args) ?? null,
+        all: async () => ({ results: db.prepare(sql).all(...args) }),
+        run: async () => ({ meta: { changes: Number(db.prepare(sql).run(...args).changes) } }),
+      });
+      return make([]);
+    },
+    batch: async (stmts) => Promise.all(stmts.map((s) => s.run())),
+  };
+  return { db, d1 };
+}
+
+/* A clue of exactly n characters, so the length is the point and the words are
+   plainly not a question anybody will be asked. */
+const clueOf = (i, n) => {
+  let s = `Fixture question ${i}: which of these four is the answer the fixture marks right?`;
+  while (s.length < n) s += " And a little more filler";
+  return s.slice(0, n - 1) + "?";
+};
+
+/* Q1 is the longest on purpose: it is what a round opens on, so every size in
+   the test is measured against the hardest clue first. */
+const LENGTHS = [150, 114, 30, 58, 90, 45, 120, 70, 24, 100, 60, 80, 40, 66];
+const OPTIONS = ["Wolverhampton Wanderers", "Brighton & Hove Albion", "Nottingham Forest FC", "Sheffield Wednesday"];
+
+export async function quickfireEnv(day) {
+  const { db, d1 } = await sqliteD1();
+  const ins = db.prepare(`INSERT INTO qf_question (id, answer, answer_norm, answer_type, clue, status,
+      option_1, option_2, option_3, option_4) VALUES (?, ?, ?, 'club', ?, 'verified', ?, ?, ?, ?)`);
+  const slot = db.prepare("INSERT INTO qf_daily_slot (play_date, slot, question_id, role) VALUES (?, ?, ?, ?)");
+  LENGTHS.forEach((n, i) => {
+    const id = "FX" + String(i + 1).padStart(3, "0");
+    const answer = OPTIONS[i % 4];
+    ins.run(id, answer, answer.toLowerCase(), clueOf(i + 1, n), ...OPTIONS);
+    slot.run(day, i < 11 ? i + 1 : i - 10, id, i < 11 ? "xi" : "bench");
+  });
+  db.prepare("INSERT INTO qf_daily (play_date, status) VALUES (?, 'published')").run(day);
+  return { DB: d1 };
+}

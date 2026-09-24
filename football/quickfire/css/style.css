@@ -207,6 +207,47 @@ h1,h2{font-family:var(--disp);letter-spacing:.01em;margin:0}
 .btn:hover{border-color:var(--ink-faint)}
 .btn.quiet{border-color:transparent;background:none;color:var(--ink-soft);margin-top:16px}
 
+/* ---- THE LOCKED SCREEN ---------------------------------------------------
+
+   The owner's ruling, 24 Sep 2026: while playing, the page is the screen and
+   nothing scrolls, at every size, with the elements scaling up rather than
+   sitting small in a scrolling page. body.locked is set by game.js checkRoom()
+   during a round and at Full Time, and taken off when the question cannot fit
+   (large text, a very short screen) -- then every rule here stands down.
+
+   The column is the viewport under the bar: the strip and the clock, then the
+   clue taking whatever height is left, then the four, the sub and the score.
+   Sizes are in units of the play screen (cqw, cqh), so a tablet or a monitor
+   gets bigger type and bigger buttons rather than more empty paper. The
+   column stops at 860px: past that a line of clue is too long to read in one
+   movement, and the four stop being scannable. */
+body.locked{height:100vh;height:100dvh;overflow:hidden;display:flex;flex-direction:column}
+body.locked>*{flex:none}
+body.locked>footer{display:none}
+body.locked>.app{flex:1 1 auto;min-height:0;width:100%;max-width:860px;
+  display:flex;flex-direction:column;padding:10px 16px 12px}
+body.locked .app>.screen:not([hidden]){flex:1 1 auto;min-height:0}
+
+body.locked #screenGame{overflow:hidden;container-type:size}
+body.locked #screenGame>*{flex:none}
+body.locked .strip{height:max(4px,.6cqh);margin-bottom:1.4cqh}
+body.locked .progress{font-size:clamp(14px,2.3cqh,22px)}
+body.locked .clock{font-size:clamp(30px,6cqh,64px);min-width:0}
+/* The clue has the room that is left, centred in it, and game.js shrinks it
+   until it fits there: never cut off. */
+body.locked .clue{flex:1 1 auto;min-height:0;overflow:hidden;display:flex;align-items:center;
+  margin:1cqh 0;font-size:clamp(20px,min(6.4cqw,4.8cqh),52px)}
+body.locked .options{gap:max(8px,1.2cqh);margin:0 0 1.2cqh}
+body.locked .option{font-size:clamp(16px,min(4.8cqw,3.4cqh),32px);
+  min-height:max(var(--tap),8.5cqh);padding:1cqh 16px;border-radius:12px}
+body.locked .feedback{margin:0 0 .8cqh;font-size:clamp(14px,2.2cqh,22px)}
+body.locked .subBtn{margin-top:0;min-height:max(var(--tap),6.5cqh);font-size:clamp(13px,2cqh,19px)}
+body.locked .scoreCluster{margin-top:1.2cqh}
+body.locked .scoreVal,body.locked .worthVal{font-size:clamp(22px,3.6cqh,40px)}
+
+/* Full Time: the bar stays, and the result scrolls inside its own panel. */
+body.locked #screenResults{overflow-y:auto;overscroll-behavior:contain}
+
 @media (prefers-reduced-motion:reduce){
   *,*::before,*::after{animation-duration:.001ms!important;transition-duration:.001ms!important}
 }
