@@ -10,7 +10,7 @@
  * more, 114 the ceiling. This file is the page: the landing the family
  * shares, the ladder of two rows, the clock, the answers list, the share.
  */
-var BUILD = "v002j";
+var BUILD = "v002k";
 
 (function () {
   "use strict";
@@ -384,8 +384,47 @@ var BUILD = "v002j";
       $(s).hidden = full ? !(s === "screenResults" || s === "screenGame") : s !== id;
     });
     $("screenGame").classList.toggle("finished", full);
+    /* The round and Full Time are locked to the screen; the landing is a page
+       and scrolls. See checkRoom(). */
+    document.body.classList.toggle("playing", id === "screenGame");
+    document.body.classList.toggle("fulltime", full);
     window.scrollTo(0, 0);
+    queueRoom();
   }
+
+  /* ---- the locked screen --------------------------------------------------
+
+     The owner's ruling, 24 Sep 2026: while playing, the page is the screen and
+     nothing scrolls, at every size, with the elements scaling up. The
+     stylesheet does the locking (body.locked); this is the one way out of it.
+
+     The calls that have settled pile up above the live pair and scroll inside
+     their own panel -- a list that grows is allowed to scroll in itself, the
+     page is not -- and the panel is held at its newest so the live pair is
+     always the thing in view. If the live pair cannot be seen whole, or the
+     stage cannot hold the question and the calls (large system text, a very
+     short screen), the page goes back to scrolling rather than hide either. */
+  function checkRoom() {
+    var body = document.body, screen = $("screenGame");
+    var want = !!screen && !screen.hidden;
+    body.classList.toggle("locked", want);
+    if (!want) return;
+    var stage = document.querySelector("#screenGame .stage"), rows = $("rows"), live = $("live");
+    var liveShown = live && getComputedStyle(live).display !== "none";
+    if (rows) rows.scrollTop = rows.scrollHeight;
+    if ((stage && stage.scrollHeight > stage.clientHeight + 1) ||
+        (liveShown && rows.clientHeight + 1 < live.offsetHeight)) {
+      body.classList.remove("locked");
+    }
+    if (rows) rows.scrollTop = rows.scrollHeight;
+  }
+  var roomQueued = false;
+  function queueRoom() {
+    if (roomQueued) return;
+    roomQueued = true;
+    (window.requestAnimationFrame || setTimeout)(function () { roomQueued = false; checkRoom(); });
+  }
+  window.addEventListener("resize", queueRoom);
   /* A board on its card, covered, the first clock waiting for Kick off. */
   function coverBoard(board, mode, meta) {
     pending = { board: board, mode: mode, meta: meta };
@@ -683,6 +722,7 @@ var BUILD = "v002j";
     var rows = $("rows");
     rows.insertBefore(row, $("live"));
     rows.scrollTop = rows.scrollHeight;
+    queueRoom();
     paint(g);
     g.elapsed = Math.round((Date.now() - g.startedAt) / 1000);
     if (g.step >= S.CALLS - 1) { fullTime(); return; }

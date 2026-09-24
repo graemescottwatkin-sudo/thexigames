@@ -35,7 +35,7 @@
 <!-- The theme, stamped before first paint: light unless the player chose
      dark, decided in one shared place for every page of the family. -->
 <script src="/shared/xi-theme.js?v=v60"></script>
-<link rel="stylesheet" href="css/style.css?v=v002j">
+<link rel="stylesheet" href="css/style.css?v=v002k">
 </head>
 <body>
 
@@ -202,16 +202,23 @@
          <strong>The XI Games &middot; <span id="buildTag"></span></strong></p>
     </div>
 
-    <section class="how" id="how">
-      <h2>How to play</h2>
-      <p><b>Twelve names, eleven calls.</b> You see one number. Is the next one higher or lower? On a board of years the faces read earlier or later; on a board of ages, younger or older. The question names who the call is about and what it is against, every time.</p>
-      <p><b>A clock on every call.</b> Each call is worth up to ten. The clock holds for two seconds so you can read it, then the points fall a point a second to nothing. A call that runs out is a wrong call, and waits for you to tap Next; an answered call moves straight on.</p>
-      <p><b>Three substitutions.</b> A wrong call spends one. Three wrong and it is still a win; four is a draw. Leave a board unfinished and it is a loss.</p>
-      <p><b>114 is the ceiling.</b> Eleven right at full value is 110, and every run of five right in a row is worth two more. Two runs of five, or a perfect eleven, reach 114.</p>
-      <p><b>The source shows as the call settles.</b> Every number on a board comes from an opened official record, or from a cached list where the club publishes none, and the line that proves it appears beside the answer once you have called it, never before.</p>
-    </section>
   </section>
 
+  <!-- HOW TO PLAY, BESIDE THE SCREENS rather than inside the landing, so it
+       can open over a locked play screen. On the landing it reads where it
+       always did. -->
+  <section class="how" id="how">
+  <!-- On a locked play screen this section opens OVER the game when the bar's
+       "How to play" is used (the #how target), and this is the way back to
+       the board. Hidden everywhere else. -->
+  <a class="how-back" href="#play">Back to the game</a>
+    <h2>How to play</h2>
+    <p><b>Twelve names, eleven calls.</b> You see one number. Is the next one higher or lower? On a board of years the faces read earlier or later; on a board of ages, younger or older. The question names who the call is about and what it is against, every time.</p>
+    <p><b>A clock on every call.</b> Each call is worth up to ten. The clock holds for two seconds so you can read it, then the points fall a point a second to nothing. A call that runs out is a wrong call, and waits for you to tap Next; an answered call moves straight on.</p>
+    <p><b>Three substitutions.</b> A wrong call spends one. Three wrong and it is still a win; four is a draw. Leave a board unfinished and it is a loss.</p>
+    <p><b>114 is the ceiling.</b> Eleven right at full value is 110, and every run of five right in a row is worth two more. Two runs of five, or a perfect eleven, reach 114.</p>
+    <p><b>The source shows as the call settles.</b> Every number on a board comes from an opened official record, or from a cached list where the club publishes none, and the line that proves it appears beside the answer once you have called it, never before.</p>
+  </section>
   <section class="screen" id="screenGame" hidden>
     <div class="game">
       <section class="stage" aria-label="The ladder">
@@ -329,7 +336,7 @@
 <!-- xi-played.js first: xi-fulltime.js asks it what has been played today. -->
 <script src="/shared/xi-played.js?v=v60"></script>
 <script src="/shared/xi-fulltime.js?v=v60"></script>
-<script src="js/scoring.js?v=v002j"></script>
-<script src="js/game.js?v=v002j"></script>
+<script src="js/scoring.js?v=v002k"></script>
+<script src="js/game.js?v=v002k"></script>
 </body>
 </html>

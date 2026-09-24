@@ -226,3 +226,111 @@ body{margin:0;font-family:var(--body)}
    Full Time card. */
 .ftChallenge { margin-top: 14px; }
 .ftChallenge:empty { display: none; }
+
+/* ---- THE LOCKED SCREEN ----------------------------------------------------
+
+   The owner's ruling, 24 Sep 2026: while playing, the page is the screen and
+   nothing scrolls, at every size, with the elements scaling up. body.locked is
+   set by game.js checkRoom() while the game screen is up, and taken off when
+   the stage cannot hold what it must (large text, a very short screen).
+
+   On a phone: the stage, then this call's clock as a strip under it. In the
+   stage the settled calls and the live pair share one panel that scrolls in
+   itself and sits at its newest; the live pair is side by side and sized in
+   units of that panel, so a taller screen gets bigger faces rather than empty
+   paper. The eleven, the source line and the table are a column of their own
+   where there is room for one. Full Time keeps the board and puts the result
+   in a panel under it, or beside it on a wide screen. */
+body.locked{height:100vh;height:100dvh;overflow:hidden;display:flex;flex-direction:column}
+body.locked>*{flex:none}
+body.locked>footer{display:none}
+body.locked>.app{flex:1 1 auto;min-height:0;width:100%;box-sizing:border-box;display:flex;flex-direction:column;margin:0}
+body.locked .app>:not(#screenGame):not(#screenResults){display:none}
+body.locked #screenGame{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
+body.locked .game{flex:1 1 auto;min-height:0;width:100%;box-sizing:border-box;padding:6px 10px 8px;gap:8px;
+  align-items:stretch;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;
+  grid-template-areas:"stage" "dug"}
+
+body.locked .stage{grid-area:stage;min-height:0;display:flex;flex-direction:column;overflow:hidden;padding:10px 12px}
+body.locked .stage>:not(.rows){flex:none}
+body.locked .eyebrow{display:none}
+body.locked .ladder{margin:6px 0 8px}
+body.locked .rows{flex:1 1 auto;min-height:0;max-height:none;container-type:size}
+/* Pushed to the foot of the panel while there is room, and scrolled in the
+   ordinary way once there is not (justify-content:flex-end would strand the
+   top of an overflowing list where it cannot be scrolled to). */
+body.locked .rows>:first-child{margin-top:auto}
+body.locked .duel{grid-template-columns:1fr auto 1fr;gap:8px}
+body.locked .duel .vs{display:block}
+body.locked .duel.live .player{min-height:clamp(96px,58cqh,300px);padding:8px}
+body.locked .duel.live .player .who{font-size:clamp(16px,min(5.6cqw,7cqh),34px)}
+body.locked .duel.live .player .val{font-size:clamp(30px,min(11cqw,15cqh),76px)}
+body.locked .duel.live .player .sub{font-size:clamp(11px,min(3.2cqw,3.6cqh),15px)}
+body.locked .ask{margin:8px 0 0}
+body.locked .calls{margin-top:8px}
+body.locked .call{min-height:max(56px,7vh)}
+
+/* The context under a name is two lines at most while the pair is live: it
+   runs to 77 characters in the bank and at four lines it pushed the pair out
+   of its panel on a 360x640 phone. */
+body.locked .duel.live .player .sub{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+
+/* This call's clock, as a strip: what is on offer, what is banked and the
+   substitutions on one row, the bar under them. */
+body.locked .dug{grid-area:dug;gap:0;min-height:0}
+body.locked .dug>:not(:first-child){display:none}
+body.locked .dug>.card:first-child{padding:6px 12px;display:grid;grid-template-columns:auto auto 1fr;
+  grid-template-areas:"worth banked subs" "bar bar bar";align-items:end;column-gap:14px}
+body.locked .dug .card h2,body.locked .dug .rule{display:none}
+body.locked .dug .clock{display:contents}
+body.locked .clock .worth{grid-area:worth}
+body.locked .clock .banked{grid-area:banked;text-align:left}
+body.locked .clock .worth b{font-size:26px}
+body.locked .clock .banked b{font-size:22px}
+body.locked .clock .worth span,body.locked .clock .banked span{font-size:10px}
+body.locked .dug .subs{grid-area:subs;margin:0;justify-content:flex-end;align-self:center}
+body.locked .dug .subs span{display:none}
+body.locked .dug .bar{grid-area:bar;margin-top:6px}
+@media (max-height:700px){
+  body.locked .cat small{font-size:12px}
+  body.locked .ask{font-size:13.5px;margin-top:4px}
+  body.locked .ask b{font-size:15px}
+}
+
+/* Full Time: the record stays, the result is a panel of its own. */
+body.locked.fulltime .dug{display:none}
+body.locked.fulltime .app>#screenResults{flex:0 1 auto;min-height:0;max-height:52%;overflow:auto;
+  width:100%;max-width:none;box-sizing:border-box;padding:8px 10px 12px;border-top:1px solid var(--line)}
+body.locked.fulltime .ftcard{max-width:560px;margin:0 auto;padding:16px}
+
+@media (min-width:821px){
+  body.locked .game{grid-template-columns:minmax(0,1fr) 300px;grid-template-rows:minmax(0,1fr);
+    grid-template-areas:"stage dug";max-width:1180px;margin:0 auto}
+  body.locked .dug{overflow:auto;gap:14px}
+  body.locked .dug>:not(:first-child){display:block}
+  body.locked .dug .card h2,body.locked .dug .rule{display:block}
+  body.locked .dug>.card:first-child{display:block;padding:14px 16px}
+  body.locked .dug .clock{display:flex}
+  body.locked .dug .subs{margin-top:10px;justify-content:flex-start}
+  body.locked .dug .subs span{display:inline}
+  body.locked .dug .bar{margin-top:10px}
+}
+@media (min-width:1100px){
+  body.locked.fulltime .dug{display:flex}
+  body.locked.fulltime>.app{display:grid;grid-template-columns:minmax(0,1fr) 420px;grid-template-rows:minmax(0,1fr);column-gap:12px}
+  body.locked.fulltime .app>#screenGame{grid-column:1;grid-row:1}
+  body.locked.fulltime .app>#screenResults{grid-column:2;grid-row:1;max-height:none;height:100%;border-top:0;border-left:1px solid var(--line)}
+}
+
+/* HOW TO PLAY, ON A LOCKED SCREEN. The bar's "How to play" goes to #how, and
+   while the play screen is locked that section is hidden with the rest of the
+   landing -- so the link did nothing mid-game (found 24 Sep 2026, the day the
+   screens were locked). As its target it opens over the game instead, a panel
+   the height of the screen that scrolls in itself, with the way back at the
+   top; leaving the target closes it. The page under it never scrolls. */
+.how-back{display:none}
+body.locked #how:target{display:block!important;position:fixed;inset:0;z-index:60;margin:0;max-width:none;
+  overflow:auto;overscroll-behavior:contain;background:var(--paper);padding:14px 16px 40px;box-sizing:border-box}
+body.locked #how:target .how-back{display:inline-flex;align-items:center;min-height:var(--tap,44px);padding:0 16px;
+  margin:0 0 10px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink);
+  font-family:var(--disp);font-weight:700;letter-spacing:.08em;text-transform:uppercase;text-decoration:none}
