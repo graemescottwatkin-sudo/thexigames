@@ -248,33 +248,36 @@ body.locked>.app{flex:1 1 auto;min-height:0;width:100%;box-sizing:border-box;dis
 body.locked .app>:not(#screenGame):not(#screenResults){display:none}
 body.locked #screenGame{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
 body.locked .game{flex:1 1 auto;min-height:0;width:100%;box-sizing:border-box;padding:6px 10px 8px;gap:8px;
-  align-items:stretch;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,max-content) auto;
-  align-content:start;grid-template-areas:"stage" "dug"}
+  align-items:stretch;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;
+  grid-template-areas:"stage" "dug"}
 
 body.locked .stage{grid-area:stage;min-height:0;display:flex;flex-direction:column;overflow:hidden;padding:10px 12px}
 body.locked .stage>:not(.rows){flex:none}
 body.locked .eyebrow{display:none}
 body.locked .ladder{margin:6px 0 8px}
-/* PACKED FROM THE TOP, THE LIVE PAIR AT A SIZE THE HISTORY CAN LIVE BESIDE.
+/* PACKED FROM THE TOP, AND THE LIVE PAIR TAKES WHAT THE HISTORY DOES NOT.
    The owner, 25 Sep 2026: "quite a bit of white space at the top ... the
    active box is massive compared to the answered ones". The panel was pushed
-   to the foot of a screen-high card and the live pair given 58% of it, so on
-   the first call a quarter of the screen stood empty above two cards of 280px
-   saying what a settled row says in 60. Now the card is as tall as what is in
-   it (the grid row is max-content, shrinking only when the screen is short),
-   the settled rows take only the height they need, and the live pair is
-   capped; what is left over is the page's, under the game, not a band in it.
-   Once the history is longer than the screen allows, the panel scrolls in
-   itself as before, the live pair at its foot. */
-body.locked .stage{align-self:start;max-height:100%;box-sizing:border-box}
-body.locked .rows{flex:0 1 auto;min-height:0;max-height:none;container-type:inline-size}
+   to the foot of the card with the live pair a fixed 58% of it, so the first
+   call stood a quarter of the screen empty above two cards of 280px mostly
+   empty inside. Packing it from the top moved that space under the game (a
+   third of the screen, found in the app the same day), and the owner's
+   answer was to grow the live cards early: they take whatever the settled
+   rows leave, and shrink toward their floor as the answers stack up. Their
+   type is sized from the card itself, so a tall card is a big card, not an
+   empty one. Once the history is longer than the screen allows, the panel
+   scrolls in itself, the live pair at its foot at its floor. */
+body.locked .stage{box-sizing:border-box}
+body.locked .rows{flex:1 1 auto;min-height:0;max-height:none;display:flex;flex-direction:column}
+body.locked .rows>*{flex:none}
 body.locked .rows>:first-child{margin-top:0}
+body.locked .rows>.duel.live{flex:1 0 auto}
 body.locked .duel{grid-template-columns:1fr auto 1fr;gap:8px}
 body.locked .duel .vs{display:block}
-body.locked .duel.live .player{min-height:clamp(96px,20vh,190px);padding:8px}
-body.locked .duel.live .player .who{font-size:clamp(16px,5.6cqw,30px)}
-body.locked .duel.live .player .val{font-size:clamp(30px,10cqw,64px)}
-body.locked .duel.live .player .sub{font-size:clamp(11px,3.2cqw,15px)}
+body.locked .duel.live .player{min-height:clamp(96px,20vh,190px);padding:8px;container-type:size}
+body.locked .duel.live .player .who{font-size:clamp(16px,min(13cqw,11cqh),56px)}
+body.locked .duel.live .player .val{font-size:clamp(30px,min(34cqw,26cqh),170px);line-height:1}
+body.locked .duel.live .player .sub{font-size:clamp(11px,min(7.4cqw,6cqh),22px)}
 body.locked .ask{margin:8px 0 0}
 body.locked .calls{margin-top:8px}
 body.locked .call{min-height:max(56px,7vh)}

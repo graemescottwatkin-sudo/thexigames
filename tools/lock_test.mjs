@@ -815,6 +815,11 @@ function measureDuel() {
     band: (() => { const l = document.querySelector("#screenGame .ladder"), f = rows.firstElementChild;
       return l && f && vis(l) ? Math.round(rect(f).top - rect(l).bottom) : null; })(),
     settledH: (() => { const d = document.querySelector("#rows .duel.settled"); return d ? Math.round(rect(d).height) : 0; })(),
+    /* And no band at the other end: packing it from the top first moved the
+       spare under the game, a third of the screen (in the app, 25 Sep 2026).
+       Under the live pair to the question, and under the whole game. */
+    underLive: (() => { const a = document.querySelector("#screenGame .ask"); return liveBox && vis(a) ? Math.round(rect(a).top - liveBox.bottom) : null; })(),
+    underGame: Math.round(innerHeight - rect(document.querySelector("#screenGame .game")).bottom),
     boxes: ["#screenGame", "#screenGame .game", "#screenGame .stage", "#rows", ".dug"].map((q) => {
       const e = document.querySelector(q); return e ? q.split(" ").pop() + ":" + Math.round(rect(e).height) + "/" + e.scrollHeight : q + ":-";
     }).join(" "),
@@ -882,6 +887,8 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "d
       duelOk(first), duelSay(first));
     t(`${vp[0]}: the first call has no empty band above the live pair`,
       first.band !== null && first.band >= 0 && first.band <= 16, `gap under the ladder ${first.band}px`);
+    t(`${vp[0]}: nor one below it: the live pair takes the spare, down to the question, and the game reaches the foot`,
+      first.underLive !== null && first.underLive <= 24 && first.underGame <= 24, `under the pair ${first.underLive}px, under the game ${first.underGame}px`);
     if (process.env.LOCK_SHOTS) await page.screenshot({ path: path.join(process.env.LOCK_SHOTS, `${id}-${vp[0]}-first.png`) });
     for (let i = 0; i < 4; i++) await callOne(page);
     const later = await page.evaluate(measureDuel);
@@ -1263,6 +1270,21 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
     const { page, context } = await openProfile(game, vp);
     const m = await page.evaluate(measureProfile);
     t(`${vp[0]}: locked, no scroll, the profile, the guess box, the clue buttons and Give up on screen`, profileOk(m), profileSay(m));
+    if (process.env.LOCK_SHOTS) await page.screenshot({ path: path.join(process.env.LOCK_SHOTS, `${id}-${vp[0]}-fresh.png`) });
+    /* NO BAND BEFORE A CLUE IS BOUGHT. The clue panel is what takes the spare
+       height, and with nothing in it that was a quarter of a 412 screen blank
+       between the buttons and Give up (in the app, 25 Sep 2026). Until a clue
+       is bought the profile takes it instead. */
+    const fresh = await page.evaluate(() => {
+      const r = (e) => e.getBoundingClientRect();
+      const ladder = document.getElementById("ladder"), give = document.getElementById("giveUp");
+      const vis = (e) => !!e && !e.hidden && getComputedStyle(e).display !== "none";
+      return { clues: document.querySelectorAll("#clues .clue").length,
+        gap: vis(ladder) && vis(give) ? Math.round(r(give).top - r(ladder).bottom) : null };
+    });
+    if (fresh.clues === 0 && fresh.gap !== null) {
+      t(`${vp[0]}: before a clue is bought, nothing stands blank between the clue buttons and Give up`, fresh.gap <= 40, `${fresh.gap}px`);
+    }
     /* Every clue there is to buy, the longest being football's fourteen-club
        career: the panel takes it and scrolls in itself, and nothing else moves
        off the screen. */

@@ -20,7 +20,7 @@
  * and a roster is a candidate list for the door.
  */
 var DECK_WORD = { main: 'Everyday', expert: 'Deep cut' };
-var BUILD = "v001e";
+var BUILD = "v001f";
 
 (function bootstrap() {
   'use strict';
