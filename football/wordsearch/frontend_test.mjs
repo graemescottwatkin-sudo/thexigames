@@ -14,6 +14,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { JSDOM } from "jsdom";
+import { localResources } from "../../tools/local_resources.js";
 import { onRequestGet as daily } from "../../functions/api/wordsearch/daily.js";
 import { onRequestGet as puzzleFn } from "../../functions/api/wordsearch/puzzle.js";
 import { onRequestGet as catalogFn } from "../../functions/api/wordsearch/catalog.js";
@@ -98,7 +99,7 @@ const giveFetch = (win) => {
   win.addEventListener("error", (e) => uncaught.push(e.message));
 };
 const dom = await JSDOM.fromURL(`http://localhost:${PORT}/football/wordsearch/`, {
-  runScripts: "dangerously", resources: "usable", pretendToBeVisual: true,
+  runScripts: "dangerously", resources: localResources(), pretendToBeVisual: true,
   beforeParse: giveFetch,
 });
 const w = dom.window, d = w.document;
@@ -470,7 +471,7 @@ t("the daily state carries saved_at for the away-time charge",
   const stash = JSON.stringify(rec);
 
   const dom2 = await JSDOM.fromURL(`http://localhost:${PORT}/football/wordsearch/`, {
-    runScripts: "dangerously", resources: "usable", pretendToBeVisual: true,
+    runScripts: "dangerously", resources: localResources(), pretendToBeVisual: true,
     beforeParse: giveFetch,
   });
   const w2 = dom2.window, d2 = w2.document;
@@ -498,7 +499,7 @@ t("the daily state carries saved_at for the away-time charge",
   const cat = await (await fetch(`http://localhost:${PORT}/api/wordsearch/catalog`)).json();
   const released = cat.boards[0];
   const dom3 = await JSDOM.fromURL(`http://localhost:${PORT}/football/wordsearch/?b=${released.id}`, {
-    runScripts: "dangerously", resources: "usable", pretendToBeVisual: true,
+    runScripts: "dangerously", resources: localResources(), pretendToBeVisual: true,
     beforeParse: giveFetch,
   });
   const w3 = dom3.window, d3 = w3.document;

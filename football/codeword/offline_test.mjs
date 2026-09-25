@@ -26,6 +26,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { JSDOM } from "jsdom";
+import { localResources } from "../../tools/local_resources.js";
 import { onRequestGet as daily } from "../../functions/api/codeword/daily.js";
 import { todayKey } from "../../functions/_lib/cw-board.js";
 
@@ -132,7 +133,7 @@ const PORT = server.address().port;
 
 async function open() {
   const dom = await JSDOM.fromURL(`http://localhost:${PORT}/football/codeword/`, {
-    runScripts: "dangerously", resources: "usable", pretendToBeVisual: true,
+    runScripts: "dangerously", resources: localResources(), pretendToBeVisual: true,
     beforeParse(win) {
       win.fetch = (u, o) => {
         const url = new URL(u, win.location.href);

@@ -16,6 +16,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { JSDOM } from "jsdom";
+import { localResources } from "../../tools/local_resources.js";
 
 import { onRequestGet as apiDaily } from "../../functions/api/daily.js";
 import { onRequestGet as apiPractice } from "../../functions/api/practice.js";
@@ -176,7 +177,7 @@ server.listen(0, "127.0.0.1", async () => {
      apart is never taken. `navType` is what a browser would have said. */
   async function open(seed, navType) {
     const dom = await JSDOM.fromURL(origin + "/", {
-      runScripts: "dangerously", pretendToBeVisual: true, resources: "usable",
+      runScripts: "dangerously", pretendToBeVisual: true, resources: localResources(),
       beforeParse(w) {
         w.matchMedia = () => ({ matches: false, addListener() {}, removeListener() {} });
         w.scrollTo = () => {}; w.scrollBy = () => {};

@@ -36,6 +36,7 @@ import path from "node:path";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import { JSDOM } from "jsdom";
+import { localResources } from "../../tools/local_resources.js";
 import { dailyNumber as serverDailyNumber, dailyDayKey } from "../../functions/_lib/daily.js";
 
 const DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -124,7 +125,7 @@ server.listen(0, "127.0.0.1", async () => {
   const AHEAD = nextMidnight - nowMs + 60000;
 
   const dom = await JSDOM.fromURL(origin + "/", {
-    runScripts: "dangerously", pretendToBeVisual: true, resources: "usable",
+    runScripts: "dangerously", pretendToBeVisual: true, resources: localResources(),
     beforeParse(w) {
       w.matchMedia = () => ({ matches: false, addListener() {}, removeListener() {} });
       w.scrollTo = () => {}; w.scrollBy = () => {};

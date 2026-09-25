@@ -30,6 +30,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { JSDOM } from "jsdom";
+import { localResources } from "./local_resources.js";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const HUB_FILE = themeHubFile("football");
@@ -143,7 +144,7 @@ const dated = (d) => d.getElementById("sheetDate").textContent !== "Today’s pu
 const counted = (d) => d.getElementById("xiCount").textContent.trim() !== "View games";
 async function hub(storage = {}, ready = null) {
   const dom = await JSDOM.fromURL(origin + "/football/", {
-    runScripts: "dangerously", resources: "usable", pretendToBeVisual: true,
+    runScripts: "dangerously", resources: localResources(), pretendToBeVisual: true,
     beforeParse(w) {
       w.fetch = (u, o) => fetch(new URL(u, w.location.href), o);
       w.matchMedia = w.matchMedia || (() => ({ matches: false, addEventListener() {}, addListener() {} }));

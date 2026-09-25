@@ -45,8 +45,11 @@ const until = async (ok, ms = 15000) => {
   return ok();
 };
 
-let JSDOM;
-try { ({ JSDOM } = await import("jsdom")); } catch (e) { JSDOM = null; }
+let JSDOM, localResources;
+try {
+  ({ JSDOM } = await import("jsdom"));
+  ({ localResources } = await import("../../tools/local_resources.js"));
+} catch (e) { JSDOM = null; }
 let sqliteOk = true;
 try { await import("node:sqlite"); } catch (e) { sqliteOk = false; }
 /* ABSENT IS NOT A PASS. */
@@ -103,7 +106,7 @@ const origin = "http://127.0.0.1:" + server.address().port;
 async function open(at) {
   asked.length = 0;
   const dom = await JSDOM.fromURL(origin + at, {
-    runScripts: "dangerously", pretendToBeVisual: true, resources: "usable",
+    runScripts: "dangerously", pretendToBeVisual: true, resources: localResources(),
     beforeParse(w) {
       w.matchMedia = () => ({ matches: false, addListener() {}, removeListener() {} });
       w.scrollTo = () => {};

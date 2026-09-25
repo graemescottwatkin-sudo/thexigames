@@ -18,6 +18,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { JSDOM } from "jsdom";
+import { localResources } from "../../tools/local_resources.js";
 import { onRequestGet as apiDaily } from "../../functions/api/grid/daily.js";
 import { onRequestPost as apiGuess } from "../../functions/api/grid/guess.js";
 /* THE REAL /api/play, because the page gets its play id from it and a round
@@ -122,7 +123,7 @@ server.listen(0, "127.0.0.1", async () => {
   console.log(`Serving ${DIR} at ${origin}\n`);
 
   const dom = await JSDOM.fromURL(origin + "/", {
-    runScripts: "dangerously", pretendToBeVisual: true, resources: "usable",
+    runScripts: "dangerously", pretendToBeVisual: true, resources: localResources(),
     beforeParse(w) {
       w.matchMedia = () => ({ matches: false, addListener() {}, removeListener() {} });
       w.scrollTo = () => {}; w.scrollBy = () => {};
@@ -464,7 +465,7 @@ server.listen(0, "127.0.0.1", async () => {
     const banked = { no: G.state().no, title: "x", score: 97, solved: 11,
                      misses: 1, hints: 0, at: Date.now() };
     const dom2 = await JSDOM.fromURL(origin + "/", {
-      runScripts: "dangerously", pretendToBeVisual: true, resources: "usable",
+      runScripts: "dangerously", pretendToBeVisual: true, resources: localResources(),
       beforeParse(w2) {
         w2.matchMedia = () => ({ matches: false, addListener() {}, removeListener() {} });
         w2.scrollTo = () => {}; w2.scrollBy = () => {};

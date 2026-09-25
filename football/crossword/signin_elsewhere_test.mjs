@@ -21,6 +21,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { JSDOM } from "jsdom";
+import { localResources } from "../../tools/local_resources.js";
 
 import { onRequestGet as apiDaily } from "../../functions/api/daily.js";
 import { onRequestGet as apiCategories } from "../../functions/api/categories.js";
@@ -91,7 +92,7 @@ const GUEST = [{ dailyNo: 6, score: 86, elapsedSeconds: 131, checks: 0, checkAll
 
 async function open(ready) {
   const dom = await JSDOM.fromURL(origin + "/", {
-    runScripts: "dangerously", pretendToBeVisual: true, resources: "usable",
+    runScripts: "dangerously", pretendToBeVisual: true, resources: localResources(),
     beforeParse(w) {
       w.matchMedia = () => ({ matches: false, addListener() {}, removeListener() {} });
       w.scrollTo = () => {}; w.scrollBy = () => {};
