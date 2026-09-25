@@ -102,6 +102,10 @@ button{font:inherit;color:inherit;cursor:pointer}
 .btn:hover:not(:disabled){background:var(--ink);color:var(--card)}
 .btn:hover:not(:disabled) small{color:inherit}
 .btn:disabled{opacity:.45;cursor:not-allowed}
+/* [hidden] MUST WIN. .btn is display:flex, and an author display beats the
+   browser's [hidden] -- so "Blow the final whistle", hidden until it may be
+   used, stood on the clock card from the start (seen 25 Sep 2026). */
+.btn[hidden]{display:none}
 .btn.primary{background:var(--pitch);border-color:var(--pitch);color:#fff}
 
 .prog{display:flex;align-items:baseline;gap:8px}
@@ -158,10 +162,19 @@ body.locked #cwGame>main.game{flex:1 1 auto;min-height:0;width:100%;max-width:11
 body.locked .game>section{display:contents}
 body.locked .game>section>.card{flex:1 1 auto;min-height:0;display:flex;flex-direction:column;padding:8px}
 body.locked .gridbox{flex:1 1 auto;min-height:0;container-type:size;display:flex;align-items:center;justify-content:center}
-body.locked .grid{width:min(100cqw,100cqh)}
-body.locked .cell{font-size:calc(min(100cqw,100cqh) / var(--n,13) * .56)}
-body.locked .cell .n{font-size:calc(min(100cqw,100cqh) / var(--n,13) * .26)}
-body.locked .cell .pencil{font-size:calc(min(100cqw,100cqh) / var(--n,13) * .4)}
+/* The board: fitted whole where there is height for it, and on a phone the
+   width of the screen like the crossword's -- panning in its own box when the
+   screen is shorter than the board (the owner, 25 Sep 2026: "like other games
+   in size"). --fit is the side of the square the board is drawn in. */
+body.locked .gridbox{--fit:min(100cqw,100cqh)}
+body.locked .cw-pitch{width:var(--fit);box-sizing:border-box}
+body.locked .grid{width:100%}
+body.locked .cell{font-size:calc(var(--fit) / var(--n,13) * .56)}
+body.locked .cell .n{font-size:calc(var(--fit) / var(--n,13) * .26)}
+body.locked .cell .pencil{font-size:calc(var(--fit) / var(--n,13) * .4)}
+body.locked .cw-here{margin:4px 0 0;min-height:1.3em;font-size:14px;line-height:1.3;color:var(--ink);
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+body.locked .cw-here:empty{display:none}
 body.locked .readout{margin-top:6px;min-height:0}
 body.locked .keys{margin-top:6px}
 body.locked .keys button{height:clamp(30px,4.6vh,52px)}
@@ -169,6 +182,7 @@ body.locked .keys button{height:clamp(30px,4.6vh,52px)}
 
 @media (max-width:860px){
   body.locked .game>section>.card{order:3}
+  body.locked .gridbox{--fit:100cqw;overflow-y:auto;overscroll-behavior:contain;align-items:flex-start}
   body.locked .game>aside{display:contents!important}
   body.locked .cw-clockcard{order:1;padding:6px 10px;display:grid;grid-template-columns:auto 1fr auto;
     grid-template-areas:"clock subs subs" "acts acts acts";align-items:center;gap:4px 10px}
@@ -201,6 +215,17 @@ body.locked .keys button{height:clamp(30px,4.6vh,52px)}
    here and only here -- at this height it wrapped each button to three lines
    and left the squares 12px wide, too small to hit. */
 @media (max-width:860px) and (max-height:700px){
+  /* A short phone fits the whole board rather than the width: at 360x640 a
+     full-width board is 75px taller than its box, and a board sitting cut off
+     reads as broken however well it pans. */
+  body.locked .gridbox{--fit:min(100cqw,100cqh);overflow:hidden}
+  /* And the pitch's border and the clue line give back the 30px the board
+     needs to stay at 18px a square: a thin rim of turf, and the clue on one
+     line (the full list is a tap away under All clues). */
+  body.locked .cw-pitch{padding:3px}
+  body.locked #cwGame>main.game{gap:4px;padding:4px 8px 6px}
+  body.locked .game>section>.card{padding:5px}
+  body.locked .cw-here{-webkit-line-clamp:1;font-size:13px;margin-top:2px}
   body.locked .cw-clockcard{padding:4px 8px;gap:2px 8px}
   body.locked .cw-clockcard .clock .min{font-size:22px}
   body.locked .cw-clockcard .clock .worth b{font-size:18px}
@@ -224,3 +249,24 @@ body.locked .keys button{height:clamp(30px,4.6vh,52px)}
 /* Full Time is a card over the board, capped at the screen and scrolling in
    itself, so the page under it never has to. */
 .ftcard{max-height:100%;overflow:auto}
+
+/* ---- THE BOARD ON THE PITCH ------------------------------------------------
+   The crossword's look (the owner, 25 Sep 2026): the grid sits on the turf,
+   blocked squares are not painted so the pitch shows through them, and the
+   open squares are the crossword's cell and line tokens rather than tiles in
+   a dark frame. Everywhere, not only on a locked screen. */
+.cw-pitch{position:relative;padding:8px;border-radius:var(--r-lg,10px);margin:0 auto}
+.cw-pitch .pitch-bg{position:absolute;inset:0;z-index:0;border-radius:inherit;overflow:hidden;pointer-events:none;
+  background:var(--grid-field);box-shadow:inset 0 0 0 1px var(--grid-field-line)}
+.cw-pitch .pitch-bg svg{width:100%;height:100%;display:block}
+.cw-pitch .pitch-bg .pl{stroke:var(--grid-field-line)}
+.cw-pitch .pitch-bg .pl .spot{fill:var(--grid-field-line);stroke:none}
+.cw-pitch .grid{position:relative;z-index:1;gap:0;padding:0;background:transparent;border-radius:2px}
+.cw-pitch .cell{background:var(--grid-cell,var(--cell));border-right:1px solid var(--grid-line);border-bottom:1px solid var(--grid-line)}
+.cw-pitch .cell.block{background:transparent;border-color:transparent}
+.cw-pitch .cell.same{background:var(--sel)}
+.cw-pitch .cell.sel{background:var(--sel)}
+.cw-pitch .cell.done{background:var(--correct-bg)}
+.cw-pitch .cell.wrong{background:var(--wrong-bg)}
+.cw-pitch .cell.revealed{background:var(--revealed-bg)}
+.cw-here{display:none}

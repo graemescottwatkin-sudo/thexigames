@@ -15,7 +15,7 @@
      the family more time than any layout question: the footer line, the
      console, and the named window variable. If this is not the build just
      deployed, the deploy has not landed — do not start debugging the game. */
-  var BUILD = "v002x";
+  var BUILD = "v002y";
   window.WORDSEARCHXI_BUILD = BUILD;
   try { console.log("Wordsearch XI build " + BUILD); } catch (e) {}
 
@@ -565,7 +565,18 @@
     if (!shell) return ZOOM_DEFAULT;
     var w = shell.clientWidth - 16;                 /* .grid padding, both sides */
     if (!(w > 0)) return ZOOM_DEFAULT;              /* no layout: jsdom, or pre-paint */
-    return Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, Math.floor(w / COLS)));
+    var cell = Math.floor(w / COLS);
+    /* AND THE HEIGHT, ON A LOCKED SCREEN. Width alone was right for a page
+       that scrolls: Safari resizes the window as its toolbars hide on scroll,
+       and a height-aware fit made the board grow and shrink under the reader
+       (see above). A locked play screen does not scroll -- the owner's
+       ruling, 24 Sep 2026 -- so the toolbars do not move and the height is
+       stable, and the board is fitted whole into the box it has. */
+    if (document.body.classList.contains("locked")) {
+      var h = shell.clientHeight - 16;
+      if (h > 0) cell = Math.min(cell, Math.floor(h / ROWS));
+    }
+    return Math.max(ZOOM_MIN, Math.min(ZOOM_MAX, cell));
   }
   /* Refitted only when the WIDTH has actually changed. A resize on iOS is
      usually the toolbar, not the layout; refitting on every one of them is
@@ -579,13 +590,48 @@
        a card it has not been given. The board keeps whatever it has and the
        next call, from the observer or from the next resize, does the fit. */
     if (w <= 0) return;
-    if (!force && w === fittedAt) { syncPanelHeight(); return; }
-    fittedAt = w;
+    /* The key is the width, and on a locked screen the height too. */
+    var key = document.body.classList.contains("locked") ? w + "x" + shell.clientHeight : w;
+    if (!force && key === fittedAt) { syncPanelHeight(); return; }
+    fittedAt = key;
     /* Someone who has zoomed has said what size they want; a rotation must
        not argue with it. */
     if (userZoomed) { redrawHighlights(); syncPanelHeight(); return; }
     setZoom(fitCell());
   }
+  /* ---- the locked screen --------------------------------------------------
+     The one way out: squares under ZOOM_MIN are too small to drag across, and
+     a round whose parts cannot fit the screen scrolls rather than cuts. Then
+     the board goes back to its width-only fit, as it always was. */
+  var unlockedFor = null;
+  function checkRoom() {
+    var body = document.body, app = $("gameApp"), shell = $("gridShell");
+    if (!app || app.classList.contains("hidden") || !shell) return;
+    var size = window.innerWidth + "x" + window.innerHeight;
+    if (!body.classList.contains("locked")) {
+      if (unlockedFor === size) return;
+      body.classList.add("locked");
+    }
+    fitBoard(true);
+    var h = shell.clientHeight - 16;
+    var tooSmall = h > 0 && Math.floor(h / ROWS) < ZOOM_MIN;
+    var over = app.scrollHeight > app.clientHeight + 1;
+    if (tooSmall || over) {
+      body.classList.remove("locked");
+      unlockedFor = size;
+      fitBoard(true);
+    } else {
+      unlockedFor = null;
+    }
+  }
+  var roomQueued = false;
+  function queueRoom() {
+    if (roomQueued) return;
+    roomQueued = true;
+    (window.requestAnimationFrame || setTimeout)(function () { roomQueued = false; checkRoom(); });
+  }
+  window.addEventListener("resize", function () { unlockedFor = null; queueRoom(); });
+
   /* Pinch. The pointer count is DERIVED from the map — never kept in a
      separate counter. Crossword's pinch kept its own count, the two drifted,
      and every frontend run since v148 threw for it. One source. */
@@ -1078,6 +1124,10 @@
     helpUsed = new Set(); varPauseStart = 0; varPauseUntil = 0; varFrozenScore = 114;
     $("prematch").classList.add("hidden");
     $("gameApp").classList.remove("hidden");
+    /* The round is locked to the screen; the landing is a page. See
+       checkRoom(). */
+    document.body.classList.add("locked");
+    queueRoom();
     $("result").classList.remove("show");
     $("finishPrompt").classList.remove("show");
     $("themeTitle").textContent = p.theme;
@@ -1550,6 +1600,8 @@
     $("result").classList.remove("show");
     $("gameApp").classList.add("hidden");
     $("prematch").classList.remove("hidden");
+    document.body.classList.remove("locked");
+    fitBoard(true);
     location.hash = "";
   }
 

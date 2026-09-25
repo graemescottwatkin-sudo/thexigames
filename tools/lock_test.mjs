@@ -6,7 +6,7 @@
  * screens its not needed, just change the size of elements to scale up"), and
  * the player cards "always take up a consistent amount of the pitch".
  *
- * SEVEN KINDS OF SCREEN. A PITCH (Scrambled, Vowels): eleven cards on a
+ * EIGHT KINDS OF SCREEN. A PITCH (Scrambled, Vowels): eleven cards on a
  * formation. A QUIZ (QuickFire): a clue, four options and the controls, where
  * what varies is the length of the clue. A SLIDER (Ballpark): a question, a
  * value and a track, and after each lock a result that stands in for them. A
@@ -16,7 +16,9 @@
  * GRID: a board of up to 16x16 whose squares are sized from its own box, the
  * answer row and the keys under it. A PROFILE (Who Am I, football and
  * Friends): a portrait and its facts, the guess box, the clue buttons, and the
- * clues bought scrolling in a panel of their own.
+ * clues bought scrolling in a panel of their own. A WORD SEARCH: the names
+ * as chips (or a column, wider) and a 12x14 board fitted to the width and the
+ * height it is left.
  *
  * WHAT IT PROVES FOR A PITCH, in real Chromium, on every sample board, at five
  * sizes (three of them touch, with the family's keyboard up):
@@ -73,12 +75,11 @@ const LOCKED = {
   grid: { kind: "grid", path: "/football/grid/" },
   whoami: { kind: "profile", path: "/football/whoami/" },
   whoami_fr: { kind: "profile", path: "/friends/whoami/" },
+  wordsearch: { kind: "wordsearch", path: "/football/wordsearch/" },
 };
 /* Not locked yet, by name, so the list of what is left is a fact in the tree
    and not a memory. Moving a game from here to LOCKED is its whole test. */
-const PENDING = {
-  "football/wordsearch": true,
-};
+const PENDING = {};
 /* Locked already, and measured by their own browser suite. */
 const ELSEWHERE = {
   "football/crossword": "football/crossword/render_test.mjs",
@@ -918,6 +919,36 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "c
     await context.close();
   }
 
+  console.log(`\n${id}: the look, and the clue in hand`);
+  {
+    /* The owner, 25 Sep 2026: the black squares were "not in keeping with
+       other games" -- the board now sits on the crossword's pitch and the
+       blocked squares show it -- and "are the clues missing": the clue for
+       the answer you are in is under the grid. And the final whistle, hidden
+       until it may be used, must actually be hidden (display:flex beat it). */
+    const { page, context } = await openCodeword(game, VIEWPORTS[1]);
+    const look = await page.evaluate(() => {
+      const block = document.querySelector("#grid .cell.block");
+      const bg = block ? getComputedStyle(block).backgroundColor : "none";
+      return { pitch: !!document.querySelector(".cw-pitch .pitch-bg"), blockBg: bg,
+        whistle: getComputedStyle(document.getElementById("whistle")).display };
+    });
+    t("the board is on the pitch and a blocked square shows the turf, not black",
+      look.pitch && (look.blockBg === "rgba(0, 0, 0, 0)" || look.blockBg === "transparent"), JSON.stringify(look));
+    t("the final whistle is hidden until it may be used", look.whistle === "none", look.whistle);
+    const at = await page.$eval("#grid .cell:not(.block)", (e) => { const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+    await page.touchscreen.tap(at.x, at.y);
+    await wait(400);
+    const clue = await page.evaluate(() => {
+      const li = document.querySelector("#hints li.here");
+      return { line: (document.getElementById("cwHere").textContent || "").trim(),
+        here: li ? li.textContent.replace(/\s+/g, " ").trim() : null,
+        shown: getComputedStyle(document.getElementById("cwHere")).display !== "none" };
+    });
+    t("tapping a square puts that answer's clue under the grid", clue.shown && !!clue.here && clue.line === clue.here, JSON.stringify(clue));
+    await context.close();
+  }
+
   console.log(`\n${id}: the answers, on a phone`);
   {
     const { page, context } = await openCodeword(game, VIEWPORTS[1]);
@@ -1213,6 +1244,108 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
   }
 }
 
+/* ---- a word search ---------------------------------------------------------- */
+function measureWS() {
+  const rect = (e) => e.getBoundingClientRect();
+  const vis = (e) => !!e && !e.hidden && getComputedStyle(e).display !== "none" && getComputedStyle(e).visibility !== "hidden";
+  const grid = document.getElementById("grid"), shell = document.getElementById("gridShell");
+  const g = rect(grid), sh = rect(shell);
+  const cell = document.querySelector("#grid .cell");
+  const words = [...document.querySelectorAll("#wordList .word")].filter(vis);
+  const offscreen = [...document.querySelectorAll(".toolbar, #gridShell, .bonusBox")].concat(words)
+    .filter(vis).filter((e) => { const r = rect(e); return r.top < -1 || r.bottom > innerHeight + 1 || r.left < -1 || r.right > innerWidth + 1; }).length;
+  return {
+    locked: document.body.classList.contains("locked"),
+    scrollY: document.documentElement.scrollHeight - innerHeight,
+    scrollX: document.documentElement.scrollWidth - innerWidth,
+    boardWhole: g.top >= sh.top - 1 && g.bottom <= sh.bottom + 1 && g.left >= sh.left - 1 && g.right <= sh.right + 1,
+    cell: cell ? Math.round(rect(cell).width) : 0,
+    words: words.length,
+    offscreen,
+  };
+}
+const wsOk = (m) => m.locked && m.scrollY <= 1 && m.scrollX <= 1 && m.boardWhole && m.cell >= 22 && m.words === 11 && m.offscreen === 0;
+const wsSay = (m) => `locked ${m.locked}, scroll ${m.scrollY}/${m.scrollX}, board ${m.boardWhole ? "whole" : "NOT WHOLE"} at ${m.cell}px a square, ${m.words} names, off screen ${m.offscreen}`;
+async function openWS(game, [name, viewport, touch]) {
+  const context = await browser.newContext({ viewport, hasTouch: touch, isMobile: touch, deviceScaleFactor: 1 });
+  const page = await context.newPage();
+  await page.goto(ORIGIN + game.path, { waitUntil: "networkidle" });
+  await page.click("#homeDaily");
+  await page.waitForSelector("#grid .cell", { timeout: 10000 });
+  if (await page.$eval("#kickCover", (e) => !e.classList.contains("hidden"))) await page.click("#kickBtn");
+  await wait(800);
+  return { page, context };
+}
+for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "wordsearch" && (!ONLY || k === ONLY))) {
+  console.log(`\n${id}: in play`);
+  for (const vp of VIEWPORTS) {
+    const { page, context } = await openWS(game, vp);
+    const m = await page.evaluate(measureWS);
+    if (vp[0] === "phone-360") {
+      /* The one size this board may not fit: eleven names and a 12x14 board
+         on 360x640. It must either fit locked, or fall back to scrolling at
+         the board's own width fit -- never lock with squares too small to
+         drag across. */
+      t(`${vp[0]}: fits locked, or falls back to scrolling with squares of 22px or more`,
+        wsOk(m) || (!m.locked && m.cell >= 22), wsSay(m));
+    } else {
+      t(`${vp[0]}: locked, no scroll, the whole board in its card, all eleven names and the toolbar on screen`, wsOk(m), wsSay(m));
+    }
+    await context.close();
+  }
+
+  console.log(`\n${id}: the old-link banner and How to play`);
+  {
+    const { page, context } = await openWS(game, VIEWPORTS[1]);
+    await bannerCheck(page, id, VIEWPORTS[1][0], wsOk, wsSay, measureWS);
+    await context.close();
+  }
+  {
+    const { page, context } = await openWS(game, VIEWPORTS[1]);
+    await howCheck(page, VIEWPORTS[1][0]);
+    await context.close();
+  }
+
+  console.log(`\n${id}: the way out, and back`);
+  {
+    const { page, context } = await openWS(game, VIEWPORTS[1]);
+    const big = await page.evaluate(async () => {
+      const st = document.createElement("style");
+      st.id = "lock-test-big";
+      st.textContent = ".word{font-size:40px!important;padding:20px!important}";
+      document.head.appendChild(st);
+      dispatchEvent(new Event("resize"));
+      await new Promise((r) => setTimeout(r, 500));
+      return document.body.classList.contains("locked");
+    });
+    t("names too large to leave the board room unlock the page rather than shrink the squares past use", big === false, "locked " + big);
+    const back = await page.evaluate(async () => {
+      document.getElementById("lock-test-big").remove();
+      dispatchEvent(new Event("resize"));
+      await new Promise((r) => setTimeout(r, 500));
+      return document.body.classList.contains("locked");
+    });
+    t("and relocks when it goes", back === true, "locked " + back);
+    await context.close();
+  }
+
+  console.log(`\n${id}: Full Time`);
+  for (const vp of [VIEWPORTS[0], VIEWPORTS[3]]) {
+    const { page, context } = await openWS(game, vp);
+    /* The result card is shown as the game shows it, by its class: what is
+       under test is where it sits, not how a board is finished. */
+    const m = await page.evaluate(async () => {
+      document.getElementById("result").classList.add("show");
+      await new Promise((r) => setTimeout(r, 300));
+      const r = document.querySelector("#result .modal").getBoundingClientRect();
+      return { locked: document.body.classList.contains("locked"), scroll: document.documentElement.scrollHeight - innerHeight,
+        top: Math.round(r.top), bottom: Math.round(r.bottom), vh: innerHeight };
+    });
+    t(`${vp[0]}: the Full Time card sits inside the screen`, m.top >= 0 && m.bottom <= m.vh + 1, JSON.stringify(m));
+    await context.close();
+  }
+}
+
 /* ---- a board's own address -------------------------------------------------
    /football/<game>/daily/<no> is what the archive pages and the sitemap give a
    board. Found in the app on 24 Sep 2026: Ballpark's served the page and it
@@ -1279,13 +1412,30 @@ function measureClues() {
 }
 if (!ONLY || ONLY === "crossword") {
   console.log(`\ncrossword: the clues, by size`);
-  for (const [label, viewport] of [["ipad-air upright", { width: 820, height: 1180 }], ["ipad upright", { width: 768, height: 1024 }]]) {
+  for (const [label, viewport] of [["ipad-air upright", { width: 820, height: 1180 }], ["ipad upright", { width: 768, height: 1024 }], ["app tablet upright", { width: 720, height: 1055 }]]) {
     const { page, context } = await openCrossword([label, viewport, true]);
     const m = await page.evaluate(measureClues);
     t(`${label}: every clue, under the board, in a panel inside the screen, and the page does not scroll`,
       m.shown && m.under && m.inside && m.lists >= 2 && m.items >= 10 && m.scroll <= 1, JSON.stringify(m));
     t(`${label}: the squares keep their reading size (32px or more) and the current clue is still by the keys`,
       m.cell >= 32 && m.nowClue, JSON.stringify({ cell: m.cell, nowClue: m.nowClue }));
+    /* THE BOARD KEEPS THE HEIGHT. Found in the app at 720x1055 (25 Sep 2026):
+       the masthead, a toolbar wrapped onto two rows and the clue panel left
+       the board frame 175px. The masthead goes (its strap moves into the
+       bar), the toolbar is one row, and the frame has at least 40% of the
+       screen. */
+    const room = await page.evaluate(() => {
+      const vis = (e) => !!e && getComputedStyle(e).display !== "none" && e.getBoundingClientRect().height > 0;
+      const head = document.querySelector("body > header:not(.xic-bar)");
+      const tbar = document.querySelector(".tbar");
+      return { masthead: vis(head), tbarH: tbar ? Math.round(tbar.getBoundingClientRect().height) : 0,
+        frame: Math.round(document.querySelector(".grid-wrap").getBoundingClientRect().height), vh: innerHeight,
+        barTitle: vis(document.querySelector(".cw-bartitle")),
+        parts: [...document.querySelectorAll(".stage > *, .stage > * > *")].filter(vis)
+          .map((e) => (e.id || e.className || e.tagName).toString().split(" ")[0] + ":" + Math.round(e.getBoundingClientRect().height)).join(" ") };
+    });
+    t(`${label}: the board frame keeps at least 40% of the screen; the title is in the bar and the toolbar is one row`,
+      !room.masthead && room.barTitle && room.tbarH <= 64 && room.frame >= room.vh * 0.4, JSON.stringify(room));
     await context.close();
   }
   {
@@ -1326,6 +1476,26 @@ if (!ONLY || ONLY === "crossword") {
     const { page, context } = await openCrossword(VIEWPORTS[3]);
     const m = await page.evaluate(measureClues);
     t("desktop: every clue, to the right of the board", m.shown && m.right && m.inside && m.lists >= 2, JSON.stringify(m));
+    await context.close();
+  }
+  /* THE OLD-LINK BANNER IS ONE LINE HERE TOO. The crossword's play screen is
+     body.flex-layout, not body.locked, so the shared one-line rules missed it
+     and an old link's banner stood as a two-line sentence over the board
+     (found in the app on an upright tablet, 25 Sep 2026). */
+  for (const vp of [VIEWPORTS[1], ["app tablet upright", { width: 720, height: 1055 }, true]]) {
+    const { page, context } = await openCrossword(vp);
+    const b = await page.evaluate(async () => {
+      window.XIChrome.permalink.aged("crossword", 4);
+      dispatchEvent(new Event("resize"));
+      await new Promise((r) => setTimeout(r, 400));
+      const box = document.querySelector(".xic-aged");
+      const vis = (sel) => { const e = box && box.querySelector(sel); return !!e && getComputedStyle(e).display !== "none"; };
+      return { there: !!box, h: box ? Math.round(box.getBoundingClientRect().height) : 0,
+        short: vis(".xic-aged-short"), long: vis(".xic-aged-long"),
+        scroll: document.documentElement.scrollHeight - innerHeight };
+    });
+    t(`${vp[0]}: an old-link banner over the crossword is one short line and the page does not scroll`,
+      b.there && b.short && !b.long && b.h <= 50 && b.scroll <= 1, JSON.stringify(b));
     await context.close();
   }
 }

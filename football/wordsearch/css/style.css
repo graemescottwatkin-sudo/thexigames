@@ -226,3 +226,54 @@ h1,h2,h3{font-family:var(--disp);letter-spacing:.01em;margin:0}
    and it takes no room when there is nothing to say. */
 .resultVerified{font-size:12px;color:var(--ink-faint,#8a968d);margin:2px 0 0}
 .resultVerified:empty{display:none}
+
+/* ---- THE LOCKED SCREEN ----------------------------------------------------
+   The owner's ruling, 24 Sep 2026: while playing, the page is the screen and
+   nothing scrolls, at every size, with the elements scaling up. body.locked is
+   set by game.js while a round is up, and taken off when the squares would be
+   under ZOOM_MIN or the round's parts cannot fit.
+
+   On a phone: the toolbar, the heading, the names as compact wrapped chips
+   with the bonus under them, then the board -- fitted whole to the width AND
+   the height it is left (game.js fitCell). Wider, the names are a column
+   beside the board that scrolls in itself if it must. The board can still be
+   zoomed past the fit; then it scrolls inside its own card. */
+body.locked{height:100vh;height:100dvh;overflow:hidden;display:flex;flex-direction:column}
+body.locked>*{flex:none}
+body.locked>footer{display:none}
+body.locked .site-ident,body.locked .site-head,body.locked .how{display:none}
+body.locked>#gameApp{flex:1 1 auto;min-height:0;width:100%;max-width:1280px;box-sizing:border-box;
+  margin:0 auto;display:flex;flex-direction:column;padding:6px 10px 8px}
+body.locked #gameApp>*{flex:none}
+body.locked .toolbar{margin-bottom:6px}
+body.locked .matchHead{margin-bottom:6px}
+body.locked #gameApp>main.main{flex:1 1 auto;min-height:0}
+body.locked .boardWrap{min-height:0;display:flex;flex-direction:column}
+body.locked .gridShell{flex:1 1 auto;min-height:0;overflow:auto;display:flex;align-items:flex-start;justify-content:center}
+body.locked .side{position:static;max-height:none;min-height:0}
+@media (max-width:760px){
+  body.locked #gameApp>main.main{display:flex;flex-direction:column;gap:6px}
+  body.locked .side{flex:none;padding:6px 8px}
+  body.locked .sideHead{margin-bottom:2px}
+  body.locked .words{gap:4px}
+  body.locked .word{font-size:13px;padding:5px 8px}
+  body.locked .bonusBox{margin-top:4px;padding:4px 8px}
+  body.locked .bonusSub{display:none}
+  body.locked .side .tb-table{display:none}
+  body.locked .boardWrap{flex:1 1 auto}
+}
+@media (min-width:761px){
+  body.locked #gameApp>main.main{grid-template-rows:minmax(0,1fr);align-items:stretch}
+  body.locked .boardWrap{height:100%}
+  body.locked .side{overflow:auto}
+}
+/* Full Time's card is capped at the screen and scrolls in itself. */
+.modal{max-height:100%;overflow:auto}
+
+/* HOW TO PLAY OVER A LOCKED BOARD, as in every locked game. */
+.how-back{display:none}
+body.locked #how:target{display:block!important;position:fixed;inset:0;z-index:60;margin:0;max-width:none;
+  overflow:auto;overscroll-behavior:contain;background:var(--paper);padding:14px 16px 40px;box-sizing:border-box}
+body.locked #how:target .how-back{display:inline-flex;align-items:center;min-height:var(--tap,44px);padding:0 16px;
+  margin:0 0 10px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink);
+  font-family:var(--disp);font-weight:700;letter-spacing:.08em;text-transform:uppercase;text-decoration:none}

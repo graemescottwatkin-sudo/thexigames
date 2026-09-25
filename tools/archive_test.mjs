@@ -23,7 +23,7 @@ import { onRequestGet as crosswordAnswers } from "../functions/football/crosswor
 import {
   PERMA_GAMES, boardKeys, permalinkPath, permalinkRoute, todayKeyFor, gamePath, gameDir,
 } from "../functions/_lib/permalink.js";
-import { dailyNoForDay, dailyDayKey, dailyNumber, ANSWERS_AFTER_DAYS } from "../functions/_lib/daily.js";
+import { dailyNoForDay, dailyDayKey, dailyNumber, ANSWERS_AFTER_DAYS, answersAvailable } from "../functions/_lib/daily.js";
 /* LISTED, not launched. A game can be live with no public way to reach it
    — see UNLISTED in functions/_lib/games.js — and two of the rules in this
    file are about being FINDABLE rather than about the page being right. The
@@ -369,10 +369,19 @@ console.log("\nThe pages that link to it");
      What is actually being claimed is that the index offers the archive in
      EITHER state, and says something true about which state it is in. Which
      state applies is derived from the same two constants the page uses, so this
-     needs no revisiting on the day HiLo and Vowels open theirs. */
+     needs no revisiting on the day HiLo and Vowels open theirs.
+     ASKED OF answersAvailable ITSELF, NOT RESTATED. It was "launch + window,
+     and today at or past it", which is one day early: the rule is today MINUS
+     the board MORE THAN the window. That disagreement was invisible for as long
+     as the game was well past or well short of its seal, and on 25 Sep 2026 --
+     board 8, a week after the epoch reset launched everything on board 1 -- it
+     turned CI red for a push that touched nothing here. */
   const sc = await (await scrambledAnswers({ env, params: { path: [] } })).text();
-  const scOpensAt = launchNumber("scrambled") + ANSWERS_AFTER_DAYS;
-  const scPublishing = dailyNumber(Date.now()) >= scOpensAt;
+  const scToday = dailyNumber(Date.now());
+  const scLaunch = launchNumber("scrambled");
+  let scOpensAt = scLaunch;
+  while (!answersAvailable(scLaunch, scOpensAt)) scOpensAt++;
+  const scPublishing = answersAvailable(scLaunch, scToday);
   t("scrambled's answers index offers the archive, published or not",
     sc.includes('href="/football/scrambled/archive/"'), "");
   t(scPublishing
@@ -389,7 +398,7 @@ console.log("\nThe pages that link to it");
   {
     const named = [...sc.matchAll(/href="\/football\/scrambled\/answers\/(\d+)"/g)]
       .map((m) => Number(m[1]));
-    const tooNew = named.filter((n) => n + ANSWERS_AFTER_DAYS > dailyNumber(Date.now()));
+    const tooNew = named.filter((n) => !answersAvailable(n, dailyNumber(Date.now())));
     t("and it names no board whose seal has not expired", tooNew.length === 0,
       tooNew.length ? `boards ${tooNew.join(", ")}` : `${named.length} board(s) named`);
   }

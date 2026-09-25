@@ -2290,8 +2290,25 @@ body.flex-layout .nudge-row{
    panel can scroll). The current clue still sits by the keys. Portrait only,
    and 600px wide or more: a phone keeps its one clue. */
 @media (min-width:600px) and (max-width:859px) and (orientation:portrait){
+  /* THE BOARD GETS THE HEIGHT, the way a phone's does. Measured in the app at
+     720x1055 (25 Sep 2026): the masthead, a toolbar wrapped onto two rows and
+     a 34% clue panel left the board 175px, 10px a square at Fit board. So the
+     same things go here as on a phone, for the same reasons -- the masthead
+     repeats the bar and its strap moves into the bar; home, mode and sign-in
+     repeat the bar's own controls, which puts the toolbar on one row -- and
+     the clue panel takes 22%: at 26% an upright iPad's frame was 37% of the
+     screen, and the panel scrolls in itself, so the height is the board's. */
+  body.flex-layout:not(.home-showing) > header:not(.xic-bar){ display:none; }
+  body.flex-layout:not(.home-showing) #tbHome,
+  body.flex-layout:not(.home-showing) #tbMode,
+  body.flex-layout:not(.home-showing) #tbSignIn{ display:none; }
+  body.flex-layout:not(.home-showing) .cw-bartitle{
+    display:block;font-family:var(--disp);font-weight:600;letter-spacing:.06em;
+    font-size:11px;text-transform:uppercase;color:var(--pitch);
+    white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;min-width:0;
+  }
   body.flex-layout .clues-block{
-    display:block;order:1;flex:0 0 34%;min-height:0;
+    display:block;order:1;flex:0 0 22%;min-height:0;
     overflow-y:auto;overscroll-behavior:contain;
     border-top:1px solid var(--line);margin:0;padding:4px 12px 10px;
     max-width:none;width:auto;
