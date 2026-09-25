@@ -56,8 +56,8 @@ const SRC = "football/whoami";          // the game this one is generated from
 
 /* WHAT IS LIVE. Bump both after a deploy with tools/post_deploy.mjs, which
    derives them from the live page rather than trusting anyone's memory. */
-const LAST_SHIPPED = "v001a";
-const LAST_SHIPPED_ASSETS = "c4584c7182017bbc";
+const LAST_SHIPPED = "v001b";
+const LAST_SHIPPED_ASSETS = "85bf583aa589d30a";
 
 let pass = 0, fail = 0;
 function t(name, ok, note) {
