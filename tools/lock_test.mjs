@@ -890,6 +890,10 @@ function measureCodeword() {
     scrollY: document.documentElement.scrollHeight - innerHeight,
     scrollX: document.documentElement.scrollWidth - innerWidth,
     square: Math.abs(g.width - g.height) <= 2,
+    /* Whole in the box that clips it. A phone board drawn the screen's width
+       and panned stood half a row cut off at 412x860 on production (25 Sep
+       2026): the board passed every check here while reading as broken. */
+    whole: (() => { const bx = rect(grid.closest(".gridbox") || grid); return g.top >= bx.top - 1 && g.bottom <= bx.bottom + 1 && g.left >= bx.left - 1 && g.right <= bx.right + 1; })(),
     cell: Math.round(g.width / n),
     cardCut: card.scrollHeight > card.clientHeight + 1,
     offscreen,
@@ -897,8 +901,8 @@ function measureCodeword() {
     vh: innerHeight,
   };
 }
-const cwOk = (m) => m.locked && m.scrollY <= 1 && m.scrollX <= 1 && m.square && m.cell >= 18 && !m.cardCut && m.offscreen === 0 && m.deadSpace <= 24;
-const cwSay = (m) => `locked ${m.locked}, scroll ${m.scrollY}/${m.scrollX}, grid ${m.square ? "square" : "NOT SQUARE"} at ${m.cell}px a square${m.cardCut ? ", board card overflows" : ""}, off screen ${m.offscreen}, empty below ${m.deadSpace}px`;
+const cwOk = (m) => m.locked && m.scrollY <= 1 && m.scrollX <= 1 && m.square && m.whole && m.cell >= 18 && !m.cardCut && m.offscreen === 0 && m.deadSpace <= 24;
+const cwSay = (m) => `locked ${m.locked}, scroll ${m.scrollY}/${m.scrollX}, grid ${m.square ? "square" : "NOT SQUARE"}${m.whole ? "" : " and NOT WHOLE"} at ${m.cell}px a square${m.cardCut ? ", board card overflows" : ""}, off screen ${m.offscreen}, empty below ${m.deadSpace}px`;
 
 async function openCodeword(game, [name, viewport, touch]) {
   const context = await browser.newContext({ viewport, hasTouch: touch, isMobile: touch, deviceScaleFactor: 1 });
