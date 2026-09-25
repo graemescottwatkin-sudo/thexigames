@@ -80,7 +80,7 @@ ${items ? `<h2>By club</h2>
 <ul>${items}</ul>` : `<p class="sub">No club boards have been released yet.</p>`}
 <a class="cta" href="/football/hilo/">Play today's board</a>`;
   return htmlResponse(sitePage({
-    title: "HiLo XI by club and theme — the higher-or-lower football game",
+    title: "HiLo XI by club and theme | The XI Games",
     description: "HiLo XI boards by club and by theme: a club's managers by the year " +
       "they took charge, and every daily that has run, grouped by what it ranks.",
     canonical: SITE + INDEX,

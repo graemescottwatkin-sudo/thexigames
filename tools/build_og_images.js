@@ -163,6 +163,87 @@ function hiloMotif() {
   return s;
 }
 
+/* CODEWORD: numbers standing for letters. The top row is the code as it is
+   given; the row under it is the same four with two worked out, which is the
+   whole game: every number decoded fills in every square that carries it. */
+function codewordMotif() {
+  const code = ["7", "3", "14", "9"], got = ["K", "A", "", ""];
+  let s = "";
+  for (let i = 0; i < 4; i++) {
+    const [x, y] = at(i, 0);
+    s += `<rect x="${x}" y="${y}" width="${CELL - 2}" height="${CELL - 2}" fill="${DEEP}"/>` +
+         `<text x="${x + 8}" y="${y + 22}" font-family="Barlow Condensed, sans-serif" font-weight="700"` +
+         ` font-size="20" fill="${SOFT}">${code[i]}</text>`;
+  }
+  for (let i = 0; i < 4; i++) {
+    s += got[i] ? cell(i, 2, MINT, got[i], DEEP) : cell(i, 2, DEEP, "", SOFT);
+    const [x, y] = at(i, 2);
+    s += `<text x="${x + 6}" y="${y + 17}" font-family="Barlow Condensed, sans-serif" font-weight="700"` +
+         ` font-size="15" fill="${got[i] ? DEEP : SOFT}">${code[i]}</text>`;
+  }
+  return s;
+}
+
+/* QUICKFIRE: four answers, one right. Four bars the width of the block, the
+   third one lit: a multiple-choice question needs no words to say so. */
+function quickfireMotif() {
+  let s = "";
+  const [x0] = at(0, 0), w = 4 * CELL - 2;
+  for (let r = 0; r < 4; r++) {
+    const [, y] = at(0, r);
+    s += `<rect x="${x0}" y="${y + 8}" width="${w}" height="${CELL - 18}" rx="6" fill="${r === 2 ? MINT : DEEP}"/>` +
+         `<text x="${x0 + 18}" y="${y + 41}" font-family="Barlow Condensed, sans-serif" font-weight="700"` +
+         ` font-size="26" fill="${r === 2 ? DEEP : SOFT}">${"ABCD"[r]}</text>`;
+  }
+  return s;
+}
+
+/* WHO AM I: one question behind a wall of doors. The middle four squares are
+   the mystery player, lit, with the question mark; the rest are the doors
+   round him, shut. */
+function whoamiMotif() {
+  let s = "";
+  for (let r = 0; r < 4; r++) {
+    for (let c = 0; c < 4; c++) {
+      const mid = r > 0 && r < 3 && c > 0 && c < 3;
+      if (!mid) s += cell(c, r, DEEP, "", SOFT);
+    }
+  }
+  const [x, y] = at(1, 1), side = 2 * CELL - 2;
+  s += `<rect x="${x}" y="${y}" width="${side}" height="${side}" fill="${MINT}"/>` +
+       `<text x="${x + side / 2}" y="${y + side / 2 + 30}" text-anchor="middle" font-family="Barlow Condensed, sans-serif"` +
+       ` font-weight="700" font-size="92" fill="${DEEP}">?</text>`;
+  return s;
+}
+
+/* BALLPARK: a guess on a track, and the ballpark round the answer. The number
+   above is what is being guessed; the lit band on the track is close enough. */
+function ballparkMotif() {
+  let s = "";
+  const digits = ["4", "1", "7"];
+  for (let i = 0; i < 3; i++) s += cell(i + 0.5, 0, MINT, digits[i], DEEP);
+  const [x0, y] = at(0, 2.3), w = 4 * CELL - 2;
+  s += `<rect x="${x0}" y="${y}" width="${w}" height="14" rx="7" fill="${DEEP}"/>` +
+       `<rect x="${x0 + w * 0.45}" y="${y}" width="${w * 0.25}" height="14" rx="7" fill="${SOFT}"/>` +
+       `<circle cx="${x0 + w * 0.56}" cy="${y + 7}" r="20" fill="${MINT}"/>`;
+  return s;
+}
+
+/* THE FAMILY: eleven shirts, numbered. The home page is every game at once,
+   and what they share is the eleven. */
+function familyMotif() {
+  let s = "";
+  let n = 1;
+  for (let r = 0; r < 3; r++) {
+    for (let c = 0; c < 4; c++) {
+      if (n > 11) { s += cell(c, r + 0.5, DEEP, "", SOFT); continue; }
+      s += cell(c, r + 0.5, n === 11 ? MINT : DEEP, String(n), n === 11 ? DEEP : SOFT);
+      n++;
+    }
+  }
+  return s;
+}
+
 /* CROSSWORD: the live card's own motif, reproduced from it. Here so --check
    and --only=crossword have something to compare, and so the family's set is
    complete in one file rather than four here and one in history. */
@@ -227,6 +308,41 @@ const GAMES = {
     sub: "A new football board every day.",
     motif: hiloMotif,
   },
+  codeword: {
+    name: "CODEWORD",
+    lead: "Every letter is a number.",
+    sub: "A new football codeword every day.",
+    motif: codewordMotif,
+  },
+  quickfire: {
+    name: "QUICKFIRE",
+    lead: "Eleven questions. Beat the clock.",
+    sub: "A new football quiz every day.",
+    motif: quickfireMotif,
+  },
+  whoami: {
+    name: "WHO AM I",
+    lead: "Eleven doors. One player each.",
+    sub: "A new football mystery every day.",
+    motif: whoamiMotif,
+  },
+  ballpark: {
+    name: "BALLPARK",
+    lead: "Eleven numbers. Get close.",
+    sub: "A new football numbers game every day.",
+    motif: ballparkMotif,
+  },
+  /* THE HOME PAGE'S CARD. Every page on the site that is not one game's shared
+     the crossword's until 25 Sep 2026, so a link to the family showed one of
+     its members. Two lines of name, "THE XI" over "GAMES". */
+  family: {
+    name: "THE XI",
+    line2: "GAMES",
+    lead: "Eleven daily football puzzles.",
+    sub: "A new board every day, free.",
+    motif: familyMotif,
+    out: "football/og-image.png",
+  },
 };
 
 /* ---- the card ---------------------------------------------------------- */
@@ -247,7 +363,7 @@ function cardSvg(game) {
   <text x="${NAME_X}" y="285" font-family="Barlow Condensed, sans-serif" font-weight="700"
         font-size="104" letter-spacing="1" fill="${MINT}">${g.name}</text>
   <text x="${NAME_X}" y="385" font-family="Barlow Condensed, sans-serif" font-weight="700"
-        font-size="104" letter-spacing="1" fill="${MINT}">XI</text>
+        font-size="104" letter-spacing="1" fill="${MINT}">${g.line2 || "XI"}</text>
   <text x="${NAME_X}" y="458" font-family="Public Sans, sans-serif" font-weight="700"
         font-size="34" fill="${SOFT}">${g.lead}</text>
   <text x="${NAME_X}" y="506" font-family="Public Sans, sans-serif" font-weight="600"
@@ -296,12 +412,12 @@ ${cardSvg(game)}`;
        with nothing to say so. */
     await page.evaluate(() => document.fonts.ready);
     const shot = await page.screenshot({ type: "png" });
-    const out = path.join(ROOT, "football", game, "og-image.png");
+    const out = path.join(ROOT, GAMES[game].out || path.join("football", game, "og-image.png"));
     const had = fs.existsSync(out) ? fs.readFileSync(out) : null;
     if (had && had.equals(shot)) { same.push(game); continue; }
     if (args.check) { differs.push(game + (had ? "" : " (missing)")); continue; }
     fs.writeFileSync(out, shot);
-    wrote.push(`${game}  ${(shot.length / 1024).toFixed(0)}kB  -> football/${game}/og-image.png`);
+    wrote.push(`${game}  ${(shot.length / 1024).toFixed(0)}kB  -> ${path.relative(ROOT, out)}`);
   }
   await browser.close();
 

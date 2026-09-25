@@ -71,7 +71,7 @@ function page() {
      four would "agree" on the wrong thing. */
   const TITLE = `${NAME} — the daily Friends identity puzzle`;
 
-  s = once(s, "Who Am I XI — the daily football identity puzzle | The XI Games",
+  s = once(s, "Who Am I XI — the daily mystery footballer | The XI Games",
     `${TITLE} | The XI Games`, "title");
   s = once(s, "Who Am I XI — the daily football identity puzzle", TITLE,
     "og:title and twitter:title");

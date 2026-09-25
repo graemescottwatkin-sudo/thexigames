@@ -163,10 +163,10 @@ function page() {
   const TITLE = `${NAME} \u2014 the daily Friends crossword`;
   const DESC = `${NAME} \u2014 ${TAGLINE}`;
 
-  s = once(s, "<title>Crossword XI \u2014 The Football Crossword</title>",
+  s = once(s, "<title>Crossword XI \u2014 the daily football crossword | The XI Games</title>",
     `<title>${TITLE}</title>`, "title");
   s = once(s,
-    '<meta name="description" content="Crossword XI \u2014 the daily football crossword. Solve before the 90 minutes gets away from you.">',
+    '<meta name="description" content="The daily football crossword: eleven clues, one grid and a 90-minute clock. Solve it before the points drain away. A new board every day.">',
     `<meta name="description" content="${DESC}">`, "meta description");
   s = once(s, '<meta property="og:title" content="Crossword XI \u2014 The Football Crossword">',
     `<meta property="og:title" content="${TITLE}">`, "og:title");

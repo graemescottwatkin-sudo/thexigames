@@ -239,11 +239,18 @@ const OG_IMAGE = {
   hilo: "/football/hilo/og-image.png",
   vowels: "/football/vowels/og-image.png",
   grid: "/football/grid/og-image.png",
+  codeword: "/football/codeword/og-image.png",
+  quickfire: "/football/quickfire/og-image.png",
+  whoami: "/football/whoami/og-image.png",
+  ballpark: "/football/ballpark/og-image.png",
+  /* A page that is no one game's -- the archive of everything, and anything
+     new -- shows the family, not the crossword. */
+  family: "/football/og-image.png",
 };
 const SITE_ORIGIN = "https://www.thexigames.com";
 
 function socialTags({ title, description, canonical, game }) {
-  const img = SITE_ORIGIN + (OG_IMAGE[game] || OG_IMAGE.crossword);
+  const img = SITE_ORIGIN + (OG_IMAGE[game] || OG_IMAGE.family);
   /* Absolute, always: a relative og:image is ignored by every scraper that
      matters, and canonical is already absolute on every caller. */
   const url = /^https?:/.test(String(canonical || "")) ? canonical : SITE_ORIGIN + canonical;
