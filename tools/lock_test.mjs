@@ -6,13 +6,17 @@
  * screens its not needed, just change the size of elements to scale up"), and
  * the player cards "always take up a consistent amount of the pitch".
  *
- * FIVE KINDS OF SCREEN. A PITCH (Scrambled, Vowels): eleven cards on a
+ * SEVEN KINDS OF SCREEN. A PITCH (Scrambled, Vowels): eleven cards on a
  * formation. A QUIZ (QuickFire): a clue, four options and the controls, where
  * what varies is the length of the clue. A SLIDER (Ballpark): a question, a
  * value and a track, and after each lock a result that stands in for them. A
  * DUEL (HiLo): two faces and a call, with the settled calls piling up above
  * them in a panel that scrolls in itself. A CODEWORD: a square grid fitted to
- * the height that is left, a key, a keypad and the answers in a panel.
+ * the height that is left, a key, a keypad and the answers in a panel. A
+ * GRID: a board of up to 16x16 whose squares are sized from its own box, the
+ * answer row and the keys under it. A PROFILE (Who Am I, football and
+ * Friends): a portrait and its facts, the guess box, the clue buttons, and the
+ * clues bought scrolling in a panel of their own.
  *
  * WHAT IT PROVES FOR A PITCH, in real Chromium, on every sample board, at five
  * sizes (three of them touch, with the family's keyboard up):
@@ -66,13 +70,14 @@ const LOCKED = {
   ballpark: { kind: "slider", path: "/football/ballpark/" },
   hilo: { kind: "duel", path: "/football/hilo/" },
   codeword: { kind: "codeword", path: "/football/codeword/" },
+  grid: { kind: "grid", path: "/football/grid/" },
+  whoami: { kind: "profile", path: "/football/whoami/" },
+  whoami_fr: { kind: "profile", path: "/friends/whoami/" },
 };
 /* Not locked yet, by name, so the list of what is left is a fact in the tree
    and not a memory. Moving a game from here to LOCKED is its whole test. */
 const PENDING = {
   "football/wordsearch": true,
-  "football/grid": true,
-  "football/whoami": true, "friends/whoami": true,
 };
 /* Locked already, and measured by their own browser suite. */
 const ELSEWHERE = {
@@ -100,7 +105,7 @@ console.log("The roster");
 }
 
 /* ---- the server ----------------------------------------------------------- */
-const { quickfireEnv, codewordRawBoard } = await import(pathToFileURL(path.join(ROOT, "tools", "lock_fixtures.mjs")).href);
+const { quickfireEnv, codewordRawBoard, whoamiStub } = await import(pathToFileURL(path.join(ROOT, "tools", "lock_fixtures.mjs")).href);
 const { publicBoard: cwPublic } = await import(pathToFileURL(path.join(ROOT, "functions", "_lib", "cw-board.js")).href);
 /* Codeword refuses to run without a database, and its round endpoints write
    to one, so the board is the fixture through the real publicBoard() and the
@@ -127,6 +132,14 @@ const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://127.0.0.1");
   const p = decodeURIComponent(url.pathname);
   try {
+    if (p.startsWith("/api/whoami/")) {
+      const chunks = [];
+      for await (const c of req) chunks.push(c);
+      let body = {};
+      try { body = chunks.length ? JSON.parse(Buffer.concat(chunks).toString("utf8")) : {}; } catch (e) {}
+      res.writeHead(200, { "Content-Type": "application/json" });
+      return res.end(JSON.stringify(whoamiStub(p, body)));
+    }
     if (p.startsWith("/api/codeword/")) {
       const chunks = [];
       for await (const c of req) chunks.push(c);
@@ -388,6 +401,12 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
       await page.click("#buyName");
       await wait(250);
     }
+    /* UNTIL FULL TIME HAS LANDED, not a fixed pause: under a full run's load
+       the last reveal was still settling at 600ms and the page was measured
+       mid-change (25 Sep 2026). A ceiling of ten seconds, then the lock check
+       has had its frame. */
+    await page.waitForFunction(() => document.body.classList.contains("fulltime") &&
+      !document.getElementById("screenResults").hidden, null, { timeout: 10000 });
     await wait(600);
     const m = await page.evaluate(measure);
     t(`${vp[0]}: Full Time is locked, the board stays and nothing scrolls`,
@@ -981,6 +1000,215 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "c
     });
     t(`${vp[0]}: the Full Time card sits inside the screen and the page does not scroll`,
       m.locked && m.scroll <= 1 && m.top >= 0 && m.bottom <= m.vh + 1, JSON.stringify(m));
+    await context.close();
+  }
+}
+
+/* ---- a grid ------------------------------------------------------------------ */
+function measureGrid() {
+  const rect = (e) => e.getBoundingClientRect();
+  const vis = (e) => !!e && !e.hidden && getComputedStyle(e).display !== "none";
+  const board = document.getElementById("gdBoard"), wrap = document.querySelector(".gd-boardwrap");
+  const b = rect(board), w = rect(wrap);
+  const cell = document.querySelector("#gdBoard .gd-cell.on");
+  const offscreen = [...document.querySelectorAll("#gdBoard, #gdSlots, #gdKbd, .gd-budget, #gdFullTime")]
+    .filter(vis).filter((e) => { const r = rect(e); return r.top < -1 || r.bottom > innerHeight + 1 || r.left < -1 || r.right > innerWidth + 1; }).length;
+  return {
+    locked: document.body.classList.contains("locked"),
+    scrollY: document.documentElement.scrollHeight - innerHeight,
+    scrollX: document.documentElement.scrollWidth - innerWidth,
+    boardWhole: b.top >= w.top - 1 && b.bottom <= w.bottom + 1 && b.left >= w.left - 1 && b.right <= w.right + 1,
+    cell: cell ? Math.round(rect(cell).width) : 0,
+    offscreen,
+    ft: vis(document.getElementById("gdFullTime")),
+    keys: vis(document.getElementById("gdKbd")),
+    entries: vis(document.getElementById("gdEntries")),
+  };
+}
+const gridOk = (m) => m.locked && m.scrollY <= 1 && m.scrollX <= 1 && m.boardWhole && m.cell >= 18 && m.offscreen === 0;
+const gridSay = (m) => `locked ${m.locked}, scroll ${m.scrollY}/${m.scrollX}, board ${m.boardWhole ? "whole" : "NOT WHOLE"} at ${m.cell}px a square, off screen ${m.offscreen}${m.ft ? ", full time up" : ""}`;
+async function openGrid(game, [name, viewport, touch], storage) {
+  const context = await browser.newContext({ viewport, hasTouch: touch, isMobile: touch, deviceScaleFactor: 1 });
+  const page = await context.newPage();
+  if (storage) await context.addInitScript((kv) => { for (const k in kv) localStorage.setItem(k, kv[k]); }, storage);
+  await page.goto(ORIGIN + game.path, { waitUntil: "networkidle" });
+  await page.waitForSelector("#gdBoard .gd-cell.on", { timeout: 10000 });
+  await wait(600);
+  return { page, context };
+}
+for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "grid" && (!ONLY || k === ONLY))) {
+  console.log(`\n${id}: in play`);
+  for (const vp of VIEWPORTS) {
+    const { page, context } = await openGrid(game, vp);
+    const m = await page.evaluate(measureGrid);
+    if (vp[0] === "phone-360") {
+      /* THE ONE SIZE A 16x16 CANNOT FIT, said rather than hidden: with the keys
+         up, a 360x640 phone leaves under 18px a square. It must fall back to
+         scrolling with the board whole at a hittable size, not lock and cut. */
+      t(`${vp[0]}: a 16x16 board fits locked, or falls back to scrolling at 18px or more (the board then scrolls sideways in its own box, as it did before the lock)`,
+        (gridOk(m) && m.keys) || (!m.locked && m.cell >= 18), gridSay(m));
+    } else {
+      t(`${vp[0]}: a 16x16 board -- locked, no scroll, the whole board in its box at hittable squares, the answer row and keys on screen`,
+        gridOk(m) && m.keys, gridSay(m));
+    }
+    if (vp[1].width >= 900) t(`${vp[0]}: the entries come back in the column beside the board`, m.entries, gridSay(m));
+    await context.close();
+  }
+
+  console.log(`\n${id}: a board already played`);
+  {
+    const no = await (async () => {
+      const r = await fetch(ORIGIN + "/api/grid/daily"); const j = await r.json(); return j.no;
+    })();
+    const rec = JSON.stringify([{ no, score: 80, solved: 9, misses: 3, result: "W", day: utcDay() }]);
+    const { page, context } = await openGrid(game, VIEWPORTS[1], { "xigd.results": rec });
+    const m = await page.evaluate(measureGrid);
+    t("the Full Time card stands where the keys were, the board stays, and the page does not scroll",
+      m.ft && !m.keys && m.locked && m.scrollY <= 1 && m.boardWhole, gridSay(m));
+    await page.click("#gdReplay");
+    await wait(400);
+    const back = await page.evaluate(measureGrid);
+    t("and \"Play it again\" puts the card away and the keys back", !back.ft && back.keys && gridOk(back), gridSay(back));
+    await context.close();
+  }
+
+  console.log(`\n${id}: the old-link banner`);
+  {
+    const { page, context } = await openGrid(game, VIEWPORTS[1]);
+    await bannerCheck(page, id, VIEWPORTS[1][0], gridOk, gridSay, measureGrid);
+    await context.close();
+  }
+  {
+    const { page, context } = await openGrid(game, VIEWPORTS[1]);
+    await howCheck(page, VIEWPORTS[1][0]);
+    await context.close();
+  }
+
+  console.log(`\n${id}: the way out, and back`);
+  {
+    const { page, context } = await openGrid(game, VIEWPORTS[1]);
+    const big = await page.evaluate(async () => {
+      const st = document.createElement("style");
+      st.id = "lock-test-big";
+      st.textContent = ".gd-k{height:120px!important}";
+      document.head.appendChild(st);
+      dispatchEvent(new Event("resize"));
+      await new Promise((r) => setTimeout(r, 500));
+      return document.body.classList.contains("locked");
+    });
+    t("keys too large to leave the board room unlock the page rather than shrink the squares past use", big === false, "locked " + big);
+    const back = await page.evaluate(async () => {
+      document.getElementById("lock-test-big").remove();
+      dispatchEvent(new Event("resize"));
+      await new Promise((r) => setTimeout(r, 500));
+      return document.body.classList.contains("locked");
+    });
+    t("and relocks when it goes", back === true, "locked " + back);
+    await context.close();
+  }
+}
+
+/* ---- a profile ----------------------------------------------------------------- */
+function measureProfile() {
+  const rect = (e) => e.getBoundingClientRect();
+  const vis = (e) => !!e && !e.hidden && getComputedStyle(e).display !== "none";
+  const play = document.getElementById("screenPlay"), done = document.getElementById("screenDone");
+  const sec = vis(play) ? play : vis(done) ? done : null;
+  /* Where the bought clues are: football's panel under the buttons, or the
+     Friends list written into the profile (#clueStack). */
+  const clues = document.getElementById("clueStack") || document.getElementById("clues");
+  const offscreen = [...document.querySelectorAll("#guessInput, #guessGo, #giveUp, .profile, #ladder")]
+    .filter(vis).filter((e) => { const r = rect(e); return r.top < -1 || r.bottom > innerHeight + 1 || r.right > innerWidth + 1; }).length;
+  return {
+    locked: document.body.classList.contains("locked"),
+    scrollY: document.documentElement.scrollHeight - innerHeight,
+    scrollX: document.documentElement.scrollWidth - innerWidth,
+    screen: sec ? sec.id : null,
+    secCut: !!sec && sec.scrollHeight > sec.clientHeight + 1,
+    offscreen,
+    cluesScroll: vis(clues) ? clues.scrollHeight > clues.clientHeight + 1 : false,
+    cluesH: vis(clues) ? Math.round(rect(clues).height) : 0,
+  };
+}
+const profileOk = (m) => m.locked && m.scrollY <= 1 && m.scrollX <= 1 && !m.secCut && m.offscreen === 0;
+const profileSay = (m) => `locked ${m.locked}, scroll ${m.scrollY}/${m.scrollX}, ${m.screen}${m.secCut ? " OVERFLOWS" : ""}, off screen ${m.offscreen}, clues ${m.cluesH}px${m.cluesScroll ? " (scrolling in itself)" : ""}`;
+async function openProfile(game, [name, viewport, touch]) {
+  const context = await browser.newContext({ viewport, hasTouch: touch, isMobile: touch, deviceScaleFactor: 1 });
+  const page = await context.newPage();
+  await page.goto(ORIGIN + game.path, { waitUntil: "networkidle" });
+  await page.click("#waToday");
+  await page.waitForSelector("#doors .door", { timeout: 10000 });
+  await page.click("#doors .door");
+  await page.waitForSelector("#playChoice:not([disabled])", { timeout: 5000 });
+  await page.click("#playChoice");
+  await page.waitForFunction(() => !document.getElementById("screenPlay").hidden, null, { timeout: 10000 });
+  await wait(600);
+  return { page, context };
+}
+for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "profile" && (!ONLY || k === ONLY))) {
+  console.log(`\n${id}: in play`);
+  for (const vp of VIEWPORTS) {
+    const { page, context } = await openProfile(game, vp);
+    const m = await page.evaluate(measureProfile);
+    t(`${vp[0]}: locked, no scroll, the profile, the guess box, the clue buttons and Give up on screen`, profileOk(m), profileSay(m));
+    /* Every clue there is to buy, the longest being football's fourteen-club
+       career: the panel takes it and scrolls in itself, and nothing else moves
+       off the screen. */
+    for (let i = 0; i < 3; i++) {
+      const rung = await page.$("#ladder .rung:not([disabled])");
+      if (!rung) break;
+      await rung.click();
+      await wait(500);
+    }
+    const bought = await page.evaluate(measureProfile);
+    t(`${vp[0]}: with every clue bought, they scroll in their own panel and the rest stays on screen`,
+      profileOk(bought) && bought.cluesH > 0, profileSay(bought));
+    await context.close();
+  }
+
+  console.log(`\n${id}: the old-link banner`);
+  {
+    const { page, context } = await openProfile(game, VIEWPORTS[1]);
+    await bannerCheck(page, id === "whoami_fr" ? "whoami_fr" : "whoami", VIEWPORTS[1][0], profileOk, profileSay, measureProfile);
+    await context.close();
+  }
+
+  console.log(`\n${id}: the way out, and back`);
+  {
+    const { page, context } = await openProfile(game, VIEWPORTS[1]);
+    const big = await page.evaluate(async () => {
+      const st = document.createElement("style");
+      st.id = "lock-test-big";
+      st.textContent = ".profile{min-height:900px!important}";
+      document.head.appendChild(st);
+      dispatchEvent(new Event("resize"));
+      await new Promise((r) => setTimeout(r, 400));
+      return document.body.classList.contains("locked");
+    });
+    t("a round too large to fit unlocks the page rather than cutting it off", big === false, "locked " + big);
+    const back = await page.evaluate(async () => {
+      document.getElementById("lock-test-big").remove();
+      dispatchEvent(new Event("resize"));
+      await new Promise((r) => setTimeout(r, 400));
+      return document.body.classList.contains("locked");
+    });
+    t("and relocks when it goes", back === true, "locked " + back);
+    await context.close();
+  }
+
+  console.log(`\n${id}: Full Time`);
+  /* 360x640 included: there the result is longer than the screen and must
+     scroll inside itself -- the case that proves the page does not unlock
+     merely because its result panel scrolls. */
+  for (const vp of [VIEWPORTS[0], VIEWPORTS[1], VIEWPORTS[3]]) {
+    const { page, context } = await openProfile(game, vp);
+    page.on("dialog", (d) => d.accept());
+    await page.click("#giveUp");
+    await page.waitForFunction(() => !document.getElementById("screenDone").hidden, null, { timeout: 10000 });
+    await wait(600);
+    const m = await page.evaluate(measureProfile);
+    t(`${vp[0]}: Full Time is locked and the page does not scroll; the result scrolls in itself`,
+      m.locked && m.scrollY <= 1 && m.scrollX <= 1 && m.screen === "screenDone", profileSay(m));
     await context.close();
   }
 }

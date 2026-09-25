@@ -19,7 +19,7 @@
  * one especially, because deciding it here would need the club's whole roster
  * and a roster is a candidate list for the door.
  */
-var BUILD = "v001m";
+var BUILD = "v001n";
 
 (function bootstrap() {
   'use strict';
@@ -262,10 +262,36 @@ function start() {
     el.feedback.className = 'feedback' + (kind ? ' ' + kind : '');
   }
 
+  /* ---- the locked screen --------------------------------------------------
+     The owner's ruling, 24 Sep 2026: while playing, the page is the screen and
+     nothing scrolls, at every size, with the elements scaling up. The round and
+     Full Time are locked; the doors are a menu of eleven and stay a page.
+     The clues a player has bought scroll inside their own panel, which takes
+     the height that is left. If the rest cannot fit (large system text, a very
+     short screen) the page goes back to scrolling rather than hide any of it. */
+  function checkRoom() {
+    var body = document.body;
+    var sec = el.screenPlay && !el.screenPlay.hidden ? el.screenPlay
+      : el.screenDone && !el.screenDone.hidden ? el.screenDone : null;
+    var want = !!sec && !!el.waGame && !el.waGame.hidden;
+    body.classList.toggle('locked', want);
+    /* The round must fit; Full Time's result is meant to scroll in itself, so
+       its own overflow is not a reason to unlock. */
+    if (want && sec === el.screenPlay && sec.scrollHeight > sec.clientHeight + 1) body.classList.remove('locked');
+  }
+  var roomQueued = false;
+  function queueRoom() {
+    if (roomQueued) return;
+    roomQueued = true;
+    (window.requestAnimationFrame || setTimeout)(function () { roomQueued = false; checkRoom(); });
+  }
+  window.addEventListener('resize', queueRoom);
+
   function show(id) {
     ['screenDoors', 'screenPlay', 'screenDone'].forEach(function (s) {
       if (el[s]) el[s].hidden = (s !== id);
     });
+    queueRoom();
   }
 
   /* ------------------------------------------------------------ the board */

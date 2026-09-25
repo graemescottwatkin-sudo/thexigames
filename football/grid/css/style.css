@@ -222,3 +222,61 @@ button:focus-visible,.gd-cell.on:focus-visible,.gd-chip:focus-visible{outline:2p
 .gd-ft td{padding:3px 0; border-bottom:1px solid var(--line)}
 .gd-ft td:last-child{text-align:right; font-family:var(--disp); font-weight:600}
 .gd-ft .miss{color:var(--danger)}
+
+/* ---- THE LOCKED SCREEN ----------------------------------------------------
+   The owner's ruling, 24 Sep 2026: while playing, the page is the screen and
+   nothing scrolls, at every size, with the elements scaling up. This page IS
+   the play screen, so it is locked once a board is up (game.js), and unlocked
+   when the squares would be under 18px or the parts cannot fit.
+
+   On a phone, one column: the title, the turns, the board in the height that
+   is left (its squares sized from that box, in game.js), the answer row and
+   the keys. The entry chips, the guess history and the rules step aside --
+   the board is the way to pick an entry. From 900px the board fills the left
+   and everything else is a column on the right, the history scrolling in
+   itself. Full time takes the answer row's and the keys' place, as a panel
+   that scrolls in itself; the board stays. */
+body.locked{height:100vh;height:100dvh;overflow:hidden;display:flex;flex-direction:column}
+body.locked>*{flex:none}
+body.locked>footer{display:none}
+body.locked>main.gd-wrap{flex:1 1 auto;min-height:0;width:100%;max-width:1180px;box-sizing:border-box;
+  margin:0 auto;padding:6px 10px 8px;display:flex;flex-direction:column}
+body.locked .gd-wrap>*{flex:none;margin-bottom:6px}
+/* The title is the whole clue, so it is kept whole -- smaller, not cut. The
+   turns are one line: "turns left" wrapped under the count and took 67px. */
+body.locked .gd-ident{padding:4px 10px}
+body.locked .gd-sub{display:none}
+body.locked .gd-kicker{font-size:11px}
+body.locked .gd-title{font-size:17px;line-height:1.2}
+body.locked .gd-budget{margin-bottom:6px;gap:10px}
+body.locked .gd-count{font-size:16px;min-width:0;white-space:nowrap}
+body.locked .gd-count small{font-size:12px}
+body.locked .gd-boardwrap{flex:1 1 auto;min-height:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
+/* The square's border inside its size, so sixteen squares of --cs are sixteen
+   times --cs wide and the board is exactly what game.js sized it to. */
+body.locked .gd-cell{box-sizing:border-box}
+body.locked .gd-lbl,body.locked .gd-entries,body.locked .gd-hist,body.locked .how{display:none}
+body.locked .gd-slots{min-height:0;padding:8px 6px}
+body.locked .gd-kbd{margin-bottom:4px}
+body.locked .gd-k{height:clamp(40px,5.2vh,56px)}
+body.locked .gd-msg{margin-bottom:0;min-height:18px}
+body.locked .gd-wrap:has(#gdFullTime:not([hidden])) :is(.gd-slots,.gd-kbd,.gd-msg){display:none}
+body.locked #gdFullTime:not([hidden]){flex:0 1 auto;min-height:0;max-height:40%;overflow:auto;margin:0}
+
+@media (min-width:900px){
+  body.locked>main.gd-wrap{display:grid;grid-template-columns:minmax(0,1fr) 380px;
+    grid-template-rows:repeat(11,auto) minmax(0,1fr);column-gap:18px}
+  body.locked .gd-boardwrap{grid-column:1;grid-row:1 / -1;margin:0}
+  body.locked .gd-wrap>:not(.gd-boardwrap){grid-column:2}
+  body.locked .gd-entries{display:flex}
+  body.locked .gd-hist{display:block;max-height:30vh;overflow:auto}
+  body.locked #gdFullTime:not([hidden]){max-height:none}
+}
+/* HOW TO PLAY OVER A LOCKED BOARD, as in every locked game: the bar's link
+   opens it as a panel the height of the screen, "Back to the game" closes it. */
+.how-back{display:none}
+body.locked #how:target{display:block!important;position:fixed;inset:0;z-index:60;margin:0;max-width:none;
+  overflow:auto;overscroll-behavior:contain;background:var(--paper);padding:14px 16px 40px;box-sizing:border-box}
+body.locked #how:target .how-back{display:inline-flex;align-items:center;min-height:var(--tap,44px);padding:0 16px;
+  margin:0 0 10px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink);
+  font-family:var(--disp);font-weight:700;letter-spacing:.08em;text-transform:uppercase;text-decoration:none}

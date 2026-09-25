@@ -101,3 +101,60 @@ export function codewordRawBoard(no, day) {
     hints: words.map((w, i) => ({ sense: "Fixture entry " + (i + 1), cat: "Club", enum: String(w[0].length) })),
   };
 }
+
+/* ---- Who Am I, football and Friends -----------------------------------------
+ * Both refuse to run without a database, and a round is several endpoints of
+ * server state, so the round is answered here in the shapes the games' own
+ * journey suites use (football/whoami/journey_test.mjs, and the canned Friends
+ * flow in .claude/static-server.js). The long case is a career of fourteen
+ * clubs: the bought clue that grows the most. Made up; nobody is the answer. */
+export function whoamiStub(pathname, body) {
+  const fr = pathname.startsWith("/api/whoami/whoami_fr/");
+  const what = pathname.replace(/^\/api\/whoami\/(whoami_fr\/)?/, "").split("?")[0];
+  const day = new Date().toISOString().slice(0, 10);
+  if (!fr) {
+    const RULE = { curve: [[0, 114], [90, 36]], max: 114, fullTime: 90, matchMinutes: 90, rateSeconds: 20,
+      ladder: [{ stage: 1, sub: 0, points: 0, label: "The spell" }, { stage: 2, sub: 1, points: 20, label: "Full career" },
+               { stage: 3, sub: 2, points: 10, label: "Nationality and year of birth" }], giveUp: { label: "Give up" } };
+    const clubs = ["Arsenal", "Chelsea", "Everton", "Newcastle United", "Liverpool", "Aston Villa",
+      "Leeds United", "Southampton", "Fulham", "West Ham United", "Sunderland"];
+    if (what === "daily") return { source: "d1", no: 21, day, lastDay: day, isToday: true, scoring: RULE,
+      board: { id: "XIWA-FIXTURE", date: day, no: 21, day, doors: clubs.map((c, i) => ({ slot: i + 1, club: c, leave: 2010 + i })), careers: [2, 3, 4, 5, 7, 9] } };
+    if (what === "names") return { count: 2, names: [["FIXTURE PLAYER", "FIXTUREPLAYER"], ["ANOTHER PLAYER", "ANOTHERPLAYER"]] };
+    if (what === "archive") return { source: "d1", count: 1, boards: [{ day, no: 21 }] };
+    if (what === "play") return { playId: "lock-wa", slot: Number(body.slot) || 1, stage: 1, pointsSpent: 0, worthNow: 114, minute: 0, day };
+    if (what === "clue") {
+      const stage = Number(body.stage) || 1;
+      const out = { stage, label: RULE.ladder[stage - 1].label, pointsSpent: stage >= 2 ? 20 : 0, minute: 0, worthNow: stage >= 2 ? 94 : 114, replayed: false };
+      if (stage === 1) out.spell = { club: "Newcastle United", from: 2004, to: 2011, apps: 233, goals: 41 };
+      if (stage === 2) {
+        const names = ["Sheffield Wednesday", "Wolverhampton Wanderers", "Brighton & Hove Albion", "Queens Park Rangers",
+          "Newcastle United", "Nottingham Forest", "West Bromwich Albion", "Borussia Mönchengladbach", "Paris Saint-Germain",
+          "Real Sociedad", "Blackburn Rovers", "Crystal Palace", "Bolton Wanderers", "Tottenham Hotspur"];
+        out.spells = names.map((c, i) => ({ club: c, from: 1996 + i * 2, to: 1998 + i * 2, apps: 40 + i, goals: i, loan: i % 5 === 2, mine: c === "Newcastle United" }));
+        out.career = out.spells.map((x) => x.from + "-" + x.to + " " + x.club).join(" - ");
+        out.clubCount = names.length;
+      }
+      if (stage === 3) { out.birthYear = 1978; out.nationality = "Republic of Ireland"; out.position = "Midfielder"; }
+      return out;
+    }
+    if (what === "guess") return { verdict: "wrong", pointsSpent: 20, minute: 0, worthNow: 94, finished: false, solved: false };
+    if (what === "giveup") return { label: "Give up", minute: 0, score: 0, worthNow: 0, pointsSpent: 20, finished: true, solved: false, answer: "FIXTURE PLAYER", career: "1996-1998 Fixture FC" };
+    if (what === "finish") return { day, slot: 1, solved: false, finished: true, pointsSpent: 20, subsUsed: 1, guesses: 1, minute: 0, score: 0, nearMisses: 0, answer: "FIXTURE PLAYER", career: "1996-1998 Fixture FC", club: "Newcastle United" };
+    return {};
+  }
+  const CLUES = ["A fixture clue, the first, long enough to wrap onto a second line on a phone.",
+    "A fixture clue, the second, written to be the longest of the three and wrap onto three lines on a narrow screen at the size it is set.",
+    "A fixture clue, the third."];
+  if (what === "daily") return { source: "dev", day, no: 5, isToday: true, lastDay: day,
+    scoring: { max: 10, doors: 3, ladder: [{ stage: 1, sub: 0, points: 0, label: "First clue" }, { stage: 2, sub: 1, points: 4, label: "Second clue" }, { stage: 3, sub: 2, points: 3, label: "Third clue" }], giveUp: { label: "Tell me" } },
+    board: { day, no: 5, doors: [{ slot: 1, section: "Loves & Exes", deck: "main" }, { slot: 2, section: "Family & Relatives", deck: "main" }, { slot: 3, section: "Jobs & Ambitions", deck: "expert" }] } };
+  if (what === "names") return { count: 2, names: [["Fixture Character", "FIXTURECHARACTER"], ["Another Character", "ANOTHERCHARACTER"]] };
+  if (what === "play") return { playId: "lock-fr", slot: Number(body.slot) || 1, startedMs: Date.now(), stage: 1, pointsSpent: 0, worthNow: 10, minute: 0, day };
+  if (what === "clue") { const st = Math.max(1, Math.min(3, Number(body.stage) || 1));
+    return { stage: st, label: ["First clue", "Second clue", "Third clue"][st - 1], pointsSpent: [0, 4, 7][st - 1], minute: 0, worthNow: 10 - [0, 4, 7][st - 1], replayed: false, finished: false, solved: false, step: st, of: 3, text: CLUES[st - 1], cited: st !== 2 }; }
+  if (what === "guess") return { verdict: "wrong", pointsSpent: 4, minute: 0, worthNow: 6, finished: false, solved: false };
+  if (what === "giveup") return { label: "Tell me", minute: 0, score: 0, worthNow: 0, pointsSpent: 7, finished: true, solved: false, answer: "Fixture Character", section: "Loves & Exes", deck: "main" };
+  if (what === "finish") return { day, slot: 1, solved: false, finished: true, pointsSpent: 7, subsUsed: 2, guesses: 1, nearMisses: 0, score: 0, minute: 0, answer: "Fixture Character", section: "Loves & Exes", deck: "main" };
+  return {};
+}

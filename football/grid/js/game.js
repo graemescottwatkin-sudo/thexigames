@@ -32,7 +32,7 @@
 
   var R = window.XIGR_RULES;
   var $ = function (id) { return document.getElementById(id); };
-  var BUILD = "v002k";
+  var BUILD = "v002l";
 
   var S = {
     board: null,          // the PUBLIC board: shape, lengths, crossings. No letters.
@@ -309,8 +309,23 @@
     if (e) e.cells.forEach(function (cell, i) { selIdx[cell] = i; });
     var cur = cursorAt();
 
-    var cs = Math.max(18, Math.min(34,
-      Math.floor((Math.min(window.innerWidth, 760) - 40) / b.cols)));
+    /* THE SQUARE'S SIZE. On a locked play screen (the owner's ruling, 24 Sep
+       2026: the page is the screen, and a bigger screen gets bigger elements)
+       it is whatever the board's own box allows in BOTH directions -- the
+       width and the height left after the title, the answer row and the keys
+       -- between 14px and 64px. Anywhere else it is what it always was: the
+       width of the column, 18 to 34. checkRoom() unlocks the page if the
+       squares this gives are under 18px. */
+    var cs, box = document.querySelector(".gd-boardwrap");
+    if (document.body.classList.contains("locked") && box && box.clientWidth && box.clientHeight) {
+      cs = Math.floor(Math.min((box.clientWidth - (b.cols - 1) * 2) / b.cols,
+                               (box.clientHeight - (b.rows - 1) * 2) / b.rows));
+      cs = Math.max(14, Math.min(64, cs));
+    } else {
+      cs = Math.max(18, Math.min(34,
+        Math.floor((Math.min(window.innerWidth, 760) - 40) / b.cols)));
+    }
+    S.cs = cs;
     var bd = $("gdBoard");
     bd.style.setProperty("--cs", cs + "px");
     bd.style.gridTemplateColumns = "repeat(" + b.cols + "," + cs + "px)";
@@ -517,6 +532,7 @@
         "</td><td>" + (S.solved[e.n] ? "&#10003;" : "&mdash;") + "</td></tr>";
     }).join("");
     el.hidden = false;
+    queueRoom();
     el.innerHTML = "<h2>Full time</h2>" +
       '<p class="score">' + S.score.total + "<small>/" + R.MAX_SCORE + "</small></p>" +
       "<p>" + S.score.solved + " of " + R.ENTRIES + " solved &middot; " +
@@ -641,7 +657,20 @@
       else if (ev.key === "Backspace") { backspace(); ev.preventDefault(); }
       else if (ev.key === "Enter") { submit(); ev.preventDefault(); }
     });
-    window.addEventListener("resize", function () { if (S.board) render(); });
+    window.addEventListener("resize", function () {
+      if (!S.board) return;
+      S.unlockedFor = null;
+      render();
+      queueRoom();
+    });
+    document.addEventListener("click", function (ev) {
+      if (ev.target && ev.target.id === "gdReplay") {
+        var ft = $("gdFullTime");
+        if (ft) ft.hidden = true;
+        render();
+        queueRoom();
+      }
+    });
   }
 
   /* ---- boot -------------------------------------------------------------- */
@@ -670,8 +699,12 @@
       '<p class="score">' + rec.score + "<small>/" + R.MAX_SCORE + "</small></p>" +
       "<p>" + rec.solved + " of " + R.ENTRIES + " solved &middot; " +
       rec.misses + (rec.misses === 1 ? " miss" : " misses") + "</p>" +
-      "<p>You played this board. The grid below is still here if you want" +
+      "<p>You played this board. The grid is still here if you want" +
       " another go — a replay is not recorded.</p>" +
+      /* The way back to it. On a locked play screen the card stands where the
+         answer row and the keys are, so "the grid below" could not be scrolled
+         to; this puts the card away and the keys back. */
+      '<p><button class="gd-ghost" id="gdReplay" type="button">Play it again</button></p>' +
       '<div id="shareRow"></div>' +
       /* The next game in this theme that has not been played today. Grid builds
          its results card in script rather than in the page, so the mount point
@@ -739,11 +772,64 @@
        * misses that were banked, which is what "I finished this" means. The
        * board underneath is left alone — replaying is still allowed, and the
        * server decides on its own whether a replay is scored. */
+      /* LOCKED BEFORE THE FIRST DRAW, so the squares are sized from the
+         board's box on the very first render rather than the column's. */
+      document.body.classList.add("locked");
       showBanked();
       render();
+      queueRoom();
+      /* AND SIZED AGAIN WHENEVER ITS BOX CHANGES. The squares were measured
+         once, on the first draw, before the title and the turns had settled;
+         when they grew, the board was left bigger than its box. The board
+         itself never changes the box's size (it is flex:1 and clips), so this
+         cannot feed itself. */
+      var gbox = document.querySelector(".gd-boardwrap");
+      if (window.ResizeObserver && gbox) {
+        var last = "";
+        new ResizeObserver(function () {
+          var now = gbox.clientWidth + "x" + gbox.clientHeight;
+          if (now === last || !document.body.classList.contains("locked")) return;
+          last = now;
+          render();
+          queueRoom();
+        }).observe(gbox);
+      }
     }).catch(function () {
       msg("Could not reach the server — check your connection.", true);
     });
+  }
+
+  /* ---- the locked screen --------------------------------------------------
+     The one way out of it: squares under 18px are too small to hit, and a page
+     whose parts cannot fit the screen must scroll rather than cut anything off
+     (large system text, a phone on its side). Unlocked, render() goes back to
+     sizing the squares from the column. */
+  function checkRoom() {
+    if (!S.board) return;
+    var body = document.body, wrap = document.querySelector("main.gd-wrap");
+    if (!body.classList.contains("locked")) {
+      if (S.unlockedFor === window.innerWidth + "x" + window.innerHeight) return;
+      body.classList.add("locked");
+      render();
+    }
+    var over = wrap && wrap.scrollHeight > wrap.clientHeight + 1;
+    /* 18px is a square you can hit. With Full Time up the board is being READ,
+       not played -- the card stands where the keys were -- so it may be
+       smaller; "Play it again" puts the card away and the 18 applies again. */
+    var ft = $("gdFullTime"), floor = ft && !ft.hidden ? 12 : 18;
+    if ((S.cs || 0) < floor || over) {
+      body.classList.remove("locked");
+      S.unlockedFor = window.innerWidth + "x" + window.innerHeight;
+      render();
+    } else {
+      S.unlockedFor = null;
+    }
+  }
+  var roomQueued = false;
+  function queueRoom() {
+    if (roomQueued) return;
+    roomQueued = true;
+    (window.requestAnimationFrame || setTimeout)(function () { roomQueued = false; checkRoom(); });
   }
 
   /* A seam for the suites, and nothing else. The board and the state, readable;
