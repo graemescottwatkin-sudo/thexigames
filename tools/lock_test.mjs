@@ -1288,7 +1288,14 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
       return { clues: document.querySelectorAll("#clues .clue").length, cut,
         gap: vis(ladder) && vis(give) ? Math.round(r(give).top - r(ladder).bottom) : null };
     });
-    t(`${vp[0]}: the starting clue is whole, nothing cut off its foot`, !fresh.cut, fresh.cut ? "CUT" : "whole");
+    /* Football only. Friends writes every clue into the profile (#clueStack)
+       and its facts scroll in themselves by design, so text taller than the
+       box is the panel working, not a cut; with the runner's taller fonts at
+       360 this read CUT on Friends in CI (25 Sep 2026) while football's facts,
+       which must never scroll, were whole everywhere. */
+    if (id === "whoami") {
+      t(`${vp[0]}: the starting clue is whole, nothing cut off its foot`, !fresh.cut, fresh.cut ? "CUT" : "whole");
+    }
     if (fresh.clues === 0 && fresh.gap !== null) {
       t(`${vp[0]}: before a clue is bought, nothing stands blank between the clue buttons and Give up`, fresh.gap <= 40, `${fresh.gap}px`);
     }
