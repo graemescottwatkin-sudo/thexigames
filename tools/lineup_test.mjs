@@ -41,6 +41,19 @@ const t = (name, ok, note) => {
   else { fail++; console.log(`FAIL  ${name}${note ? "  — " + note : ""}`); }
 };
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+/* WAIT FOR THE THING, NOT FOR A NUMBER OF MILLISECONDS. The hub was read a
+   fixed 800ms after load, and on a loaded machine the probes behind it can
+   still be in flight then. The page says when it has heard back: the date
+   line leaves its markup wording when /api/daily answers, and the count is
+   written only once EVERY game has answered or failed -- so after it, a card
+   left unmarked is a card judged, not one still waiting. The deadline is the
+   guard against a wait that cannot end: a condition that never comes true
+   returns false, and the assertion after it fails as it always would have. */
+const until = async (ok, ms = 10000) => {
+  const end = Date.now() + ms;
+  while (!ok() && Date.now() < end) await wait(20);
+  return ok();
+};
 
 /* ======================================================================
    1. THE MARKUP, before any script runs
@@ -121,7 +134,14 @@ const server = http.createServer((req, res) => {
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const origin = "http://127.0.0.1:" + server.address().port;
 
-async function hub(storage = {}) {
+/* `ready` is what the page does when it has heard back, read from its
+   document. With none, the wait stays fixed: that is the case where nothing
+   can be read and the checks are that nothing is claimed, and a condition
+   cannot wait for a change that must never come. */
+const dated = (d) => d.getElementById("sheetDate").textContent !== "Today’s puzzles" &&
+  !/00:00 UTC/.test(d.getElementById("resetLine").textContent);
+const counted = (d) => d.getElementById("xiCount").textContent.trim() !== "View games";
+async function hub(storage = {}, ready = null) {
   const dom = await JSDOM.fromURL(origin + "/football/", {
     runScripts: "dangerously", resources: "usable", pretendToBeVisual: true,
     beforeParse(w) {
@@ -131,8 +151,9 @@ async function hub(storage = {}) {
     },
   });
   await new Promise((r) => dom.window.addEventListener("load", r));
-  await wait(800);
   const d = dom.window.document;
+  if (ready) await until(() => ready(d));
+  else await wait(800);
   const card = (g) => d.querySelector(`.gcard[data-game="${g}"]`);
   return { dom, d, card, text: (id) => (d.getElementById(id) || {}).textContent || "" };
 }
@@ -140,12 +161,12 @@ async function hub(storage = {}) {
 console.log("\nThe day and the reset, from the server's day, in the reader's zone");
 {
   DAY = "2026-09-23"; NO = 6;
-  let h = await hub();
+  let h = await hub({}, dated);
   t("the date is the server's day, once", h.text("sheetDate") === "Wed 23 Sep", h.text("sheetDate"));
   t("the reset is the next board day, in British Summer Time", h.text("resetLine") === "New puzzles at 01:00 BST", h.text("resetLine"));
   h.dom.window.close();
   DAY = "2026-12-01"; NO = 75;
-  h = await hub();
+  h = await hub({}, dated);
   t("and in winter, at midnight GMT", h.text("resetLine") === "New puzzles at 00:00 GMT", h.text("resetLine"));
   t("the date follows the server's day, not this machine's", h.text("sheetDate") === "Tue 1 Dec", h.text("sheetDate"));
   h.dom.window.close();
@@ -154,7 +175,7 @@ console.log("\nThe day and the reset, from the server's day, in the reader's zon
 console.log("\nA newcomer, and nothing played");
 {
   DAY = "2026-09-23"; NO = 6; apiDown = false;
-  const h = await hub();
+  const h = await hub({}, counted);
   t("the introduction is shown", !h.d.getElementById("hubIntro").hidden);
   t("the count says 0 of 10: every game was read, and nothing is done", h.text("xiCount") === "0 of 10 completed", h.text("xiCount"));
   t("no card is marked completed", !h.d.querySelector(".gcard.done"));
@@ -167,7 +188,7 @@ console.log("\nA returning player who has finished two games today");
   const h = await hub({
     "fcw.results.v1": [{ dailyNo: 6, complete: true, score: 86 }],
     "xihl.results": [{ day: "2026-09-23", score: 70 }],
-  });
+  }, counted);
   t("the introduction is hidden: this device has played before", h.d.getElementById("hubIntro").hidden);
   const done = [...h.d.querySelectorAll(".gcard.done")].map((c) => c.getAttribute("data-game"));
   t("exactly those two cards are completed", done.join() === "crossword,hilo", done.join());

@@ -236,6 +236,38 @@ const VIEWPORTS = [
 
 const browser = await chromium.launch();
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+/* WAIT FOR THE PAGE, NOT FOR A NUMBER OF MILLISECONDS, wherever the page says
+   when it is done: the room check that follows a kick-off or a resize turns
+   body.locked on or off, a reveal marks its tile, a fit writes the clue's
+   size, a permalink's request reaches the server. A fixed pause loses that
+   race on a loaded machine (Grid's journey suite, 24 Sep 2026). Each signal
+   is false before the thing starts, so it cannot be met by the state it is
+   waiting to see change. The deadline is the guard against a wait that
+   cannot end: a condition that never comes true returns false, and the
+   assertion after it fails as it always would have, rather than the run
+   crashing and naming no check.
+   WHERE A PAUSE STAYS FIXED it is one of two things: a check that something
+   does NOT happen (nothing unlocks, nothing moves), which no condition can
+   wait for; or a room check that changes nothing a condition could see --
+   the page stays locked either way -- so there is no "done" to wait on. */
+const until = (page, fn, arg = null, ms = 10000) =>
+  page.waitForFunction(fn, arg, { timeout: ms }).then(() => true, () => false);
+const untilHere = async (ok, ms = 10000) => {
+  const end = Date.now() + ms;
+  while (!ok() && Date.now() < end) await wait(20);
+  return ok();
+};
+const isLocked = () => document.body.classList.contains("locked");
+const isUnlocked = () => !document.body.classList.contains("locked");
+/* A fit that shrinks text writes the element's inline size, so its style
+   attribute changing is the fit having run -- watched from BEFORE the resize,
+   so a size left by an earlier fit cannot pass for this one. */
+const watchStyle = (page, id) => page.evaluate((i) => {
+  window.__lockTestStyled = false;
+  new MutationObserver(() => { window.__lockTestStyled = true; })
+    .observe(document.getElementById(i), { attributes: true, attributeFilter: ["style"] });
+}, id);
+const styleWritten = () => window.__lockTestStyled === true;
 
 async function open(game, board, [name, viewport, touch]) {
   const context = await browser.newContext({ viewport, hasTouch: touch, isMobile: touch, deviceScaleFactor: 1 });
@@ -250,7 +282,9 @@ async function open(game, board, [name, viewport, touch]) {
   await page.goto(ORIGIN + game.path, { waitUntil: "networkidle" });
   await page.click("#homeDaily");
   await page.waitForSelector("#pitch .slot", { timeout: 10000 });
-  await wait(400);
+  /* The landing is not locked; the pitch is drawn in the same task that
+     queues its room check, so body.locked is that check having run. */
+  await until(page, isLocked);
   return { page, context };
 }
 
@@ -264,6 +298,8 @@ async function bannerCheck(page, gameId, label, okFn, sayFn, measureFn) {
   const b = await page.evaluate(async (g) => {
     window.XIChrome.permalink.aged(g, 4);
     dispatchEvent(new Event("resize"));
+    /* Stays fixed: working, the room check this queues leaves the page locked,
+       so nothing changes that a condition could wait on. */
     await new Promise((r) => setTimeout(r, 400));
     const box = document.querySelector(".xic-aged");
     const vis = (sel) => { const e = box && box.querySelector(sel); return !!e && getComputedStyle(e).display !== "none"; };
@@ -278,6 +314,7 @@ async function bannerCheck(page, gameId, label, okFn, sayFn, measureFn) {
 async function bannerOffLock(page, gameId, label) {
   const b = await page.evaluate(async (g) => {
     window.XIChrome.permalink.aged(g, 4);
+    /* Stays fixed: part of the check is that the landing does NOT lock. */
     await new Promise((r) => setTimeout(r, 200));
     const box = document.querySelector(".xic-aged");
     const vis = (sel) => { const e = box && box.querySelector(sel); return !!e && getComputedStyle(e).display !== "none"; };
@@ -293,6 +330,9 @@ async function bannerOffLock(page, gameId, label) {
 async function howCheck(page, label) {
   const opened = await page.evaluate(async () => {
     location.hash = "#how";
+    /* Stays fixed, both ways: :target opens and closes the panel at once, and
+       the pause is for whatever the hash change sets off -- the check is that
+       it neither unlocks nor scrolls the page. */
     await new Promise((r) => setTimeout(r, 250));
     const h = document.getElementById("how"), r = h.getBoundingClientRect();
     return { shown: getComputedStyle(h).display !== "none", top: Math.round(r.top), bottom: Math.round(r.bottom),
@@ -344,6 +384,7 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
        not unlock under the player's thumb. */
     const word = await page.$eval("#pitch .slot .letters", (e) => e.textContent.replace(/[^A-Z]/g, "").slice(0, 4));
     for (const ch of word) { await page.type("#answer", ch); await wait(80); }
+    /* Stays fixed: the check is that typing does NOT unlock the page. */
     await wait(300);
     const m = await page.evaluate(measure);
     t(`${vp[0]}: typing "${word}" keeps the page locked and every card whole`, ok(m), say(m));
@@ -375,6 +416,8 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
         return { x: q.left + q.width / 2, y: q.top + q.height / 2, slot: el.dataset.slot };
       }, which);
       if (vp[2]) await page.touchscreen.tap(at.x, at.y); else await page.mouse.click(at.x, at.y);
+      /* Stays fixed: the pick marks its tile at once, before the room check it
+         queues, and the check is that the cards do NOT change size. */
       await wait(400);
       const after = await size();
       const bench = await page.evaluate((slot) => {
@@ -393,6 +436,8 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
       t(`${vp[0]}: and its bench is over the pitch, clear of the tile it is for`,
         bench.picked && bench.shown && bench.overPitch && bench.clearOfTile, JSON.stringify(bench));
       await page.evaluate(() => document.getElementById("benchClose").click());
+      /* Stays fixed: the bench goes at once, before the room check it queues,
+         which keeps the page locked when it works. */
       await wait(200);
     }
     await context.close();
@@ -420,22 +465,22 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
   console.log(`\n${id}: the way out, and back`);
   {
     const { page, context } = await open(game, 1, VIEWPORTS[1]);
-    const big = await page.evaluate(async (m) => {
+    await page.evaluate(() => {
       const st = document.createElement("style");
       st.id = "lock-test-big";
       st.textContent = ".slot .pos,.slot .enum{font-size:40px!important}.slot .letters{font-size:60px!important;min-width:200px}";
       document.head.appendChild(st);
       dispatchEvent(new Event("resize"));
-      await new Promise((r) => setTimeout(r, 300));
-      return document.body.classList.contains("locked");
     });
+    await until(page, isUnlocked);
+    const big = await page.evaluate(isLocked);
     t("text too large to fit unlocks the page rather than cutting it off", big === false, "locked " + big);
-    const back = await page.evaluate(async () => {
+    await page.evaluate(() => {
       document.getElementById("lock-test-big").remove();
       dispatchEvent(new Event("resize"));
-      await new Promise((r) => setTimeout(r, 300));
-      return document.body.classList.contains("locked");
     });
+    await until(page, isLocked);
+    const back = await page.evaluate(isLocked);
     t("and relocks when it goes", back === true, "locked " + back);
     await context.close();
   }
@@ -454,7 +499,11 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
         await page.click(`#pitch .slot[data-slot="${open[0]}"]`, { timeout: 3000 });
         await page.click("#buyName", { timeout: 3000 });
       } catch (e) { break; }
-      await wait(250);
+      /* The reveal goes to the server; its tile is marked when it lands. */
+      await until(page, (s) => {
+        const e = document.querySelector(`#pitch .slot[data-slot="${s}"]`);
+        return !e || e.matches(".solved, .given") || document.body.classList.contains("fulltime");
+      }, open[0]);
     }
     /* UNTIL FULL TIME HAS LANDED, not a fixed pause: under a full run's load
        the last reveal was still settling at 600ms and the page was measured
@@ -464,6 +513,8 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
        a crash names no check, and the prover read it as a pass (25 Sep 2026). */
     await page.waitForFunction(() => document.body.classList.contains("fulltime") &&
       !document.getElementById("screenResults").hidden, null, { timeout: 10000 }).catch(() => {});
+    /* Stays fixed: Full Time's room check keeps the page locked when it works,
+       so it changes nothing to wait on; this is its frame to run in. */
     await wait(600);
     const m = await page.evaluate(measure);
     t(`${vp[0]}: Full Time is locked, the board stays and nothing scrolls`,
@@ -515,7 +566,9 @@ async function openQuiz(game, [name, viewport, touch]) {
   await page.goto(ORIGIN + game.path, { waitUntil: "networkidle" });
   await page.click("#kickOff");
   await page.waitForSelector("#options .option", { timeout: 10000 });
-  await wait(500);
+  /* The round is shown and its first question served in one task, which
+     queues the one room check that locks it. */
+  await until(page, isLocked);
   return { page, context };
 }
 /* Answer the question on screen and wait for the next one (or Full Time). */
@@ -524,6 +577,8 @@ async function answerOne(page) {
   await page.click("#options .option:not([disabled])");
   await page.waitForFunction((b) => !document.getElementById("screenResults").hidden ||
     (document.getElementById("progress").textContent !== b && document.querySelector("#options .option:not([disabled])")), before, { timeout: 15000 });
+  /* Stays fixed: the new clue's fit keeps the page locked, so it has no
+     "done" to wait on; this is its frame to run in. */
   await wait(300);
 }
 
@@ -558,34 +613,37 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "q
   console.log(`\n${id}: the way out, and back`);
   {
     const { page, context } = await openQuiz(game, VIEWPORTS[1]);
-    const big = await page.evaluate(async () => {
+    await page.evaluate(() => {
       const st = document.createElement("style");
       st.id = "lock-test-big";
       st.textContent = ".option{font-size:44px!important;padding:40px!important}.clue{min-height:500px!important}";
       document.head.appendChild(st);
       dispatchEvent(new Event("resize"));
-      await new Promise((r) => setTimeout(r, 400));
-      return document.body.classList.contains("locked");
     });
+    await until(page, isUnlocked);
+    const big = await page.evaluate(isLocked);
     t("a question too large to fit unlocks the page rather than cutting it off", big === false, "locked " + big);
-    const back = await page.evaluate(async () => {
+    await page.evaluate(() => {
       document.getElementById("lock-test-big").remove();
       dispatchEvent(new Event("resize"));
-      await new Promise((r) => setTimeout(r, 400));
-      return document.body.classList.contains("locked");
     });
+    await until(page, isLocked);
+    const back = await page.evaluate(isLocked);
     t("and relocks when it goes", back === true, "locked " + back);
     /* THE FIT, made to work. The longest clue in the fixture fits at its
        stylesheet size at every size above, so none of those checks needs the
        shrink at all. Here the clue starts far too big for its box: the page
        must bring it down until it is whole, and stay locked while it does. */
-    const fitted = await page.evaluate(async () => {
+    await watchStyle(page, "clue");
+    await page.evaluate(() => {
       const st = document.createElement("style");
       st.id = "lock-test-huge-clue";
       st.textContent = "body.locked .clue{font-size:72px}";
       document.head.appendChild(st);
       dispatchEvent(new Event("resize"));
-      await new Promise((r) => setTimeout(r, 400));
+    });
+    await until(page, styleWritten);
+    const fitted = await page.evaluate(() => {
       const c = document.getElementById("clue");
       return { locked: document.body.classList.contains("locked"), cut: c.scrollHeight > c.clientHeight + 1,
         size: parseFloat(getComputedStyle(c).fontSize) };
@@ -602,6 +660,7 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "q
       if (!(await page.$eval("#screenResults", (e) => e.hidden))) break;
       await answerOne(page);
     }
+    /* Stays fixed: Full Time's room check keeps the page locked when it works. */
     await wait(500);
     const m = await page.evaluate(measureQuiz);
     t(`${vp[0]}: Full Time is locked and the page does not scroll`,
@@ -680,7 +739,9 @@ async function openSlider(game, [name, viewport, touch]) {
   await page.goto(ORIGIN + game.path, { waitUntil: "networkidle" });
   await page.click("#homeDaily");
   await page.waitForFunction(() => (document.getElementById("q").textContent || "").length > 20, null, { timeout: 10000 });
-  await wait(500);
+  /* The game screen and its first question come up in one task, which
+     queues the one room check that locks it. */
+  await until(page, isLocked);
   return { page, context };
 }
 /* A guess and the lock, as a player makes them: the slider moved, then Lock
@@ -694,6 +755,7 @@ async function guessAndLock(page) {
   await page.waitForFunction(() => !document.getElementById("lock").disabled, null, { timeout: 5000 });
   await page.click("#lock");
   await page.waitForFunction(() => !document.getElementById("result").hidden || !document.getElementById("ft").hidden, null, { timeout: 10000 });
+  /* Stays fixed: the result's room check keeps the page locked when it works. */
   await wait(400);
 }
 
@@ -726,29 +788,32 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "s
   console.log(`\n${id}: the way out, and back`);
   {
     const { page, context } = await openSlider(game, VIEWPORTS[1]);
-    const big = await page.evaluate(async () => {
+    await page.evaluate(() => {
       const st = document.createElement("style");
       st.id = "lock-test-big";
       st.textContent = ".q small{font-size:60px!important}.big span{font-size:120px!important}";
       document.head.appendChild(st);
       dispatchEvent(new Event("resize"));
-      await new Promise((r) => setTimeout(r, 400));
-      return document.body.classList.contains("locked");
     });
+    await until(page, isUnlocked);
+    const big = await page.evaluate(isLocked);
     t("a question too large to fit unlocks the page rather than cutting it off", big === false, "locked " + big);
-    const back = await page.evaluate(async () => {
+    await page.evaluate(() => {
       document.getElementById("lock-test-big").remove();
       dispatchEvent(new Event("resize"));
-      await new Promise((r) => setTimeout(r, 400));
-      return document.body.classList.contains("locked");
     });
+    await until(page, isLocked);
+    const back = await page.evaluate(isLocked);
     t("and relocks when it goes", back === true, "locked " + back);
-    const fitted = await page.evaluate(async () => {
+    await watchStyle(page, "q");
+    await page.evaluate(() => {
       const st = document.createElement("style");
       st.textContent = "body.locked .q{font-size:64px}";
       document.head.appendChild(st);
       dispatchEvent(new Event("resize"));
-      await new Promise((r) => setTimeout(r, 400));
+    });
+    await until(page, styleWritten);
+    const fitted = await page.evaluate(() => {
       const q = document.getElementById("q");
       return { locked: document.body.classList.contains("locked"), cut: q.scrollHeight > q.clientHeight + 1,
         size: parseFloat(getComputedStyle(q).fontSize) };
@@ -767,8 +832,11 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "s
       if (await page.$eval("#ft", (e) => !e.hidden)) break;
       await page.click("#next");
       await page.waitForFunction(() => document.getElementById("result").hidden || !document.getElementById("ft").hidden, null, { timeout: 10000 });
+      /* Stays fixed: the page tells the server the question is open and
+         shows nothing when the answer comes back. */
       await wait(300);
     }
+    /* Stays fixed: Full Time's room check keeps the page locked when it works. */
     await wait(500);
     const m = await page.evaluate(measureSlider);
     t(`${vp[0]}: Full Time is locked, the page does not scroll, and the card is inside the screen`,
@@ -863,6 +931,8 @@ async function openDuel(game, [name, viewport, touch]) {
     !document.getElementById("kickCover").classList.contains("hidden"), null, { timeout: 10000 });
   if (await page.$eval("#kickCover", (e) => !e.classList.contains("hidden"))) await page.click("#kickBtn");
   await page.waitForFunction(() => !document.getElementById("higher").disabled, null, { timeout: 10000 });
+  /* Stays fixed: behind the cover the page is locked BEFORE the pair is
+     live, so body.locked cannot say that the pair's own room check has run. */
   await wait(500);
   return { page, context };
 }
@@ -875,6 +945,7 @@ async function callOne(page) {
     !document.getElementById("nextRow").classList.contains("hidden") ||
     !document.getElementById("higher").disabled, null, { timeout: 10000 });
   if (await page.$eval("#nextRow", (e) => !e.classList.contains("hidden"))) await page.click("#nextBtn");
+  /* Stays fixed: the call's room check keeps the page locked when it works. */
   await wait(300);
 }
 
@@ -920,22 +991,22 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "d
   console.log(`\n${id}: the way out, and back`);
   {
     const { page, context } = await openDuel(game, VIEWPORTS[1]);
-    const big = await page.evaluate(async () => {
+    await page.evaluate(() => {
       const st = document.createElement("style");
       st.id = "lock-test-big";
       st.textContent = ".ask{font-size:60px!important}.cat{font-size:70px!important}";
       document.head.appendChild(st);
       dispatchEvent(new Event("resize"));
-      await new Promise((r) => setTimeout(r, 400));
-      return document.body.classList.contains("locked");
     });
+    await until(page, isUnlocked);
+    const big = await page.evaluate(isLocked);
     t("a board too large to fit unlocks the page rather than cutting it off", big === false, "locked " + big);
-    const back = await page.evaluate(async () => {
+    await page.evaluate(() => {
       document.getElementById("lock-test-big").remove();
       dispatchEvent(new Event("resize"));
-      await new Promise((r) => setTimeout(r, 400));
-      return document.body.classList.contains("locked");
     });
+    await until(page, isLocked);
+    const back = await page.evaluate(isLocked);
     t("and relocks when it goes", back === true, "locked " + back);
     await context.close();
   }
@@ -947,6 +1018,7 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "d
       if (await page.$eval("#screenResults", (e) => !e.hidden)) break;
       await callOne(page);
     }
+    /* Stays fixed: Full Time's room check keeps the page locked when it works. */
     await wait(600);
     const m = await page.evaluate(measureDuel);
     t(`${vp[0]}: Full Time is locked, the board stays and the page does not scroll`,
@@ -994,7 +1066,9 @@ async function openCodeword(game, [name, viewport, touch]) {
   await page.goto(ORIGIN + game.path, { waitUntil: "networkidle" });
   await page.click("#cwToday");
   await page.waitForFunction(() => document.querySelectorAll("#grid .cell").length >= 169, null, { timeout: 10000 });
-  await wait(500);
+  /* Its only room check is the one showing the game queues, and it is what
+     sets body.locked. */
+  await until(page, isLocked);
   return { page, context };
 }
 
@@ -1026,7 +1100,8 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "c
     t("the final whistle is hidden until it may be used", look.whistle === "none", look.whistle);
     const at = await page.$eval("#grid .cell:not(.block)", (e) => { const r = e.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
     await page.touchscreen.tap(at.x, at.y);
-    await wait(400);
+    /* Nothing is in hand before the tap, so the line under the grid is empty. */
+    await until(page, () => (document.getElementById("cwHere").textContent || "").trim() !== "");
     const clue = await page.evaluate(() => {
       const li = document.querySelector("#hints li.here");
       return { line: (document.getElementById("cwHere").textContent || "").trim(),
@@ -1043,7 +1118,7 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "c
     const shut = await page.evaluate(() => getComputedStyle(document.getElementById("cwAnswers")).display);
     t("the answers are not taking the screen until asked for", shut === "none", shut);
     await page.click("#cwAnswersBtn");
-    await wait(200);
+    await until(page, () => getComputedStyle(document.getElementById("cwAnswers")).display !== "none");
     const open = await page.evaluate(() => {
       const a = document.getElementById("cwAnswers"), r = a.getBoundingClientRect();
       return { shown: getComputedStyle(a).display !== "none", top: Math.round(r.top), bottom: Math.round(r.bottom),
@@ -1051,7 +1126,7 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "c
     });
     t("opened, they are a panel inside the screen with all eleven", open.shown && open.top >= 0 && open.bottom <= open.vh + 1 && open.items === 11 && open.scroll <= 1, JSON.stringify(open));
     await page.click("#hints li");
-    await wait(200);
+    await until(page, () => getComputedStyle(document.getElementById("cwAnswers")).display === "none");
     const closed = await page.evaluate(() => getComputedStyle(document.getElementById("cwAnswers")).display);
     t("and picking one closes the panel, to look at it on the grid", closed === "none", closed);
     await context.close();
@@ -1070,10 +1145,12 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "c
      past hitting. */
   {
     const { page, context } = await openCodeword(game, VIEWPORTS[0]);
-    const b = await page.evaluate(async () => {
+    await page.evaluate(() => {
       window.XIChrome.permalink.aged("codeword", 4);
       dispatchEvent(new Event("resize"));
-      await new Promise((r) => setTimeout(r, 400));
+    });
+    await until(page, isUnlocked);
+    const b = await page.evaluate(() => {
       const g = document.getElementById("grid").getBoundingClientRect();
       return { locked: document.body.classList.contains("locked"), cell: Math.round(g.width / 13) };
     });
@@ -1085,22 +1162,22 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "c
   console.log(`\n${id}: the way out, and back`);
   {
     const { page, context } = await openCodeword(game, VIEWPORTS[1]);
-    const big = await page.evaluate(async () => {
+    await page.evaluate(() => {
       const st = document.createElement("style");
       st.id = "lock-test-big";
       st.textContent = ".keys button{height:160px!important}";
       document.head.appendChild(st);
       dispatchEvent(new Event("resize"));
-      await new Promise((r) => setTimeout(r, 400));
-      return document.body.classList.contains("locked");
     });
+    await until(page, isUnlocked);
+    const big = await page.evaluate(isLocked);
     t("keys too large to leave the grid room unlock the page rather than shrink it past use", big === false, "locked " + big);
-    const back = await page.evaluate(async () => {
+    await page.evaluate(() => {
       document.getElementById("lock-test-big").remove();
       dispatchEvent(new Event("resize"));
-      await new Promise((r) => setTimeout(r, 400));
-      return document.body.classList.contains("locked");
     });
+    await until(page, isLocked);
+    const back = await page.evaluate(isLocked);
     t("and relocks when it goes", back === true, "locked " + back);
     await context.close();
   }
@@ -1112,6 +1189,8 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "c
        test is where it sits, not how a round is won. */
     const m = await page.evaluate(async () => {
       document.getElementById("ft").classList.add("on");
+      /* Stays fixed: the stylesheet places the card at once, and the check
+         is that nothing the page does about it unlocks or scrolls. */
       await new Promise((r) => setTimeout(r, 200));
       const r = document.querySelector("#ft .ftcard").getBoundingClientRect();
       return { locked: document.body.classList.contains("locked"), scroll: document.documentElement.scrollHeight - innerHeight,
@@ -1152,6 +1231,8 @@ async function openGrid(game, [name, viewport, touch], storage) {
   if (storage) await context.addInitScript((kv) => { for (const k in kv) localStorage.setItem(k, kv[k]); }, storage);
   await page.goto(ORIGIN + game.path, { waitUntil: "networkidle" });
   await page.waitForSelector("#gdBoard .gd-cell.on", { timeout: 10000 });
+  /* Stays fixed: the board is locked BEFORE its first draw and the room
+     check after it may only take that away, so there is no "done" to see. */
   await wait(600);
   return { page, context };
 }
@@ -1185,6 +1266,8 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "g
     t("the Full Time card stands where the keys were, the board stays, and the page does not scroll",
       m.ft && !m.keys && m.locked && m.scrollY <= 1 && m.boardWhole, gridSay(m));
     await page.click("#gdReplay");
+    /* Stays fixed: the card goes at once, before the room check it queues,
+       and that check keeps the page locked when it works. */
     await wait(400);
     const back = await page.evaluate(measureGrid);
     t("and \"Play it again\" puts the card away and the keys back", !back.ft && back.keys && gridOk(back), gridSay(back));
@@ -1206,22 +1289,22 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "g
   console.log(`\n${id}: the way out, and back`);
   {
     const { page, context } = await openGrid(game, VIEWPORTS[1]);
-    const big = await page.evaluate(async () => {
+    await page.evaluate(() => {
       const st = document.createElement("style");
       st.id = "lock-test-big";
       st.textContent = ".gd-k{height:120px!important}";
       document.head.appendChild(st);
       dispatchEvent(new Event("resize"));
-      await new Promise((r) => setTimeout(r, 500));
-      return document.body.classList.contains("locked");
     });
+    await until(page, isUnlocked);
+    const big = await page.evaluate(isLocked);
     t("keys too large to leave the board room unlock the page rather than shrink the squares past use", big === false, "locked " + big);
-    const back = await page.evaluate(async () => {
+    await page.evaluate(() => {
       document.getElementById("lock-test-big").remove();
       dispatchEvent(new Event("resize"));
-      await new Promise((r) => setTimeout(r, 500));
-      return document.body.classList.contains("locked");
     });
+    await until(page, isLocked);
+    const back = await page.evaluate(isLocked);
     t("and relocks when it goes", back === true, "locked " + back);
     await context.close();
   }
@@ -1261,6 +1344,8 @@ async function openProfile(game, [name, viewport, touch]) {
   await page.waitForSelector("#playChoice:not([disabled])", { timeout: 5000 });
   await page.click("#playChoice");
   await page.waitForFunction(() => !document.getElementById("screenPlay").hidden, null, { timeout: 10000 });
+  /* Stays fixed: the round locks as soon as it is shown, and the starting
+     clue arrives on a second request after it, with no mark of its own. */
   await wait(600);
   return { page, context };
 }
@@ -1323,6 +1408,8 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
       const rung = await page.$("#ladder .rung:not([disabled])");
       if (!rung) break;
       await rung.click();
+      /* Stays fixed: Friends animates each clue in for half a second, and the
+         measure below is of the panel once it has landed. */
       await wait(500);
     }
     const bought = await page.evaluate(measureProfile);
@@ -1365,22 +1452,22 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
   console.log(`\n${id}: the way out, and back`);
   {
     const { page, context } = await openProfile(game, VIEWPORTS[1]);
-    const big = await page.evaluate(async () => {
+    await page.evaluate(() => {
       const st = document.createElement("style");
       st.id = "lock-test-big";
       st.textContent = ".profile{min-height:900px!important}";
       document.head.appendChild(st);
       dispatchEvent(new Event("resize"));
-      await new Promise((r) => setTimeout(r, 400));
-      return document.body.classList.contains("locked");
     });
+    await until(page, isUnlocked);
+    const big = await page.evaluate(isLocked);
     t("a round too large to fit unlocks the page rather than cutting it off", big === false, "locked " + big);
-    const back = await page.evaluate(async () => {
+    await page.evaluate(() => {
       document.getElementById("lock-test-big").remove();
       dispatchEvent(new Event("resize"));
-      await new Promise((r) => setTimeout(r, 400));
-      return document.body.classList.contains("locked");
     });
+    await until(page, isLocked);
+    const back = await page.evaluate(isLocked);
     t("and relocks when it goes", back === true, "locked " + back);
     await context.close();
   }
@@ -1394,6 +1481,7 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
     page.on("dialog", (d) => d.accept());
     await page.click("#giveUp");
     await page.waitForFunction(() => !document.getElementById("screenDone").hidden, null, { timeout: 10000 });
+    /* Stays fixed: Full Time's room check keeps the page locked when it works. */
     await wait(600);
     const m = await page.evaluate(measureProfile);
     t(`${vp[0]}: Full Time is locked and the page does not scroll; the result scrolls in itself`,
@@ -1446,6 +1534,8 @@ async function openWS(game, [name, viewport, touch]) {
   await page.click("#homeDaily");
   await page.waitForSelector("#grid .cell", { timeout: 10000 });
   if (await page.$eval("#kickCover", (e) => !e.classList.contains("hidden"))) await page.click("#kickBtn");
+  /* Stays fixed: the round is locked BEFORE its room check, which may only
+     take that away, and the board is fitted again by an observer after it. */
   await wait(800);
   return { page, context };
 }
@@ -1482,22 +1572,22 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "w
   console.log(`\n${id}: the way out, and back`);
   {
     const { page, context } = await openWS(game, VIEWPORTS[1]);
-    const big = await page.evaluate(async () => {
+    await page.evaluate(() => {
       const st = document.createElement("style");
       st.id = "lock-test-big";
       st.textContent = ".word{font-size:40px!important;padding:20px!important}";
       document.head.appendChild(st);
       dispatchEvent(new Event("resize"));
-      await new Promise((r) => setTimeout(r, 500));
-      return document.body.classList.contains("locked");
     });
+    await until(page, isUnlocked);
+    const big = await page.evaluate(isLocked);
     t("names too large to leave the board room unlock the page rather than shrink the squares past use", big === false, "locked " + big);
-    const back = await page.evaluate(async () => {
+    await page.evaluate(() => {
       document.getElementById("lock-test-big").remove();
       dispatchEvent(new Event("resize"));
-      await new Promise((r) => setTimeout(r, 500));
-      return document.body.classList.contains("locked");
     });
+    await until(page, isLocked);
+    const back = await page.evaluate(isLocked);
     t("and relocks when it goes", back === true, "locked " + back);
     await context.close();
   }
@@ -1509,6 +1599,8 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "w
        under test is where it sits, not how a board is finished. */
     const m = await page.evaluate(async () => {
       document.getElementById("result").classList.add("show");
+      /* Stays fixed: the result fades in on a transition, and is read once
+         it has run. */
       await new Promise((r) => setTimeout(r, 300));
       const r = document.querySelector("#result .modal").getBoundingClientRect();
       return { locked: document.body.classList.contains("locked"), scroll: document.documentElement.scrollHeight - innerHeight,
@@ -1569,12 +1661,21 @@ if (!ONLY || ONLY === "perma") {
     const asked = [];
     page.on("request", (q) => { const u = new URL(q.url()); if (u.pathname.startsWith("/api/")) asked.push(u.pathname + u.search); });
     await page.goto(ORIGIN + `/${r}/daily/${PERMA_N}`, { waitUntil: "load" });
-    await wait(1500);
+    /* Until the page has asked for its board (a game that asks only when
+       started is asked below) and named it: the label is written once, from
+       the board, with the title in the same breath. */
+    if (!row.start) await untilHere(() => asked.includes(row.asks));
+    if (row.label) {
+      await until(page, ([sel, n]) => {
+        const e = document.querySelector(sel);
+        return !!e && new RegExp("#\\s?" + n + "\\b").test(e.textContent);
+      }, [row.label, PERMA_N]);
+    }
     const said = row.label ? await page.$eval(row.label, (e) => e.textContent.replace(/\s+/g, " ").trim()).catch(() => "(no such element)") : null;
     const titled = row.title ? await page.$eval(row.title, (e) => e.textContent.replace(/\s+/g, " ").trim()).catch(() => "(no such element)") : null;
     if (row.start && !asked.includes(row.asks)) {
       await page.click(row.start);
-      await wait(1500);
+      await untilHere(() => asked.includes(row.asks));
     }
     t(`${r}: /daily/${PERMA_N} asks the server for that board`, asked.includes(row.asks),
       asked.includes(row.asks) ? row.asks : "asked " + JSON.stringify(asked.filter((a) => !/season|auth|played/.test(a)).slice(0, 6)));
@@ -1607,6 +1708,8 @@ async function openCrossword([name, viewport, touch]) {
   await page.waitForSelector("#kickOffBtn:not([disabled])", { timeout: 12000 });
   await page.click("#kickOffBtn");
   await page.waitForFunction(() => !document.querySelector("#startOverlay")?.classList.contains("show"), null, { timeout: 8000 });
+  /* Stays fixed: the crossword fits its board and clue panel with nothing
+     here that says when it has finished. */
   await wait(800);
   return { page, context };
 }
@@ -1681,7 +1784,9 @@ if (!ONLY || ONLY === "crossword") {
        would pass the very rule this is here to refuse. */
     if (fw.other) {
       await page.touchscreen.tap(fw.x, fw.y);
-      await wait(400);
+      /* It was picked for being outside the answer in hand. */
+      await until(page, () => { const c = document.querySelector("[data-lock-test]");
+        return !!c && (c.classList.contains("in-word") || c.classList.contains("active")); });
       fw.nowInWord = await page.$eval("[data-lock-test]", (c) => c.classList.contains("in-word") || c.classList.contains("active"));
     }
     t("phone-412: in Fit word the rest of the board is dimmed, not hidden, and can be tapped",
@@ -1713,6 +1818,7 @@ if (!ONLY || ONLY === "crossword") {
     const b = await page.evaluate(async () => {
       window.XIChrome.permalink.aged("crossword", 4);
       dispatchEvent(new Event("resize"));
+      /* Stays fixed: the check is that the board's refit does NOT scroll. */
       await new Promise((r) => setTimeout(r, 400));
       const box = document.querySelector(".xic-aged");
       const vis = (sel) => { const e = box && box.querySelector(sel); return !!e && getComputedStyle(e).display !== "none"; };

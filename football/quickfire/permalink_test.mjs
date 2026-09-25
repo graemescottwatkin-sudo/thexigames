@@ -32,6 +32,18 @@ let pass = 0, fail = 0;
 const t = (n, ok, d) => { ok ? pass++ : fail++; console.log(`${ok ? "  ok  " : "FAIL  "}${n}${d ? "  — " + d : ""}`); };
 const done = () => { console.log(`\n${pass} passed, ${fail} failed`); process.exit(fail ? 1 : 0); };
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+/* WAIT FOR THE THING, NOT FOR A NUMBER OF MILLISECONDS. The list of boards
+   was read a fixed second and a half after the click, and a loaded machine
+   can lose that race to the fetch behind it. The page says when it is done:
+   the board's name is drawn, the list has stopped saying "Loading…". The
+   deadline is the guard against a wait that cannot end: a condition that
+   never comes true returns false, and the assertion after it fails as it
+   always would have. */
+const until = async (ok, ms = 15000) => {
+  const end = Date.now() + ms;
+  while (!ok() && Date.now() < end) await wait(20);
+  return ok();
+};
 
 let JSDOM;
 try { ({ JSDOM } = await import("jsdom")); } catch (e) { JSDOM = null; }
@@ -104,15 +116,17 @@ async function open(at) {
      seconds and read the landing before the page had asked for anything
      (24 Sep 2026). Fifteen is a ceiling, not a wait. */
   const w = dom.window;
-  for (let i = 0; i < 150; i++) {
-    const date = (w.document.getElementById("startDate") || {}).textContent || "";
-    if (asked.length && /No\. \d+/.test(date)) break;
-    await wait(100);
-  }
+  await until(() => asked.length > 0 &&
+    /No\. \d+/.test((w.document.getElementById("startDate") || {}).textContent || ""));
+  /* STAYS FIXED: the front page's check is that NO numbered request follows,
+     and a condition cannot wait for a request that never comes. */
   await wait(300);
   return dom;
 }
 const txt = (d, id) => ((d.getElementById(id) || {}).textContent || "").trim();
+/* The list of boards has answered, one way or the other: it is empty before
+   the click and says "Loading…" until the fetch behind it settles. */
+const listed = (d) => { const s = ((d.getElementById("archiveList") || {}).textContent || "").trim(); return !!s && s !== "Loading…"; };
 
 console.log("A board's own address");
 {
@@ -125,7 +139,7 @@ console.log("A board's own address");
   /* The list of boards, from a board's own address: every link is a board's
      address, and none of them is /daily/daily/. */
   d.getElementById("showArchive").dispatchEvent(new dom.window.Event("click", { bubbles: true }));
-  await wait(1500);
+  await until(() => listed(d));
   const hrefs = [...d.querySelectorAll("#archiveList a.archiveItem")].map((a) => new URL(a.href).pathname);
   t("from here, the list of boards links to each board's own address",
     hrefs.length >= 3 && hrefs.every((h) => /^\/football\/quickfire\/daily\/\d+$/.test(h)), hrefs.join(" "));
@@ -139,7 +153,7 @@ console.log("\nThe front page");
   t("asks for today's board, with no number", asked.length >= 1 && asked.every((q) => !/no=/.test(q)), JSON.stringify(asked));
   t("and calls it today's", /today/i.test(txt(d, "startKicker")), txt(d, "startKicker"));
   d.getElementById("showArchive").dispatchEvent(new dom.window.Event("click", { bubbles: true }));
-  await wait(1500);
+  await until(() => listed(d));
   const hrefs = [...d.querySelectorAll("#archiveList a.archiveItem")].map((a) => new URL(a.href).pathname);
   t("and its list of boards links to each board's own address",
     hrefs.length >= 3 && hrefs.every((h) => /^\/football\/quickfire\/daily\/\d+$/.test(h)) && hrefs.includes(`/football/quickfire/daily/${PAST_NO}`),
