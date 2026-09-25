@@ -66,12 +66,30 @@ const server = http.createServer(async (req, res) => {
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const origin = "http://127.0.0.1:" + server.address().port;
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+/* WAIT FOR THE THING, NOT FOR A NUMBER OF MILLISECONDS. Boot was a fixed five
+   seconds, which a loaded machine can spend before the page has even asked who
+   is signed in. The server's log says when the page got there, so that is what
+   is waited on, with a deadline: a condition that never comes true returns
+   false and the assertion after it fails as it always would have. What a
+   condition cannot prove is that something did NOT happen, so each absence
+   below still gets a fixed wait of its own, started once the page is there. */
+const until = async (ok, ms = 10000) => {
+  const end = Date.now() + ms;
+  while (!ok() && Date.now() < end) await wait(20);
+  return ok();
+};
+/* The crossword's own calls carry its CSRF header; the chrome asks for the
+   session too, without it, and must not stand in for the game. */
+const gameAsked = (p) => log.some((e) => e.path === p && e.headers["x-crossword-xi"] === "1");
+const pushed = () => log.some((e) => e.path === "/api/account/migrate");
+const pulled = () => log.some((e) => e.path === "/api/account/results" && e.method === "GET");
+const SETTLE = 2000;
 
 /* The owner's result, in the shape the crossword itself banks (fcw.results.v1). */
 const GUEST = [{ dailyNo: 6, score: 86, elapsedSeconds: 131, checks: 0, checkAlls: 0,
   revealedLetters: 0, revealedAnswers: 0, club: "Aston Villa", completedAt: "2026-09-23T23:31:02.000Z" }];
 
-async function open() {
+async function open(ready) {
   const dom = await JSDOM.fromURL(origin + "/", {
     runScripts: "dangerously", pretendToBeVisual: true, resources: "usable",
     beforeParse(w) {
@@ -82,14 +100,18 @@ async function open() {
       w.localStorage.setItem("fcw.results.v1", JSON.stringify(GUEST));
     },
   });
-  await wait(5000);
+  await until(() => dom.window.document.readyState === "complete" && ready(), 30000);
   return dom;
 }
 
 console.log("Signed in elsewhere, then the crossword opened");
 {
   user = { id: "u-owner", displayName: "Graeme" }; log.length = 0;
-  const dom = await open();
+  /* Push then pull is one chain, so the pull arriving means the push had its
+     chance. A second upload would come later still: that is an absence, and it
+     gets a fixed wait. */
+  const dom = await open(() => pushed() && pulled());
+  await wait(SETTLE);
   const pushes = log.filter((e) => e.path === "/api/account/migrate");
   t("THE REPORTED FAULT: the device's guest result goes to the account on load",
     pushes.length === 1 && pushes[0].body && (pushes[0].body.results || []).some((r) => r.dailyNo === 6 && r.score === 86),
@@ -105,7 +127,11 @@ console.log("Signed in elsewhere, then the crossword opened");
 console.log("\nSigned out");
 {
   user = null; log.length = 0;
-  const dom = await open();
+  /* Nothing to wait FOR here: the page asks, hears nobody, and must send
+     nothing. So wait until it has asked, then fixed, for an upload that should
+     never come. */
+  const dom = await open(() => gameAsked("/api/auth/session"));
+  await wait(SETTLE);
   t("a signed-out device sends nothing: its results stay on the device",
     !log.some((e) => e.path === "/api/account/migrate"));
   dom.window.close();

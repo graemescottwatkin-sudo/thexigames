@@ -98,7 +98,24 @@ server.listen(0, "127.0.0.1", async () => {
   const w = dom.window, d = w.document;
   const $ = (id) => d.getElementById(id);
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-  await wait(7000);
+  /* WAIT FOR THE THING, NOT FOR A NUMBER OF MILLISECONDS. Boot was a fixed
+     seven seconds, loading the daily two and a half, and every press after it
+     had its own few hundred — races a loaded machine can lose. The page says
+     when its work has landed: every script has run and the landing screen is
+     built; a board's squares are drawn; the solved count has come back from
+     the server; the status sheet has had its answer. Those are what is waited
+     on, and the deadline stops a wait that cannot end: a condition that never
+     comes true returns false and the assertion after it fails as it always
+     would have. A wait that proves something did NOT happen stays a fixed one,
+     because a condition cannot prove that. */
+  const until = async (ok, ms = 10000) => {
+    const end = Date.now() + ms;
+    while (!ok() && Date.now() < end) await wait(20);
+    return ok();
+  };
+  const drawn = () => d.querySelectorAll("#grid .cell").length > 0;
+  const kickedOff = () => !d.querySelector(".stage").classList.contains("prestart");
+  await until(() => d.readyState === "complete" && !!$("homeClubSelect") && $("homeClubSelect").options.length > 0, 30000);
 
   /* The game now opens on a landing screen and loads nothing until a mode is
      chosen — the point of the change, since guessing was starting the daily's
@@ -200,7 +217,7 @@ server.listen(0, "127.0.0.1", async () => {
      suite needs a loaded puzzle to measure, not a particular way of asking for
      one. */
   ($("dailyBtn") || $("homeDaily")).dispatchEvent(new w.Event("click", { bubbles: true }));
-  await wait(2500);
+  await until(drawn);
 
   console.log("\nLoading");
   t("the page loads its stylesheet and scripts as separate files", (() => {
@@ -264,7 +281,7 @@ server.listen(0, "127.0.0.1", async () => {
 
   console.log("\nPlaying");
   $("kickOffBtn").dispatchEvent(new w.Event("click", { bubbles: true }));
-  await wait(400);
+  await until(kickedOff);
   t("kick off starts the clock", !d.querySelector(".stage").classList.contains("prestart"));
 
   // Solve one entry using the reveal endpoint, the way a player would.
@@ -282,7 +299,9 @@ server.listen(0, "127.0.0.1", async () => {
     if (el) el.dispatchEvent(new w.Event("pointerdown", { bubbles: true }));
     d.dispatchEvent(new w.KeyboardEvent("keydown", { key: rv.answer[i], bubbles: true }));
   }
-  await wait(1200);
+  /* Nothing was solved before these keys, so the count leaving zero is the
+     server's verdict on this entry arriving. */
+  await until(() => /^[1-9]/.test($("progressChip").textContent));
   t("typing an entry asks the server to judge it", apiCalls > before,
     (apiCalls - before) + " calls while typing");
   t("the solved count came back from the server",
@@ -306,7 +325,7 @@ server.listen(0, "127.0.0.1", async () => {
   solvedCells[0].dispatchEvent(new w.Event("pointerdown", { bubbles: true }));
   d.dispatchEvent(new w.KeyboardEvent("keydown", { key: stray, bubbles: true }));
   d.dispatchEvent(new w.KeyboardEvent("keydown", { key: "Backspace", bubbles: true }));
-  await wait(600);
+  await wait(600);   // fixed: this proves nothing changed
   t("a solved word cannot be typed over", solvedCells[0].querySelector(".ltr").textContent === letterBefore,
     letterBefore + " -> " + solvedCells[0].querySelector(".ltr").textContent);
   t("nor backspaced, so the counter holds", $("progressChip").textContent === chipBefore,
@@ -1456,19 +1475,23 @@ server.listen(0, "127.0.0.1", async () => {
      before cutting the connection. */
   if (d.querySelector(".stage").classList.contains("prestart")) {
     $("kickOffBtn").dispatchEvent(new w.Event("click", { bubbles: true }));
-    await wait(300);
+    await until(kickedOff);
   }
   d.dispatchEvent(new w.KeyboardEvent("keydown", { key: "A", bubbles: true }));
+  /* Fixed: this lets the page's own 130ms verify timer fire on the real fetch,
+     so the offline notice below can only come from the Check. */
   await wait(300);
   w.fetch = () => Promise.reject(new Error("network down"));
   $("checkBtn").dispatchEvent(new w.Event("click", { bubbles: true }));
-  await wait(900);
+  await until(() => d.body.classList.contains("offline"));
   t("a dropped request marks the game offline and tells the player", (() => {
     return d.body.classList.contains("offline") &&
       /connection/i.test(d.getElementById("netStrip").textContent);
   })(), d.getElementById("netStrip").textContent);
   w.fetch = realFetch;
   w.dispatchEvent(new w.Event("online"));
+  /* Fixed: "online" clears the notice at once, so what this proves is that the
+     catch-up it starts does not put it back. */
   await wait(900);
   t("reconnecting clears the notice and re-checks what was missed",
     !d.body.classList.contains("offline"),
@@ -1614,7 +1637,9 @@ server.listen(0, "127.0.0.1", async () => {
     return opened && !sheet.classList.contains("show");
   })());
   $("buildBadge").dispatchEvent(new w.Event("click", { bubbles: true }));
-  await wait(500);   // the panel fills from /api/status
+  /* The panel fills from /api/status. Opening it blanks the rows and says
+     "Checking…" until an answer arrives, success or failure. */
+  await until(() => !/Checking/.test($("statusSub").textContent));
   t("it reports the build and where the puzzles came from", (() => {
     const rows = d.getElementById("statusBody").textContent;
     return rows.indexOf(w.CROSSWORDXI_BUILD) !== -1 && /D1|development/i.test(rows);
@@ -1826,15 +1851,16 @@ server.listen(0, "127.0.0.1", async () => {
   // Clue list items bind "click"; grid cells bind "pointerdown". Different
   // events for different elements, so the test has to send the right one.
   d.querySelector("#downList li").dispatchEvent(new w.Event("click", { bubbles: true }));
-  await wait(200);
+  await until(() => $("ncMeta").textContent.indexOf(downNum + "D") === 0);
   // Re-query: selecting re-renders the list, so the original element is stale.
   t("clicking a Down clue selects it and updates the active strip", (() => {
     const active = d.querySelector("#downList li.active");
     return !!active && active.querySelector(".cl-num").textContent.trim() === downNum &&
       $("ncMeta").textContent.indexOf(downNum + "D") === 0;
   })(), "meta=" + $("ncMeta").textContent + " clicked=" + downNum);
+  const metaBefore = $("ncMeta").textContent;
   $("nextClue").dispatchEvent(new w.Event("click", { bubbles: true }));
-  await wait(200);
+  await until(() => $("ncMeta").textContent !== metaBefore);
   t("the next-clue arrow still moves the selection",
     !!d.querySelector("#acrossList li.active, #downList li.active"));
 

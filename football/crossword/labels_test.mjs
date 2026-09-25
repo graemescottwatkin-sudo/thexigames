@@ -32,6 +32,18 @@ const ROOT = path.join(DIR, "..", "..");
 let pass = 0, fail = 0;
 const t = (n, ok, d) => { ok ? pass++ : fail++; console.log(`${ok ? "  ok  " : "FAIL  "}${n}${d ? "  — " + d : ""}`); };
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+/* WAIT FOR THE THING, NOT FOR A NUMBER OF MILLISECONDS. Each page was given a
+   fixed five and a half seconds to boot and two and a half to load a board, and
+   a loaded machine loses that race. The page says when it is ready — the
+   account's result merged into this device's history, a board's squares drawn,
+   the landing screen built — so that is what is waited on. The deadline stops
+   a wait that cannot end: a condition that never comes true returns false and
+   the assertion after it fails as it always would have. */
+const until = async (ok, ms = 10000) => {
+  const end = Date.now() + ms;
+  while (!ok() && Date.now() < end) await wait(20);
+  return ok();
+};
 const TYPES = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript", ".json": "application/json" };
 const REAL = { "/api/daily": apiDaily, "/api/categories": apiCategories, "/api/status": apiStatus };
 
@@ -74,7 +86,17 @@ const server = http.createServer(async (req, res) => {
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const origin = "http://127.0.0.1:" + server.address().port;
 
-async function open(at, storage = {}) {
+/* The squares are drawn in the same synchronous pass that writes the strap and
+   the kick-off card, so a board with squares has its labels too. */
+const drawn = (dom) => dom.window.document.querySelectorAll("#grid .cell").length > 0;
+const landed = (dom) => dom.window.document.getElementById("homeClubSelect").options.length > 0;
+/* The account's row has reached this device's history: the pull has landed and
+   been merged, which is what My Season reads. */
+const merged = (no) => (dom) => {
+  try { return JSON.parse(dom.window.localStorage.getItem("fcw.results.v1") || "[]").some((r) => r && r.dailyNo === no); }
+  catch (e) { return false; }
+};
+async function open(at, ready, storage = {}) {
   const dom = await JSDOM.fromURL(origin + at, {
     runScripts: "dangerously", pretendToBeVisual: true, resources: "usable",
     beforeParse(w) {
@@ -85,7 +107,7 @@ async function open(at, storage = {}) {
       for (const k in storage) w.localStorage.setItem(k, typeof storage[k] === "string" ? storage[k] : JSON.stringify(storage[k]));
     },
   });
-  await wait(5500);
+  await until(() => dom.window.document.readyState === "complete" && ready(dom), 30000);
   return dom;
 }
 const txt = (d, id) => ((d.getElementById(id) || {}).textContent || "").trim();
@@ -96,10 +118,10 @@ console.log("a) and b): My Season, with a result the account holds");
   /* The shape /api/account/results returns: no league position. */
   accountResults = [{ game: "crossword", entryKey: "daily:" + PAST_NO, dailyNo: PAST_NO, mode: "daily",
     score: 86, elapsedSeconds: 402, club: null, season: null, completedAt: new Date(NOW).toISOString() }];
-  const dom = await open("/football/crossword/");
+  const dom = await open("/football/crossword/", merged(PAST_NO));
   const d = dom.window.document;
   d.getElementById("statsBtn").dispatchEvent(new dom.window.Event("click", { bubbles: true }));
-  await wait(300);
+  await until(() => d.getElementById("statsSheet").classList.contains("show"));
   const grid = txt(d, "statGrid"), hist = txt(d, "historyBody");
   t("a result with no position: nobody reads 'undefined'", !/undefined/.test(grid + hist), (grid + " | " + hist).slice(0, 140));
   t("Best finish says '—' rather than inventing one", /—\s*Best finish/.test(grid), grid.slice(0, 120));
@@ -109,10 +131,10 @@ console.log("a) and b): My Season, with a result the account holds");
 }
 {
   user = null; accountResults = [];
-  const dom = await open("/football/crossword/");
+  const dom = await open("/football/crossword/", landed);
   const d = dom.window.document;
   d.getElementById("statsBtn").dispatchEvent(new dom.window.Event("click", { bubbles: true }));
-  await wait(300);
+  await until(() => d.getElementById("statsSheet").classList.contains("show"));
   t("b) signed out, it still says this device only", /Saved on this device only/.test(txt(d, "statsKept")), txt(d, "statsKept"));
   dom.window.close();
 }
@@ -120,7 +142,7 @@ console.log("a) and b): My Season, with a result the account holds");
 console.log("\nd) and c): a board three days old, at its own address");
 {
   user = null; accountResults = [];
-  const dom = await open("/football/crossword/daily/" + PAST_NO);
+  const dom = await open("/football/crossword/daily/" + PAST_NO, drawn);
   const d = dom.window.document;
   const strap = txt(d, "strapText"), mode = txt(d, "kickMode"), note = txt(d, "kickNote");
   t("the page opened that board", /daily/i.test(strap) || mode.length > 0, strap || mode);
@@ -132,10 +154,10 @@ console.log("\nd) and c): a board three days old, at its own address");
   dom.window.close();
 }
 {
-  const dom = await open("/football/crossword/");
+  const dom = await open("/football/crossword/", landed);
   const d = dom.window.document;
   (d.getElementById("homeDaily") || d.getElementById("dailyBtn")).dispatchEvent(new dom.window.Event("click", { bubbles: true }));
-  await wait(2500);
+  await until(() => drawn(dom));
   const mode = txt(d, "kickMode"), note = txt(d, "kickNote");
   t("today's board is still today's puzzle", /Today.s puzzle|Pre-season|Matchday/.test(mode + " " + note), `${mode} | ${note}`);
   dom.window.close();

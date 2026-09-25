@@ -140,12 +140,27 @@ const server = http.createServer(async (req, res) => {
 });
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+/* WAIT FOR THE THING, NOT FOR A NUMBER OF MILLISECONDS. Every page here had a
+   fixed five and a half seconds to boot and a second or so after each press,
+   and a loaded machine loses that race: sixteen copies at once turned "and
+   says how many are out" red twice, the count not yet back from /api/themes
+   when it was read. The page says when its work has landed — the count is
+   written, the section is drawn, the option just asked for is struck off, a
+   board's squares exist — so that is what is waited on. The deadline stops a
+   wait that cannot end: a condition that never comes true returns false and
+   the assertion after it fails as it always would have. A wait that proves
+   something did NOT happen stays a fixed one; a condition cannot prove that. */
+const until = async (ok, ms = 10000) => {
+  const end = Date.now() + ms;
+  while (!ok() && Date.now() < end) await wait(20);
+  return ok();
+};
 
 server.listen(0, "127.0.0.1", async () => {
   const origin = `http://127.0.0.1:${server.address().port}`;
   console.log(`Serving ${DIR} at ${origin}\n`);
 
-  async function open(search, seed) {
+  async function open(search, ready, seed) {
     const dom = await JSDOM.fromURL(origin + "/" + (search || ""), {
       runScripts: "dangerously", pretendToBeVisual: true, resources: "usable",
       beforeParse(w) {
@@ -156,13 +171,24 @@ server.listen(0, "127.0.0.1", async () => {
         for (const k in seed || {}) if (seed[k] != null) w.localStorage.setItem(k, seed[k]);
       },
     });
-    await wait(5500);
+    await until(() => dom.window.document.readyState === "complete" && ready(dom.window), 30000);
     return dom;
   }
+  /* What each page is waited for. The count on the landing tile is written
+     only when /api/themes answers; the section says "Loading…" until it has
+     been drawn from the answer; a board has squares; a link to a board that is
+     not out says so in a toast, and nothing else writes that. */
+  const counted = (w) => w.document.getElementById("homeThemedState").textContent !== "";
+  const drawnSection = (w) => {
+    const box = w.document.getElementById("themeAvailable");
+    return box.textContent.trim() !== "" && !/Loading/.test(box.textContent);
+  };
+  const drawnBoard = (w) => w.document.querySelectorAll("#grid .cell").length > 0;
+  const refused = (w) => /not available/.test(w.document.getElementById("toast").textContent);
 
   /* ---- the three panels ---- */
   console.log("The Themed section");
-  let dom = await open();
+  let dom = await open("", counted);
   let w = dom.window, $ = (id) => w.document.getElementById(id);
 
   t("the landing screen offers themed boards", !!$("homeThemed"));
@@ -174,14 +200,14 @@ server.listen(0, "127.0.0.1", async () => {
      found. Proven by what stops happening, because jsdom will not navigate:
      the sheet must NOT open from the tile any more. */
   $("homeThemed").click();
-  await wait(1200);
+  await wait(1200);   // fixed: this proves the sheet did NOT open
   t("the tile no longer opens the sheet in place",
     !$("themeSheet").className.includes("show"));
 
   /* And the sheet is still reachable, because it still owns the request form.
      The index links here with ?themes=1 rather than growing a second copy. */
   w.close();
-  dom = await open("?themes=1");
+  dom = await open("?themes=1", drawnSection);
   w = dom.window; $ = (id) => w.document.getElementById(id);
   t("the section opens from the clubs index link",
     $("themeSheet").className.includes("show"));
@@ -219,9 +245,8 @@ server.listen(0, "127.0.0.1", async () => {
   const emptyOptions = THEMES_FIXTURE.options;
   THEMES_FIXTURE.themes = [];
   THEMES_FIXTURE.options = [];
-  dom = await open("?themes=1");
+  dom = await open("?themes=1", drawnSection);
   w = dom.window; $ = (id) => w.document.getElementById(id);
-  await wait(1200);
   t("the section says so plainly", /No themed boards yet/.test($("themeAvailable").textContent));
   t("and the request list is still filled, so a club can be asked for",
     $("themeRequestKey").options.length > 5,
@@ -234,9 +259,8 @@ server.listen(0, "127.0.0.1", async () => {
   THEMES_FIXTURE.options = emptyOptions;      // restored too, or later checks
                                               // see a server with no labels
   w.close();
-  dom = await open("?themes=1");
+  dom = await open("?themes=1", drawnSection);
   w = dom.window; $ = (id) => w.document.getElementById(id);
-  await wait(1200);
 
   /* Several themes each, each of them once. The schema says so — UNIQUE
      (theme_key, requested_by) — and the list has to say so too, or the rule is
@@ -247,6 +271,13 @@ server.listen(0, "127.0.0.1", async () => {
     sel.value = key;
     $("themeRequestBtn").dispatchEvent(new w.MouseEvent("click", { bubbles: true }));
   };
+  /* A request has landed when the list, refetched after the server said yes,
+     strikes that theme off — false before the press, and true of nothing but
+     this press. */
+  const struck = (key) => {
+    const o = [...$("themeRequestKey").options].find((x) => x.value === key);
+    return !!o && o.disabled;
+  };
   t("the control says request, not ask", (() => {
     const sheet = $("themeSheet").textContent;
     return /Request a theme/.test(sheet) && /one request each/i.test(sheet) &&
@@ -254,18 +285,17 @@ server.listen(0, "127.0.0.1", async () => {
   })(), $("themeRequestBtn").textContent.trim());
 
   pick("everton");
-  await wait(900);
+  await until(() => struck("everton"));
   t("a request is accepted", /on the list|Noted/i.test($("themeRequestMsg").textContent),
     $("themeRequestMsg").textContent.trim());
   t("and the choice is cleared, ready for another", $("themeRequestKey").value === "");
 
   pick("leeds-united");
-  await wait(900);
+  await until(() => struck("leeds-united"));
   t("a second, different theme is accepted too",
     /on the list|Noted/i.test($("themeRequestMsg").textContent),
     $("themeRequestMsg").textContent.trim());
 
-  await wait(300);
   t("themes already requested are struck off the list", (() => {
     const opts = [...$("themeRequestKey").options];
     const villa = opts.find((o) => o.value === "aston-villa");   // seeded as requested
@@ -283,7 +313,7 @@ server.listen(0, "127.0.0.1", async () => {
     !!$("themeMine").querySelector('.mine-drop[data-key="aston-villa"]'));
   $("themeMine").querySelector('.mine-drop[data-key="aston-villa"]')
     .dispatchEvent(new w.MouseEvent("click", { bubbles: true }));
-  await wait(1200);
+  await until(() => !struck("aston-villa") && [...$("themeRequestKey").options].some((o) => o.value === "aston-villa"));
   t("removing it says so", /removed/i.test($("themeRequestMsg").textContent),
     $("themeRequestMsg").textContent.trim());
   t("and the theme goes back on the list to be asked for again", (() => {
@@ -294,16 +324,26 @@ server.listen(0, "127.0.0.1", async () => {
   /* ---- opening a board ---- */
   console.log("\nPlaying a themed board");
   $("themeAvailable").querySelector('[data-theme="man-united"][data-no="2"]').click();
-  await wait(2500);
+  await until(() => drawnBoard(w));
   t("the board opens and names itself on the strap",
     /Manchester United #2/.test($("strapText").textContent), $("strapText").textContent);
   t("the page title names it too", /Manchester United #2/.test(w.document.title), w.document.title);
 
   /* The slot. Three modes, three slots — sharing the practice key would mean
      opening a themed board destroyed a practice game in progress. */
-  if ($("kickOffBtn")) { $("kickOffBtn").click(); await wait(500); }
+  if ($("kickOffBtn")) {
+    $("kickOffBtn").click();
+    await until(() => !w.document.querySelector(".stage").classList.contains("prestart"));
+  }
   for (const ch of "ABC") w.document.dispatchEvent(new w.KeyboardEvent("keydown", { key: ch, bubbles: true }));
-  await wait(1500);
+  /* The board saved itself, empty, when it was built, so a slot existing says
+     nothing about the typing. The typed letters reaching it is what says the
+     save after the keys has landed. */
+  await until(() => Object.keys(w.localStorage).some((k) => {
+    if (k.indexOf("fcw.v04.theme") !== 0) return false;
+    try { return Object.keys(JSON.parse(w.localStorage.getItem(k)).letters || {}).length > 0; }
+    catch (e) { return false; }
+  }));
   /* Themed saves are keyed per board now: fcw.v04.theme.<theme>-<no>. One
      shared slot meant opening a second club board destroyed the first. */
   const themeSlot = Object.keys(w.localStorage)
@@ -318,7 +358,7 @@ server.listen(0, "127.0.0.1", async () => {
 
   /* ---- the readable share link ---- */
   console.log("\nA shared themed board");
-  dom = await open("?t=aston-villa-1");
+  dom = await open("?t=aston-villa-1", drawnBoard);
   w = dom.window; $ = (id) => w.document.getElementById(id);
   t("a /?t= link opens that board directly, not the menu",
     !$("homeOverlay").className.includes("show"));
@@ -327,7 +367,8 @@ server.listen(0, "127.0.0.1", async () => {
   w.close();
 
   /* A link to a board that is not out must not fall through to something else. */
-  dom = await open("?t=man-united-9");
+  /* Waited on the toast, not the menu: the menu shows before any script runs. */
+  dom = await open("?t=man-united-9", refused);
   w = dom.window; $ = (id) => w.document.getElementById(id);
   t("a link to an unreleased board returns to the menu rather than opening another",
     $("homeOverlay").className.includes("show"));
