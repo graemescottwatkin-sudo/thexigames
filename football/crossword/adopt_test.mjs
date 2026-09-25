@@ -55,6 +55,9 @@ const DAILY_SLOT = "fcw.v04.daily." + TODAY_NO;
 /* What the account is holding. Set between page loads. */
 let STATE_BODY = { state: null };
 let servedDailyNo = null;
+/* What this server has answered: boards, and pulls of the account's journey.
+   An adoption shows itself as a SECOND board asked for after the pull. */
+const served = { daily: 0, pull: 0 };
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://127.0.0.1");
@@ -69,6 +72,7 @@ const server = http.createServer(async (req, res) => {
   }
   if (url.pathname === "/api/account/state") {
     if (req.method === "POST") { for await (const c of req) void c; return send({ updatedAt: "2026-01-01T00:00:00.000Z" }); }
+    served.pull++;
     return send(STATE_BODY);
   }
   if (url.pathname.startsWith("/api/account/")) return send({ results: [], user: null });
@@ -79,6 +83,7 @@ const server = http.createServer(async (req, res) => {
     const body = await out.text();
     if (url.pathname === "/api/daily") {
       try { servedDailyNo = JSON.parse(body).dailyNo; } catch (e) {}
+      served.daily++;
     }
     res.writeHead(out.status, { "Content-Type": "application/json", Date: SERVER_DATE });
     return res.end(body);
@@ -108,12 +113,29 @@ const server = http.createServer(async (req, res) => {
 });
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+/* WAIT FOR THE THING, NOT FOR A NUMBER OF MILLISECONDS — the fix
+   football/grid/journey_test.mjs carries, and the reasoning is written out
+   there. This opened each daily behind two fixed sleeps, 4000ms to boot and
+   6000ms for the board, the pull and any adoption, and a loaded machine can
+   lose either race. Now boot is waited on until the document is complete, the
+   page holds the server's clock and the session has signed it in (the pull
+   asks nothing of a guest), and the board until the server has answered what
+   each case needs of it and the page has finished building. The deadline is
+   the guard against a wait that cannot end: a condition that never comes true
+   returns false, and the assertion after it fails as it always would have. */
+const until = async (ok, ms = 10000) => {
+  const end = Date.now() + ms;
+  while (!ok() && Date.now() < end) await wait(20);
+  return ok();
+};
 
 server.listen(0, "127.0.0.1", async () => {
   const origin = "http://127.0.0.1:" + server.address().port;
   console.log("Serving " + DIR + " at " + origin + "\n");
 
-  async function openDaily(seed) {
+  /* `ready` is asked what the server has answered SINCE the click — boards and
+     pulls — so nothing a previous window asked for can satisfy it. */
+  async function openDaily(seed, ready) {
     const dom = await JSDOM.fromURL(origin + "/", {
       runScripts: "dangerously", pretendToBeVisual: true, resources: "usable",
       beforeParse(w) {
@@ -129,10 +151,18 @@ server.listen(0, "127.0.0.1", async () => {
         for (const k in seed || {}) if (seed[k] != null) w.localStorage.setItem(k, seed[k]);
       },
     });
-    await wait(4000);
-    const btn = dom.window.document.getElementById("homeDaily");
+    const d = dom.window.document;
+    await until(() => d.readyState === "complete" && !!dom.window.FCW &&
+      dom.window.FCW.timeState().trusted &&
+      !!d.getElementById("tbSignIn") && d.getElementById("tbSignIn").classList.contains("signed-in"), 30000);
+    const at = { daily: served.daily, pull: served.pull };
+    const btn = d.getElementById("homeDaily");
     if (btn) btn.click();
-    await wait(6000);
+    /* newPuzzle() marks the button busy before it asks for a board and clears
+       it once the board is built, so a count reached and the button clear is
+       a board finished rather than one still in flight. */
+    await until(() => ready({ daily: served.daily - at.daily, pull: served.pull - at.pull }) &&
+      !d.getElementById("newBtn").classList.contains("busy"), 30000);
     return dom;
   }
   const cells = (w) => [...w.document.querySelectorAll(".cell[data-x]")];
@@ -149,7 +179,11 @@ server.listen(0, "127.0.0.1", async () => {
   /* ---- 1. a normal open: the numbers agree, so the clamp branch is skipped */
   console.log("A daily opened the normal way");
   STATE_BODY = { state: null };
-  let dom = await openDaily();
+  let dom = await openDaily(null, (n) => n.daily >= 1 && n.pull >= 1);
+  /* Fixed on purpose: the pull has been answered but perhaps not yet read,
+     and "nothing is painted" below is a claim that no adoption followed —
+     which only time can give the chance to be false. */
+  await wait(1000);
   let w = dom.window;
   const grid = cells(w);
   t("the board renders", grid.length > 0, grid.length + " cells");
@@ -188,7 +222,8 @@ server.listen(0, "127.0.0.1", async () => {
     }),
     updatedAt: "2099-01-01T00:00:00.000Z",
   };
-  dom = await openDaily();
+  /* The adoption's rebuild is the second board asked for since the click. */
+  dom = await openDaily(null, (n) => n.daily >= 2);
   w = dom.window;
   const shown = painted(w);
   t("the account's letters reach the rendered grid",
@@ -222,7 +257,8 @@ server.listen(0, "127.0.0.1", async () => {
     helpActions: [], pauseCount: 0, pausedMs: 0,
   });
   const seasonWith = async (clubPref) => {
-    const d = await openDaily({ [DAILY_SLOT]: inProgress, "fcw.clubPref": clubPref });
+    const d = await openDaily({ [DAILY_SLOT]: inProgress, "fcw.clubPref": clubPref },
+      (n) => n.daily >= 1 && n.pull >= 1);
     const v = d.window.document.getElementById("tableSeason").textContent.trim();
     d.window.close();
     return v;

@@ -59,6 +59,9 @@ const t = (n, ok, d) => { ok ? pass++ : fail++; console.log(`${ok ? "  ok  " : "
 
 const TYPES = { ".html": "text/html; charset=utf-8", ".css": "text/css",
   ".js": "text/javascript", ".json": "application/json", ".txt": "text/plain" };
+/* Boards this server has answered. A board reopened mid-game shows no card
+   to wait for, so its rebuild is known by a request having gone out for it. */
+let dailyServed = 0;
 const ROUTES = {
   "/api/daily": apiDaily, "/api/practice": apiPractice,
   "/api/categories": apiCategories, "/api/check-answer": apiCheck,
@@ -78,6 +81,7 @@ const server = http.createServer(async (req, res) => {
     });
     const out = await fn({ request, env: {} });
     const body = await out.text();
+    if (url.pathname === "/api/daily") dailyServed++;
     res.writeHead(out.status, { "Content-Type": "application/json", Date: SERVER_DATE });
     return res.end(body);
   }
@@ -109,6 +113,22 @@ const server = http.createServer(async (req, res) => {
 });
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+/* WAIT FOR THE THING, NOT FOR A NUMBER OF MILLISECONDS — the fix
+   football/grid/journey_test.mjs carries, and the reasoning is written out
+   there. A fixed sleep after an action races the page on a loaded machine, so
+   work that has to LAND is waited on: boot until the document is complete and
+   the page holds the server's clock, a daily until its kick-off card is up or
+   its rebuild has come back, a save until the slot's bytes have changed. The
+   deadline is the guard against a wait that cannot end: a condition that
+   never comes true returns false, and the assertion after it fails as it
+   always would have. The club changes on the landing screen keep their fixed
+   sleeps: what they prove is that the debounced save did NOT overwrite
+   anything, and only time lets it have its chance. */
+const until = async (ok, ms = 10000) => {
+  const end = Date.now() + ms;
+  while (!ok() && Date.now() < end) await wait(20);
+  return ok();
+};
 /* Saves are keyed by board now: fcw.v04.daily.<no>, not one shared slot.
 
    A single slot held whichever daily was last opened, so an archive board
@@ -181,12 +201,24 @@ server.listen(0, "127.0.0.1", async () => {
         };
       },
     });
-    await wait(5500);
+    await until(() => dom.window.document.readyState === "complete" && !!dom.window.FCW &&
+      dom.window.FCW.timeState().trusted, 30000);
     return dom;
   }
   const daily = (w) => {
     try { return JSON.parse(w.localStorage.getItem(DAILY_SLOT)); } catch (e) { return null; }
   };
+  /* The slot as it stands now; the returned test is true once a save has
+     rewritten it. Taken BEFORE the action, so a save that landed earlier
+     cannot satisfy it. */
+  const changed = (w, k = DAILY_SLOT) => {
+    const was = w.localStorage.getItem(k);
+    return () => w.localStorage.getItem(k) !== was;
+  };
+  const kickCard = (w) => w.document.getElementById("startOverlay").classList.contains("show");
+  /* newPuzzle() marks the button busy before it asks for a board and clears
+     it once the board is built. */
+  const building = (w) => w.document.getElementById("newBtn").classList.contains("busy");
   const played = (r) => !!r && (Object.keys(r.letters || {}).length > 0 || !!r.elapsed);
   const snap = (w) => { const o = {}; for (const k of KEYS) o[k] = w.localStorage.getItem(k); return o; };
   const type = (w, s) => {
@@ -276,10 +308,16 @@ server.listen(0, "127.0.0.1", async () => {
   dom = await open(null);
   w = dom.window; $ = (id) => w.document.getElementById(id);
   ($("dailyBtn") || $("homeDaily")).click();
-  await wait(2500);
-  if ($("kickOffBtn")) { $("kickOffBtn").click(); await wait(500); }
+  await until(() => kickCard(w));
+  if ($("kickOffBtn")) { $("kickOffBtn").click(); await until(() => !kickCard(w)); }
   type(w, "BURN");
-  await wait(1500);
+  /* Not merely the next write: the first save after typing can land before
+     the clock has ticked once, so this waits for the record to carry both
+     the letters and some time — which is what the two checks below read. */
+  await until(() => {
+    const r = daily(w);
+    return !!r && Object.keys(r.letters || {}).length >= 4 && r.elapsed > 0;
+  });
   const after = daily(w);
   t("letters typed into the daily are written to storage",
     !!after && Object.keys(after.letters || {}).length >= 4,
@@ -290,9 +328,10 @@ server.listen(0, "127.0.0.1", async () => {
      because the club is part of the record. */
   const before = Object.keys(after.letters || {}).length;
   const mid = $("clubSelect");
+  const resaved = changed(w);
   mid.value = "Liverpool";
   mid.dispatchEvent(new w.Event("change", { bubbles: true }));
-  await wait(1200);
+  await until(resaved);
   const now = daily(w);
   t("changing club mid-game keeps the letters and records the club",
     !!now && Object.keys(now.letters || {}).length === before && now.club === "Liverpool",
@@ -306,8 +345,11 @@ server.listen(0, "127.0.0.1", async () => {
      early return were ever removed a single change would fire several saves.
      This holds the invariant rather than fixing anything. */
   console.log("\nThe change listener");
-  $("menuBtn").click(); await wait(600);
-  ($("dailyBtn") || $("homeDaily")).click(); await wait(2500);
+  $("menuBtn").click();
+  await until(() => $("homeOverlay").classList.contains("show"));
+  const asked = dailyServed;
+  ($("dailyBtn") || $("homeDaily")).click();
+  await until(() => dailyServed > asked && !building(w));
   const binds = w.__clubBinds || {};
   console.log("      bindings per control: " + JSON.stringify(binds));
   const most = Math.max(0, ...Object.values(binds));

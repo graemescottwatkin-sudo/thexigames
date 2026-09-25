@@ -83,6 +83,21 @@ const server = http.createServer(async (req, res) => {
 });
 
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+/* WAIT FOR THE THING, NOT FOR A NUMBER OF MILLISECONDS — the fix
+   football/grid/journey_test.mjs carries, and the reasoning is written out
+   there. A fixed sleep after an action races the page on a loaded machine, so
+   work that has to LAND is waited on: boot until the document is complete and
+   the page holds the server's clock, a daily until its kick-off card is up,
+   typing until the slot's bytes have changed. The deadline is the guard
+   against a wait that cannot end: a condition that never comes true returns
+   false, and the assertion after it fails as it always would have.
+   The fixed waits that remain are the ones proving something did NOT happen —
+   no write-back, no resurrection — which no condition can prove. */
+const until = async (ok, ms = 10000) => {
+  const end = Date.now() + ms;
+  while (!ok() && Date.now() < end) await wait(20);
+  return ok();
+};
 /* Saves are keyed by board: fcw.v04.daily.<no>. See save_test.mjs. */
 /* ONE READING OF THE CLOCK, HANDED TO BOTH SIDES — the same fix save_test.mjs
    carries and the reasoning is written out there. The day is read once, from
@@ -111,12 +126,22 @@ server.listen(0, "127.0.0.1", async () => {
         for (const k in seed || {}) if (seed[k] != null) w.localStorage.setItem(k, seed[k]);
       },
     });
-    await wait(5500);
+    await until(() => dom.window.document.readyState === "complete" && !!dom.window.FCW &&
+      dom.window.FCW.timeState().trusted, 30000);
     return dom;
   }
   const rec = (w, k = SLOT) => {
     try { return JSON.parse(w.localStorage.getItem(k)); } catch (e) { return null; }
   };
+  /* The slot as it stands now; the returned test is true once a save has
+     rewritten it. Taken BEFORE the action, so a save that landed earlier
+     cannot satisfy it — and typing is synchronous, so any write after it
+     carries the letters just typed. */
+  const changed = (w, k = SLOT) => {
+    const was = w.localStorage.getItem(k);
+    return () => w.localStorage.getItem(k) !== was;
+  };
+  const kickCard = (w) => w.document.getElementById("startOverlay").classList.contains("show");
   const letters = (r) => Object.keys((r && r.letters) || {}).length;
   const type = (w, s) => {
     for (const ch of s) w.document.dispatchEvent(new w.KeyboardEvent("keydown", { key: ch, bubbles: true }));
@@ -144,9 +169,10 @@ server.listen(0, "127.0.0.1", async () => {
     w.FCW.dailyNumber() === TODAY_NO,
     `page #${w.FCW.dailyNumber()}, fixtures #${TODAY_NO}` +
     (w.FCW.timeState().trusted ? "" : " — the page never got a trusted clock"));
-  ($("dailyBtn") || $("homeDaily")).click(); await wait(2500);
-  if ($("kickOffBtn")) { $("kickOffBtn").click(); await wait(500); }
-  type(w, "BURN"); await wait(1200);
+  ($("dailyBtn") || $("homeDaily")).click(); await until(() => kickCard(w));
+  if ($("kickOffBtn")) { $("kickOffBtn").click(); await until(() => !kickCard(w)); }
+  let saved = changed(w);
+  type(w, "BURN"); await until(saved);
   t("this window has a game in progress", letters(rec(w)) >= 4, letters(rec(w)) + " letters");
 
   asAnotherTab(w, SLOT, null);
@@ -175,9 +201,10 @@ server.listen(0, "127.0.0.1", async () => {
   console.log("\nA newer game written by another window");
   dom = await open(null);
   w = dom.window; $ = (id) => w.document.getElementById(id);
-  ($("dailyBtn") || $("homeDaily")).click(); await wait(2500);
-  if ($("kickOffBtn")) { $("kickOffBtn").click(); await wait(500); }
-  type(w, "BUR"); await wait(1200);
+  ($("dailyBtn") || $("homeDaily")).click(); await until(() => kickCard(w));
+  if ($("kickOffBtn")) { $("kickOffBtn").click(); await until(() => !kickCard(w)); }
+  saved = changed(w);
+  type(w, "BUR"); await until(saved);
   const mine = rec(w);
   t("this window has its own copy", letters(mine) >= 3, letters(mine) + " letters");
 
@@ -186,6 +213,8 @@ server.listen(0, "127.0.0.1", async () => {
     elapsed: 900,
   }));
   asAnotherTab(w, SLOT, theirs);
+  /* Fixed on purpose, both: the check is that nothing overwrites theirs, and
+     only time lets a pending save or the typing's debounce have its chance. */
   await wait(600);
   type(w, "ZZZ"); await wait(1500);
   const after = rec(w);
@@ -198,18 +227,21 @@ server.listen(0, "127.0.0.1", async () => {
   console.log("\nOne window on its own");
   dom = await open(null);
   w = dom.window; $ = (id) => w.document.getElementById(id);
-  ($("dailyBtn") || $("homeDaily")).click(); await wait(2500);
-  if ($("kickOffBtn")) { $("kickOffBtn").click(); await wait(500); }
-  type(w, "BURND"); await wait(1200);
+  ($("dailyBtn") || $("homeDaily")).click(); await until(() => kickCard(w));
+  if ($("kickOffBtn")) { $("kickOffBtn").click(); await until(() => !kickCard(w)); }
+  saved = changed(w);
+  type(w, "BURND"); await until(saved);
   const first = letters(rec(w));
-  type(w, "EN"); await wait(1200);
+  saved = changed(w);
+  type(w, "EN"); await until(saved);
   t("a single window keeps saving normally", letters(rec(w)) > first,
     first + " then " + letters(rec(w)) + " letters");
 
   /* A change to a key this window is not playing is none of its business. */
   asAnotherTab(w, "fcw.v04.practice", null);
-  await wait(500);
-  type(w, "P"); await wait(1200);
+  await wait(500);   // fixed: the handler ran inside dispatchEvent, so nothing is in flight to wait on
+  saved = changed(w);
+  type(w, "P"); await until(saved);
   t("a change to the other mode's slot is ignored", letters(rec(w)) > first,
     letters(rec(w)) + " letters");
   w.close();

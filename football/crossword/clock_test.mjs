@@ -146,7 +146,20 @@ server.listen(0, "127.0.0.1", async () => {
   });
   const w = dom.window, d = w.document;
   const wait = (ms) => new Promise((r) => setTimeout(r, ms));
-  await wait(7000);
+  /* WAIT FOR THE THING, NOT FOR A NUMBER OF MILLISECONDS — the fix
+     football/grid/journey_test.mjs carries, and the reasoning is written out
+     there. This slept 7000ms and hoped the sync had landed; a loaded machine
+     can lose that race. The page says when it has: the document is complete
+     and the clock it holds is the server's. The tile is redrawn in the same
+     callback that trusts the clock, so it is already on screen by then. The
+     deadline is the guard against a wait that cannot end: a sync that never
+     lands returns false, and the checks below fail as they always would have. */
+  const until = async (ok, ms = 10000) => {
+    const end = Date.now() + ms;
+    while (!ok() && Date.now() < end) await wait(20);
+    return ok();
+  };
+  await until(() => d.readyState === "complete" && !!w.FCW && w.FCW.timeState().trusted, 30000);
 
   console.log("\nThe landing tile, on a device whose calendar day is ahead of the server's");
   const FCW = w.FCW;
