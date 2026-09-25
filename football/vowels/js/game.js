@@ -15,7 +15,7 @@
  *   - no practice. There is now an archive picker and a finals catalogue; what
  *     is still missing is a practice mode, which this game may never want.
  */
-var BUILD = "v001v";
+var BUILD = "v001w";
 
 (function () {
   "use strict";
@@ -1165,6 +1165,7 @@ var BUILD = "v001v";
     state.picked = slotId;
     syncBench();
     drawPitch();
+    placeBench();
     /* AND THE BOX TAKES THE KEYS AGAIN. Clicking a tile moved focus to the
        tile, so the next thing typed went nowhere — the player selected a
        player, started typing and watched nothing happen. Selecting is how you
@@ -1243,6 +1244,25 @@ var BUILD = "v001v";
   }
 
   function hideBench() { $("benchRow").hidden = true; }
+
+  /* THE BENCH FLOATS OVER THE PITCH, AT THE END AWAY FROM THE PICKED TILE.
+     The owner, 25 Sep 2026: "on scrambled if i select a name the sizing
+     changes" -- the bench and the echo took rows of the locked screen, so the
+     pitch lost a third of its height on every pick and every card shrank and
+     grew back. On a locked screen it is laid over the pitch instead (the CSS
+     puts it in the pitch's own cell), and this says which end: the foot,
+     unless the tile being answered is in the lower half, where the bench
+     would cover it. Measured after drawPitch, which is what marks the tile. */
+  function placeBench() {
+    var tile = document.querySelector("#pitch .slot.picked");
+    var pitch = $("pitch");
+    var low = false;
+    if (tile && pitch) {
+      var t = tile.getBoundingClientRect(), p = pitch.getBoundingClientRect();
+      low = (t.top + t.bottom) / 2 > p.top + p.height / 2;
+    }
+    $("benchRow").classList.toggle("atTop", low);
+  }
 
   function slotOf(id) {
     return state.board.slots.find(function (s) { return String(s.id) === String(id); });

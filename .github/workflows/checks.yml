@@ -143,6 +143,12 @@ jobs:
       - name: The coming boards are checked, and the gate holds
         run: node tools/preflight_test.mjs
 
+      # What post_deploy writes into a gate, proved without production: both
+      # constants recorded or the game refused, and every other byte -- the
+      # line endings too -- left as the file had it.
+      - name: Recording a release rewrites two constants and nothing else
+        run: node tools/record_shipped_test.mjs
+
       # The play bot's reasoning half, proved offline against real boards and
       # against production's OWN judge: every word located from the grid a
       # browser is given, with no placements in it. If this claim were false the

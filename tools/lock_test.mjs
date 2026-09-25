@@ -350,6 +350,54 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
     await context.close();
   }
 
+  /* PICKING A TILE DOES NOT MOVE THE BOARD. The owner, 25 Sep 2026: "on
+     scrambled if i select a name the sizing changes" (and Vowels the same):
+     the bench and the echo took rows of the screen, and the pitch lost a third
+     of its height on every pick. Picked by a real tap, top row and bottom row:
+     the cards keep their size, the bench is on screen over the pitch, and it
+     does not cover the tile it is for. */
+  console.log(`\n${id}: picking a tile`);
+  for (const vp of [VIEWPORTS[0], VIEWPORTS[1], VIEWPORTS[3]]) {
+    const { page, context } = await open(game, 1, vp);
+    const size = () => page.evaluate(() => {
+      const r = (e) => e.getBoundingClientRect();
+      const tiles = [...document.querySelectorAll("#pitch .slot")].map(r);
+      return { h: Math.round(tiles[0].height), w: Math.round(tiles[0].width), pitch: Math.round(r(document.getElementById("pitch")).height),
+        scroll: document.documentElement.scrollHeight - innerHeight, locked: document.body.classList.contains("locked") };
+    });
+    const before = await size();
+    for (const which of ["top", "bottom"]) {
+      const at = await page.evaluate((w) => {
+        const tiles = [...document.querySelectorAll("#pitch .slot:not(.solved)")];
+        tiles.sort((a, b) => a.getBoundingClientRect().top - b.getBoundingClientRect().top);
+        const el = w === "top" ? tiles[0] : tiles[tiles.length - 1];
+        const q = el.getBoundingClientRect();
+        return { x: q.left + q.width / 2, y: q.top + q.height / 2, slot: el.dataset.slot };
+      }, which);
+      if (vp[2]) await page.touchscreen.tap(at.x, at.y); else await page.mouse.click(at.x, at.y);
+      await wait(400);
+      const after = await size();
+      const bench = await page.evaluate((slot) => {
+        const r = (e) => e.getBoundingClientRect();
+        const b = document.getElementById("benchRow"), p = document.getElementById("pitch");
+        const tile = document.querySelector(`#pitch .slot[data-slot="${slot}"]`);
+        const br = r(b), pr = r(p), tr = r(tile);
+        return { shown: !b.hidden && getComputedStyle(b).display !== "none",
+          overPitch: br.top >= pr.top - 1 && br.bottom <= pr.bottom + 1,
+          clearOfTile: br.bottom <= tr.top + 1 || br.top >= tr.bottom - 1,
+          picked: tile.classList.contains("picked") };
+      }, at.slot);
+      t(`${vp[0]}: picking a ${which}-row tile leaves every card its size and the page locked`,
+        after.locked && after.scroll <= 1 && Math.abs(after.h - before.h) <= 1 && Math.abs(after.w - before.w) <= 1 && Math.abs(after.pitch - before.pitch) <= 1,
+        `before ${JSON.stringify(before)} after ${JSON.stringify(after)}`);
+      t(`${vp[0]}: and its bench is over the pitch, clear of the tile it is for`,
+        bench.picked && bench.shown && bench.overPitch && bench.clearOfTile, JSON.stringify(bench));
+      await page.evaluate(() => document.getElementById("benchClose").click());
+      await wait(200);
+    }
+    await context.close();
+  }
+
   console.log(`\n${id}: the old-link banner`);
   for (const vp of [VIEWPORTS[0], VIEWPORTS[1]]) {
     const { page, context } = await open(game, 1, vp);
@@ -399,16 +447,23 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
     for (let i = 0; i < 11; i++) {
       const open = await page.$$eval("#pitch .slot:not(.solved):not(.given)", (els) => els.map((e) => e.dataset.slot));
       if (!open.length) break;
-      await page.click(`#pitch .slot[data-slot="${open[0]}"]`);
-      await page.click("#buyName");
+      /* Short and caught: a click something else intercepts is the board
+         being wrong, which the checks below report; left to throw it killed
+         the suite and named nothing (25 Sep 2026). */
+      try {
+        await page.click(`#pitch .slot[data-slot="${open[0]}"]`, { timeout: 3000 });
+        await page.click("#buyName", { timeout: 3000 });
+      } catch (e) { break; }
       await wait(250);
     }
     /* UNTIL FULL TIME HAS LANDED, not a fixed pause: under a full run's load
        the last reveal was still settling at 600ms and the page was measured
        mid-change (25 Sep 2026). A ceiling of ten seconds, then the lock check
        has had its frame. */
+    /* A wait that never ends is this check failing, not the suite crashing:
+       a crash names no check, and the prover read it as a pass (25 Sep 2026). */
     await page.waitForFunction(() => document.body.classList.contains("fulltime") &&
-      !document.getElementById("screenResults").hidden, null, { timeout: 10000 });
+      !document.getElementById("screenResults").hidden, null, { timeout: 10000 }).catch(() => {});
     await wait(600);
     const m = await page.evaluate(measure);
     t(`${vp[0]}: Full Time is locked, the board stays and nothing scrolls`,

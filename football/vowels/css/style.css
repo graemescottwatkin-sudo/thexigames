@@ -724,8 +724,24 @@ body.locked .pitch {
   container-type: size;
 }
 body.locked .feedback { grid-area: feedback; min-height: 18px; margin: 4px 2px 2px; font-size: 13.5px; }
-body.locked .echo { grid-area: echo; margin: 0 2px 4px; }
-body.locked .benchRow { grid-area: bench; margin-top: 6px; padding: 8px; }
+/* PICKING A TILE DOES NOT MOVE THE BOARD. The bench and the echo were rows of
+   this grid, so the pitch gave up a third of its height whenever a tile was
+   picked (the owner, 25 Sep 2026: "if i select a name the sizing changes").
+   The bench is laid over the pitch, in the pitch's own cell, at the end away
+   from the picked tile (game.js placeBench); the echo is not drawn here at
+   all -- it repeats the tile for a screen where the system keyboard hides the
+   pitch, and on a locked screen the pitch is never hidden and the picked tile
+   is marked on it. */
+body.locked .echo { display: none; }
+body.locked .benchRow {
+  grid-area: pitch;
+  align-self: end;
+  z-index: 6;
+  margin: 0 8px 8px;
+  padding: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .35);
+}
+body.locked .benchRow.atTop { align-self: start; margin: 8px 8px 0; }
 
 /* The answer row and the keys are in the flow at the foot of the screen, not
    fixed over it: the board is sized to what they leave, so there is nothing

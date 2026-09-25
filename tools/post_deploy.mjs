@@ -23,6 +23,7 @@
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
+import { recordShipped } from "./record_shipped.mjs";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 
@@ -136,34 +137,10 @@ if (!WRITE) {
 
 let unwritten = 0;
 for (const p of plan) {
-  const before = read(p.gateFile);
-  let gate = before;
-  gate = gate.replace(/const LAST_SHIPPED = "[^"]+";/, `const LAST_SHIPPED = "${p.newTag}";`);
-  /* NULL IS A SHAPE THIS HAS TO WRITE OVER. A game that has never shipped
-     carries `= null;` — the sentinel its gate reads as "nothing to compare
-     against yet" — and this pattern used to demand quotes, so Grid XI's first
-     hash was reported as written and was not. The trailing comment goes with
-     it: "nothing has shipped yet" beside a recorded hash is a lie. */
-  gate = gate.replace(/const LAST_SHIPPED_ASSETS = (?:"[^"]*"|null);[^\n]*/,
-    `const LAST_SHIPPED_ASSETS = "${p.newHash}";`);
-  /* EACH CONSTANT ANSWERS FOR ITSELF, and it did not used to.
-   *
-   * The guard was `gate === before` — one comparison for two rewrites — so it
-   * could only see a file where NEITHER landed. Who Am I's gate had no
-   * LAST_SHIPPED_ASSETS line at all: the tag replacement landed, the file
-   * differed from before, the guard was satisfied, and the report said
-   * "LAST_SHIPPED_ASSETS undefined -> dea4aa99f808361d" over a hash that was
-   * never written. That is the same fault the guard was added for — a no-op
-   * reported as a write — surviving inside the guard itself because it asked
-   * one question about two things.
-   *
-   * So the check is now made on the RESULT rather than on whether anything
-   * moved: after the rewrite, the file must literally contain each value this
-   * script says it recorded. A constant that is missing, renamed or written in
-   * a shape the pattern cannot match fails here instead of passing quietly. */
-  const missing = [];
-  if (!gate.includes(`const LAST_SHIPPED = "${p.newTag}";`)) missing.push("LAST_SHIPPED");
-  if (!gate.includes(`const LAST_SHIPPED_ASSETS = "${p.newHash}";`)) missing.push("LAST_SHIPPED_ASSETS");
+  /* THE REWRITE IS tools/record_shipped.mjs, where record_shipped_test proves
+     it without production: both constants recorded or the game refused, and
+     every other byte -- line endings included -- left as the file had it. */
+  const { text: gate, missing, changed } = recordShipped(read(p.gateFile), p.newTag, p.newHash);
   if (missing.length) {
     console.log(`FAIL  ${p.gateFile}: ${missing.join(" and ")} ` +
       `${missing.length > 1 ? "are" : "is"} absent or not in a shape this can ` +
@@ -171,6 +148,10 @@ for (const p of plan) {
     unwritten++;
     continue;
   }
+  /* A GATE ALREADY RECORDING WHAT IS LIVE IS NOT TOUCHED. Every game was
+     rewritten on every run whether it had moved or not, so a release of one
+     game rewrote twelve files. */
+  if (!changed) continue;
   fs.writeFileSync(path.join(ROOT, p.gateFile), gate);
   console.log(`  written  ${p.gateFile}`);
 }
