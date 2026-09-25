@@ -34,6 +34,15 @@
   align-items: center;
   gap: 12px;
   padding: 6px 16px;
+  /* UNDER THE SYSTEM BARS. A page with viewport-fit=cover (ten of them: it is
+     what lets interactive-widget and the keyboard behave) is drawn edge to
+     edge, and the browser -- or the app's WebView, before app 0.1.3 -- expects
+     the page to keep clear of the status bar and the notch itself. It did not,
+     and the bar sat under Android's clock (found in the app, 25 Sep 2026).
+     env() is 0 wherever nothing is in the way, so this costs nothing there. */
+  padding-top: calc(6px + env(safe-area-inset-top));
+  padding-left: calc(16px + env(safe-area-inset-left));
+  padding-right: calc(16px + env(safe-area-inset-right));
   background: var(--paper);
   border-bottom: 1px solid var(--line);
   /* Not sticky. A sticky bar on a phone eats the board's height for something
@@ -312,6 +321,11 @@ a.xic-slot:focus-visible { outline: 2px solid var(--ink); outline-offset: -2px; 
    play screen is body.flex-layout (it was fitted before the family's class
    existed), and its home screen is .home-showing, which scrolls. */
 .xic-aged-short { display: none; }
+/* The bottom of a locked play screen keeps clear of the gesture bar and the
+   home indicator, for the reason the bar keeps clear of the status bar above.
+   Not where the family's keyboard is on the page: it pads itself
+   (shared/xi-keys.css), and twice would be a strip of nothing under the keys. */
+body.locked:not(:has(.osk)) { box-sizing: border-box; padding-bottom: env(safe-area-inset-bottom); }
 body.locked .xic-aged,
 body.flex-layout:not(.home-showing) .xic-aged { flex-wrap: nowrap; gap: 10px; padding: 0 4px 0 14px; font-size: 13px; }
 body.locked .xic-aged-long,

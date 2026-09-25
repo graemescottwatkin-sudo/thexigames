@@ -1391,10 +1391,10 @@ const PERMA = {
   "football/quickfire": { asks: `/api/quickfire/daily?no=${PERMA_N}` },
   "football/scrambled": { asks: `/api/scrambled/daily?no=${PERMA_N}`, label: "#startKicker" },
   "football/vowels":    { asks: `/api/scrambled/daily?no=${PERMA_N}&cy=1`, label: "#startKicker" },
-  "football/whoami":    { asks: `/api/whoami/daily?no=${PERMA_N}`, label: "#waTodayKicker" },
+  "football/whoami":    { asks: `/api/whoami/daily?no=${PERMA_N}`, label: "#waTodayKicker", title: "#waToday .hc-title" },
   "football/wordsearch": { asks: "/api/wordsearch/archive" },
   "friends/crossword":  { asks: `/api/crossword/crossword_fr/daily?no=${PERMA_N}` },
-  "friends/whoami":     { asks: `/api/whoami/whoami_fr/daily?no=${PERMA_N}`, label: "#waTodayKicker" },
+  "friends/whoami":     { asks: `/api/whoami/whoami_fr/daily?no=${PERMA_N}`, label: "#waTodayKicker", title: "#waToday .hc-title" },
 };
 if (!ONLY || ONLY === "perma") {
   console.log(`\na board's own address, every game (board ${PERMA_N})`);
@@ -1418,6 +1418,7 @@ if (!ONLY || ONLY === "perma") {
     await page.goto(ORIGIN + `/${r}/daily/${PERMA_N}`, { waitUntil: "load" });
     await wait(1500);
     const said = row.label ? await page.$eval(row.label, (e) => e.textContent.replace(/\s+/g, " ").trim()).catch(() => "(no such element)") : null;
+    const titled = row.title ? await page.$eval(row.title, (e) => e.textContent.replace(/\s+/g, " ").trim()).catch(() => "(no such element)") : null;
     if (row.start && !asked.includes(row.asks)) {
       await page.click(row.start);
       await wait(1500);
@@ -1427,6 +1428,11 @@ if (!ONLY || ONLY === "perma") {
     if (row.label) {
       t(`${r}: and the page names board ${PERMA_N}, not today's`,
         new RegExp(`#\\s?${PERMA_N}\\b`).test(said) && !/today/i.test(said), said);
+    }
+    /* The line under the kicker too: Who Am I's said "Today's eleven" over
+       board 4 after its kicker was fixed (found in the app, 25 Sep 2026). */
+    if (row.title) {
+      t(`${r}: and the card's title does not call it today's`, titled !== "(no such element)" && titled.length > 0 && !/today/i.test(titled), titled);
     }
     await context.close();
   }

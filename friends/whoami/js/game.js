@@ -20,7 +20,7 @@
  * and a roster is a candidate list for the door.
  */
 var DECK_WORD = { main: 'Everyday', expert: 'Deep cut' };
-var BUILD = "v001c";
+var BUILD = "v001d";
 
 (function bootstrap() {
   'use strict';
@@ -921,6 +921,13 @@ function shareTextFor(r, solved) {
   el.boardDate.textContent = formatDate(BOARD.day);
   el.waTodayKicker.textContent =
     DATA.isToday ? 'TODAY · #' + BOARD.no : 'BOARD #' + BOARD.no;
+  /* And the card's title with it: "Today's eleven" over board 4 was the kicker
+     fixed and the line under it not (found in the app, 25 Sep 2026). The
+     title is the theme's own words ("eleven", "three"), so only the day goes. */
+  var todayTitle = el.waToday && el.waToday.querySelector('.hc-title');
+  if (!DATA.isToday && todayTitle) {
+    todayTitle.textContent = todayTitle.textContent.replace(/^Today’s /, 'The ');
+  }
 
   /* HOW MANY BOARDS THERE ARE, from the only number on the page that knows:
      today's is the last one, so today's ordinal IS the count. On an archive
