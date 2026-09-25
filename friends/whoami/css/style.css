@@ -183,6 +183,15 @@ body{margin:0;font-family:var(--body)}
   color:var(--ink);font-size:16px;font-family:inherit}
 #guessInput:focus{outline:none;border-color:var(--pitch)}
 .guessRow .kick{flex:0 0 auto}
+/* THE BUTTON IS A BUTTON. .kick was never given a face in this stylesheet --
+   the other games' own sheets each define it -- so "Name him" beside the box
+   drew as the browser's grey default, faded further while disabled, and read
+   as a second input (the owner, 25 Sep 2026). The family's face, as
+   Scrambled's: display type on the pitch colour. */
+.wa-ed .kick{font-family:var(--disp);font-weight:600;font-size:17px;letter-spacing:.04em;
+  text-transform:uppercase;min-height:var(--tap);padding:0 18px;border-radius:10px;
+  border:1px solid var(--pitch-deep,var(--pitch));background:var(--pitch);color:#fff;cursor:pointer}
+.wa-ed .kick:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
 
 /* The type-ahead. It lists names from the ANSWER SPACE — the same 3,146 every
    day — so it narrows typing rather than narrowing the puzzle. */
@@ -504,6 +513,14 @@ body.locked .wa-ed .pf-years{font-size:18px}
 body.locked .wa-ed .pf-nums{margin:8px 0 0;padding:8px 0 0;gap:20px}
 body.locked .wa-ed .pf-num b{font-size:24px}
 body.locked .wa-ed .suggest{max-height:30vh;overflow:auto}
+/* NOTHING HOLDS A LINE FOR WHAT HAS NOT HAPPENED. The empty feedback line, the
+   empty tries line and the empty type-ahead kept about 70px between the box
+   and "Need another clue?" on a 412 phone (the owner, 25 Sep 2026: "a little
+   wasted white space so move it up"). Each comes back the moment it has
+   something to say, and the clue panel under them is what gives way. Was the
+   short phone's rule alone; it is every size's. */
+body.locked .wa-ed .feedback:empty,body.locked .wa-ed .tries:empty,body.locked .wa-ed .suggest:empty,
+body.locked .wa-ed .ladder:empty{display:none}
 body.locked .wa-ed .cluesHead{margin:10px 0 8px}
 body.locked .wa-ed .ladder{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
 body.locked .wa-ed .rung{min-height:0;padding:10px 12px}

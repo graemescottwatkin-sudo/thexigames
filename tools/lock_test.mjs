@@ -808,10 +808,20 @@ function measureDuel() {
     deadSpace: Math.round(rect(stage).bottom - pad - last),
     results: vis(results) ? [Math.round(rect(results).top), Math.round(rect(results).bottom)] : null,
     vh: innerHeight,
+    /* The owner, 25 Sep 2026: "quite a bit of white space at the top ... the
+       active box is massive compared to the answered ones". The gap from the
+       ladder to the first thing under it, and a settled row's height beside
+       the live pair's. */
+    band: (() => { const l = document.querySelector("#screenGame .ladder"), f = rows.firstElementChild;
+      return l && f && vis(l) ? Math.round(rect(f).top - rect(l).bottom) : null; })(),
+    settledH: (() => { const d = document.querySelector("#rows .duel.settled"); return d ? Math.round(rect(d).height) : 0; })(),
+    boxes: ["#screenGame", "#screenGame .game", "#screenGame .stage", "#rows", ".dug"].map((q) => {
+      const e = document.querySelector(q); return e ? q.split(" ").pop() + ":" + Math.round(rect(e).height) + "/" + e.scrollHeight : q + ":-";
+    }).join(" "),
   };
 }
 const duelOk = (m) => m.locked && m.scrollY <= 1 && m.scrollX <= 1 && !m.stageCut && m.liveWhole && m.offscreen === 0 && m.deadSpace <= 24;
-const duelSay = (m) => `locked ${m.locked}, scroll ${m.scrollY}/${m.scrollX}${m.stageCut ? ", stage overflows" : ""}, live pair ${m.liveH}px${m.liveWhole ? "" : " NOT WHOLE"}, names at ${m.whoSize}, ${m.settled} settled, off screen ${m.offscreen}, empty below ${m.deadSpace}px`;
+const duelSay = (m) => `locked ${m.locked}, scroll ${m.scrollY}/${m.scrollX}${m.stageCut ? ", stage overflows" : ""}, live pair ${m.liveH}px${m.liveWhole ? "" : " NOT WHOLE"}, names at ${m.whoSize}, ${m.settled} settled, off screen ${m.offscreen}, empty below ${m.deadSpace}px${m.scrollY > 1 ? " [" + m.boxes + "]" : ""}`;
 
 /* THE LONGEST OF EVERYTHING. Measured in the bank on 24 Sep 2026: a name of 41
    characters, a context line of 77, a category of 53 and a subtitle of 101.
@@ -870,10 +880,21 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "d
     const first = await page.evaluate(measureDuel);
     t(`${vp[0]}: the longest names -- locked, no scroll, the live pair whole, the calls and the clock on screen`,
       duelOk(first), duelSay(first));
+    t(`${vp[0]}: the first call has no empty band above the live pair`,
+      first.band !== null && first.band >= 0 && first.band <= 16, `gap under the ladder ${first.band}px`);
+    if (process.env.LOCK_SHOTS) await page.screenshot({ path: path.join(process.env.LOCK_SHOTS, `${id}-${vp[0]}-first.png`) });
     for (let i = 0; i < 4; i++) await callOne(page);
     const later = await page.evaluate(measureDuel);
     t(`${vp[0]}: four calls later -- the settled rows scroll in their panel and the live pair is still whole`,
       duelOk(later) && later.settled >= 4, duelSay(later));
+    /* Asked as a share of the screen, not against a settled row: this suite's
+       names are padded to the bank's longest, so its settled rows run 126 to
+       168px and a ratio passed the very 320px pair it exists to refuse. The
+       owner's 280px pair was a third of the play area; this holds it under 30%
+       of the screen. */
+    t(`${vp[0]}: and the live pair takes 30% of the screen or less, in scale with the answered ones`,
+      later.liveH > 0 && later.liveH <= later.vh * 0.3, `live ${later.liveH}px of ${later.vh}, settled ${later.settledH}px`);
+    if (process.env.LOCK_SHOTS) await page.screenshot({ path: path.join(process.env.LOCK_SHOTS, `${id}-${vp[0]}-later.png`) });
     await context.close();
   }
 
@@ -1254,6 +1275,30 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
     const bought = await page.evaluate(measureProfile);
     t(`${vp[0]}: with every clue bought, they scroll in their own panel and the rest stays on screen`,
       profileOk(bought) && bought.cluesH > 0, profileSay(bought));
+    if (process.env.LOCK_SHOTS) await page.screenshot({ path: path.join(process.env.LOCK_SHOTS, `${id}-${vp[0]}-bought.png`) });
+    /* THE OWNER'S THREE, 25 Sep 2026, football only (Friends has no career
+       list and draws its clues in the profile): the one-line clue above the
+       career that scrolls; no empty lines holding the clue panel down; and
+       the button beside the box drawn as a button, not the browser's grey. */
+    if (id === "whoami") {
+      const o = await page.evaluate(() => {
+        const r = (e) => e.getBoundingClientRect();
+        const boxes = [...document.querySelectorAll("#clues .clue")];
+        const career = boxes.findIndex((b) => b.querySelector(".spells"));
+        const born = boxes.findIndex((b) => /Born \d{4}/.test(b.textContent));
+        const go = document.getElementById("guessGo");
+        const pitch = getComputedStyle(document.documentElement).getPropertyValue("--pitch").trim();
+        const probe = document.createElement("span"); probe.style.color = pitch; document.body.appendChild(probe);
+        const pitchRgb = getComputedStyle(probe).color; probe.remove();
+        return { career, born, gap: Math.round(r(document.querySelector(".cluesHead")).top - r(document.querySelector(".guessRow")).bottom),
+          goBg: getComputedStyle(go).backgroundColor, pitchRgb, goRight: Math.round(r(go).right), vw: innerWidth };
+      });
+      t(`${vp[0]}: nationality and year of birth sit above the career, which is last`,
+        o.born >= 0 && o.career >= 0 && o.born < o.career, `born at ${o.born}, career at ${o.career}`);
+      t(`${vp[0]}: no empty lines between the box and "Need another clue?"`, o.gap >= 0 && o.gap <= 24, `${o.gap}px`);
+      t(`${vp[0]}: the button beside the box is drawn as a button, and whole`,
+        o.goBg === o.pitchRgb && o.goRight <= o.vw, `background ${o.goBg} against the pitch's ${o.pitchRgb}, right edge ${o.goRight} of ${o.vw}`);
+    }
     await context.close();
   }
 

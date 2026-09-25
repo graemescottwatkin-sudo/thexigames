@@ -19,7 +19,7 @@
  * one especially, because deciding it here would need the club's whole roster
  * and a roster is a candidate list for the door.
  */
-var BUILD = "v001p";
+var BUILD = "v001q";
 
 (function bootstrap() {
   'use strict';
@@ -648,7 +648,18 @@ function start() {
       bits.push('<span class="c-body answer">' + esc(r.answer) + '</span>');
     }
     box.innerHTML = bits.join('');
-    el.clues.appendChild(box);
+    /* THE FIXED-HEIGHT CLUES FIRST, THE CAREER LAST. The owner, 25 Sep 2026:
+       "Nationality and year of birth go to the top, above clubs as its a fixed
+       height and clubs can be 1 or 20 or in between". Bought second, it was
+       drawn under a career that scrolls, so it could only be read by scrolling
+       past every club. A one-line clue goes in ahead of the career; the list
+       whose length varies stays at the foot, where the panel's own scroll
+       takes up the difference. */
+    var career = !!((r.spells && r.spells.length) || r.career);
+    if (career) box.classList.add('c-career');
+    var firstCareer = career ? null : el.clues.querySelector('.clue.c-career');
+    if (firstCareer) el.clues.insertBefore(box, firstCareer);
+    else el.clues.appendChild(box);
   }
 
   /* ---------------------------------------------------------- the guessing */
