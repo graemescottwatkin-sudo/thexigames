@@ -59,6 +59,13 @@ let postDown = false;
 const posts = [];
 let stampN = 0;
 const stamp = () => new Date(Date.UTC(2026, 8, 24, 12, 0, stampN++)).toISOString();
+/* WHICH WINDOW IS OPEN. A closed window is a force-stopped app, and nothing
+   it had in flight lands: every request carries its window's number and a
+   push from any other is dropped like a lost one. The fixed sleeps used to
+   hide this — they let a closed window's second push arrive before the next
+   case set the account up — and once they went, it arrived after, and case 2
+   adopted case 1's letters. */
+let windowNo = 0;
 
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://127.0.0.1");
@@ -73,6 +80,7 @@ const server = http.createServer(async (req, res) => {
     if (req.method === "POST") {
       let raw = ""; for await (const c of req) raw += c;
       const body = JSON.parse(raw || "{}");
+      if (Number(req.headers["x-test-window"]) !== windowNo) { req.socket.destroy(); return; }
       /* NO SIGNAL: the socket dies with no answer, as in a tunnel. */
       if (postDown) { posts.push({ lost: true, body }); req.socket.destroy(); return; }
       posts.push({ lost: false, body });
@@ -113,28 +121,61 @@ const deviceOf = (w) => {
   for (let i = 0; i < w.localStorage.length; i++) { const k = w.localStorage.key(i); out[k] = w.localStorage.getItem(k); }
   return out;
 };
-async function openDaily({ fresh = false, seed = null } = {}) {
+/* Built, and no build in flight: newPuzzle marks #newBtn busy before it asks
+   for the board and clears it only after finishBuild has painted. */
+const built = (w) => cells(w).length > 0 && !w.document.getElementById("newBtn").classList.contains("busy");
+/* The account's journey taken: pullState writes the account's stamp into the
+   board's sync record and starts the rebuild in the same breath, so the stamp
+   there and nothing building means the adopted board is the one painted. */
+const adopted = (w) => {
+  let s = null; try { s = JSON.parse(w.localStorage.getItem(SYNC)); } catch (e) {}
+  return !!s && s.syncedAt === account.updatedAt && built(w);
+};
+/* Kept and sent: pullState pushes this device's play instead of asking. */
+const pushed = () => posts.some((p) => !p.lost);
+async function openDaily({ fresh = false, seed = null, settled = () => true } = {}) {
+  const mine = ++windowNo;
+  /* Pulls of the account's journey the page has asked for and not yet read.
+     A board resumed at boot pulls too, and may adopt; a click while that is in
+     flight rebuilds from the older local copy, which then paints last. */
+  let pulls = 0;
   const dom = await JSDOM.fromURL(origin + "/", {
     runScripts: "dangerously", pretendToBeVisual: true, resources: "usable",
     beforeParse(w) {
       w.matchMedia = () => ({ matches: false, addListener() {}, removeListener() {} });
       w.scrollTo = () => {}; w.scrollBy = () => {};
-      w.fetch = (u, o) => fetch(String(u).startsWith("http") ? u : origin + u, o);
+      w.fetch = (u, o = {}) => {
+        const headers = new Headers(o.headers);
+        headers.set("X-Test-Window", String(mine));
+        const sent = fetch(String(u).startsWith("http") ? u : origin + u, { ...o, headers });
+        if (!String(u).startsWith("/api/account/state?")) return sent;
+        pulls++;
+        return sent.then((r) => {
+          const json = r.json.bind(r);
+          r.json = () => json().finally(() => { pulls--; });
+          return r;
+        }, (e) => { pulls--; throw e; });
+      };
       w.confirm = () => true;
       if (fresh) w.localStorage.clear();
       for (const k in seed || {}) w.localStorage.setItem(k, seed[k]);
     },
   });
-  await wait(4000);
-  const d = dom.window.document;
+  const w = dom.window, d = w.document;
+  /* Signed in before the board is asked for: pullState does nothing without an
+     account. A board the page resumed by itself at boot is let finish first,
+     its pull read and any journey it adopted built. */
+  await until(() => d.readyState === "complete" &&
+    (d.getElementById("accountToggle") || {}).textContent === "account" &&
+    pulls === 0 && !d.getElementById("newBtn").classList.contains("busy"), 30000);
   const btn = d.getElementById("homeDaily");
   if (btn) btn.click();
-  await wait(2500);
+  await until(() => built(w), 30000);
   const stage = d.querySelector(".stage");
   if (stage && stage.classList.contains("prestart")) {
     d.getElementById("kickOffBtn").dispatchEvent(new dom.window.Event("click", { bubbles: true }));
   }
-  await wait(4000);
+  await until(() => settled(w), 30000);
   return dom;
 }
 const cells = (w) => [...w.document.querySelectorAll("#grid .cell[data-x]")];
@@ -151,10 +192,16 @@ async function typeInto(w, key, ch) {
   const [x, y] = key.split(",");
   w.document.querySelector(`#grid .cell[data-x="${x}"][data-y="${y}"]`)
     .dispatchEvent(new w.Event("pointerdown", { bubbles: true }));
-  await wait(120);
+  await wait(120);                                  // pauses between synchronous handlers, not a race
   w.document.dispatchEvent(new w.KeyboardEvent("keydown", { key: ch, bubbles: true }));
   await wait(200);
 }
+/* WAIT FOR THE THING, NOT FOR A NUMBER OF MILLISECONDS. openDaily slept 4s,
+   2.5s and 4s, and a loaded machine loses that race (the grid's journey went
+   red that way on 24 Sep 2026). It now waits on what the page says: signed
+   in, the board built, and the case's own settling — the account's journey
+   adopted, or this device's play pushed. The deadline stops a wait that
+   cannot end; a condition that never comes true fails the assertion after it. */
 async function until(test, ms = 15000) {
   const end = Date.now() + ms;
   while (Date.now() < end) { if (test()) return true; await wait(250); }
@@ -184,7 +231,7 @@ console.log("1. Letters typed while pushes fail, then a force-stop and a reopen"
   postDown = true;
   const WORD = ["Q", "R", "S"];
   for (let i = 0; i < 3; i++) await typeInto(w, targets[i], WORD[i]);
-  await wait(3500);
+  await until(() => targets.every((k, i) => ((slot(w) || {}).letters || {})[k] === WORD[i]));
   const local = slot(w);
   t("the letters are saved on the device",
     targets.every((k, i) => local && local.letters && local.letters[k] === WORD[i]),
@@ -195,7 +242,7 @@ console.log("1. Letters typed while pushes fail, then a force-stop and a reopen"
   dom.window.close();                                   // the force-stop
 
   postDown = false; posts.length = 0;
-  dom = await openDaily({ fresh: true, seed: device });  // the relaunch, same device
+  dom = await openDaily({ fresh: true, seed: device, settled: pushed });  // the relaunch, same device
   w = dom.window;
   const shown = painted(w);
   t("THE REPORTED FAULT: the letters are back on the reopened board",
@@ -206,7 +253,9 @@ console.log("1. Letters typed while pushes fail, then a force-stop and a reopen"
   t("and they are sent to the account, which now holds them",
     targets.every((k, i) => (sent.letters || {})[k] === WORD[i]),
     Object.keys(sent.letters || {}).length + " letters on the account");
-  await wait(1500);
+  /* Carried only once the page has written the account's stamp for that push
+     into its sync record: case 2 needs a board with nothing pending. */
+  await until(() => { try { return JSON.parse(w.localStorage.getItem(SYNC)).syncedAt === account.updatedAt; } catch (e) { return false; } });
   carried = deviceOf(w);
   dom.window.close();
 }
@@ -218,7 +267,7 @@ console.log("\n2. Another device's newer journey, on a board this device has ful
   const other = {}; ["J", "K", "L"].forEach((c, i) => { other[targets[i]] = c; });
   account = { state: snapWith(other, 300), updatedAt: stamp() };
   posts.length = 0;
-  const dom = await openDaily({ fresh: true, seed: carried });
+  const dom = await openDaily({ fresh: true, seed: carried, settled: adopted });
   const shown = painted(dom.window);
   t("the newer journey is adopted: cross-device still works",
     targets.every((k) => shown[k] === other[k]),
@@ -239,7 +288,7 @@ console.log("\n2b. Unpushed play here, and a newer journey from another device")
   const theirs = {}; ["G", "H", "I"].forEach((c, i) => { theirs[targets[i]] = c; });
   account = { state: snapWith(theirs, 400), updatedAt: stamp() };
   posts.length = 0;
-  const dom = await openDaily({ fresh: true, seed: device });
+  const dom = await openDaily({ fresh: true, seed: device, settled: pushed });
   const shown = painted(dom.window);
   t("this device's unpushed play is kept over the newer remote",
     targets.every((k) => shown[k] === mine.letters[k]),
@@ -255,7 +304,7 @@ console.log("\n3. A device that saved before this fix");
   const mine = {}; ["A", "B", "C"].forEach((c, i) => { mine[targets[i]] = c; });
   const theirs = {}; ["X", "Y", "Z"].forEach((c, i) => { theirs[targets[i]] = c; });
   account = { state: snapWith(theirs, 200), updatedAt: stamp() };
-  const dom = await openDaily({ fresh: true, seed: { [SLOT]: snapWith(mine, 100) } });
+  const dom = await openDaily({ fresh: true, seed: { [SLOT]: snapWith(mine, 100) }, settled: adopted });
   const shown = painted(dom.window);
   t("no sync record: the old rule, and the account's newer journey is taken",
     targets.every((k) => shown[k] === theirs[k]),
@@ -270,7 +319,7 @@ console.log("\n4. A board emptied by a reset, with a stale sync record");
   const dom = await openDaily({ fresh: true, seed: {
     [SLOT]: snapWith({}, 45),
     [SYNC]: JSON.stringify({ syncedAt: "2026-01-01T00:00:00.000Z", sig: "a board that is gone" }),
-  } });
+  }, settled: adopted });
   const shown = painted(dom.window);
   t("an empty board has nothing to lose: the account's journey is taken",
     targets.every((k) => shown[k] === theirs[k]),

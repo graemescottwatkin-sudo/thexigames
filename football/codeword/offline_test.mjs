@@ -35,6 +35,27 @@ const ROOT = path.join(DIR, "..", "..");
 let pass = 0, fail = 0;
 const t = (n, ok, d) => { ok ? pass++ : fail++; console.log(`${ok ? "  ok  " : "FAIL  "}${n}${d ? "  — " + d : ""}`); };
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
+/* WAIT FOR THE THING, NOT FOR A NUMBER OF MILLISECONDS, as the grid's journey
+   learned on 24 Sep 2026: a fixed sleep after an action is a race, and a loaded
+   machine loses it. The page holds its round and its asks in closures, so what
+   is waited on is `heard`: every answer the page has READ from the referee,
+   and every ask that came back to it lost, recorded where its fetch resolves.
+   The page's own handler runs in the same turn, so by the next look it has
+   acted on what it heard. The deadline stops a wait that cannot end: a
+   condition that never comes true fails the assertion after it. The sleeps
+   that remain give an ABSENCE, or the retry timer, its window. */
+const until = async (ok, ms = 10000) => {
+  const end = Date.now() + ms;
+  while (!ok() && Date.now() < end) await wait(20);
+  return ok();
+};
+const heard = [];
+const told = (what, ok = true) => heard.filter((e) => e.what === what && e.ok === ok).length;
+/* BUT NOT TOO LONG AFTER "online". The page retries by itself every 5s
+   (RETRY_MS), which is the second case's whole point, so a reconnect given
+   longer than that could be the timer's doing and would pass with the
+   "online" handler gone. Well under it, so what lands was the event's. */
+const ONLINE_MS = 3000;
 
 const MIME = { ".html": "text/html; charset=utf-8", ".css": "text/css",
   ".js": "text/javascript", ".json": "application/json", ".png": "image/png",
@@ -112,22 +133,35 @@ const PORT = server.address().port;
 async function open() {
   const dom = await JSDOM.fromURL(`http://localhost:${PORT}/football/codeword/`, {
     runScripts: "dangerously", resources: "usable", pretendToBeVisual: true,
-    beforeParse(win) { win.fetch = (u, o) => globalThis.fetch(new URL(u, win.location.href), o); },
+    beforeParse(win) {
+      win.fetch = (u, o) => {
+        const url = new URL(u, win.location.href);
+        const what = url.pathname.startsWith("/api/codeword/") ? url.pathname.split("/").pop() : null;
+        return globalThis.fetch(url, o).then((r) => {
+          if (what) {
+            const json = r.json.bind(r);
+            r.json = () => json().then((v) => { heard.push({ what, ok: true }); return v; });
+          }
+          return r;
+        }, (e) => { if (what) heard.push({ what, ok: false }); throw e; });
+      };
+    },
   });
   await new Promise((r) => dom.window.addEventListener("load", r));
-  await wait(600);
+  await until(() => !!dom.window.document.querySelector("#key [data-n]"));   // boot has drawn the board
   return dom;
 }
 
 /* A letter onto a number: pick the number that `on` belongs to in the key,
-   then type `letter` (the right one unless a wrong one is asked for). */
+   then type `letter` (the right one unless a wrong one is asked for). Typing
+   is synchronous; whatever it sets off is waited on by the caller, which
+   knows what that is. */
 async function put(dom, on, letter = on) {
   const d = dom.window.document;
   const k = d.querySelector(`#key [data-n="${CODE[on]}"]`);
   if (!k || k.classList.contains("absent")) throw new Error("no number on this board for " + on);
   k.click();
   d.dispatchEvent(new dom.window.KeyboardEvent("keydown", { key: letter, bubbles: true }));
-  await wait(250);
 }
 const guessed = (dom, on) => {
   const n = CODE[on];
@@ -139,12 +173,14 @@ const marks = () => log.filter((e) => e.what === "mark");
 
 console.log("A word finished with no signal, then the signal returns");
 {
-  log.length = 0; down = false;
+  log.length = 0; heard.length = 0; down = false;
   const dom = await open();
   await put(dom, "A");                              // opens the round: /play reached the server
+  await until(() => told("play") > 0);
   t("the round opened with a signal", log.some((e) => e.what === "play" && e.reached));
   down = true;
   await put(dom, "T");                              // CAT across and down are both complete now
+  await until(() => told("mark", false) > 0);
   t("finishing the word offline asked the referee, and the ask was lost",
     marks().length >= 1 && marks().every((e) => !e.reached), marks().length + " asks, none reached");
   t("nothing is marked while there is no signal", solved(dom) === 0, "solved " + solved(dom));
@@ -153,45 +189,53 @@ console.log("A word finished with no signal, then the signal returns");
 
   down = false;
   const before = marks().length;
+  const answered = told("mark");
   dom.window.dispatchEvent(new dom.window.Event("online"));
-  await wait(500);
+  await until(() => told("mark") > answered, ONLINE_MS);
   t("coming back online confirms the word, with no second word typed",
     solved(dom) === 2 && marks().length === before + 1 && marks().at(-1).reached,
     `solved ${solved(dom)}, ${marks().length - before} new ask(s)`);
   const settled = marks().length;
-  await wait(6000);
+  await wait(6000);                                 // an absence: this one stays fixed
   t("and once confirmed, the retrying stops", marks().length === settled, `${marks().length - settled} more asks`);
   dom.window.close();
 }
 
 console.log("\nThe same, on a phone whose wifi never fires \"online\"");
 {
-  log.length = 0; down = false;
+  log.length = 0; heard.length = 0; down = false;
   const dom = await open();
   await put(dom, "A");
+  await until(() => told("play") > 0);
   down = true;
   await put(dom, "T");
+  await until(() => told("mark", false) > 0);       // lost, and the retry timer armed on it
   down = false;
-  await wait(6000);                                 // the timer alone, no event
+  await wait(6000);                                 // the timer alone, no event: its own 5s, left to fire
   t("the timed retry confirms the word by itself", solved(dom) === 2 && marks().some((e) => e.reached),
     `solved ${solved(dom)}`);
   /* THE GUARD IS FREE AGAIN: the next word is asked about as normal. Before
      the fix `asking` stayed latched and this word was never asked at all. */
+  const answered = told("mark");
   await put(dom, "R");
   await put(dom, "E");                              // ARE complete and right
+  await until(() => told("mark") > answered);
   t("and the next word is marked as normal afterwards", solved(dom) === 3, `solved ${solved(dom)}`);
   dom.window.close();
 }
 
 console.log("\nA word the referee marked wrong");
 {
-  log.length = 0; down = false;
+  log.length = 0; heard.length = 0; down = false;
   const dom = await open();
   await put(dom, "A");
   await put(dom, "T");
+  await until(() => told("mark") > 0);              // CAT confirmed
   await put(dom, "R");
   const before = marks().length;
+  const answered = told("mark");
   await put(dom, "E", "N");                         // N on E's number: ARN, complete and wrong
+  await until(() => told("mark") > answered);       // and the referee's no has been read
   const asked = marks().length;
   /* THE SCENARIO MUST EXIST before its absence of retries means anything: the
      wrong word is complete on the grid, and it was put to the referee. */
@@ -199,7 +243,7 @@ console.log("\nA word the referee marked wrong");
     `R=${guessed(dom, "R")} E=${guessed(dom, "E")}`);
   t("is asked about once, and not marked", asked === before + 1 && marks().at(-1).reached && solved(dom) === 2,
     `${asked - before} ask(s), solved ${solved(dom)}`);
-  await wait(6000);
+  await wait(6000);                                 // an absence: this one stays fixed
   t("and is NOT re-asked on a timer: a wrong answer is not owed anything",
     marks().length === asked, `${marks().length - asked} more asks`);
   dom.window.close();
@@ -207,25 +251,26 @@ console.log("\nA word the referee marked wrong");
 
 console.log("\nA whistle blown with no signal");
 {
-  log.length = 0; down = false;
+  log.length = 0; heard.length = 0; down = false;
   const dom = await open();
   const d = dom.window.document;
   await put(dom, "A");
+  await until(() => told("play") > 0);              // a whistle with no round has nothing to ask
   down = true;
   d.getElementById("whistle").click();
-  await wait(400);
+  await until(() => told("finish", false) > 0);
   const ft = d.getElementById("ft");
   t("the whistle's call was lost", log.some((e) => e.what === "finish" && !e.reached));
   t("and no Full Time is invented without the referee", !ft.classList.contains("on"));
   down = false;
   dom.window.dispatchEvent(new dom.window.Event("online"));
-  await wait(600);
+  await until(() => told("finish") > 0, ONLINE_MS);
   const fin = log.filter((e) => e.what === "finish" && e.reached);
   t("the connection returning brings Full Time", ft.classList.contains("on"), ft.className);
   t("with the server's verdict, not one worked out on the page",
     d.getElementById("ftScore").textContent === "97" && fin.length === 1,
     `score ${d.getElementById("ftScore").textContent}, ${fin.length} finish reached`);
-  await wait(6000);
+  await wait(6000);                                 // an absence: this one stays fixed
   t("and the whistle is asked for once, not again after it answered",
     log.filter((e) => e.what === "finish" && e.reached).length === 1);
   dom.window.close();
