@@ -20,7 +20,7 @@
  * and a roster is a candidate list for the door.
  */
 var DECK_WORD = { main: 'Everyday', expert: 'Deep cut' };
-var BUILD = "v001b";
+var BUILD = "v001c";
 
 (function bootstrap() {
   'use strict';
@@ -39,7 +39,13 @@ var BUILD = "v001b";
   window.XIWA_API = api;
 
   var hash = location.hash || "";
-  var askedNo = (/[#&]b=(\d+)/.exec(hash) || [])[1];
+  /* A BOARD'S OWN ADDRESS, as well as the older #b= form. /whoami/daily/4 is
+     what the archive and the sitemap give board 4, and until v001o the page
+     read only the hash, so it dealt today's board under "TODAY" (found in the
+     app, 25 Sep 2026). */
+  var permaNo = window.XIChrome && window.XIChrome.permalink ? window.XIChrome.permalink.read() : null;
+  var askedNo = (/[#&]b=(\d+)/.exec(hash) || [])[1] ||
+    (/^[1-9][0-9]*$/.test(permaNo || "") ? permaNo : undefined);
   var url = "/api/whoami/whoami_fr/daily" + (askedNo ? "?no=" + encodeURIComponent(askedNo) : "");
 
   /* A PERMANENT CONDITION MUST NOT BE DRESSED AS A TRANSIENT ONE. QuickFire
@@ -914,7 +920,7 @@ function shareTextFor(r, solved) {
   el.boardNo.textContent = 'No. ' + BOARD.no;
   el.boardDate.textContent = formatDate(BOARD.day);
   el.waTodayKicker.textContent =
-    (DATA.isToday ? 'TODAY' : 'A BOARD THAT HAS BEEN') + ' · #' + BOARD.no;
+    DATA.isToday ? 'TODAY · #' + BOARD.no : 'BOARD #' + BOARD.no;
 
   /* HOW MANY BOARDS THERE ARE, from the only number on the page that knows:
      today's is the last one, so today's ordinal IS the count. On an archive

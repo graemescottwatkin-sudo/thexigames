@@ -260,7 +260,11 @@ body.locked .side{position:static;max-height:none;min-height:0}
   body.locked .bonusBox{margin-top:4px;padding:4px 8px}
   body.locked .bonusSub{display:none}
   body.locked .side .tb-table{display:none}
-  body.locked .boardWrap{flex:1 1 auto}
+  /* The card spans the column and the board sits in its middle. The board is
+     sized by its height here (fourteen rows), so it is narrower than the
+     screen, and a card hugging it left 90px of nothing to one side (found in
+     the app at 412, 25 Sep 2026). */
+  body.locked .boardWrap{flex:1 1 auto;align-self:stretch;width:100%;max-width:none;box-sizing:border-box}
 }
 @media (min-width:761px){
   body.locked #gameApp>main.main{grid-template-rows:minmax(0,1fr);align-items:stretch}

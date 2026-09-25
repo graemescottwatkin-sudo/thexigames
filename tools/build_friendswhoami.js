@@ -43,7 +43,7 @@ const SRC = "football/whoami";
 const OUT = "friends/whoami";
 
 /* THE TAG LIVES HERE, written into every generated file. Bump, regenerate. */
-const TAG = "v001b";
+const TAG = "v001c";
 
 const NAME = "Who Am I XI: Friends";
 /* THREE, NOT ELEVEN. This said eleven -- copied from football's shape before

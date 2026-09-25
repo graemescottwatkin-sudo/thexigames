@@ -106,6 +106,7 @@ console.log("The roster");
 }
 
 /* ---- the server ----------------------------------------------------------- */
+const { dailyNumber } = await import(pathToFileURL(path.join(ROOT, "functions", "_lib", "daily.js")).href);
 const { quickfireEnv, codewordRawBoard, whoamiStub } = await import(pathToFileURL(path.join(ROOT, "tools", "lock_fixtures.mjs")).href);
 const { publicBoard: cwPublic } = await import(pathToFileURL(path.join(ROOT, "functions", "_lib", "cw-board.js")).href);
 /* Codeword refuses to run without a database, and its round endpoints write
@@ -139,7 +140,7 @@ const server = http.createServer(async (req, res) => {
       let body = {};
       try { body = chunks.length ? JSON.parse(Buffer.concat(chunks).toString("utf8")) : {}; } catch (e) {}
       res.writeHead(200, { "Content-Type": "application/json" });
-      return res.end(JSON.stringify(whoamiStub(p, body)));
+      return res.end(JSON.stringify(whoamiStub(p, body, url.searchParams.get("no"))));
     }
     if (p.startsWith("/api/codeword/")) {
       const chunks = [];
@@ -1266,10 +1267,25 @@ function measureWS() {
     cell: cell ? Math.round(rect(cell).width) : 0,
     words: words.length,
     offscreen,
+    /* THE BOARD'S CARD SPANS THE COLUMN AND THE BOARD SITS IN ITS MIDDLE. On a
+       phone the board is sized by its height (fourteen rows), so it is
+       narrower than the screen; in the app at 412 (25 Sep 2026) its card
+       hugged it against the left edge with 90px of nothing to its right. */
+    spread: (() => {
+      const card = rect(document.querySelector(".boardWrap")), col = rect(document.querySelector("#gameApp>main.main"));
+      const side = rect(document.querySelector(".side"));
+      const beside = side.height > 0 && side.top < card.bottom && side.bottom > card.top;
+      /* What the names do not take, the card takes: the column's width on a
+         phone, where they sit above it, and the column less the names and a
+         gap where they sit beside it. */
+      const free = col.width - card.width - (beside ? side.width : 0);
+      const l = g.left - sh.left, r = sh.right - g.right;
+      return free <= (beside ? 40 : 2) && Math.abs(l - r) <= 4;
+    })(),
   };
 }
-const wsOk = (m) => m.locked && m.scrollY <= 1 && m.scrollX <= 1 && m.boardWhole && m.cell >= 22 && m.words === 11 && m.offscreen === 0;
-const wsSay = (m) => `locked ${m.locked}, scroll ${m.scrollY}/${m.scrollX}, board ${m.boardWhole ? "whole" : "NOT WHOLE"} at ${m.cell}px a square, ${m.words} names, off screen ${m.offscreen}`;
+const wsOk = (m) => m.locked && m.scrollY <= 1 && m.scrollX <= 1 && m.boardWhole && m.spread && m.cell >= 22 && m.words === 11 && m.offscreen === 0;
+const wsSay = (m) => `locked ${m.locked}, scroll ${m.scrollY}/${m.scrollX}, board ${m.boardWhole ? "whole" : "NOT WHOLE"}${m.spread ? "" : " and NOT CENTRED IN A FULL-WIDTH CARD"} at ${m.cell}px a square, ${m.words} names, off screen ${m.offscreen}`;
 async function openWS(game, [name, viewport, touch]) {
   const context = await browser.newContext({ viewport, hasTouch: touch, isMobile: touch, deviceScaleFactor: 1 });
   const page = await context.newPage();
@@ -1350,29 +1366,68 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "w
   }
 }
 
-/* ---- a board's own address -------------------------------------------------
-   /football/<game>/daily/<no> is what the archive pages and the sitemap give a
-   board. Found in the app on 24 Sep 2026: Ballpark's served the page and it
-   kicked off TODAY'S board under "Today's eleven", and Codeword's loaded the
-   right board under a card that said "Today's board". QuickFire had the first
-   fault until v001n (football/quickfire/permalink_test.mjs). The landing must
-   name the board, and starting must ask the server for that number. */
-if (!ONLY || ONLY === "ballpark" || ONLY === "codeword") {
-  console.log(`\na board's own address`);
-  for (const [game, start, kicker, api] of [
-    ["ballpark", "#homeDaily", "#startKicker", "/api/ballpark/daily"],
-    ["codeword", "#cwToday", "#cwTodayKicker", "/api/codeword/daily"],
-  ]) {
+/* ---- a board's own address, EVERY GAME ------------------------------------
+   /<theme>/<game>/daily/<no> is what the archive pages and the sitemap give a
+   board. It has regressed game by game: Ballpark kicked off TODAY'S board
+   under "Today's eleven" and Codeword named the right board "Today's board"
+   (24 Sep 2026); QuickFire had the first fault until v001n; and Grid and Who
+   Am I played today's board at /daily/4 under "TODAY" until v002m / v001o
+   (found in the app, 25 Sep 2026). So it is asked of every game at once.
+   THE LIST IS THE TREE: every functions/<theme>/<game>/daily route must have
+   a row here, so a new game's permalink is refused until somebody says how it
+   asks for a board -- a registry that only loops its own rows would pass the
+   game it never reached.
+   Each row says how the page asks the server for the board (by number, and
+   Word Search by the archive list it resolves the number from) and, where the
+   fixture server has that board, which element names it. The day asked for is
+   YESTERDAY, derived: a board every fixture has, and never today's. */
+const PERMA_N = dailyNumber() - 1;
+const PERMA = {
+  "football/ballpark":  { start: "#homeDaily", asks: `/api/ballpark/daily?no=${PERMA_N}`, label: "#startKicker" },
+  "football/codeword":  { asks: `/api/codeword/daily?no=${PERMA_N}`, label: "#cwTodayKicker" },
+  "football/crossword": { asks: `/api/daily?no=${PERMA_N}` },
+  "football/grid":      { asks: `/api/grid/daily?no=${PERMA_N}`, label: "#gdKicker" },
+  "football/hilo":      { asks: `/api/hilo/daily?no=${PERMA_N}` },
+  "football/quickfire": { asks: `/api/quickfire/daily?no=${PERMA_N}` },
+  "football/scrambled": { asks: `/api/scrambled/daily?no=${PERMA_N}`, label: "#startKicker" },
+  "football/vowels":    { asks: `/api/scrambled/daily?no=${PERMA_N}&cy=1`, label: "#startKicker" },
+  "football/whoami":    { asks: `/api/whoami/daily?no=${PERMA_N}`, label: "#waTodayKicker" },
+  "football/wordsearch": { asks: "/api/wordsearch/archive" },
+  "friends/crossword":  { asks: `/api/crossword/crossword_fr/daily?no=${PERMA_N}` },
+  "friends/whoami":     { asks: `/api/whoami/whoami_fr/daily?no=${PERMA_N}`, label: "#waTodayKicker" },
+};
+if (!ONLY || ONLY === "perma") {
+  console.log(`\na board's own address, every game (board ${PERMA_N})`);
+  const routes = [];
+  for (const theme of fs.readdirSync(path.join(ROOT, "functions"))) {
+    const dir = path.join(ROOT, "functions", theme);
+    if (theme.startsWith("_") || theme === "api" || !fs.statSync(dir).isDirectory()) continue;
+    for (const g of fs.readdirSync(dir)) {
+      if (fs.existsSync(path.join(dir, g, "daily"))) routes.push(`${theme}/${g}`);
+    }
+  }
+  t("the walk found the permalink routes (a walk that finds nothing passes everything)", routes.length >= 12, routes.length + " routes");
+  const missing = routes.filter((r) => !PERMA[r]);
+  t("every game with a /daily/<no> route has a row here", missing.length === 0, missing.join(", ") || "all placed");
+  for (const r of routes.filter((x) => PERMA[x])) {
+    const row = PERMA[r];
     const context = await browser.newContext({ viewport: VIEWPORTS[1][1], hasTouch: true, isMobile: true, deviceScaleFactor: 1 });
     const page = await context.newPage();
     const asked = [];
-    page.on("request", (r) => { const u = new URL(r.url()); if (u.pathname === api) asked.push(u.search); });
-    await page.goto(ORIGIN + `/football/${game}/daily/3`, { waitUntil: "networkidle" });
-    const said = await page.$eval(kicker, (e) => e.textContent.trim());
-    await page.click(start);
+    page.on("request", (q) => { const u = new URL(q.url()); if (u.pathname.startsWith("/api/")) asked.push(u.pathname + u.search); });
+    await page.goto(ORIGIN + `/${r}/daily/${PERMA_N}`, { waitUntil: "load" });
     await wait(1500);
-    t(`${game}: /daily/3 names board 3 on its landing, not today's`, /3/.test(said) && !/today/i.test(said), said);
-    t(`${game}: and what it plays is board 3, asked of the server by number`, asked.some((q) => /[?&]no=3\b/.test(q)), JSON.stringify(asked));
+    const said = row.label ? await page.$eval(row.label, (e) => e.textContent.replace(/\s+/g, " ").trim()).catch(() => "(no such element)") : null;
+    if (row.start && !asked.includes(row.asks)) {
+      await page.click(row.start);
+      await wait(1500);
+    }
+    t(`${r}: /daily/${PERMA_N} asks the server for that board`, asked.includes(row.asks),
+      asked.includes(row.asks) ? row.asks : "asked " + JSON.stringify(asked.filter((a) => !/season|auth|played/.test(a)).slice(0, 6)));
+    if (row.label) {
+      t(`${r}: and the page names board ${PERMA_N}, not today's`,
+        new RegExp(`#\\s?${PERMA_N}\\b`).test(said) && !/today/i.test(said), said);
+    }
     await context.close();
   }
 }
@@ -1474,6 +1529,14 @@ if (!ONLY || ONLY === "crossword") {
       fw.inWord && fw.other && fw.opacity > 0.2 && fw.opacity < 1 && fw.taps, JSON.stringify(fw));
     t("phone-412: tapping a dimmed square makes its answer the one in hand", fw.nowInWord, JSON.stringify(fw));
     t("phone-412: the button names the other half of the pair, Fit board", fw.label === "Fit board", String(fw.label));
+    /* A LONG PRESS ON A CONTROL SELECTS NOTHING. In the app a held Fit board
+       pill selected its words and raised Android's Copy / Share bar over the
+       board (25 Sep 2026). */
+    const sel = await page.evaluate(() => ["#fxFit", ".fx-zoom button", ".osk button", ".nc-arrow"].map((q) => {
+      const e = document.querySelector(q);
+      return q + ":" + (e ? getComputedStyle(e).userSelect : "missing");
+    }));
+    t("phone-412: the board's controls and keys cannot be selected as text", sel.every((x) => x.endsWith(":none")), sel.join(" "));
     await context.close();
   }
   {

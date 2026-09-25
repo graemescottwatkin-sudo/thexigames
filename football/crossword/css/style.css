@@ -2362,6 +2362,11 @@ body.flex-layout .grid{
   position:absolute;top:0;left:0;transform-origin:0 0;will-change:transform;
 }
 
+/* PLAY CONTROLS ARE NOT TEXT. A long press on the Fit board pill selected its
+   words and raised Android's Copy / Share / Select all bar over the board
+   (found in the app, 25 Sep 2026); a key or a zoom button held a moment too
+   long does the same. Nothing here is for copying. */
+.fx-zoom,.fx-fit,.osk,.tbar,.nc-arrow,.grid-wrap{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
 /* Board controls, bottom left of the frame. */
 .fx-zoom{position:absolute;left:8px;bottom:8px;z-index:6;display:none;gap:5px}
 body.flex-layout .fx-zoom{display:flex}

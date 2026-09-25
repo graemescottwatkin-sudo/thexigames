@@ -32,7 +32,7 @@
 
   var R = window.XIGR_RULES;
   var $ = function (id) { return document.getElementById(id); };
-  var BUILD = "v002l";
+  var BUILD = "v002m";
 
   var S = {
     board: null,          // the PUBLIC board: shape, lengths, crossings. No letters.
@@ -239,7 +239,10 @@
     var b = S.board, e = entry();
 
     $("gdTitle").textContent = b.title;
-    $("gdKicker").textContent = "TODAY · #" + (S.no || "");
+    /* Today's board says so; a board opened at its own address says which
+       board it is. It said "TODAY · #8" over /daily/4 until v002m. */
+    $("gdKicker").textContent = S.today && S.no !== S.today
+      ? "BOARD #" + S.no : "TODAY · #" + (S.no || "");
 
     var left = Math.max(0, S.turns === null ? R.TURNS_START : S.turns);
     $("gdTurns").textContent = left;
@@ -735,16 +738,30 @@
     }
   }
 
+  /* A BOARD'S OWN ADDRESS. /football/grid/daily/4 is what the archive and the
+     sitemap give board 4, and the page read nothing from it: it played today's
+     board under "TODAY" (found in the app, 25 Sep 2026 -- the fault QuickFire
+     and Ballpark had first). The number is read the one way every game reads
+     it, and the server decides whether that board may be opened. */
+  var permaNo = (function () {
+    var raw = window.XIChrome && window.XIChrome.permalink ? window.XIChrome.permalink.read() : null;
+    return /^[1-9][0-9]*$/.test(raw || "") ? raw : null;
+  })();
+
   function boot() {
     if (window.XIChrome && window.XIChrome.init) window.XIChrome.init({ game: "grid" });
     wire();
-    api("daily").then(function (r) {
+    api(permaNo ? "daily?no=" + permaNo : "daily").then(function (r) {
       if (!r.board) {
         msg("No board today. The calendar has a gap.", true);
         return;
       }
       S.board = r.board;
       S.no = r.no;
+      S.today = r.today;
+      if (r.today && r.no !== r.today && window.XIChrome && window.XIChrome.permalink) {
+        window.XIChrome.permalink.aged("grid", r.today - r.no);
+      }
       S.turns = R.TURNS_START;
       resetBuffer();
       syncAccount();
@@ -794,8 +811,12 @@
           queueRoom();
         }).observe(gbox);
       }
-    }).catch(function () {
-      msg("Could not reach the server — check your connection.", true);
+    }).catch(function (e) {
+      /* A refusal is the server's own sentence -- a board more than a week
+         old without an account, or one that is not out yet -- and saying
+         "check your connection" to it would send somebody off to fix wifi. */
+      msg(e && e.status && e.status !== 500 && e.message
+        ? e.message : "Could not reach the server — check your connection.", true);
     });
   }
 

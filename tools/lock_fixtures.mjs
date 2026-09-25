@@ -108,7 +108,12 @@ export function codewordRawBoard(no, day) {
  * journey suites use (football/whoami/journey_test.mjs, and the canned Friends
  * flow in .claude/static-server.js). The long case is a career of fourteen
  * clubs: the bought clue that grows the most. Made up; nobody is the answer. */
-export function whoamiStub(pathname, body) {
+export function whoamiStub(pathname, body, asked) {
+  /* A NUMBER ASKED FOR IS THE NUMBER SERVED, as wa-endpoints serves it: the
+   * board's own address asks by number, and a stub that answered today's
+   * whatever it was asked could not tell a page that asked from one that did
+   * not. Today is 21 (football) and 5 (Friends); anything else is an old board. */
+  const want = /^[1-9][0-9]*$/.test(asked || "") ? Number(asked) : null;
   const fr = pathname.startsWith("/api/whoami/whoami_fr/");
   const what = pathname.replace(/^\/api\/whoami\/(whoami_fr\/)?/, "").split("?")[0];
   const day = new Date().toISOString().slice(0, 10);
@@ -118,8 +123,8 @@ export function whoamiStub(pathname, body) {
                { stage: 3, sub: 2, points: 10, label: "Nationality and year of birth" }], giveUp: { label: "Give up" } };
     const clubs = ["Arsenal", "Chelsea", "Everton", "Newcastle United", "Liverpool", "Aston Villa",
       "Leeds United", "Southampton", "Fulham", "West Ham United", "Sunderland"];
-    if (what === "daily") return { source: "d1", no: 21, day, lastDay: day, isToday: true, scoring: RULE,
-      board: { id: "XIWA-FIXTURE", date: day, no: 21, day, doors: clubs.map((c, i) => ({ slot: i + 1, club: c, leave: 2010 + i })), careers: [2, 3, 4, 5, 7, 9] } };
+    if (what === "daily") return { source: "d1", no: want || 21, day, lastDay: day, isToday: !want || want === 21, scoring: RULE,
+      board: { id: "XIWA-FIXTURE", date: day, no: want || 21, day, doors: clubs.map((c, i) => ({ slot: i + 1, club: c, leave: 2010 + i })), careers: [2, 3, 4, 5, 7, 9] } };
     if (what === "names") return { count: 2, names: [["FIXTURE PLAYER", "FIXTUREPLAYER"], ["ANOTHER PLAYER", "ANOTHERPLAYER"]] };
     if (what === "archive") return { source: "d1", count: 1, boards: [{ day, no: 21 }] };
     if (what === "play") return { playId: "lock-wa", slot: Number(body.slot) || 1, stage: 1, pointsSpent: 0, worthNow: 114, minute: 0, day };
@@ -146,9 +151,9 @@ export function whoamiStub(pathname, body) {
   const CLUES = ["A fixture clue, the first, long enough to wrap onto a second line on a phone.",
     "A fixture clue, the second, written to be the longest of the three and wrap onto three lines on a narrow screen at the size it is set.",
     "A fixture clue, the third."];
-  if (what === "daily") return { source: "dev", day, no: 5, isToday: true, lastDay: day,
+  if (what === "daily") return { source: "dev", day, no: want || 5, isToday: !want || want === 5, lastDay: day,
     scoring: { max: 10, doors: 3, ladder: [{ stage: 1, sub: 0, points: 0, label: "First clue" }, { stage: 2, sub: 1, points: 4, label: "Second clue" }, { stage: 3, sub: 2, points: 3, label: "Third clue" }], giveUp: { label: "Tell me" } },
-    board: { day, no: 5, doors: [{ slot: 1, section: "Loves & Exes", deck: "main" }, { slot: 2, section: "Family & Relatives", deck: "main" }, { slot: 3, section: "Jobs & Ambitions", deck: "expert" }] } };
+    board: { day, no: want || 5, doors: [{ slot: 1, section: "Loves & Exes", deck: "main" }, { slot: 2, section: "Family & Relatives", deck: "main" }, { slot: 3, section: "Jobs & Ambitions", deck: "expert" }] } };
   if (what === "names") return { count: 2, names: [["Fixture Character", "FIXTURECHARACTER"], ["Another Character", "ANOTHERCHARACTER"]] };
   if (what === "play") return { playId: "lock-fr", slot: Number(body.slot) || 1, startedMs: Date.now(), stage: 1, pointsSpent: 0, worthNow: 10, minute: 0, day };
   if (what === "clue") { const st = Math.max(1, Math.min(3, Number(body.stage) || 1));
