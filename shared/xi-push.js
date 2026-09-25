@@ -78,14 +78,22 @@
     setTimeout(function () { if (n.parentNode) n.parentNode.removeChild(n); }, 4000);
   }
 
+  /* The Settings menu, if it is open, shows what just settled. */
+  function redraw() {
+    var s = window.XIChrome && window.XIChrome.settings;
+    if (s && s.refresh) s.refresh();
+  }
+
   function turnOn() {
     return P.enable().then(function (r) {
       state.token = r.token; state.platform = r.platform || "android";
       state.on = true; state.asked = true; save(state);
       return register();
     }).then(function () {
+      redraw();
       say("Reminders are on. Change them in Settings.");
     }, function (e) {
+      redraw();
       var code = e && (e.code || e.message);
       if (code === "denied") say("Notifications are turned off for The XI Games in Android settings.");
       else say("Reminders could not be turned on just now.");
@@ -96,7 +104,7 @@
     var token = state.token;
     state.on = false; save(state); prefs = null;
     var forget = token ? call("DELETE", { token: token }).catch(function () {}) : Promise.resolve();
-    return forget.then(function () { return P.disable(); }).catch(function () {});
+    return forget.then(function () { return P.disable(); }).catch(function () {}).then(redraw);
   }
 
   /* ---- the offer, after a finished game ---- */

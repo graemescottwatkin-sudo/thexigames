@@ -1036,8 +1036,10 @@ t("and no game writes the link itself", (() => {
   return guilty.length === 0;
 })(), "the href lives once, in shared/xi-chrome.js");
 
-const SHARED_TAG = "v62";
-/* The bytes that ship AS v62, AND THE TAG HAD TO MOVE FOR THEM.
+const SHARED_TAG = "v63";
+/* The bytes that ship AS v63, AND THE TAG HAD TO MOVE FOR THEM.
+   v62 WAS LIVE when the Full Time slot announced the end of a game on every page load, and the Settings menu did not redraw when reminders settled, so v62 -> v63 across every page and site-page.js's constant.
+   The note below is the move before this one.
    v61 WAS LIVE when the bar and the locked screen were padded for nothing under the system bars, so v61 -> v62 across every page and site-page.js's constant.
    The note below is the move before this one.
    v60 WAS LIVE when the old-link banner is one line on the crossword's play screen too, so v60 -> v61 across every page and site-page.js's constant.
@@ -1067,7 +1069,7 @@ const SHARED_TAG = "v62";
    v53, which is this project's oldest fault in miniature: a measurement left
    standing after it stopped being true, in the comment that tells the next
    reader whether they may leave the tag alone. */
-const SHARED_HASH = "d5837228f4e1156d";
+const SHARED_HASH = "cefe4307e774aea8";
 /* MOVED AGAIN WITHOUT THE TAG MOVING, which is the other half of the rule
    above and is worth showing rather than only stating. xi-chrome.js changed a
    second time in the same unpushed run -- the Friends squad slot going from

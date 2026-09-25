@@ -885,6 +885,16 @@
     var first = pop.querySelector(".xic-row");
     if (first) first.focus();
   }
+  /* A ROW WHOSE VALUE CHANGES AFTER THE PRESS. Most rows change in press()
+     and the menu is redrawn straight after; turning reminders on waits for
+     Android's permission prompt and the server, so the row still said Off
+     when the answer came (found in the app, 25 Sep 2026). A setting that
+     settles later asks for the open menu to be drawn again; a closed menu is
+     drawn fresh when it next opens, so there is nothing to do. */
+  function refreshPop() {
+    if (pop && !pop.hidden) fillPop();
+  }
+
   function closePop() {
     if (!pop || pop.hidden) return;
     pop.hidden = true;
@@ -1568,7 +1578,7 @@
     account: { open: openSheet, close: closeSheet, user: function () { return acct.user; },
                known: function () { return acct.known; }, available: function () { return acct.accounts; },
                say: say, deviceCode: deviceCode },
-    settings: { open: openPop, close: closePop, add: addSetting },
+    settings: { open: openPop, close: closePop, add: addSetting, refresh: refreshPop },
     permalink: { read: permaRead, show: permaShow, clear: permaClear, aged: permaAged },
     records: { clear: clearRecords, prefixes: RECORD_PREFIXES, keep: RECORD_KEEP },
     /* Exposed so a game that rebuilds its results card can fill the box again

@@ -45,6 +45,17 @@
        xi-push.js offers reminders on it, inside the app. Nothing on the web
        listens. */
     try { document.dispatchEvent(new CustomEvent("xi:fulltime", { detail: { game: o.game || null } })); } catch (e) {}
+    return fill(target, o);
+  }
+
+  /* THE SLOT FILLED WITHOUT SAYING THE GAME HAS ENDED. watch() fills the slot
+     at load so that it has a height to be seen by; that fill went through
+     nextUp() and so announced Full Time on every page load, and in the app
+     the reminders offer came up before a ball was kicked -- where a quick
+     "Not now" is remembered for good (found 25 Sep 2026, when the offer was
+     missing after a real Full Time). Only a panel actually shown announces. */
+  function fill(target, opts) {
+    var o = opts || {};
     if (!target || !window.XIPlayed) return Promise.resolve(null);
 
     return XIPlayed.suggestNext(o.game).then(function (slot) {
@@ -108,7 +119,7 @@
      signal it had made impossible. */
   function watch(target, opts) {
     if (!target) return;
-    nextUp(target, opts);
+    fill(target, opts);
     if (!window.IntersectionObserver) return;   // filled once is still correct
 
     var showing = false;

@@ -121,6 +121,28 @@ const posts = (p, method = "POST") => p.calls.fetch.filter((c) => c.url === "/ap
   t("XIFullTime.nextUp announces xi:fulltime with the game", heard && heard.game === "hilo", JSON.stringify(heard));
 }
 
+/* ---- but filling the slot at load does not ----
+   Every game's #nextUpRow is filled when the page loads, so that it has a
+   height to be seen by, and that fill announced Full Time: in the app the
+   reminders offer came up before a ball was kicked, where a quick "Not now"
+   is remembered for good (found 25 Sep 2026). A page loading with its results
+   panel hidden says nothing; the panel being shown is what announces. */
+{
+  const p = page({ app: false });
+  let heard = 0;
+  p.doc.addEventListener("xi:fulltime", () => { heard++; });
+  const row = p.doc.createElement("div");
+  row.id = "nextUpRow"; row.setAttribute("data-game", "hilo");
+  const panel = p.doc.createElement("section"); panel.hidden = true; panel.appendChild(row);
+  p.doc.body.appendChild(panel);
+  p.w.eval(fulltimeJs);
+  await settle();
+  t("a page loading with its Full Time panel hidden does not announce xi:fulltime", heard === 0, `${heard} announcement(s)`);
+  p.w.XIFullTime.watch(p.doc.createElement("div"), { game: "hilo" });
+  await settle();
+  t("and nor does watch() filling a slot", heard === 0, `${heard} announcement(s)`);
+}
+
 /* ---- in the app, not configured ---- */
 {
   const p = page({ configured: false });
@@ -131,6 +153,28 @@ const posts = (p, method = "POST") => p.calls.fetch.filter((c) => c.url === "/ap
   fulltime(p);
   t("an app built without Firebase offers nothing", !p.doc.querySelector(".xip-ask"));
   t("and shows no reminder rows", !("Reminders" in rows(p)));
+}
+
+/* ---- turned on from Settings, with the menu still open ----
+   The row said Off until Settings was closed and opened again: turning on
+   waits for Android's prompt and the server, and the menu had been drawn
+   before either answered (found in the app, 25 Sep 2026). */
+{
+  const p = page();
+  loadPush(p);
+  await settle();
+  p.w.XIChrome.settings.open();
+  const row = () => [...p.doc.querySelectorAll(".xic-pop .xic-row[data-row]")].find((x) => x.textContent.startsWith("Reminders"));
+  row().click();
+  await settle();
+  const pop = p.doc.querySelector(".xic-pop");
+  const st = row() && row().querySelector(".xic-pc");
+  t("turning reminders on from an open Settings menu shows On there once it has settled",
+    pop && !pop.hidden && st && st.textContent === "On", st ? st.textContent : "no row");
+  row().click();
+  await settle();
+  t("and Off again when turned off", row().querySelector(".xic-pc").textContent === "Off", row().querySelector(".xic-pc").textContent);
+  p.w.XIChrome.settings.close();
 }
 
 /* ---- yes ---- */
