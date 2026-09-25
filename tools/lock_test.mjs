@@ -1285,7 +1285,19 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
       const nums = document.getElementById("playNums");
       const cut = !!facts && !!prof && (facts.scrollHeight > facts.clientHeight + 1 ||
         (nums && nums.getBoundingClientRect().height > 0 && r(nums).bottom > r(prof).bottom + 1));
-      return { clues: document.querySelectorAll("#clues .clue").length, cut,
+      /* HOW MUCH OF THE PORTRAIT IS SHOWN, from the box and the fit rather
+         than by eye: a square picture covering a box much wider than tall
+         shows a band of it, and in the app at 412x839 that band was forehead
+         to chin, the crown gone (25 Sep 2026). */
+      const img = document.querySelector(".pf-face img");
+      let shown = null;
+      if (img && img.naturalWidth) {
+        const bw = img.clientWidth, bh = img.clientHeight, nw = img.naturalWidth, nh = img.naturalHeight;
+        const fit = getComputedStyle(img).objectFit;
+        const s = fit === "cover" ? Math.max(bw / nw, bh / nh) : fit === "contain" ? Math.min(bw / nw, bh / nh) : null;
+        shown = s === null ? null : { h: Math.min(1, bh / (nh * s)), w: Math.min(1, bw / (nw * s)), box: `${bw}x${bh}`, fit };
+      }
+      return { clues: document.querySelectorAll("#clues .clue").length, cut, shown,
         gap: vis(ladder) && vis(give) ? Math.round(r(give).top - r(ladder).bottom) : null };
     });
     /* Football only. Friends writes every clue into the profile (#clueStack)
@@ -1295,6 +1307,11 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
        which must never scroll, were whole everywhere. */
     if (id === "whoami") {
       t(`${vp[0]}: the starting clue is whole, nothing cut off its foot`, !fresh.cut, fresh.cut ? "CUT" : "whole");
+      /* The whole height of the head, crown to chin; the sides of a profile
+         silhouette can give way, which is how a narrow column shows it. */
+      t(`${vp[0]}: the portrait shows the whole head, not a band of it`,
+        !!fresh.shown && fresh.shown.h >= 0.9 && fresh.shown.w >= 0.5,
+        fresh.shown ? `${Math.round(fresh.shown.h * 100)}% of its height, ${Math.round(fresh.shown.w * 100)}% of its width, in ${fresh.shown.box} (${fresh.shown.fit})` : "no image");
     }
     if (fresh.clues === 0 && fresh.gap !== null) {
       t(`${vp[0]}: before a clue is bought, nothing stands blank between the clue buttons and Give up`, fresh.gap <= 40, `${fresh.gap}px`);

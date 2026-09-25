@@ -573,7 +573,16 @@ body.locked .wa-ed .screen:has(#clues:empty) .profile:not(:has(#clueStack)) .pf-
    kept rather than cropped to a stripe" -- with the portrait taking the
    height and the facts under it. */
 body.locked .wa-ed .screen:has(#clues:empty) .profile:not(:has(#clueStack)) .pf-facts{justify-content:center}
-body.locked .wa-ed .screen:has(#clues:empty) .profile:not(:has(#clueStack)) .pf-face img{object-position:50% 18%}
+/* THE WHOLE PORTRAIT, NOT A BAND OF IT. The box this profile grows into can
+   be any shape -- 412x128 on a phone with a long starting clue, 252x550 on a
+   tablet -- and a square picture covering it shows a strip: forehead to chin
+   in the app (25 Sep 2026), the nose and the back of the head elsewhere. So
+   it is fitted whole, sitting on the caption, on the picture's own light
+   grey so the margins either side are part of it; the caption moves out from
+   over the picture to under it. */
+body.locked .wa-ed .screen:has(#clues:empty) .profile:not(:has(#clueStack)) .pf-face{background:#DCE1DF;flex-direction:column;align-items:stretch}
+body.locked .wa-ed .screen:has(#clues:empty) .profile:not(:has(#clueStack)) .pf-face img{flex:1 1 auto;min-height:0;height:auto;object-fit:contain;object-position:50% 100%}
+body.locked .wa-ed .screen:has(#clues:empty) .profile:not(:has(#clueStack)) .pf-cap{position:static}
 @media (max-width:700px) and (min-height:701px){
   /* The portrait keeps the phone's own proportions and crop -- a box about
      230px high, the head at 18% -- because a square picture in a box that
