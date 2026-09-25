@@ -72,22 +72,20 @@ body{margin:0;font-family:var(--body)}
 
 /* ---------- the board ---------- */
 .gd-boardwrap{overflow-x:auto; -webkit-overflow-scrolling:touch; margin-bottom:14px}
-.gd-board{display:grid; gap:2px; margin:0 auto; width:max-content}
-.gd-cell{width:var(--cs); height:var(--cs); background:transparent}
-.gd-cell.on{background:var(--card); border:1px solid var(--line); border-radius:3px;
-  display:flex; align-items:center; justify-content:center;
-  font-family:var(--disp); font-weight:700; font-size:calc(var(--cs)*.62);
-  color:var(--ink); cursor:pointer; user-select:none; position:relative}
-.gd-cell .n{position:absolute; top:0; left:2px; font-family:var(--body); font-weight:600;
-  font-size:calc(var(--cs)*.3); color:var(--ink-faint); line-height:1.1}
-
-/* the selected entry reads as a lane */
-.gd-cell.lane{background:#EFF4EF; border-color:#BFD4C4}
+/* THE CROSSWORD'S BOARD (the owner, 25 Sep 2026: "look more like the
+   crossword I.e. background, similar layout, boxes"). The pitch and the
+   squares are shared/xi-board.css -- joined squares on the turf, the answer
+   you are in tinted and the square you are typing in ringed -- and this game
+   sets only their size and paints its own marks over them. */
+.gd-pitch{position:relative; padding:8px; border-radius:var(--r-lg); width:max-content; margin:0 auto}
+.gd-board{position:relative; z-index:1; display:grid; gap:0; width:max-content}
+.gd-cell{width:var(--cs); height:var(--cs); box-sizing:border-box}
+.gd-cell.on{font-size:calc(var(--cs)*.58); user-select:none}
+.gd-cell .num{font-size:calc(var(--cs)*.26); line-height:1.1}
 /* Once every entry's marks stay on the board, a tint alone cannot show which
    entry is selected — most of its cells are coloured. A ring survives any
    background underneath it. */
 .gd-cell.ring{box-shadow:inset 0 0 0 2px rgba(255,255,255,.75)}
-.gd-cell.cursor{border-color:var(--pitch); box-shadow:inset 0 0 0 1px var(--pitch)}
 /* WHERE ONE WORD ENDS AND THE NEXT BEGINS.
    LEWISSKELLY is eleven letters and nothing on the grid said the name is
    Lewis-Skelly. The server sends the letter offsets where a new word starts and
@@ -118,13 +116,16 @@ body{margin:0;font-family:var(--body)}
 /* letters the player has typed but not yet submitted */
 .gd-cell.typed{color:var(--ink-soft)}
 /* the marks */
-.gd-cell.c{background:var(--pitch); border-color:var(--pitch); color:#fff}
-.gd-cell.p{background:var(--present); border-color:var(--present); color:#fff}
-.gd-cell.a{background:var(--dead); border-color:var(--dead); color:#fff}
+.gd-cell.c{background:var(--pitch); color:#fff}
+.gd-cell.p{background:var(--present); color:#fff}
+.gd-cell.a{background:var(--dead); color:#fff}
 .gd-cell.c .n,.gd-cell.p .n,.gd-cell.a .n{color:rgba(255,255,255,.85)}
 /* proved, and permanent */
-.gd-cell.conf{background:var(--pitch); border-color:var(--pitch); color:#fff}
+.gd-cell.conf{background:var(--pitch); color:#fff}
 .gd-cell.conf .n{color:rgba(255,255,255,.85)}
+/* A marked square in the answer you are in keeps its mark and shows the
+   cursor as the ring alone. */
+.gd-cell.active.c,.gd-cell.active.p,.gd-cell.active.a,.gd-cell.active.conf{border-right-color:transparent; border-bottom-color:transparent}
 
 /* ---------- the slot row ---------- */
 .gd-slots{display:flex; flex-wrap:wrap; gap:5px; justify-content:center;

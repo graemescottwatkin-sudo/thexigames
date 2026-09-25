@@ -1,0 +1,63 @@
+/* xi-board.css — the family's board: the pitch it sits on and the squares.
+ *
+ * The owner, 25 Sep 2026: Grid should "look more like the crossword I.e.
+ * background, similar layout, boxes", and the family should look made by one
+ * person. The crossword's board is the reference, so its rules were MOVED here
+ * rather than copied: the crossword, Codeword and Grid all draw from this one
+ * file, and a change to the board is a change to all three.
+ *
+ * What is here is the look, not the size. Each game sizes its own squares
+ * (the crossword from --cell, Grid from --cs, Codeword from its grid) and sets
+ * their type size to match; everything else about a square is this file's.
+ *
+ * The pitch markings are drawn by shared/xi-board.js into every .pitch-bg, so
+ * the SVG exists once too.
+ */
+
+/* THE PITCH. One flat step off paper, with the lines in the same hairline:
+   it reads as a pitch without competing with the squares on it. */
+.pitch-bg{
+  position:absolute;inset:0;z-index:0;border-radius:var(--r-lg);
+  overflow:hidden;pointer-events:none;
+  background:var(--grid-field);
+  box-shadow:inset 0 0 0 1px var(--grid-field-line);
+}
+.pitch-bg svg{width:100%;height:100%;display:block}
+.pitch-bg .pl{stroke:var(--grid-field-line)}
+.pitch-bg .pl .spot{fill:var(--grid-field-line);stroke:none}
+
+/* THE SQUARES. Joined, a hairline between them, not separate tiles. */
+.cell{
+  position:relative;background:var(--grid-cell);
+  border-right:1px solid var(--grid-line);border-bottom:1px solid var(--grid-line);
+  display:flex;align-items:center;justify-content:center;
+  font-family:var(--disp);font-weight:600;color:var(--ink);cursor:pointer;
+  /* A letter arriving, a square going green or red, the word lighting up as
+     you move onto it: all state changes, all at --t-base, so the board answers
+     rather than snaps. */
+  transition:background var(--t-base) var(--ease),color var(--t-base) var(--ease),border-color var(--t-fast) var(--ease);
+}
+/* Blocked squares are not painted: the pitch shows through them. */
+.cell.block{background:transparent;border-color:transparent;cursor:default}
+.cell .num{
+  position:absolute;top:1px;left:3px;
+  font-family:var(--body);font-weight:600;color:var(--ink-faint);
+}
+
+/* THE ANSWER YOU ARE IN, tinted, with its separators a step darker so its
+   squares do not run together into one bar. */
+.cell.in-word{
+  background:var(--sel-word);
+  border-right-color:var(--sel-line);
+  border-bottom-color:var(--sel-line);
+}
+.cell.in-word + .cell:not(.in-word){border-left-color:var(--sel-line)}
+/* THE SQUARE YOU ARE TYPING IN: colour AND a ring, because a fill difference
+   is the first thing lost to a dim screen or colour vision. Indigo, which
+   means nothing else on the board. */
+.cell.active{
+  background:var(--sel);
+  box-shadow:inset 0 0 0 3px var(--sel-ring);
+  border-right-color:var(--sel-ring);
+  border-bottom-color:var(--sel-ring);
+}

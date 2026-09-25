@@ -143,8 +143,12 @@ t("and the script no longer reserves width for a rail", (() => {
 const tokens = fs.readFileSync(path.join(DIR, "..", "..", "shared", "xi-tokens.css"), "utf8");
 const darkBlocks = (tokens.match(/--grid-cell:#5A6356/g) || []).length;
 t("the dark set lightens the playable cells", darkBlocks === 1, darkBlocks + " blocks");
+/* The square's look moved to shared/xi-board.css on 25 Sep 2026 (one board
+   for the crossword, Codeword and Grid), so the rule is asked of that file:
+   the fact, where it now lives. */
+const board = fs.readFileSync(path.join(DIR, "..", "..", "shared", "xi-board.css"), "utf8");
 t("cells are painted from their own token, not the card colour",
-  /\.cell\{[^}]*background:var\(--grid-cell\)/.test(css.replace(/\s*\n\s*/g, "")) &&
+  /\.cell\{[^}]*background:var\(--grid-cell\)/.test(board.replace(/\s*\n\s*/g, "")) &&
   /:root\{[^}]*--grid-cell:#FFFFFF/.test(tokens.replace(/\s*\n\s*/g, "")));
 /* The flash lands on --correct now: a solved word keeps that colour and is
    locked, so fading back to white would be a square that then snaps green. */

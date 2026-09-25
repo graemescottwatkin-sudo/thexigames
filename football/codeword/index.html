@@ -35,13 +35,14 @@
      tokens' custom properties, so the other order leaves the bar unstyled for
      one paint. Every reference carries ?v=v46, which moves when the shared
      files move and never with this game's own tag. -->
-<link rel="stylesheet" href="/shared/xi-tokens.css?v=v64">
-<link rel="stylesheet" href="/shared/xi-landing.css?v=v64">
-<link rel="stylesheet" href="/shared/xi-chrome.css?v=v64">
-<link rel="stylesheet" href="/shared/xi-share.css?v=v64">
-<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v64">
-<script src="/shared/xi-theme.js?v=v64"></script>
-<link rel="stylesheet" href="css/style.css?v=v001r">
+<link rel="stylesheet" href="/shared/xi-tokens.css?v=v65">
+<link rel="stylesheet" href="/shared/xi-landing.css?v=v65">
+<link rel="stylesheet" href="/shared/xi-chrome.css?v=v65">
+<link rel="stylesheet" href="/shared/xi-board.css?v=v65">
+<link rel="stylesheet" href="/shared/xi-share.css?v=v65">
+<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v65">
+<script src="/shared/xi-theme.js?v=v65"></script>
+<link rel="stylesheet" href="css/style.css?v=v001s">
 </head>
 <body>
 <!-- The bar and the footer are MOUNTED, not written: shared/xi-chrome.js fills
@@ -112,24 +113,7 @@
            the crossword theme of the pitch background"). The turf shows
            through the blocked squares; the markings are the crossword's. -->
       <div class="gridbox"><div class="cw-pitch">
-        <div class="pitch-bg" aria-hidden="true">
-          <svg viewBox="0 0 1050 680" preserveAspectRatio="xMidYMid meet" focusable="false">
-          <g class="pl" fill="none" stroke-width="3">
-          <rect x="30" y="30" width="990" height="620"/>
-          <line x1="525" y1="30" x2="525" y2="650"/>
-          <circle cx="525" cy="340" r="91"/>
-          <circle cx="525" cy="340" r="7" class="spot"/>
-          <rect x="30" y="152" width="165" height="376"/>
-          <rect x="30" y="248" width="55" height="184"/>
-          <circle cx="140" cy="340" r="7" class="spot"/>
-          <path d="M195 249a91 91 0 0 1 0 182"/>
-          <rect x="855" y="152" width="165" height="376"/>
-          <rect x="965" y="248" width="55" height="184"/>
-          <circle cx="910" cy="340" r="7" class="spot"/>
-          <path d="M855 249a91 91 0 0 0 0 182"/>
-          </g>
-          </svg>
-        </div>
+        <div class="pitch-bg" aria-hidden="true"></div>
         <div class="grid" id="grid" role="grid" aria-label="The board"></div>
       </div></div>
       <div class="readout"><b id="rNum"></b><span id="rHint">Tap a square to select its number</span></div>
@@ -202,15 +186,16 @@
 </div>
 <footer class="xic-foot"></footer>
 
-<script src="/shared/xi-chrome.js?v=v64"></script>
-<script src="/shared/xi-share.js?v=v64"></script>
+<script src="/shared/xi-chrome.js?v=v65"></script>
+<script src="/shared/xi-board.js?v=v65"></script>
+<script src="/shared/xi-share.js?v=v65"></script>
 <!-- xi-played.js first: xi-fulltime.js asks it what has been played today. -->
-<script src="/shared/xi-played.js?v=v64"></script>
-<script src="/shared/xi-fulltime.js?v=v64"></script>
-<script src="/shared/xi-season.js?v=v64"></script>
-<script src="/shared/xi-plays.js?v=v64"></script>
+<script src="/shared/xi-played.js?v=v65"></script>
+<script src="/shared/xi-fulltime.js?v=v65"></script>
+<script src="/shared/xi-season.js?v=v65"></script>
+<script src="/shared/xi-plays.js?v=v65"></script>
 <script>XIChrome.init({ game: "codeword" });</script>
-<script src="js/game.js?v=v001r"></script>
+<script src="js/game.js?v=v001s"></script>
 <!-- THE SWITCH, and it is only a switch. The board loads and renders behind
      the landing exactly as it did before; this shows it. The game's own clock
      starts on the first interaction rather than on load, so nothing is running

@@ -1036,8 +1036,10 @@ t("and no game writes the link itself", (() => {
   return guilty.length === 0;
 })(), "the href lives once, in shared/xi-chrome.js");
 
-const SHARED_TAG = "v64";
-/* The bytes that ship AS v64, AND THE TAG HAD TO MOVE FOR THEM.
+const SHARED_TAG = "v65";
+/* The bytes that ship AS v65, AND THE TAG HAD TO MOVE FOR THEM.
+   v64 WAS LIVE when the board -- its pitch, its squares and its highlights -- became one shared file, shared/xi-board.{css,js}, used by the crossword, Codeword and Grid, so v64 -> v65 across every page and site-page.js's constant.
+   The note below is the move before this one.
    v63 WAS LIVE when Full Time was announced only once the next-game slot had been scrolled to, so the reminders offer never came up for a player who did not scroll, so v63 -> v64 across every page and site-page.js's constant.
    The note below is the move before this one.
    v62 WAS LIVE when the Full Time slot announced the end of a game on every page load, and the Settings menu did not redraw when reminders settled, so v62 -> v63 across every page and site-page.js's constant.
@@ -1071,7 +1073,7 @@ const SHARED_TAG = "v64";
    v53, which is this project's oldest fault in miniature: a measurement left
    standing after it stopped being true, in the comment that tells the next
    reader whether they may leave the tag alone. */
-const SHARED_HASH = "ae500c9275d504bd";
+const SHARED_HASH = "f6dfc447782356a1";
 /* MOVED AGAIN WITHOUT THE TAG MOVING, which is the other half of the rule
    above and is worth showing rather than only stating. xi-chrome.js changed a
    second time in the same unpushed run -- the Friends squad slot going from

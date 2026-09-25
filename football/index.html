@@ -91,9 +91,9 @@
      own — the team sheet and the kit colours. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/shared/xi-tokens.css?v=v64">
-<link rel="stylesheet" href="/shared/xi-chrome.css?v=v64">
-<script src="/shared/xi-theme.js?v=v64"></script>
+<link rel="stylesheet" href="/shared/xi-tokens.css?v=v65">
+<link rel="stylesheet" href="/shared/xi-chrome.css?v=v65">
+<script src="/shared/xi-theme.js?v=v65"></script>
 <style>
 :root{
 
@@ -559,12 +559,12 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
 
 <!-- The shared footer, built by shared/xi-chrome.js. -->
 <footer class="xic-foot"></footer>
-<script src="/shared/xi-season.js?v=v64"></script>
-<script src="/shared/xi-chrome.js?v=v64"></script>
+<script src="/shared/xi-season.js?v=v65"></script>
+<script src="/shared/xi-chrome.js?v=v65"></script>
 <!-- AFTER xi-chrome.js, because xi-played.js joins its probe to the squad and
      the squad is declared there. Before the inline script below, which calls
      XIPlayed.list() while it builds the shirts. -->
-<script src="/shared/xi-played.js?v=v64"></script>
+<script src="/shared/xi-played.js?v=v65"></script>
 
 <script>
 /* Progressive enhancement only: everything above is complete without this.
@@ -837,7 +837,7 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
         var left = 2, ok = true;
         /* ROOT-ABSOLUTE, like every asset on this page: it is served at / and
            at /football/, and a relative path resolves differently at each. */
-        ["/shared/xi-seasons.js?v=v64", "/shared/xi-table.js?v=v64"].forEach(function (src) {
+        ["/shared/xi-seasons.js?v=v65", "/shared/xi-table.js?v=v65"].forEach(function (src) {
           var el = document.createElement("script");
           el.src = src;
           el.onload = function () { if (!--left) done(ok); };

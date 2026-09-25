@@ -1277,6 +1277,35 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "g
         gridOk(m) && m.keys, gridSay(m));
     }
     if (vp[1].width >= 900) t(`${vp[0]}: the entries come back in the column beside the board`, m.entries, gridSay(m));
+    /* THE CROSSWORD'S BOARD. The owner, 25 Sep 2026: Grid should "look more
+       like the crossword I.e. background, similar layout, boxes". The pitch
+       with its markings behind the board, squares joined rather than
+       separate rounded tiles, and the crossword's own tint and ring for the
+       answer you are in and the square you are typing in -- read from the
+       shared tokens, so the check is against what the crossword draws. */
+    const look = await page.evaluate(() => {
+      const css = (e, p) => getComputedStyle(e).getPropertyValue(p).trim();
+      const probe = (v) => { const s = document.createElement("span"); s.style.color = `var(${v})`; document.body.appendChild(s); const c = getComputedStyle(s).color; s.remove(); return c; };
+      const bg = document.querySelector(".gd-pitch .pitch-bg"), board = document.getElementById("gdBoard");
+      const on = [...document.querySelectorAll("#gdBoard .gd-cell.on")];
+      let joined = null;
+      for (const a of on) {
+        const r = a.getBoundingClientRect();
+        const b = on.find((x) => { const q = x.getBoundingClientRect(); return Math.abs(q.top - r.top) < 1 && Math.abs(q.left - r.right) < 3; });
+        if (b) { joined = Math.abs(b.getBoundingClientRect().left - r.right) < 0.6; break; }
+      }
+      const word = document.querySelector("#gdBoard .gd-cell.in-word:not(.active):not(.c):not(.p):not(.a):not(.conf)");
+      const cur = document.querySelector("#gdBoard .gd-cell.active");
+      return {
+        pitch: !!bg && !!bg.querySelector("svg") && bg.getBoundingClientRect().width >= board.getBoundingClientRect().width,
+        joined, radius: on[0] ? css(on[0], "border-top-left-radius") : "?",
+        word: word ? css(word, "background-color") === probe("--sel-word") : null,
+        ring: cur ? css(cur, "box-shadow").includes(probe("--sel-ring")) : null,
+      };
+    });
+    t(`${vp[0]}: the board is the crossword's -- on the pitch, squares joined and square-cornered, the answer tinted and the cursor ringed as the crossword's are`,
+      look.pitch && look.joined === true && look.radius === "0px" && look.word === true && look.ring === true, JSON.stringify(look));
+    if (process.env.LOCK_SHOTS) await page.screenshot({ path: path.join(process.env.LOCK_SHOTS, `${id}-${vp[0]}-board.png`) });
     await context.close();
   }
 

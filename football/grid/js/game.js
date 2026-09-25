@@ -32,7 +32,7 @@
 
   var R = window.XIGR_RULES;
   var $ = function (id) { return document.getElementById(id); };
-  var BUILD = "v002m";
+  var BUILD = "v002n";
 
   var S = {
     board: null,          // the PUBLIC board: shape, lengths, crossings. No letters.
@@ -321,8 +321,9 @@
        squares this gives are under 18px. */
     var cs, box = document.querySelector(".gd-boardwrap");
     if (document.body.classList.contains("locked") && box && box.clientWidth && box.clientHeight) {
-      cs = Math.floor(Math.min((box.clientWidth - (b.cols - 1) * 2) / b.cols,
-                               (box.clientHeight - (b.rows - 1) * 2) / b.rows));
+      /* Joined squares now, on a pitch with an 8px rim of turf. */
+      cs = Math.floor(Math.min((box.clientWidth - 16) / b.cols,
+                               (box.clientHeight - 16) / b.rows));
       cs = Math.max(14, Math.min(64, cs));
     } else {
       cs = Math.max(18, Math.min(34,
@@ -337,14 +338,17 @@
     for (var r = 0; r < b.rows; r++) {
       for (var c = 0; c < b.cols; c++) {
         var cell = r + "," + c;
-        if (!inGrid[cell]) { html += '<div class="gd-cell"></div>'; continue; }
-        var cls = ["gd-cell", "on"], ch = "";
+        if (!inGrid[cell]) { html += '<div class="gd-cell cell block"></div>'; continue; }
+        /* The family's square (shared/xi-board.css): the crossword's look,
+           the answer you are in tinted and the square you are typing in
+           ringed, with Grid's own marks painted over it. */
+        var cls = ["gd-cell", "cell", "on"], ch = "";
         var inSel = cell in selIdx, i = selIdx[cell];
 
         if (S.confirmed[cell]) { cls.push("conf"); ch = S.confirmed[cell]; }
-        else if (inSel && S.typed[i]) { cls.push("lane", "typed"); ch = S.typed[i]; }
+        else if (inSel && S.typed[i]) { cls.push("lane", "in-word", "typed"); ch = S.typed[i]; }
         else if (shown[cell]) { cls.push(SHORT[shown[cell].m]); ch = shown[cell].ch; }
-        else if (inSel) { cls.push("lane"); }
+        else if (inSel) { cls.push("lane", "in-word"); }
         /* AT FULL TIME THE BOARD FILLS IN, from the answers the SERVER sent
            when it said the round was over. Before that this branch has nothing
            to draw with, which is the point. */
@@ -355,7 +359,7 @@
         }
         if (inSel && !S.over) {
           if (cls.indexOf("lane") === -1) cls.push("ring");
-          if (i === cur) cls.push("cursor");
+          if (i === cur) cls.push("cursor", "active");
         }
         /* AFTER the branches, because it is `ch` that decides it and `ch` is
            what they set. A cell with a letter carries its break; an empty one
@@ -364,7 +368,7 @@
            on screen and the rule is part of reading it. */
         if (ch && brk[cell]) cls.push(brk[cell].trim());
         html += '<div class="' + cls.join(" ") + '" data-cell="' + cell + '" tabindex="0">' +
-          (startsAt[cell] ? '<span class="n">' + startsAt[cell] + "</span>" : "") + ch + "</div>";
+          (startsAt[cell] ? '<span class="n num">' + startsAt[cell] + "</span>" : "") + ch + "</div>";
       }
     }
     bd.innerHTML = html;
