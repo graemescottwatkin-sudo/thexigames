@@ -120,16 +120,32 @@
   function watch(target, opts) {
     if (!target) return;
     fill(target, opts);
-    if (!window.IntersectionObserver) return;   // filled once is still correct
-
     var showing = false;
+    function seen(on) {
+      /* ONLY ON THE EDGE, not on every change. A panel that stays shown is
+         the same showing, and refreshing on each tick would ask the season
+         endpoint a dozen times for an answer that has not changed. */
+      if (on && !showing) { showing = true; nextUp(target, opts); }
+      else if (!on) showing = false;
+    }
+
+    /* SHOWN, NOT SCROLLED TO. This watched the slot come into VIEW, and the
+       slot sits at the foot of every results panel: on a phone Full Time was
+       only announced once the player scrolled to the bottom, so the app's
+       reminders offer never came up for one who did not (found in the app,
+       25 Sep 2026). A slot inside a hidden panel has no size, and gets one the
+       moment its panel is shown wherever it is on the page -- so its SIZE is
+       the signal. Width, because a slot with nothing to suggest is empty and
+       has no height, but is still as wide as its panel. */
+    if (window.ResizeObserver) {
+      new ResizeObserver(function (entries) {
+        seen(entries.some(function (e) { return e.contentRect.width > 0; }));
+      }).observe(target);
+      return;
+    }
+    if (!window.IntersectionObserver) return;   // filled once is still correct
     new IntersectionObserver(function (entries) {
-      var visible = entries.some(function (e) { return e.isIntersecting; });
-      /* ONLY ON THE EDGE, not on every scroll tick. A panel scrolled in and out
-         of view is still the same showing, and refreshing on each one would ask
-         the season endpoint a dozen times for an answer that has not changed. */
-      if (visible && !showing) { showing = true; nextUp(target, opts); }
-      else if (!visible) showing = false;
+      seen(entries.some(function (e) { return e.isIntersecting; }));
     }, { threshold: 0.01 }).observe(target);
   }
 

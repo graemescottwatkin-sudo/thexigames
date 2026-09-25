@@ -235,6 +235,23 @@ const VIEWPORTS = [
 ];
 
 const browser = await chromium.launch();
+/* EVERY PAGE COUNTS ITS FULL TIME ANNOUNCEMENTS. xi:fulltime is what the app's
+   reminders offer listens for; it was said on page load until shared v63, and
+   then only once the next-game slot at the foot of the results had been
+   SCROLLED to, so a player who did not scroll was never offered (found in the
+   app, 25 Sep 2026). Counted from before the page's own scripts run. */
+{
+  const make = browser.newContext.bind(browser);
+  browser.newContext = async (o) => {
+    const c = await make(o);
+    await c.addInitScript(() => { window.__ft = 0; document.addEventListener("xi:fulltime", () => { window.__ft++; }); });
+    return c;
+  };
+}
+async function announcedCheck(page, label) {
+  const n = await page.evaluate(() => window.__ft);
+  t(`${label}: Full Time is announced once it shows, without scrolling to the foot of it`, n >= 1, `${n} announcement(s)`);
+}
 const wait = (ms) => new Promise((r) => setTimeout(r, ms));
 /* WAIT FOR THE PAGE, NOT FOR A NUMBER OF MILLISECONDS, wherever the page says
    when it is done: the room check that follows a kick-off or a resize turns
@@ -519,6 +536,7 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
     const m = await page.evaluate(measure);
     t(`${vp[0]}: Full Time is locked, the board stays and nothing scrolls`,
       m.fulltime && ok(m), say(m));
+    await announcedCheck(page, vp[0]);
     t(`${vp[0]}: and the result is a panel inside the screen`,
       !!m.results && m.results[0] >= 0 && m.results[1] <= m.vh + 1, JSON.stringify(m.results));
     await context.close();
@@ -589,6 +607,10 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "q
     const long = await page.evaluate(measureQuiz);
     t(`${vp[0]}: the longest clue -- locked, no scroll, clue whole, four options and the controls on screen`,
       quizOk(long) && long.clueLen >= 140, quizSay(long));
+    /* And nothing said about Full Time while the game is being played: the
+       landing's fill and a hidden results panel announce nothing. */
+    const early = await page.evaluate(() => window.__ft);
+    t(`${vp[0]}: in play, Full Time has not been announced`, early === 0, `${early} announcement(s)`);
     /* The next question, shorter, on the same screen: the clue's size is set
        afresh per question, not left at whatever the long one needed. */
     await answerOne(page);
@@ -665,6 +687,7 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "q
     const m = await page.evaluate(measureQuiz);
     t(`${vp[0]}: Full Time is locked and the page does not scroll`,
       m.fulltime && m.locked && m.scrollY <= 1 && m.scrollX <= 1, `fulltime ${m.fulltime}, locked ${m.locked}, scroll ${m.scrollY}/${m.scrollX}`);
+    await announcedCheck(page, vp[0]);
     t(`${vp[0]}: and the result is a panel inside the screen, scrolling in itself`,
       !!m.results && m.results[0] >= 0 && m.results[1] <= m.vh + 1, JSON.stringify(m.results));
     await context.close();
@@ -841,6 +864,7 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "s
     const m = await page.evaluate(measureSlider);
     t(`${vp[0]}: Full Time is locked, the page does not scroll, and the card is inside the screen`,
       m.locked && m.scrollY <= 1 && m.scrollX <= 1 && !!m.ft && m.ft[0] >= 0 && m.ft[1] <= m.vh + 1, sliderSay(m) + " | card " + JSON.stringify(m.ft));
+    await announcedCheck(page, vp[0]);
     await context.close();
   }
 }
@@ -1023,6 +1047,7 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "d
     const m = await page.evaluate(measureDuel);
     t(`${vp[0]}: Full Time is locked, the board stays and the page does not scroll`,
       m.fulltime && m.locked && m.scrollY <= 1 && m.scrollX <= 1, duelSay(m));
+    await announcedCheck(page, vp[0]);
     t(`${vp[0]}: and the result is a panel inside the screen`,
       !!m.results && m.results[0] >= 0 && m.results[1] <= m.vh + 1, JSON.stringify(m.results));
     await context.close();
@@ -1486,6 +1511,7 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
     const m = await page.evaluate(measureProfile);
     t(`${vp[0]}: Full Time is locked and the page does not scroll; the result scrolls in itself`,
       m.locked && m.scrollY <= 1 && m.scrollX <= 1 && m.screen === "screenDone", profileSay(m));
+    await announcedCheck(page, vp[0]);
     await context.close();
   }
 }
