@@ -575,6 +575,13 @@ body.locked .wa-ed .screen:has(#clues:empty) .profile:not(:has(#clueStack)) .pf-
 body.locked .wa-ed .screen:has(#clues:empty) .profile:not(:has(#clueStack)) .pf-facts{justify-content:center}
 body.locked .wa-ed .screen:has(#clues:empty) .profile:not(:has(#clueStack)) .pf-face img{object-position:50% 18%}
 @media (max-width:700px) and (min-height:701px){
-  body.locked .wa-ed .screen:has(#clues:empty) .profile:not(:has(#clueStack)){grid-template-columns:1fr;grid-template-rows:minmax(0,1fr) auto}
+  /* The portrait keeps the phone's own proportions and crop -- a box about
+     230px high, the head at 18% -- because a square picture in a box that
+     grows wide and short is cropped to the crown or to the hair (both found
+     in the app, 25 Sep 2026). The facts under it take the spare height and
+     sit in the middle of it. */
+  /* The facts are sized first and never cut; the portrait takes what they
+     leave, up to 260px; anything beyond that is the facts' too. */
+  body.locked .wa-ed .screen:has(#clues:empty) .profile:not(:has(#clueStack)){grid-template-columns:1fr;grid-template-rows:minmax(0,260px) 1fr}
   body.locked .wa-ed .screen:has(#clues:empty) .profile:not(:has(#clueStack)) .pf-face{height:auto;min-height:0}
 }

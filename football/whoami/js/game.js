@@ -19,7 +19,7 @@
  * one especially, because deciding it here would need the club's whole roster
  * and a roster is a candidate list for the door.
  */
-var BUILD = "v001r";
+var BUILD = "v001s";
 
 (function bootstrap() {
   'use strict';

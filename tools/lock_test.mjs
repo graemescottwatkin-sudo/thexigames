@@ -1279,9 +1279,16 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
       const r = (e) => e.getBoundingClientRect();
       const ladder = document.getElementById("ladder"), give = document.getElementById("giveUp");
       const vis = (e) => !!e && !e.hidden && getComputedStyle(e).display !== "none";
-      return { clues: document.querySelectorAll("#clues .clue").length,
+      /* And the starting clue whole while the profile takes that height: a
+         portrait sized too greedily cut the numbers off the foot of it. */
+      const facts = document.getElementById("startClue"), prof = document.querySelector(".profile");
+      const nums = document.getElementById("playNums");
+      const cut = !!facts && !!prof && (facts.scrollHeight > facts.clientHeight + 1 ||
+        (nums && nums.getBoundingClientRect().height > 0 && r(nums).bottom > r(prof).bottom + 1));
+      return { clues: document.querySelectorAll("#clues .clue").length, cut,
         gap: vis(ladder) && vis(give) ? Math.round(r(give).top - r(ladder).bottom) : null };
     });
+    t(`${vp[0]}: the starting clue is whole, nothing cut off its foot`, !fresh.cut, fresh.cut ? "CUT" : "whole");
     if (fresh.clues === 0 && fresh.gap !== null) {
       t(`${vp[0]}: before a clue is bought, nothing stands blank between the clue buttons and Give up`, fresh.gap <= 40, `${fresh.gap}px`);
     }
