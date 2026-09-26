@@ -5,7 +5,7 @@
      it is yesterday's code. aligned_test asserts the two agree, and until
      this game launched it had no BUILD at all — three of its assets were on
      three different tags, which is the same fault with nobody checking. */
-  var BUILD = "v001v";
+  var BUILD = "v001w";
   if (window.XIPlays && document.documentElement) {
     document.documentElement.setAttribute("data-build", BUILD);
   }
@@ -214,6 +214,7 @@
             " will appear here as you play.";
     }
     $("running").textContent = scoreNow;
+    if (window.XIBar) XIBar.set({ score: scoreNow, subs: { left: Math.max(0, R.SUBS - subsUsed), of: R.SUBS } });
 
     var dots = $("subs").querySelectorAll("i");
     for (var k = 0; k < dots.length; k++) dots[k].classList.toggle("spent", k < subsUsed);
@@ -234,6 +235,7 @@
     el.innerHTML = Math.ceil(left) + "<small>s</small>";
     el.className = "secs" + (left <= 3 ? " warn" : "");
     $("worth").textContent = Math.round(worth);
+    if (window.XIBar) XIBar.set({ clock: Math.ceil(left) + "s", worth: Math.round(worth) });
     /* The same two numbers, beside the value. Written from this tick rather
        than from a second timer, so they cannot disagree with the scoreboard. */
     $("tSecs").innerHTML = Math.ceil(left) + "<i>sec</i>";
@@ -277,6 +279,7 @@
     $("result").hidden = true;
     $("qNo").innerHTML = (step + 1) +
       '<small> of ' + board.questions.length + '</small>';
+    if (window.XIBar) XIBar.set({ progress: (step + 1) + "/" + board.questions.length });
     var v = $("verdict"); v.textContent = ""; v.className = "verdict";
     $("lock").disabled = true;
     $("next").hidden = true; $("next").disabled = true;
@@ -550,6 +553,7 @@
     $("secs").innerHTML = lockedSecs + "<small>s</small>";
     $("secs").className = "secs";
     $("worth").textContent = points[step];
+    if (window.XIBar) XIBar.set({ clock: lockedSecs + "s", worth: points[step] });
     /* Frozen where the clock stopped, rather than left running or blanked. */
     $("tSecs").innerHTML = lockedSecs + "<i>sec</i>";
     $("tSecs").className = "";
@@ -936,6 +940,14 @@
 
   function startRound(data) {
     board = data.board; token = board.token; no = data.no; day = data.day || null;
+    /* THE FAMILY'S TOP BAR, named with the board the server sent: its number,
+       its day, and whether that is today's. Ballpark said "Today" over every
+       board until then. */
+    if (window.XIBar) {
+      XIBar.mount($("xiBar"));
+      XIBar.set({ name: "Ballpark XI", no: data.no, day: data.day, old: data.no !== data.today,
+                  progress: null, clock: null, score: 0, worth: null, subs: { left: R.SUBS, of: R.SUBS } });
+    }
     /* THE CARD, NOT ANOTHER ROUND. A daily already finished on this device
        comes back to what it came to rather than reopening as if it had never
        been played.

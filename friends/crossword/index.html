@@ -110,17 +110,18 @@
      width:var(--tap) was invalid, not because it was styled small. Order
      matters — style.css comes after and still wins wherever the crossword
      genuinely differs. -->
-<link rel="stylesheet" href="/shared/xi-tokens.css?v=v65">
-<link rel="stylesheet" href="/shared/xi-landing.css?v=v65">
-<link rel="stylesheet" href="/shared/xi-chrome.css?v=v65">
-<link rel="stylesheet" href="/shared/xi-keys.css?v=v65">
-<link rel="stylesheet" href="/shared/xi-board.css?v=v65">
-<link rel="stylesheet" href="/shared/xi-share.css?v=v65">
-<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v65">
+<link rel="stylesheet" href="/shared/xi-tokens.css?v=v66">
+<link rel="stylesheet" href="/shared/xi-landing.css?v=v66">
+<link rel="stylesheet" href="/shared/xi-chrome.css?v=v66">
+<link rel="stylesheet" href="/shared/xi-keys.css?v=v66">
+<link rel="stylesheet" href="/shared/xi-board.css?v=v66">
+<link rel="stylesheet" href="/shared/xi-matchbar.css?v=v66">
+<link rel="stylesheet" href="/shared/xi-share.css?v=v66">
+<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v66">
 <!-- The theme, stamped before first paint: light unless the player chose
      dark, decided in one shared place for every page of the family. -->
-<script src="/shared/xi-theme.js?v=v65"></script>
-<link rel="stylesheet" href="css/style.css?v=v002i">
+<script src="/shared/xi-theme.js?v=v66"></script>
+<link rel="stylesheet" href="css/style.css?v=v002j">
 </head>
 <body>
 <!-- The page's only H1, first thing in the body.
@@ -242,6 +243,11 @@
        does. The scoring, the server calls and the accounting stay in exactly
        one place — a second implementation of "reveal a letter" is two things
        that have to agree forever. -->
+  <!-- THE FAMILY'S TOP BAR (shared/xi-matchbar.js), by the owner's ruling of
+       25 Sep 2026: the same five slots in the same places on every game. The
+       toolbar under it keeps only what acts on the puzzle; its readings below
+       are kept for what the page still writes, and not drawn. -->
+  <div id="xiBar"></div>
   <div class="tbar" id="tbar">
     <!-- THE CLOCK AND THE SCORE LIVE IN THE ACTION ROW, not in a band of their
          own. They sat to the right of the letter boxes, which cost the board a
@@ -935,7 +941,7 @@
 
 <footer>
   <button id="statsBtn">My Season</button> &middot; <span id="streakLine"></span><br>
-  Crossword <span class="xi">XI</span> by The <span class="xi">XI</span> Games &middot; unofficial word puzzle &middot; <span id="buildTag">v002i</span> &middot;
+  Crossword <span class="xi">XI</span> by The <span class="xi">XI</span> Games &middot; unofficial word puzzle &middot; <span id="buildTag">v002j</span> &middot;
   <a href="/football/crossword/privacy.html">privacy</a> &middot;
   <button id="skipToggle">skip filled: off</button> &middot;
   <button id="bankToggle">letter bank: on</button> &middot;
@@ -954,20 +960,21 @@
      aligned_test only grepped for the class, which is true of an element
      sealed inside a hidden container. -->
 <footer class="xic-foot"></footer>
-<script src="/shared/xi-clubs.js?v=v65"></script>
-<script src="/shared/xi-chrome.js?v=v65"></script>
-<script src="/shared/xi-board.js?v=v65"></script>
-<script src="/shared/xi-menu.js?v=v65"></script>
-<script src="/shared/xi-plays.js?v=v65"></script>
-<script src="/shared/xi-share.js?v=v65"></script>
+<script src="/shared/xi-clubs.js?v=v66"></script>
+<script src="/shared/xi-chrome.js?v=v66"></script>
+<script src="/shared/xi-board.js?v=v66"></script>
+<script src="/shared/xi-matchbar.js?v=v66"></script>
+<script src="/shared/xi-menu.js?v=v66"></script>
+<script src="/shared/xi-plays.js?v=v66"></script>
+<script src="/shared/xi-share.js?v=v66"></script>
 <!-- xi-played.js first: xi-fulltime.js asks it what has been played today. -->
-<script src="/shared/xi-played.js?v=v65"></script>
-<script src="/shared/xi-fulltime.js?v=v65"></script>
-<script src="/shared/xi-keys.js?v=v65"></script>
-<script src="/shared/xi-seasons.js?v=v65"></script>
-<script src="/shared/xi-clubs.js?v=v65"></script>
-<script src="/shared/xi-table.js?v=v65"></script>
-<script src="js/engine.js?v=v002i"></script>
-<script src="js/game.js?v=v002i"></script>
+<script src="/shared/xi-played.js?v=v66"></script>
+<script src="/shared/xi-fulltime.js?v=v66"></script>
+<script src="/shared/xi-keys.js?v=v66"></script>
+<script src="/shared/xi-seasons.js?v=v66"></script>
+<script src="/shared/xi-clubs.js?v=v66"></script>
+<script src="/shared/xi-table.js?v=v66"></script>
+<script src="js/engine.js?v=v002j"></script>
+<script src="js/game.js?v=v002j"></script>
 </body>
 </html>

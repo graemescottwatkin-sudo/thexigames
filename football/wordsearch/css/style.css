@@ -238,6 +238,9 @@ h1,h2,h3{font-family:var(--disp);letter-spacing:.01em;margin:0}
    the height it is left (game.js fitCell). Wider, the names are a column
    beside the board that scrolls in itself if it must. The board can still be
    zoomed past the fit; then it scrolls inside its own card. */
+/* The family's top bar stands in for the mode label, the clock and the score
+   (shared/xi-matchbar.css); the theme stays under it. */
+#modeLabel,.matchHead>.scoreCluster{display:none}
 body.locked{height:100vh;height:100dvh;overflow:hidden;display:flex;flex-direction:column}
 body.locked>*{flex:none}
 body.locked>footer{display:none}

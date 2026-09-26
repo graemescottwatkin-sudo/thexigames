@@ -71,6 +71,9 @@ body{margin:0;font-family:var(--body)}
 .gd-count small{font-weight:500; color:var(--ink-faint); font-size:14px}
 
 /* ---------- the board ---------- */
+/* The family's top bar stands in for the kicker and the turns strip
+   (shared/xi-matchbar.css); the title under it is the board's one clue. */
+#gdKicker,.gd-budget{display:none}
 .gd-boardwrap{overflow-x:auto; -webkit-overflow-scrolling:touch; margin-bottom:14px}
 /* THE CROSSWORD'S BOARD (the owner, 25 Sep 2026: "look more like the
    crossword I.e. background, similar layout, boxes"). The pitch and the
@@ -267,8 +270,10 @@ body.locked #gdFullTime:not([hidden]){flex:0 1 auto;min-height:0;max-height:40%;
 @media (min-width:900px){
   body.locked>main.gd-wrap{display:grid;grid-template-columns:minmax(0,1fr) 380px;
     grid-template-rows:repeat(11,auto) minmax(0,1fr);column-gap:18px}
-  body.locked .gd-boardwrap{grid-column:1;grid-row:1 / -1;margin:0}
+  body.locked .gd-boardwrap{grid-column:1;grid-row:2 / -1;margin:0}
   body.locked .gd-wrap>:not(.gd-boardwrap){grid-column:2}
+  /* The family's top bar across the top of both columns, as on every game. */
+  body.locked .gd-wrap>#xiBar{grid-column:1 / -1;grid-row:1}
   body.locked .gd-entries{display:flex}
   body.locked .gd-hist{display:block;max-height:30vh;overflow:auto}
   body.locked #gdFullTime:not([hidden]){max-height:none}

@@ -297,7 +297,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v004f";
+  var BUILD = "v004g";
   try {
     window.CROSSWORDXI_BUILD = BUILD;
     console.log("Crossword XI build " + BUILD);
@@ -588,6 +588,7 @@
   }
   function renderClock() {
     var m = FCW.matchMinute(elapsed);
+    if (window.XIBar) window.XIBar.set({ clock: FCW.matchClockLabel(elapsed) });
     $("matchClock").innerHTML = escapeHtml(FCW.matchClockLabel(elapsed)) +
       '<small id="elapsedLine">' + fmt(elapsed) + ' elapsed</small>';
     $("matchClock").classList.toggle("ht", m >= 45 && m < 46);
@@ -1328,6 +1329,16 @@
        The date rather than the number: a number that only counts up tells a
        newcomer they are late, and the date is what the calendar they came from
        was showing. */
+    /* THE FAMILY'S TOP BAR, named with this board: a daily's number and date,
+       and whether it is today's; a practice board has no number. */
+    if (window.XIBar) {
+      window.XIBar.mount($("xiBar"));
+      var isDaily = board.kind === "daily";
+      window.XIBar.set({ name: "Crossword XI", no: isDaily ? board.no : null,
+                  day: isDaily ? FCW.dailyDate(board.no).toISOString().slice(0, 10) : null,
+                  old: isDaily && board.no !== today(),
+                  progress: "0/" + puzzle.entries.length, clock: "0'", score: null, worth: null, subs: null });
+    }
     $("strapText").innerHTML = board.kind === "daily"
       ? escapeHtml(dailyLabel(board.no)) + " &middot; " +
         escapeHtml(FCW.dailyDate(board.no).toLocaleDateString(undefined,
@@ -2390,6 +2401,7 @@
        is 39px that the buttons need more. Numbers by textContent, word by
        markup — neither is player input. */
     $("progressChip").textContent = solved + "/" + puzzle.entries.length;
+    if (window.XIBar) window.XIBar.set({ progress: solved + "/" + puzzle.entries.length });
     $("progressChip").appendChild(document.createElement("small"))
       .textContent = " solved";
   }
@@ -3033,9 +3045,10 @@
      endpoint expects. Read-only — the local copy is never cleared, so signing
      out leaves the player exactly as they were. */
   function guestPayload() {
-    var results = [];
-    try { results = JSON.parse(localStorage.getItem(RESULTS_KEY)) || []; } catch (e) {}
-    return { club: club || null, results: Array.isArray(results) ? results : [] };
+    /* Through loadResults, not the raw key: it is what sets aside a row from
+       before the numbering restarted, and posting the raw list is how one of
+       those reached an account and stood in for a board never played. */
+    return { club: club || null, results: loadResults() };
   }
 
   function refreshAdmin() {
@@ -4372,6 +4385,9 @@
      derived from these, and the shape is stable enough for a future optional
      account sync to consume unchanged. */
   var RESULTS_KEY = "fcw.results.v1";
+  /* Results from before the numbering restarted; see upgradeResults. Written
+     once and read by nothing in the game. */
+  var RETIRED_KEY = "fcw.results.retired";
   /* What "clear everything" clears: history and saved games, and nothing else.
      Preferences stay — the club you play as, the pitch, the letter bank, the
      clue style — because wiping a record is not the same as resetting a
@@ -4439,6 +4455,13 @@
      is reached only from the two Full Time paths, so every row present is a
      finished daily. A row that already carries either field is left alone, so
      a false from a future banked loss is never overwritten with true. */
+  /* A daily from before the numbering restarted on 18 September 2026: dated
+     before the board that holds its number now ran. See upgradeResults. */
+  function renumbered(r) {
+    var P = window.XIPlayed;
+    return !!(P && P.beforeItsBoard && r && r.mode === "daily" && r.dailyNo != null &&
+      P.beforeItsBoard(r, FCW.localDateKey(FCW.dailyDate(r.dailyNo))));
+  }
   function upgradeResults(list) {
     var changed = false;
     list.forEach(function (r) {
@@ -4446,6 +4469,40 @@
       if (r.mode == null && r.dailyNo != null) { r.mode = "daily"; changed = true; }
       if (r.complete == null) { r.complete = true; changed = true; }
     });
+    /* AND A ROW FROM BEFORE THE NUMBERING RESTARTED IS SET ASIDE. Every game
+       went back to board 1 on 18 September 2026, so a #9 finished on 3
+       September sat here as daily 9 — and on the 26th, when a different #9
+       ran, this game told the owner they had already played it, the hub
+       ticked it, and the push carried it to the account, which then refused
+       the real one. Moved to its own key rather than deleted: it is somebody's
+       history, just not of any board that exists now. The rule is
+       XIPlayed.beforeItsBoard, the hub's; the server's twin refuses the same
+       rows at /api/account/migrate. */
+    if (window.XIPlayed && window.XIPlayed.beforeItsBoard) {
+      var old = [];
+      list = list.filter(function (r) {
+        var stale = renumbered(r);
+        if (stale) old.push(r);
+        return !stale;
+      });
+      if (old.length) {
+        changed = true;
+        if (!saveBlocked) {
+          try {
+            /* Once each: until the account's copy is gone, every pull brings
+               the same row back down to be set aside again. */
+            var kept = JSON.parse(localStorage.getItem(RETIRED_KEY) || "[]");
+            if (!Array.isArray(kept)) kept = [];
+            var had = {};
+            kept.forEach(function (k) { if (k) had[k.dailyNo + "@" + k.date] = 1; });
+            old.forEach(function (r) {
+              if (!had[r.dailyNo + "@" + r.date]) { kept.push(r); had[r.dailyNo + "@" + r.date] = 1; }
+            });
+            localStorage.setItem(RETIRED_KEY, JSON.stringify(kept));
+          } catch (e) {}
+        }
+      }
+    }
     /* The repair is applied in memory whatever happens; only the write back is
        withheld. A stood-down tab still renders, and rendering from unrepaired
        rows would show it as having played nothing.
@@ -4506,7 +4563,14 @@
          never overwrites the original.
 
          A local row the account has never seen is untouched — it is the row
-         that has not been pushed yet, not a row in conflict. */
+         that has not been pushed yet, not a row in conflict.
+
+         EXCEPT A ROW FROM BEFORE THE NUMBERING RESTARTED. It is not a first
+         banking of this board at all, only of the board that had its number
+         until 18 September; winning outright, it replaced a real #9
+         with the #9 of 3 September on the first pull after it was played. It
+         is not taken down at all. */
+      if (renumbered(r)) return;
       byKey[keyOf(r)] = r;
     });
     return Object.keys(byKey).map(function (k) { return byKey[k]; })
@@ -4988,6 +5052,8 @@
 
   function updateScoreUI() {
     updateLiveScoreChip();
+    if (window.XIBar && puzzle) window.XIBar.set({ worth: liveScore(),
+      subs: { left: subsRemainingNow(), of: FCW.SCORING.SUBS_PER_BOARD } });
     /* The table only exists once a club is chosen, and choosing one is
        optional. Without it there is no table to read the score off, so the chip
        stays — with it, the chip would be saying the same thing twice, which is

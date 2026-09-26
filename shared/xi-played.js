@@ -31,10 +31,27 @@
      that board. The two cypher games share a daily NUMBER and never a board,
      so each reads its OWN key: a player who has done one has not done the
      other. */
+  /* A CROSSWORD RESULT DATED BEFORE ITS OWN BOARD RAN IS ANOTHER NUMBERING'S:
+     every game restarted at board 1 on 18 September 2026, and a #9 finished on
+     3 September is not the #9 that ran on the 26th. Read as that board, it
+     told the owner they had already played a puzzle they had never seen (26
+     Sep 2026). The server's statement of this rule is beforeItsBoard in
+     functions/_lib/games.js, which refuses such a row onto an account; this is
+     the browser's, for the rows already on a device, and played_test runs the
+     two over the same rows. `day` is the board's own day key. A day of slack
+     for the same reason as there: older rows carry the device's date. */
+  function beforeItsBoard(r, day) {
+    var d = String((r && r.date) || "");
+    if (!/^\d{4}-\d{2}-\d{2}/.test(d) || !/^\d{4}-\d{2}-\d{2}$/.test(String(day || ""))) return false;
+    return Date.parse(d.slice(0, 10) + "T00:00:00Z") < Date.parse(day + "T00:00:00Z") - 86400000;
+  }
+
   var PROBE = [
     { id: "crossword",  key: "fcw.results.v1", api: "/api/daily",
       today: function (d) { return d.dailyNo; },
-      done: function (r, t) { return r.dailyNo === t && r.complete !== false; } },
+      done: function (r, t, d) {
+        return r.dailyNo === t && r.complete !== false && !beforeItsBoard(r, d && d.day);
+      } },
     { id: "wordsearch", key: "xiws.results", api: "/api/wordsearch/daily",
       today: function (d) { return d.day; },
       done: function (r, t) { return r.day === t; } },
@@ -109,7 +126,7 @@
       .then(function (payload) {
         var t = payload && p.today(payload);
         if (t === undefined || t === null) return null;
-        if (listOf(p.key).some(function (r) { return r && p.done(r, t); })) return true;
+        if (listOf(p.key).some(function (r) { return r && p.done(r, t, payload); })) return true;
         var acct = window.XIChrome && XIChrome.playedTodaySync
           ? XIChrome.playedTodaySync() : null;
         return !!(acct && acct.games.indexOf(id) !== -1);
@@ -175,6 +192,6 @@
 
   window.XIPlayed = {
     PROBE: PROBE, list: list, listOf: listOf, doneToday: doneToday,
-    suggestNext: suggestNext, idOf: idOf,
+    suggestNext: suggestNext, idOf: idOf, beforeItsBoard: beforeItsBoard,
   };
 })();

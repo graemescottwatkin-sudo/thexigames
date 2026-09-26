@@ -43,7 +43,7 @@ const SRC = "football/whoami";
 const OUT = "friends/whoami";
 
 /* THE TAG LIVES HERE, written into every generated file. Bump, regenerate. */
-const TAG = "v001h";
+const TAG = "v001i";
 
 const NAME = "Who Am I XI: Friends";
 /* THREE, NOT ELEVEN. This said eleven -- copied from football's shape before
@@ -794,6 +794,8 @@ function script() {
      Friends name in its title, its crumb and its masthead. Four agreeing and
      one not is worse than all five being wrong, because only the odd one out
      looks like a mistake in the game rather than in the branding. */
+  /* And the family's top bar names the game in its first line. */
+  s = once(s, 'XIBar.set({ name: "Who Am I XI",', `XIBar.set({ name: "${NAME}",`, "the top bar's name");
   s = once(s, 'hero.querySelector(".hc-title").textContent = "Who Am I XI";',
     `hero.querySelector(".hc-title").textContent = "${NAME}";`, "the hero's fallback name");
   s = once(s,

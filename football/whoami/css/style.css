@@ -501,6 +501,10 @@ body.locked #waGame .screen>.profile{flex:none}
 /* The page's own name and tabs are the landing's; during a round the bar says
    where you are. */
 body.locked .site-ident,body.locked .site-head{display:none}
+/* The family's top bar stands in for the heading, the clock and the points
+   on the play screen (shared/xi-matchbar.css), and names the board itself. */
+#screenPlay > .playHead, #screenPlay > .strip{display:none}
+.wa-ed .app:has(#screenPlay:not([hidden])) .boardHead{display:none}
 body.locked .wa-ed .boardHead{margin-bottom:4px}
 body.locked .wa-ed .playHead{margin:0 0 8px;gap:12px}
 body.locked .wa-ed .matchHead .clock,body.locked .wa-ed .matchHead .worthVal{font-size:26px}

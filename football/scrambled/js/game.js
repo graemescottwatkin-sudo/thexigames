@@ -15,7 +15,7 @@
  *   - no practice. There is now an archive picker and a finals catalogue; what
  *     is still missing is a practice mode, which this game may never want.
  */
-var BUILD = "v003a";
+var BUILD = "v003b";
 
 (function () {
   "use strict";
@@ -652,6 +652,7 @@ var BUILD = "v003a";
     $("clockValue").textContent = minute;
     var worth = SCORING.computeScore(state.elapsed, state.help).score;
     $("worthNow").textContent = worth;
+    if (window.XIBar) XIBar.set({ clock: minute + "'", worth: worth });
     /* The ladder follows the SAME number the box above it shows, read from one
        place rather than recomputed — a table that disagreed with the score
        printed beside it would be two answers to one question. */
@@ -1002,6 +1003,7 @@ var BUILD = "v003a";
     });
 
     $("solvedCount").textContent = Object.keys(state.solved).length;
+    if (window.XIBar) XIBar.set({ progress: Object.keys(state.solved).length + "/" + (state.board.slots || []).length });
     $("helpSpent").textContent = state.help;
     /* Painted at the end of every rebuild too, not only on input. drawPitch()
        runs on any change — a solve, a bought letter, a pick — and it recreates
@@ -1900,6 +1902,16 @@ var BUILD = "v003a";
            computed here: the server decides what day it is. A board off the
            ring carries no `today`, so the count already established stands. */
         if (board.today) state.todayNo = board.today;
+        /* THE FAMILY'S TOP BAR, named with this board: its number, its day
+           (the same date the calendar gives it) and whether it is today's. */
+        if (window.XIBar) {
+          XIBar.mount($("xiBar"));
+          XIBar.set({ name: "Scrambled XI", no: board.no,
+                      day: new Date(dateForNo(board.no)).toISOString().slice(0, 10),
+                      old: !!state.todayNo && board.no !== state.todayNo,
+                      progress: "0/" + ((board.slots || []).length || 11), clock: "0'",
+                      score: null, worth: null, subs: null });
+        }
         /* Followed a link to an older board: say how old, once, and only
            where the page was OPENED at one. Somebody who just picked a board
            out of the calendar was looking at its date a second ago. */

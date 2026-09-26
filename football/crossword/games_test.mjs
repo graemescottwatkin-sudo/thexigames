@@ -368,7 +368,12 @@ console.log("\nFirst banked wins, and the account holds it");
 function crosswordMerge(local, remote) {
   const src = cw.match(/function mergeResults\(local, remote\) \{[\s\S]*?\n  \}/);
   if (!src) throw new Error("mergeResults not found — it moved or was renamed");
-  return new Function("local", "remote", src[0] + "\nreturn mergeResults(local, remote);")(local, remote);
+  /* `renumbered` is the merge's one outside call: a row from before the
+     numbering restarted on 18 Sep 2026 is not taken down. Every row here is a
+     current one, so it answers no; renumbered_test runs the real one in the
+     page. */
+  return new Function("local", "remote", "renumbered",
+    src[0] + "\nreturn mergeResults(local, remote);")(local, remote, () => false);
 }
 t("the crossword takes the account's row over its own for the same daily", (() => {
   const merged = crosswordMerge(

@@ -19,7 +19,7 @@
  * one especially, because deciding it here would need the club's whole roster
  * and a roster is a candidate list for the door.
  */
-var BUILD = "v001t";
+var BUILD = "v001u";
 
 (function bootstrap() {
   'use strict';
@@ -184,6 +184,7 @@ function start() {
     if (base === null) { el.worthNow.textContent = '—'; return; }
     var worth = Math.max(0, Math.round(base - state.pointsSpent));
     el.worthNow.textContent = worth;
+    if (window.XIBar) XIBar.set({ clock: m + "'", worth: worth });
     el.worthNow.classList.toggle('low', worth <= 40);
   }
 
@@ -525,6 +526,11 @@ function start() {
   /* ------------------------------------------------------------- the ladder */
 
   function renderLadder() {
+    /* The substitutions in the family's top bar: the clues still to buy. */
+    if (window.XIBar) {
+      var paid = LADDER.filter(function (r) { return r.points; });
+      XIBar.set({ subs: { left: paid.filter(function (r) { return r.stage > state.stage; }).length, of: paid.length } });
+    }
     el.ladder.innerHTML = '';
     LADDER.forEach(function (rung) {
       if (rung.stage <= state.stage) return;        // already taken
@@ -995,6 +1001,13 @@ function start() {
 
   el.boardNo.textContent = 'No. ' + BOARD.no;
   el.boardDate.textContent = formatDate(BOARD.day);
+  /* THE FAMILY'S TOP BAR, named with this board: its number, its day, and
+     whether the server says it is today's. */
+  if (window.XIBar) {
+    XIBar.mount(document.getElementById('xiBar'));
+    XIBar.set({ name: "Who Am I XI", no: BOARD.no, day: BOARD.day, old: !DATA.isToday,
+                progress: null, clock: "0'", score: null, worth: null, subs: null });
+  }
   el.waTodayKicker.textContent =
     DATA.isToday ? 'TODAY · #' + BOARD.no : 'BOARD #' + BOARD.no;
   /* And the card's title with it: "Today's eleven" over board 4 was the kicker

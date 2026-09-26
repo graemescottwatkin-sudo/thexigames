@@ -591,6 +591,34 @@ export function playedOn(game, row) {
   return null;
 }
 
+/* A RESULT DATED BEFORE ITS OWN BOARD RAN IS ANOTHER NUMBERING'S.
+ *
+ * On 18 September 2026 every game restarted at board 1 (c2c8ffc). A crossword
+ * finished as #9 on 3 September was a different puzzle from the #9 that ran on
+ * 26 September, but both key as daily:9 — and a device still holding the first
+ * posted it here on 24 September, where it became "already played, 36" on the
+ * morning the second one ran. The owner's report, 26 Sep 2026. The account
+ * then refuses the real #9 as a duplicate, which is worse than the message.
+ *
+ * The crossword ONLY, because it is the only game whose row carries a date of
+ * its own to compare: the other numbered games are dated FROM their number by
+ * playedOn() above, so an old one cannot be told from a new one. Measured on
+ * production the same day: no account holds a row of any other game dated
+ * before its board.
+ *
+ * A DAY OF SLACK, not none. Before 21 Sep a crossword row carried the device's
+ * date rather than the board's, so an honest row can sit a day either side of
+ * its board — board 3 finished at 00:20 BST is on the account as 21 Sep. The
+ * renumbering moved every board by twenty-three days; a day's slack cannot
+ * mistake one for the other. */
+export function beforeItsBoard(game, row) {
+  if (game !== "crossword" || !row) return false;
+  const board = dailyDayKey(row.dailyNo);
+  const d = String(row.date || "");
+  if (!board || !/^\d{4}-\d{2}-\d{2}/.test(d)) return false;
+  return Date.parse(d.slice(0, 10) + "T00:00:00Z") < Date.parse(board + "T00:00:00Z") - 86400000;
+}
+
 /* The fields a game keeps that the others have no column for. The shared
    columns — score, elapsed_seconds, played_on, solved — stay shared; this is
    everything else, and it goes to `detail` as JSON.

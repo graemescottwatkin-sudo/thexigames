@@ -20,7 +20,7 @@
  * and a roster is a candidate list for the door.
  */
 var DECK_WORD = { main: 'Everyday', expert: 'Deep cut' };
-var BUILD = "v001h";
+var BUILD = "v001i";
 
 (function bootstrap() {
   'use strict';
@@ -919,6 +919,13 @@ function shareTextFor(r, solved) {
 
   el.boardNo.textContent = 'No. ' + BOARD.no;
   el.boardDate.textContent = formatDate(BOARD.day);
+  /* THE FAMILY'S TOP BAR, named with this board: its number, its day, and
+     whether the server says it is today's. */
+  if (window.XIBar) {
+    XIBar.mount(document.getElementById('xiBar'));
+    XIBar.set({ name: "Who Am I XI: Friends", no: BOARD.no, day: BOARD.day, old: !DATA.isToday,
+                progress: null, clock: "0'", score: null, worth: null, subs: null });
+  }
   el.waTodayKicker.textContent =
     DATA.isToday ? 'TODAY · #' + BOARD.no : 'BOARD #' + BOARD.no;
   /* And the card's title with it: "Today's eleven" over board 4 was the kicker

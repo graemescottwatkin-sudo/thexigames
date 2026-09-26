@@ -17,7 +17,7 @@ import { onRequestGet as scrambled } from "../functions/football/scrambled/answe
 import { onRequestGet as vowels } from "../functions/football/vowels/answers/[[path]].js";
 import { onRequestGet as hilo } from "../functions/football/hilo/answers/[[path]].js";
 import { onRequestGet as crossword } from "../functions/football/crossword/answers/index.js";
-import { dailyNumber, ANSWERS_AFTER_DAYS, answersAvailable } from "../functions/_lib/daily.js";
+import { dailyNumber, dailyDayKey, ANSWERS_AFTER_DAYS, answersAvailable } from "../functions/_lib/daily.js";
 import { publishedNumbers, dayIsPublished } from "../functions/_lib/answers-page.js";
 import { launchNumber } from "../functions/_lib/games.js";
 

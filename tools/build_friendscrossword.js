@@ -56,7 +56,7 @@ const OUT = "friends/crossword";
 
 /* THE TAG LIVES HERE, because it is written into three generated files and a
    number kept in three places disagrees with itself. Bump here, regenerate. */
-const TAG = "v002i";
+const TAG = "v002j";
 
 /* THE SHARED LAYER'S TAG, read from the source page rather than restated. It
    has its own plain vN lifecycle and moves without this game's tag moving, so a
@@ -342,6 +342,8 @@ function styles() {
  */
 function script() {
   let s = read(`${SRC}/js/game.js`);
+  /* The family's top bar names the game in its first line. */
+  s = once(s, 'XIBar.set({ name: "Crossword XI",', `XIBar.set({ name: "${NAME}",`, "the top bar's name");
 
   /* THE BOARD'S FIVE ENDPOINTS, NAMESPACED. The others are football's and are
      not rewritten: /api/play and /api/account/state are the family's and serve

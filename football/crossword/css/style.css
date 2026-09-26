@@ -766,6 +766,16 @@ body.no-pitch .cell.block{background:var(--grid-block);border-color:var(--grid-b
   border:none;border-radius:2px;
   touch-action:manipulation;user-select:none;-webkit-user-select:none;
 }
+/* The family's top bar stands in for the toolbar's readings and for the
+   board's name in the site bar (shared/xi-matchbar.css). */
+.tb-readouts{display:none}
+#xiBar{margin-top:6px;flex:none}
+body.flex-layout.home-showing #xiBar{display:none}
+/* In play the bar names the game, so the masthead above it goes, at every
+   width: on a desktop it stood between the site bar and the family's bar,
+   and put this game's bar 60px lower than every other game's. */
+body.flex-layout:not(.home-showing) > header:not(.xic-bar){display:none}
+body.flex-layout:not(.home-showing) .cw-bartitle{display:none!important}
 /* A square's look is shared/xi-board.css; its size is this game's. */
 .cell{width:var(--cell);height:var(--cell);font-size:calc(var(--cell) * .54)}
 /* KEYBOARD. Every control shows the family's ring on focus-visible. The
@@ -2257,8 +2267,9 @@ body.flex-layout .nudge-row{
      same things go here as on a phone, for the same reasons -- the masthead
      repeats the bar and its strap moves into the bar; home, mode and sign-in
      repeat the bar's own controls, which puts the toolbar on one row -- and
-     the clue panel takes 22%: at 26% an upright iPad's frame was 37% of the
-     screen, and the panel scrolls in itself, so the height is the board's. */
+     the clue panel takes 16%: at 26% an upright iPad's frame was 37% of the
+     screen, and the family's top bar (25 Sep 2026) took another line from it;
+     the panel scrolls in itself, so the height is the board's. */
   body.flex-layout:not(.home-showing) > header:not(.xic-bar){ display:none; }
   body.flex-layout:not(.home-showing) #tbHome,
   body.flex-layout:not(.home-showing) #tbMode,
@@ -2269,7 +2280,7 @@ body.flex-layout .nudge-row{
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;min-width:0;
   }
   body.flex-layout .clues-block{
-    display:block;order:1;flex:0 0 22%;min-height:0;
+    display:block;order:1;flex:0 0 16%;min-height:0;
     overflow-y:auto;overscroll-behavior:contain;
     border-top:1px solid var(--line);margin:0;padding:4px 12px 10px;
     max-width:none;width:auto;

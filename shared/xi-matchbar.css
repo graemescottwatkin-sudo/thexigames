@@ -1,0 +1,48 @@
+/* xi-matchbar.css — the one top bar on every game's play screen. See
+   shared/xi-matchbar.js for what goes in it and why. The same labels, type,
+   order, positions and SIZE in every game; a slot a game does not have shows a
+   dash so nothing moves.
+
+   ITS OWN MEASURES, NOT THE PAGE'S. Every line height here is stated, because
+   the bar inherits nothing it can use: ten pages set ten body line-heights,
+   and a bar that took them was 71px tall in one game and 78 in the next. Its
+   width and margin are stated for the same reason -- each game's column has
+   its own padding and its own centre -- at one width (the screen less a 10px
+   gutter, up to 880px) and placed on the SCREEN's centre by
+   shared/xi-matchbar.js, so it is in the same place in every game. */
+.xmb{
+  display:block;box-sizing:border-box;line-height:1.2;
+  width:min(880px, calc(100vw - 20px));max-width:none;
+  margin:0 0 8px;
+  background:var(--card);border:1px solid var(--line);border-radius:var(--r-md);
+  padding:6px 10px 7px;
+}
+.xmb-top{display:flex;justify-content:space-between;align-items:baseline;gap:10px;margin-bottom:4px;min-width:0;height:18px}
+.xmb-name{font-family:var(--disp);font-weight:700;font-size:15px;line-height:18px;letter-spacing:.02em;color:var(--ink);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.xmb-date{font-family:var(--body);font-size:11.5px;line-height:18px;color:var(--ink-soft);white-space:nowrap}
+.xmb-row{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:4px}
+.xmb-c{border-left:1px solid var(--line);padding-left:8px;min-width:0}
+.xmb-c:first-child{border-left:0;padding-left:0}
+.xmb-l{display:block;font-family:var(--disp);font-size:10px;line-height:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--ink-faint)}
+.xmb-v{display:block;font-family:var(--disp);font-weight:700;font-size:19px;line-height:22px;color:var(--ink);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.xmb-none .xmb-v{color:var(--ink-faint);font-weight:400}
+.xmb-c[data-k="subs"] .xmb-v{letter-spacing:.1em;color:var(--pitch)}
+.xmb-c[data-k="worth"] .xmb-v{color:var(--pitch)}
+/* A SHORT SCREEN (360x640 and the like) gives the board its height: the
+   same bar, tighter, on every game alike. */
+@media (max-height:700px){
+  .xmb{padding:3px 8px 4px;margin-bottom:4px}
+  .xmb-top{margin-bottom:1px;height:16px}
+  .xmb-name{font-size:13px;line-height:16px}
+  .xmb-date{font-size:10.5px;line-height:16px}
+  .xmb-l{font-size:9px;line-height:10px;letter-spacing:.1em}
+  .xmb-v{font-size:16px;line-height:18px}
+}
+@media (min-width:900px){
+  .xmb{padding:8px 14px 9px}
+  .xmb-top{height:20px}
+  .xmb-name{font-size:17px;line-height:20px}
+  .xmb-v{font-size:22px;line-height:26px}
+}

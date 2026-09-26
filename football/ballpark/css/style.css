@@ -527,6 +527,8 @@ body{margin:0;font-family:var(--body)}
    sized in units of the stage (cqw, cqh). After the lock the result stands in
    for the value and the track, which it repeats. The eleven is a column of
    its own where there is room, and on a phone the pips carry it. */
+/* The family's top bar stands in for the scoreboard (shared/xi-matchbar.css). */
+#screenGame .board{display:none}
 body.locked{height:100vh; height:100dvh; overflow:hidden; display:flex; flex-direction:column}
 body.locked>*{flex:none}
 body.locked>footer{display:none}

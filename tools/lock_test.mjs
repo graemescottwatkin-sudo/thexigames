@@ -245,6 +245,10 @@ const browser = await chromium.launch();
   browser.newContext = async (o) => {
     const c = await make(o);
     await c.addInitScript(() => { window.__ft = 0; document.addEventListener("xi:fulltime", () => { window.__ft++; }); });
+    /* An exception in a page is said, not swallowed: a game that throws while
+       it boots shows up here as a timeout somewhere else. */
+    c.on("page", (p) => p.on("pageerror", (e) => console.log(`  !!  page error on ${p.url()}: ${e.message}`)));
+    c.on("page", (p) => p.on("console", (m) => { if (process.env.LOCK_CONSOLE && (m.type() === "error" || m.type() === "warning")) console.log(`  !!  console ${m.type()}: ${m.text()}`); }));
     return c;
   };
 }
@@ -555,8 +559,12 @@ function measureQuiz() {
   /* THE SCREEN IS FILLED. Locked is not the same as fitted: the first build
      locked the page with the clue held at its own height, and a quarter of a
      phone sat empty under the score (seen on the Play build, 24 Sep 2026). */
-  const cluster = document.querySelector("#screenGame .scoreCluster");
-  const deadSpace = !game.hidden && cluster ? Math.round(rect(game).bottom - rect(cluster).bottom) : 0;
+  /* To the last thing DRAWN: the score boxes were the foot of the screen
+     until the family's top bar took the score, 25 Sep 2026, and a hidden box
+     has no bottom to measure from. */
+  const drawn = game.hidden ? [] : [...game.children].filter((e) => vis(e) && rect(e).height > 0);
+  const lastBottom = drawn.length ? Math.max(...drawn.map((e) => rect(e).bottom)) : 0;
+  const deadSpace = drawn.length ? Math.round(rect(game).bottom - (parseFloat(getComputedStyle(game).paddingBottom) || 0) - lastBottom) : 0;
   return {
     locked: document.body.classList.contains("locked"),
     fulltime: document.body.classList.contains("fulltime"),
@@ -1806,12 +1814,17 @@ if (!ONLY || ONLY === "crossword") {
       const tbar = document.querySelector(".tbar");
       return { masthead: vis(head), tbarH: tbar ? Math.round(tbar.getBoundingClientRect().height) : 0,
         frame: Math.round(document.querySelector(".grid-wrap").getBoundingClientRect().height), vh: innerHeight,
-        barTitle: vis(document.querySelector(".cw-bartitle")),
+        /* The board's name is the family's top bar now (25 Sep 2026), not the
+           site bar's strap. */
+        barTitle: vis(document.getElementById("xiBar")),
         parts: [...document.querySelectorAll(".stage > *, .stage > * > *")].filter(vis)
           .map((e) => (e.id || e.className || e.tagName).toString().split(" ")[0] + ":" + Math.round(e.getBoundingClientRect().height)).join(" ") };
     });
-    t(`${label}: the board frame keeps at least 40% of the screen; the title is in the bar and the toolbar is one row`,
-      !room.masthead && room.barTitle && room.tbarH <= 64 && room.frame >= room.vh * 0.4, JSON.stringify(room));
+    t(`${label}: the board frame keeps at least 35% of the screen; the board is named in the family's top bar and the toolbar is one row`,
+      /* 35%, not 40: the family's top bar (approved 25 Sep 2026) takes a line
+         of its own above the buttons. The floor is here to refuse the 17% the
+         app found, and 35% still refuses it by double. */
+      !room.masthead && room.barTitle && room.tbarH <= 64 && room.frame >= room.vh * 0.35, JSON.stringify(room));
     await context.close();
   }
   {
@@ -1822,6 +1835,14 @@ if (!ONLY || ONLY === "crossword") {
        and the owner, 24 Sep 2026: "it looks strange if its just a single
        word ... then you can select them manually". The rest is dimmed, still
        there and still tappable, and tapping one makes it the answer in hand. */
+    /* Into Fit word first, by its own button: which mode a board OPENS in
+       follows the size its squares would be, and that moved when the family's
+       top bar took a line (25 Sep 2026). What is proved here is Fit word. */
+    if (!(await page.evaluate(() => document.body.classList.contains("focus-word")))) {
+      await page.click("#fxFit");
+      await until(page, () => document.body.classList.contains("focus-word"));
+      await wait(400);   // the dimming is a transition; read it once it has run
+    }
     const fw = await page.evaluate(async () => {
       const inWord = document.body.classList.contains("focus-word");
       const other = [...document.querySelectorAll(".cell")].find((c) =>
@@ -1884,6 +1905,55 @@ if (!ONLY || ONLY === "crossword") {
     t(`${vp[0]}: an old-link banner over the crossword is one short line and the page does not scroll`,
       b.there && b.short && !b.long && b.h <= 50 && b.scroll <= 1, JSON.stringify(b));
     await context.close();
+  }
+}
+
+/* ---- the family's top bar --------------------------------------------------
+   The owner, 25 Sep 2026: "make the top bar the same on every game" -- "you
+   could not tell they are made by the same person". One bar
+   (shared/xi-matchbar.js), approved with five slots in one order: Progress ·
+   Clock · Score · Worth · Subs. Asked of every game, in play, the way each is
+   opened above: the bar is there, its slots are those five in that order, its
+   first line names the game, and it sits at the same place and size on every
+   game -- measured against the others, not against a number written here. */
+if (!ONLY || ONLY === "bar") {
+  console.log(`\nthe family's top bar`);
+  const WANT = ["Progress", "Clock", "Score", "Worth", "Subs"];
+  const openers = {
+    pitch: (g, vp) => open(g, 1, vp), quiz: openQuiz, slider: openSlider, duel: openDuel,
+    codeword: openCodeword, grid: openGrid, profile: openProfile, wordsearch: openWS,
+  };
+  for (const vp of [VIEWPORTS[1], VIEWPORTS[3]]) {
+    const seen = [];
+    const games = [...Object.entries(LOCKED).map(([id, g]) => [id, () => openers[g.kind](g, vp)]),
+                   ["crossword", () => openCrossword(vp)]];
+    for (const [id, go] of games) {
+      const { page, context } = await go();
+      await wait(300);
+      const b = await page.evaluate(() => {
+        const bar = document.getElementById("xiBar");
+        if (!bar || !bar.classList.contains("xmb")) return { missing: !bar ? "no #xiBar on the page" : "not mounted", XIBar: typeof window.XIBar };
+        const r = bar.getBoundingClientRect();
+        return { shown: r.height > 0 && getComputedStyle(bar).display !== "none",
+          labels: [...bar.querySelectorAll(".xmb-l")].map((e) => e.textContent.trim()),
+          name: bar.querySelector(".xmb-name").textContent.trim(),
+          left: Math.round(r.left), width: Math.round(r.width), top: Math.round(r.top), height: Math.round(r.height) };
+      });
+      t(`${vp[0]} ${id}: the family's bar, its five slots in order, naming the game`,
+        !!b && b.shown && b.labels.join(",") === WANT.join(",") && / XI/.test(b.name), JSON.stringify(b));
+      if (b) seen.push([id, b]);
+      await context.close();
+    }
+    /* THE SAME PLACE AND SIZE ON EVERY GAME, against the family's own median:
+       a bar that is present but sits somewhere else in one game is the
+       inconsistency the owner named. */
+    const med = (k) => { const v = seen.map(([, b]) => b[k]).sort((a, z) => a - z); return v[Math.floor(v.length / 2)]; };
+    const M = { left: med("left"), width: med("width"), top: med("top"), height: med("height") };
+    const off = seen.filter(([, b]) => Math.abs(b.left - M.left) > 3 || Math.abs(b.width - M.width) > 6 ||
+      Math.abs(b.top - M.top) > (vp[1].width >= 900 ? 18 : 6) || Math.abs(b.height - M.height) > 3)
+      .map(([id, b]) => `${id} ${b.left},${b.top} ${b.width}x${b.height}`);
+    t(`${vp[0]}: the bar sits at the same place and size on every game`, seen.length >= 10 && off.length === 0,
+      off.length ? `off the family's ${M.left},${M.top} ${M.width}x${M.height}: ${off.join("; ")}` : `${seen.length} games at ${M.left},${M.top} ${M.width}x${M.height}`);
   }
 }
 

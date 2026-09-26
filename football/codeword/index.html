@@ -35,14 +35,15 @@
      tokens' custom properties, so the other order leaves the bar unstyled for
      one paint. Every reference carries ?v=v46, which moves when the shared
      files move and never with this game's own tag. -->
-<link rel="stylesheet" href="/shared/xi-tokens.css?v=v65">
-<link rel="stylesheet" href="/shared/xi-landing.css?v=v65">
-<link rel="stylesheet" href="/shared/xi-chrome.css?v=v65">
-<link rel="stylesheet" href="/shared/xi-board.css?v=v65">
-<link rel="stylesheet" href="/shared/xi-share.css?v=v65">
-<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v65">
-<script src="/shared/xi-theme.js?v=v65"></script>
-<link rel="stylesheet" href="css/style.css?v=v001s">
+<link rel="stylesheet" href="/shared/xi-tokens.css?v=v66">
+<link rel="stylesheet" href="/shared/xi-landing.css?v=v66">
+<link rel="stylesheet" href="/shared/xi-chrome.css?v=v66">
+<link rel="stylesheet" href="/shared/xi-board.css?v=v66">
+<link rel="stylesheet" href="/shared/xi-matchbar.css?v=v66">
+<link rel="stylesheet" href="/shared/xi-share.css?v=v66">
+<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v66">
+<script src="/shared/xi-theme.js?v=v66"></script>
+<link rel="stylesheet" href="css/style.css?v=v001t">
 </head>
 <body>
 <!-- The bar and the footer are MOUNTED, not written: shared/xi-chrome.js fills
@@ -104,6 +105,10 @@
      repo's; the template is the site's.
      =================================================================== -->
 <main class="wrap game">
+  <!-- THE FAMILY'S TOP BAR (shared/xi-matchbar.js), by the owner's ruling of
+       25 Sep 2026: the same five slots in the same places on every game. The
+       clock card below keeps only its three buttons. -->
+  <div id="xiBar"></div>
   <section>
     <div class="card">
       <!-- The box the grid is fitted to on a locked screen: as large as the
@@ -186,16 +191,17 @@
 </div>
 <footer class="xic-foot"></footer>
 
-<script src="/shared/xi-chrome.js?v=v65"></script>
-<script src="/shared/xi-board.js?v=v65"></script>
-<script src="/shared/xi-share.js?v=v65"></script>
+<script src="/shared/xi-chrome.js?v=v66"></script>
+<script src="/shared/xi-board.js?v=v66"></script>
+<script src="/shared/xi-matchbar.js?v=v66"></script>
+<script src="/shared/xi-share.js?v=v66"></script>
 <!-- xi-played.js first: xi-fulltime.js asks it what has been played today. -->
-<script src="/shared/xi-played.js?v=v65"></script>
-<script src="/shared/xi-fulltime.js?v=v65"></script>
-<script src="/shared/xi-season.js?v=v65"></script>
-<script src="/shared/xi-plays.js?v=v65"></script>
+<script src="/shared/xi-played.js?v=v66"></script>
+<script src="/shared/xi-fulltime.js?v=v66"></script>
+<script src="/shared/xi-season.js?v=v66"></script>
+<script src="/shared/xi-plays.js?v=v66"></script>
 <script>XIChrome.init({ game: "codeword" });</script>
-<script src="js/game.js?v=v001s"></script>
+<script src="js/game.js?v=v001t"></script>
 <!-- THE SWITCH, and it is only a switch. The board loads and renders behind
      the landing exactly as it did before; this shows it. The game's own clock
      starts on the first interaction rather than on load, so nothing is running

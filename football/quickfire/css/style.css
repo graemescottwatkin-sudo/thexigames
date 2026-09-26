@@ -221,6 +221,9 @@ h1,h2{font-family:var(--disp);letter-spacing:.01em;margin:0}
    gets bigger type and bigger buttons rather than more empty paper. The
    column stops at 860px: past that a line of clue is too long to read in one
    movement, and the four stop being scannable. */
+/* The family's top bar stands in for the strip, the count, the clock and
+   the score boxes (shared/xi-matchbar.css). */
+#screenGame>.strip,#screenGame>.matchHead,#screenGame>.scoreCluster{display:none}
 body.locked{height:100vh;height:100dvh;overflow:hidden;display:flex;flex-direction:column}
 body.locked>*{flex:none}
 body.locked>footer{display:none}

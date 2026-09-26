@@ -680,6 +680,10 @@ body.locked #screenGame {
     "bench bench";
   column-gap: 12px;
 }
+/* The family's top bar stands in for the count, the clock and the score
+   boxes (shared/xi-matchbar.css), across the top row of the grid. */
+#screenGame > .matchHead, #screenGame > .scoreCluster { display: none; }
+body.locked #xiBar { grid-row: 1; grid-column: 1 / 3; }
 body.locked .matchHead {
   grid-area: head;
   align-self: center;
@@ -724,6 +728,18 @@ body.locked .pitch {
   container-type: size;
 }
 body.locked .feedback { grid-area: feedback; min-height: 18px; margin: 4px 2px 2px; font-size: 13.5px; }
+/* A short screen: the family's top bar is a line taller than the count and
+   clock it replaced, and the feedback line gives some of it back. */
+@media (max-height: 700px) {
+  body.locked .feedback { min-height: 15px; margin: 2px 2px 1px; font-size: 12.5px; line-height: 15px; }
+  /* And the keys, a little: at 640 tall a name being typed no longer fitted
+     its tile (the room check's "clipped"), and 3px a row is what it needed. */
+  body.locked .osk { --osk-h: 31px; --osk-gap: 3px; padding: 3px 4px calc(3px + env(safe-area-inset-bottom)); }
+  /* And the cards take a little more of a shorter pitch, so a name being
+     typed still fits: 15% of its height, where 14% left them 3px short. The
+     room check still refuses any that would meet. */
+  body.locked .pitch .slot { height: 15cqh; }
+}
 /* PICKING A TILE DOES NOT MOVE THE BOARD. The bench and the echo were rows of
    this grid, so the pitch gave up a third of its height whenever a tile was
    picked (the owner, 25 Sep 2026: "if i select a name the sizing changes").
@@ -746,6 +762,11 @@ body.locked .benchRow.atTop { align-self: start; margin: 8px 8px 0; }
 /* The answer row and the keys are in the flow at the foot of the screen, not
    fixed over it: the board is sized to what they leave, so there is nothing
    underneath for them to cover. */
+/* ONE ENTER, ON THE KEYS. Where the family's keyboard is drawn it has its
+   own Enter, bottom left, so the button beside the box was a second one (the
+   owner's approval, 25 Sep 2026: the separate button only where there are no
+   drawn keys). */
+body.touch #submit { display: none; }
 body.locked .entry {
   grid-area: entry;
   position: static;

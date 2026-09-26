@@ -32,7 +32,7 @@
 
   var R = window.XIGR_RULES;
   var $ = function (id) { return document.getElementById(id); };
-  var BUILD = "v002n";
+  var BUILD = "v002o";
 
   var S = {
     board: null,          // the PUBLIC board: shape, lengths, crossings. No letters.
@@ -246,6 +246,11 @@
 
     var left = Math.max(0, S.turns === null ? R.TURNS_START : S.turns);
     $("gdTurns").textContent = left;
+    /* The family's top bar: the entries solved, and the turns left in the
+       slot where the other games show what the board is worth. */
+    if (window.XIBar) XIBar.set({
+      progress: Object.keys(S.solved || {}).length + "/" + b.entries.length,
+      worth: left + (left === 1 ? " turn" : " turns") });
     var bar = $("gdBar");
     /* Capped at full: a run of right answers carries the count above the start,
        and a bar overflowing its track reads as a rendering fault. */
@@ -763,6 +768,12 @@
       S.board = r.board;
       S.no = r.no;
       S.today = r.today;
+      /* THE FAMILY'S TOP BAR, named with the board the server sent. */
+      if (window.XIBar) {
+        XIBar.mount($("xiBar"));
+        XIBar.set({ name: "Grid XI", no: r.no, day: r.day, old: !!r.today && r.no !== r.today,
+                    progress: null, clock: null, score: null, worth: null, subs: null });
+      }
       if (r.today && r.no !== r.today && window.XIChrome && window.XIChrome.permalink) {
         window.XIChrome.permalink.aged("grid", r.today - r.no);
       }

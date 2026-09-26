@@ -17,7 +17,7 @@
 import { json, bad } from "../../_lib/puzzle.js";
 import { hasDB } from "../../_lib/db.js";
 import { currentUser, csrfOk, newId } from "../../_lib/auth.js";
-import { validGame, entryKey, detailOf, playedOn } from "../../_lib/games.js";
+import { validGame, entryKey, detailOf, playedOn, beforeItsBoard } from "../../_lib/games.js";
 
 const MAX_RESULTS = 400;
 
@@ -96,6 +96,11 @@ export async function onRequestPost({ request, env }) {
        rule each caller reimplements. */
     const key = entryKey(game, r);
     if (!key) { skipped++; continue; }
+    /* A board from before the numbering restarted, under a number a later
+       board now holds. Written against that board it would stand as the
+       player's result for a puzzle they have not played, and refuse the one
+       they do. See beforeItsBoard in _lib/games.js. */
+    if (beforeItsBoard(game, r)) { skipped++; continue; }
     const dailyNo = game === "crossword" ? intOr(r.dailyNo, null) : null;
     const mode = "daily";
 

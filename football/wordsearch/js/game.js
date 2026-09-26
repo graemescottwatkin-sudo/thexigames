@@ -15,7 +15,7 @@
      the family more time than any layout question: the footer line, the
      console, and the named window variable. If this is not the build just
      deployed, the deploy has not landed — do not start debugging the game. */
-  var BUILD = "v002z";
+  var BUILD = "v003";
   window.WORDSEARCHXI_BUILD = BUILD;
   try { console.log("Wordsearch XI build " + BUILD); } catch (e) {}
 
@@ -368,6 +368,7 @@
   function renderScore(v) {
     var shown = v === undefined ? finalScore() : v;
     $("score").textContent = shown;
+    if (window.XIBar) XIBar.set({ worth: shown });
     $("scoreStar").textContent = bonusFound ? "★" : "☆";
     $("scoreStar").classList.toggle("found", bonusFound);
     /* The table follows the same number the scoreboard shows — read from one
@@ -387,12 +388,14 @@
       $("varBanner").querySelector("span").textContent = bonusWindow
         ? "free · find the secret" : "match clock stopped";
       $("clock").textContent = bonusWindow ? "BONUS" : "VAR";
+      if (window.XIBar) XIBar.set({ clock: bonusWindow ? "Bonus" : "VAR" });
       renderScore(varFrozenScore);
       $("varCountdown").textContent = left + "s";
       return;
     }
     $("varBanner").classList.add("hidden");
     $("clock").textContent = footballMinute() + "'";
+    if (window.XIBar) XIBar.set({ clock: footballMinute() + "'" });
     renderScore();
   }
   function timerTick() {
@@ -945,6 +948,7 @@
   /* ---- UI -------------------------------------------------------------- */
   function updateUI() {
     $("count").textContent = found.size;
+    if (window.XIBar) XIBar.set({ progress: found.size + "/11" });
     $("progress").style.width = (found.size / 11 * 100) + "%";
     Array.prototype.forEach.call($("wordList").children, function (x) {
       var done = found.has(x.dataset.word);
@@ -1119,6 +1123,14 @@
   /* ---- loading and restoring boards ------------------------------------ */
   function enterBoard(p, label) {
     puzzle = p;
+    /* THE FAMILY'S TOP BAR. Named here, and given its number and day by the
+       caller that knows them: today's daily, or an old board from the archive.
+       A board opened from a theme has no number. */
+    if (window.XIBar) {
+      XIBar.mount($("xiBar"));
+      XIBar.set({ name: "Wordsearch XI", no: null, day: null, old: false,
+                  progress: "0/11", clock: "0'", score: null, worth: null, subs: null });
+    }
     found = new Set(); bonusFound = false;
     elapsed = 0; penaltyMinutes = 0; wrongRun = 0; assisted = false;
     helpUsed = new Set(); varPauseStart = 0; varPauseUntil = 0; varFrozenScore = 114;
@@ -1138,6 +1150,7 @@
   function startDaily(p) {
     mode = "daily";
     enterBoard(p, "Team of the day");
+    if (window.XIBar) XIBar.set({ no: serverNo, day: serverDay, old: false });
     /* The account may hold a NEWER journey, pushed by another device. Async:
        the board opens from the local record immediately and upgrades if the
        account knows better — first paint never waits on a network call. The
@@ -1299,6 +1312,7 @@
       pending = { puzzle: r.puzzle, kicker: kicker, note: note };
       mode = "free";
       enterBoard(r.puzzle, "Free play");
+      if (window.XIBar && board.no != null) XIBar.set({ no: board.no, day: board.day || null, old: true });
       $("kickKicker").textContent = kicker || "BOARD";
       $("kickTitle").textContent = r.puzzle.theme;
       $("kickNote").textContent = note ||

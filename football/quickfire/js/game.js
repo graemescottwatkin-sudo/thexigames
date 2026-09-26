@@ -31,7 +31,7 @@
  * link so a friend could replay the exact eleven, and that is now a board
  * number in the fragment, which is shorter and does not describe the board.
  */
-var BUILD = "v001o";
+var BUILD = "v001p";
 
 (function bootstrap() {
   'use strict';
@@ -261,6 +261,7 @@ function start() {
     el.stripFill.classList.toggle('late', minute >= 60);
     var worth = pointsFor(minute);
     el.worthNow.textContent = worth;
+    if (window.XIBar) XIBar.set({ clock: minute + "'", worth: worth });
     el.worthNow.classList.toggle('low', worth <= 40);
   }
 
@@ -275,6 +276,7 @@ function start() {
     el.subCost.textContent = left > 0
       ? '−' + CONFIG.SUB_POINT_PENALTY + ' · ' + left + ' left'
       : 'none left';
+    if (window.XIBar) XIBar.set({ subs: { left: Math.max(0, CONFIG.SUBS_PER_DAILY - state.subsUsed), of: CONFIG.SUBS_PER_DAILY } });
   }
 
   /* THE FOUR. Rendered from what the server sent and nothing else.
@@ -460,8 +462,9 @@ function start() {
     current = { idx: idx, question: q, finished: false };
 
     el.progress.textContent = idx + ' / ' + CONFIG.QUESTIONS_PER_DAILY;
+    if (window.XIBar) XIBar.set({ progress: idx + '/' + CONFIG.QUESTIONS_PER_DAILY });
     el.clue.textContent = q.clue;
-    el.runningScore.textContent = state.totalScore;
+    el.runningScore.textContent = state.totalScore; if (window.XIBar) XIBar.set({ score: state.totalScore });
     setFeedback('');
     renderOptions(q);
     renderSubButton();
@@ -532,7 +535,7 @@ function start() {
       answer: r.answer || null
     });
     state.totalScore += (r.points || 0);
-    el.runningScore.textContent = state.totalScore;
+    el.runningScore.textContent = state.totalScore; if (window.XIBar) XIBar.set({ score: state.totalScore });
 
     /* WHAT IT WAS, WHEN THEY DID NOT GET IT. Being told "no" and not what the
        answer was leaves nothing to learn and no way to see the question was
@@ -601,7 +604,7 @@ function start() {
         var q = questions[state.index - 1];
         current = { idx: state.index, question: q, finished: false };
         el.clue.textContent = q.clue;
-        el.runningScore.textContent = state.totalScore;
+        el.runningScore.textContent = state.totalScore; if (window.XIBar) XIBar.set({ score: state.totalScore });
         renderOptions(q);
         renderSubButton();
         setFeedback('SUBBED OFF — −' + CONFIG.SUB_POINT_PENALTY, 'sub');
@@ -993,6 +996,12 @@ function start() {
   /* --------------------------------------------------------- start screen */
 
   function describeBoard() {
+    /* THE FAMILY'S TOP BAR, named with this board. */
+    if (window.XIBar) {
+      XIBar.mount(document.getElementById('xiBar'));
+      XIBar.set({ name: 'QuickFire XI', no: board.no, day: board.day, old: !DATA.isToday,
+                  progress: null, clock: "0'", score: 0, worth: null, subs: null });
+    }
     el.startKicker.textContent = DATA.isToday ? "Today's Daily" : 'A board that has been';
     el.startDate.textContent = 'No. ' + board.no + ' — ' + formatDate(board.day);
   }

@@ -152,6 +152,11 @@ button{font:inherit;color:inherit;cursor:pointer}
    back beside the board and holds everything, scrolling in itself if it must.
    The grid's letters are sized from its own square (cqmin), so a larger
    screen gets a larger board rather than more paper. */
+/* The family's top bar stands in for the clock, the worth and the
+   substitutions (shared/xi-matchbar.css), across the top of the game; the
+   clock card keeps its buttons. */
+.game>#xiBar{grid-column:1/-1}
+.cw-clockcard>h2,.cw-clockcard>.clock,.cw-clockcard>.subs{display:none}
 body.locked{height:100vh;height:100dvh;overflow:hidden;display:flex;flex-direction:column}
 body.locked>*{flex:none}
 body.locked>footer{display:none}
@@ -229,6 +234,11 @@ body.locked .keys button{height:clamp(30px,4.6vh,52px)}
   body.locked .cw-clockcard .clock .worth span{font-size:9px}
   body.locked .cw-clockcard .acts .btn{min-height:34px}
   body.locked .cw-clockcard .acts .btn small{display:none}
+  /* And the family's top bar is a line taller than the clock it replaced:
+     measured at 360x640 it left the squares at 17.5px, under the floor. The
+     readout under the grid gives the line back -- the clue line under it
+     already says which answer you are in. */
+  body.locked .readout{display:none}
   body.locked .cw-clockcard .acts .btn{font-size:11px;letter-spacing:.02em;white-space:nowrap;padding:2px 4px}
   body.locked .cw-clockcard .clock .min small{font-size:12px}
   body.locked .cw-keycard{padding:2px 4px}
@@ -238,9 +248,10 @@ body.locked .keys button{height:clamp(30px,4.6vh,52px)}
   body.locked .keys{margin-top:4px;gap:3px}
 }
 @media (min-width:861px){
-  body.locked #cwGame>main.game{display:grid;grid-template-columns:minmax(0,1fr) 300px;grid-template-rows:minmax(0,1fr);gap:16px}
-  body.locked .game>section>.card{grid-column:1;grid-row:1}
-  body.locked .game>aside{grid-column:2;grid-row:1;overflow:auto;min-height:0}
+  body.locked #cwGame>main.game{display:grid;grid-template-columns:minmax(0,1fr) 300px;grid-template-rows:auto minmax(0,1fr);gap:0 16px}
+  body.locked .game>#xiBar{grid-column:1/-1;grid-row:1}
+  body.locked .game>section>.card{grid-column:1;grid-row:2}
+  body.locked .game>aside{grid-column:2;grid-row:2;overflow:auto;min-height:0}
 }
 
 /* Full Time is a card over the board, capped at the screen and scrolling in

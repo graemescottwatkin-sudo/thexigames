@@ -26,16 +26,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/shared/xi-tokens.css?v=v65">
-<link rel="stylesheet" href="/shared/xi-landing.css?v=v65">
-<link rel="stylesheet" href="/shared/xi-chrome.css?v=v65">
-<link rel="stylesheet" href="/shared/xi-share.css?v=v65">
-<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v65">
-<link rel="stylesheet" href="/shared/xi-table.css?v=v65">
+<link rel="stylesheet" href="/shared/xi-tokens.css?v=v66">
+<link rel="stylesheet" href="/shared/xi-landing.css?v=v66">
+<link rel="stylesheet" href="/shared/xi-chrome.css?v=v66">
+<link rel="stylesheet" href="/shared/xi-matchbar.css?v=v66">
+<link rel="stylesheet" href="/shared/xi-share.css?v=v66">
+<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v66">
+<link rel="stylesheet" href="/shared/xi-table.css?v=v66">
 <!-- The theme, stamped before first paint: light unless the player chose
      dark, decided in one shared place for every page of the family. -->
-<script src="/shared/xi-theme.js?v=v65"></script>
-<link rel="stylesheet" href="css/style.css?v=v002m">
+<script src="/shared/xi-theme.js?v=v66"></script>
+<link rel="stylesheet" href="css/style.css?v=v002n">
 </head>
 <body>
 
@@ -220,6 +221,12 @@
     <p><b>The source shows as the call settles.</b> Every number on a board comes from an opened official record, or from a cached list where the club publishes none, and the line that proves it appears beside the answer once you have called it, never before.</p>
   </section>
   <section class="screen" id="screenGame" hidden>
+    <!-- THE FAMILY'S TOP BAR (shared/xi-matchbar.js), by the owner's ruling
+         of 25 Sep 2026: the same five slots in the same places on every game,
+         the score among them rather than at the foot of the screen. The
+         category stays under it -- it is the question being asked -- and so
+         does the ladder of eleven. -->
+    <div id="xiBar"></div>
     <div class="game">
       <section class="stage" aria-label="The ladder">
         <div class="eyebrow" id="modeLabel">Today</div>
@@ -324,19 +331,20 @@
 <!-- THE SHARED FOOTER, AT TOP LEVEL. It carries the family disclaimer. -->
 <footer class="xic-foot"></footer>
 
-<script src="/shared/xi-seasons.js?v=v65"></script>
-<script src="/shared/xi-clubs.js?v=v65"></script>
-<script src="/shared/xi-table.js?v=v65"></script>
-<script src="/shared/xi-chrome.js?v=v65"></script>
-<script src="/shared/xi-season.js?v=v65"></script>
-<script src="/shared/xi-menu.js?v=v65"></script>
-<script src="/shared/xi-plays.js?v=v65"></script>
-<script src="/shared/xi-challenge.js?v=v65"></script>
-<script src="/shared/xi-share.js?v=v65"></script>
+<script src="/shared/xi-seasons.js?v=v66"></script>
+<script src="/shared/xi-clubs.js?v=v66"></script>
+<script src="/shared/xi-table.js?v=v66"></script>
+<script src="/shared/xi-chrome.js?v=v66"></script>
+<script src="/shared/xi-matchbar.js?v=v66"></script>
+<script src="/shared/xi-season.js?v=v66"></script>
+<script src="/shared/xi-menu.js?v=v66"></script>
+<script src="/shared/xi-plays.js?v=v66"></script>
+<script src="/shared/xi-challenge.js?v=v66"></script>
+<script src="/shared/xi-share.js?v=v66"></script>
 <!-- xi-played.js first: xi-fulltime.js asks it what has been played today. -->
-<script src="/shared/xi-played.js?v=v65"></script>
-<script src="/shared/xi-fulltime.js?v=v65"></script>
-<script src="js/scoring.js?v=v002m"></script>
-<script src="js/game.js?v=v002m"></script>
+<script src="/shared/xi-played.js?v=v66"></script>
+<script src="/shared/xi-fulltime.js?v=v66"></script>
+<script src="js/scoring.js?v=v002n"></script>
+<script src="js/game.js?v=v002n"></script>
 </body>
 </html>

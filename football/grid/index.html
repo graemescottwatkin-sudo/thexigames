@@ -26,14 +26,15 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/shared/xi-tokens.css?v=v65">
-<link rel="stylesheet" href="/shared/xi-landing.css?v=v65">
-<link rel="stylesheet" href="/shared/xi-chrome.css?v=v65">
-<link rel="stylesheet" href="/shared/xi-board.css?v=v65">
-<link rel="stylesheet" href="/shared/xi-share.css?v=v65">
-<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v65">
-<script src="/shared/xi-theme.js?v=v65"></script>
-<link rel="stylesheet" href="css/style.css?v=v002n">
+<link rel="stylesheet" href="/shared/xi-tokens.css?v=v66">
+<link rel="stylesheet" href="/shared/xi-landing.css?v=v66">
+<link rel="stylesheet" href="/shared/xi-chrome.css?v=v66">
+<link rel="stylesheet" href="/shared/xi-board.css?v=v66">
+<link rel="stylesheet" href="/shared/xi-matchbar.css?v=v66">
+<link rel="stylesheet" href="/shared/xi-share.css?v=v66">
+<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v66">
+<script src="/shared/xi-theme.js?v=v66"></script>
+<link rel="stylesheet" href="css/style.css?v=v002o">
 </head>
 <body>
 
@@ -56,6 +57,10 @@
        of each entry, and nothing revealed at the start. The owner's ruling,
        6 September 2026 — "it should just be the title, i.e. what are we trying
        to solve". -->
+  <!-- THE FAMILY'S TOP BAR (shared/xi-matchbar.js), by the owner's ruling of
+       25 Sep 2026. The board's title stays under it: here it is the only clue. -->
+  <div id="xiBar"></div>
+
   <section class="gd-ident" id="gdIdent">
     <p class="gd-kicker" id="gdKicker">TODAY</p>
     <h2 class="gd-title" id="gdTitle">&mdash;</h2>
@@ -129,15 +134,16 @@
 <!-- THE SHARED FOOTER, AT TOP LEVEL. It carries the family disclaimer. -->
 <footer class="xic-foot"></footer>
 
-<script src="/shared/xi-chrome.js?v=v65"></script>
-<script src="/shared/xi-board.js?v=v65"></script>
-<script src="/shared/xi-share.js?v=v65"></script>
+<script src="/shared/xi-chrome.js?v=v66"></script>
+<script src="/shared/xi-board.js?v=v66"></script>
+<script src="/shared/xi-matchbar.js?v=v66"></script>
+<script src="/shared/xi-share.js?v=v66"></script>
 <!-- xi-played.js first: xi-fulltime.js asks it what has been played today. -->
-<script src="/shared/xi-played.js?v=v65"></script>
-<script src="/shared/xi-fulltime.js?v=v65"></script>
-<script src="js/rules.js?v=v002n"></script>
-<script src="/shared/xi-season.js?v=v65"></script>
-<script src="/shared/xi-plays.js?v=v65"></script>
-<script src="js/game.js?v=v002n"></script>
+<script src="/shared/xi-played.js?v=v66"></script>
+<script src="/shared/xi-fulltime.js?v=v66"></script>
+<script src="js/rules.js?v=v002o"></script>
+<script src="/shared/xi-season.js?v=v66"></script>
+<script src="/shared/xi-plays.js?v=v66"></script>
+<script src="js/game.js?v=v002o"></script>
 </body>
 </html>

@@ -241,6 +241,10 @@ body{margin:0;font-family:var(--body)}
    paper. The eleven, the source line and the table are a column of their own
    where there is room for one. Full Time keeps the board and puts the result
    in a panel under it, or beside it on a wide screen. */
+/* The family's top bar stands in for this call's clock, worth, banked and
+   substitutions card (shared/xi-matchbar.css). */
+.dug>.card:first-child{display:none}
+body.locked #screenGame>#xiBar{flex:none;margin-top:6px}
 body.locked{height:100vh;height:100dvh;overflow:hidden;display:flex;flex-direction:column}
 body.locked>*{flex:none}
 body.locked>footer{display:none}
@@ -281,6 +285,16 @@ body.locked .duel.live .player .sub{font-size:clamp(11px,min(7.4cqw,6cqh),22px)}
 body.locked .ask{margin:8px 0 0}
 body.locked .calls{margin-top:8px}
 body.locked .call{min-height:max(56px,7vh)}
+/* A SHORT SCREEN with the old-link banner up: the family's top bar and the
+   banner together left the live pair 40px short of its panel at 360x640. The
+   pair goes to its floor and the calls give a little. */
+@media (max-height:700px){
+  body.locked .duel.live .player{min-height:96px}
+  body.locked .call{min-height:46px}
+  body.locked .ask{margin-top:4px}
+  body.locked .calls{margin-top:4px}
+  body.locked .ladder{margin:4px 0 4px}
+}
 
 /* The context under a name is two lines at most while the pair is live: it
    runs to 77 characters in the bank and at four lines it pushed the pair out

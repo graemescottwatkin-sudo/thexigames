@@ -10,7 +10,7 @@
  * more, 114 the ceiling. This file is the page: the landing the family
  * shares, the ladder of two rows, the clock, the answers list, the share.
  */
-var BUILD = "v002m";
+var BUILD = "v002n";
 
 (function () {
   "use strict";
@@ -454,7 +454,7 @@ var BUILD = "v002m";
       var day = r.day;
       if (typeof r.freeArchiveDays === "number") freeArchiveDays = r.freeArchiveDays;
       if (!r.board) { toast("No board that day"); return; }
-      coverBoard(r.board, day === serverDay ? "daily" : "free", { day: day === serverDay ? day : null, kicker: kicker });
+      coverBoard(r.board, day === serverDay ? "daily" : "free", { day: day === serverDay ? day : null, kicker: kicker, no: r.no, boardDay: day });
       /* The address follows the board, and today's keeps the plain one. It is
          the board NUMBER since 6 September 2026 — one address shape for the
          family — and the number comes from the server's answer rather than
@@ -491,6 +491,16 @@ var BUILD = "v002m";
 
   /* ---- the round ------------------------------------------------------- */
   function startRound(board, mode, meta) {
+    /* THE FAMILY'S TOP BAR, named with this board as the round starts -- every
+       round comes through here, today's and every other: a numbered daily says its
+       number and day, and an old one says so; a club or theme board is named
+       by the category under the bar and has no number. */
+    if (window.XIBar) {
+      XIBar.mount($("xiBar"));
+      XIBar.set({ name: "HiLo XI", no: meta.no != null ? meta.no : null, day: meta.boardDay || null,
+                  old: mode === "free" && meta.no != null,
+                  progress: null, clock: null, score: 0, worth: null, subs: null });
+    }
     g = freshRound(board, mode, meta);
     /* Mounted per ROUND, before the board is drawn: drawBoard reports the
        banked score and the table has to exist to receive it. The token comes
@@ -627,6 +637,8 @@ var BUILD = "v002m";
     if (leagueTable) leagueTable.update(banked);
     Array.prototype.forEach.call($("subs").querySelectorAll("i"), function (dot, i) { dot.classList.toggle("spent", i < round.subsUsed); });
     var leftSubs = S.SUBS - round.subsUsed;
+    if (window.XIBar) XIBar.set({ progress: Math.min(round.step + 1, S.CALLS) + "/" + S.CALLS, score: banked,
+                                  subs: { left: Math.max(0, leftSubs), of: S.SUBS } });
     $("subs").querySelector("span").textContent = leftSubs <= 0 ? "No substitutions left" : leftSubs + (leftSubs === 1 ? " substitution" : " substitutions");
   }
 
@@ -643,6 +655,7 @@ var BUILD = "v002m";
     var elapsed = Date.now() - g.clockStart;
     var worth = S.worthAt(elapsed);
     $("callWorth").textContent = worth;
+    if (window.XIBar) XIBar.set({ clock: Math.max(0, Math.ceil((S.CLOCK_MS - elapsed) / 1000)) + "s", worth: worth });
     var frac = Math.max(0, 1 - Math.max(0, elapsed - S.GRACE_MS) / (S.CLOCK_MS - S.GRACE_MS));
     $("clockBar").querySelector("i").style.width = (frac * 100) + "%";
     $("clockBar").classList.toggle("low", worth <= 3);
@@ -1012,7 +1025,7 @@ var BUILD = "v002m";
     };
     function startToday() {
       startRound(todayBoard, "daily",
-        { day: serverDay, kicker: todayNo ? "TODAY · #" + todayNo : "TODAY" });
+        { day: serverDay, kicker: todayNo ? "TODAY · #" + todayNo : "TODAY", no: todayNo, boardDay: serverDay });
     }
     $("homeFeatured").onclick = function () {
       if (!featured) { toast("No board this week"); return; }

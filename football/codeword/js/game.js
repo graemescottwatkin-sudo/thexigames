@@ -3,7 +3,7 @@
   /* THE BUILD, PAIRED WITH THE ?v= ON THIS FILE'S OWN SCRIPT TAG. A stale
      cached script is otherwise invisible: the page loads, the game runs, and
      it is yesterday's code. aligned_test asserts the two agree. */
-  var BUILD = "v001s";
+  var BUILD = "v001t";
   if (window.XIPlays && document.documentElement) {
     document.documentElement.setAttribute("data-build", BUILD);
   }
@@ -74,6 +74,20 @@ function boot(BOARD){
     BOARD_NO = ("00" + BOARD.no).slice(-3);
     BOARD_NO_N = BOARD.no;
     BOARD_DAY = BOARD.day || null;
+    /* THE FAMILY'S TOP BAR, named with this board. Its number never showed on
+       the play screen: it was written to a #tag this page does not have. */
+    var old = !!BOARD.today && !!BOARD_DAY && BOARD_DAY !== BOARD.today;
+    if (window.XIBar) {
+      XIBar.mount(document.getElementById("xiBar"));
+      XIBar.set({ name: "Codeword XI", no: BOARD.no, day: BOARD_DAY, old: old,
+                  progress: "0/" + ((BOARD.slots || BOARD.words || []).length || 11), clock: "0'",
+                  score: null, worth: null, subs: null });
+    }
+    /* And the old-link banner the family's other games give an old board,
+       counted from the two days the server sent. */
+    if (old && window.XIChrome && XIChrome.permalink && XIChrome.permalink.aged) {
+      XIChrome.permalink.aged("codeword", Math.round((Date.parse(BOARD.today) - Date.parse(BOARD_DAY)) / 864e5));
+    }
     var tagEl = document.getElementById("tag");
     if (tagEl) tagEl.innerHTML = "Codeword XI " + DOT + " board " + BOARD_NO;
   }
@@ -496,6 +510,7 @@ function boot(BOARD){
       }
     });
     document.getElementById("solved").textContent = count;
+    if (window.XIBar) XIBar.set({ progress: count + "/" + SLOTS.length });
 
     Array.prototype.forEach.call(keyEl.children, function(k){
       var n = Number(k.dataset.n);
@@ -530,6 +545,7 @@ function boot(BOARD){
     var subsEl = document.getElementById("subs");
     Array.prototype.forEach.call(subsEl.querySelectorAll("i"), function(dot,i){ dot.classList.toggle("spent", i < subsUsed); });
     subsEl.querySelector("span").textContent = subsUsed >= SUBS ? "No substitutions left" : (SUBS - subsUsed) + (SUBS - subsUsed === 1 ? " substitution" : " substitutions");
+    if (window.XIBar) XIBar.set({ subs: { left: Math.max(0, SUBS - subsUsed), of: SUBS } });
     document.getElementById("reveal").disabled = over || selected === null || !!locked[selected];
     document.getElementById("check").disabled = over;
     if (count === SLOTS.length && !over) fullTime();
@@ -817,7 +833,9 @@ function boot(BOARD){
      top, so it answers a different question from "how long were they here". */
   function playsProgress(){
     var solved = Object.keys(solvedWords).length;
-    var total = WORDS.length || 11;
+    /* SLOTS, not WORDS: a sealed board -- every live one -- carries no words,
+       so WORDS is undefined there and this threw on every progress report. */
+    var total = (SLOTS || []).length || 11;
     return {
       solved: solved,
       elapsed: startedAt ? Math.round((Date.now() - startedAt) / 1000) : 0,
@@ -847,6 +865,7 @@ function boot(BOARD){
     if (over) return; var m = matchMinute();
     document.getElementById("minute").textContent = minuteText(m);
     document.getElementById("worth").textContent = Math.round(scoreAt(m));
+    if (window.XIBar) XIBar.set({ clock: minuteText(m) + "'", worth: Math.round(scoreAt(m)) });
     // past ninety there is a way to stop, since nothing stops it for you
     document.getElementById("whistle").hidden = m < 90;
   }
@@ -1232,6 +1251,9 @@ function loadDaily(){
     return r.json();
   }).then(function(d){
     if (!d || !d.board) throw new Error("no board");
+    /* Today's day, as the server says it, travels with the board: it is what
+       tells an old board from today's. */
+    d.board.today = d.day || null;
     return d.board;
   });
 }
