@@ -297,7 +297,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v004p";
+  var BUILD = "v004q";
   /* WHAT THIS GAME IS CALLED on its Full Time panel and in the tab, and whether it has a league to show.
      One line, so tools/build_friendscrossword.js rewrites it in one place:
      the Friends board has its own name, its own word for the end, and no
@@ -686,6 +686,9 @@
   /* One adoption per page load. The rebuild it triggers runs buildPuzzle
      again, which pulls again — without this the pair recurse for ever. */
   var stateAdopted = false;
+  /* Boards the account refused as banked, this page: pushing one again on the
+     next keystroke would only be refused again. */
+  var stateBanked = {};
   function stateKey() {
     return board && board.kind === "daily" && board.no ? "daily:" + board.no : null;
   }
@@ -767,6 +770,7 @@
       if (!Object.keys(probe.letters || {}).length && !probe.elapsed) return;
     } catch (e) { return; }
     var no = board.no;
+    if (stateBanked[no] && !probe.complete) return;
     apiAuth("/api/account/state", { game: "crossword", key: k, state: snap })
       .then(function (r) {
         if (!r || !r.updatedAt) return;
@@ -775,12 +779,23 @@
            while this was in flight stay unacknowledged, as they are. */
         writeSync(no, r.updatedAt, probe);
       })
-      .catch(function (e) { accountNote("state push", e); });
-  }
-  function clearRemoteState(no) {
-    if (!account || !no) return;
-    apiAuth("/api/account/state", { game: "crossword", key: "daily:" + no, state: null })
-      .catch(function (e) { accountNote("state clear", e); });
+      .catch(function (e) {
+        /* REFUSED BECAUSE THE BOARD IS BANKED (functions/api/account/state.js):
+           whatever this device still holds for it is a journey that already
+           ended elsewhere. Marked as acknowledged, so the next open does not
+           push it again instead of asking, and then the account is asked for
+           the finished grid -- the owner typed MONACO into a board banked at
+           36, and this is the path that board takes. */
+        if (e && e.status === 409 && e.body && e.body.banked) {
+          stateBanked[no] = true;
+          writeSync(no, "", probe);
+          stateSyncedAt = "";
+          stateAdopted = false;
+          if (board && board.kind === "daily" && board.no === no) pullJourney(no);
+          return;
+        }
+        accountNote("state push", e);
+      });
   }
   function pullState(no, then) {
     if (!account || !no) { then(null); return; }
@@ -800,6 +815,14 @@
         var sync = readSync(no);
         var since = String(stateSyncedAt || "");
         if (sync && String(sync.syncedAt || "") > since) since = String(sync.syncedAt);
+        /* BANKED, AND THE ACCOUNT HAS NO FINISHED GRID -- but this device
+           does. Sent, so the player's other devices open it finished. This is
+           the device that finished before the final grid was ever sent (every
+           board before 26 Sep 2026), catching the account up. */
+        if (r && r.banked && !r.state) {
+          var mine = readSlot("daily", { kind: "daily", no: no });
+          if (mine && mine.complete && board && board.kind === "daily" && board.no === no) pushStateNow();
+        }
         if (r && r.state && String(r.updatedAt || "") > since) {
           stateSyncedAt = r.updatedAt;
           var snap = null;
@@ -838,6 +861,15 @@
         if (local && !local.complete &&
             (Object.keys(local.letters || {}).length || local.elapsed) &&
             !(Object.keys(snap.letters || {}).length || snap.elapsed)) return;
+        /* A FINISHED BOARD IS NEVER REPLACED BY AN UNFINISHED ONE. The floor
+           above guards an unfinished board only, and the slot is written
+           before the rebuild checks `complete` -- so an older journey on the
+           account could overwrite, in storage, the one device's finished grid,
+           and a board banked on it could never be shown finished anywhere
+           (the owner's crossword No. 9, 26 Sep 2026). The account now keeps a
+           banked board's finished grid (functions/api/account/state.js); this
+           is the same rule on the device, for a board not yet banked. */
+        if (local && local.complete && !snap.complete) return;
         /* Addressed by the board this pull was FOR, not by whatever `board`
            happens to be when the network answers — slotKey() reads the
            CURRENT board, so a pull landing after the player moved on wrote
@@ -3023,7 +3055,13 @@
     }
     return fetch(path, opts).then(function (r) {
       return r.json().then(function (j) {
-        if (!r.ok) throw new Error(j && j.error ? j.error : "Request failed");
+        if (!r.ok) {
+          /* The status and the answer ride with the error, so a caller can
+             tell "that board is finished" from a failure. */
+          var err = new Error(j && j.error ? j.error : "Request failed");
+          err.status = r.status; err.body = j;
+          throw err;
+        }
         return j;
       });
     });
@@ -4804,11 +4842,15 @@
     /* After the device has its copy, never before: a failed push must leave the
        record exactly where it was, and the next push carries it. */
     pushResults();
-    /* The journey ends when the result banks: the in-progress row is cleared
-       so no device later resumes a board that is already scored. Fire and
-       forget like every account call — a failed clear leaves a stale row the
-       next open ignores, because a completed local save wins. */
-    if (board && board.kind === "daily" && board.no) clearRemoteState(board.no);
+    /* THE FINAL GRID GOES TO THE ACCOUNT, not a clear. The row was cleared
+       here, so the finished board lived only on the device that finished it:
+       another device opened it empty, or adopted whatever stale save reached
+       the account next -- the owner's crossword No. 9 on 26 Sep 2026, banked
+       at 36 and reopening as a blank grid. The save is complete by now
+       (checkComplete saved before recording), so this sends the finished
+       board, and functions/api/account/state.js keeps only a finished grid
+       for a banked board. */
+    if (board && board.kind === "daily" && board.no) pushStateNow();
     return list;
   }
   /* A themed board keeps its own record, and deliberately not the season's.

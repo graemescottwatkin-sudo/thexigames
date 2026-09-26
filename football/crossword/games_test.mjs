@@ -315,14 +315,15 @@ t("the crossword pushes after recording a finished daily", (() => {
      (with its comment) between pushResults() and return list, pushing the
      terminator out of reach — the assertion failed with the behaviour intact.
      800 admits the clear block; the order logic below is unchanged and still
-     fails if the push moves or vanishes. */
-  const rec = cw.match(/list\.sort\([\s\S]{0,800}?saveResults\(list\);[\s\S]{0,800}?return list;/);
+     fails if the push moves or vanishes. 1400 since 26 Sep 2026: the final
+     grid is sent there now instead of a clear, with its reason. */
+  const rec = cw.match(/list\.sort\([\s\S]{0,800}?saveResults\(list\);[\s\S]{0,1400}?return list;/);
   return !!rec && /pushResults\(\)/.test(rec[0]);
 })());
 /* After the device has its copy, never before: a failed push must leave the
    record where it was. */
 t("and only after the device has saved its own copy", (() => {
-  const rec = cw.match(/saveResults\(list\);[\s\S]{0,800}?return list;/);
+  const rec = cw.match(/saveResults\(list\);[\s\S]{0,1400}?return list;/);
   return !!rec && rec[0].indexOf("saveResults(list)") < rec[0].indexOf("pushResults()");
 })());
 t("the word search pushes after recording a completed board", (() => {

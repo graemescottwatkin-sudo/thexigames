@@ -71,6 +71,12 @@ jobs:
           # through a force-stop and relaunch, and proves cross-device adoption
           # still works. Five sabotages caught, one of them the original code.
           node football/crossword/unpushed_test.mjs
+          # A BANKED BOARD REOPENS FINISHED, NOT EMPTY. The owner's No. 9 (26
+          # Sep 2026): banked at 36, then a stale morning save reached the
+          # account and every other device opened an empty board. The page is
+          # driven against the REAL account/state endpoint over a stubbed D1;
+          # six sabotages caught.
+          node football/crossword/banked_test.mjs
           # ANOTHER DEVICE'S NEWER JOURNEY SURVIVES WHATEVER ANSWERS FIRST. Two
           # board loads in flight painted in the network's order, and a board
           # drawn before the session answered was never pulled; either way the

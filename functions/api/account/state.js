@@ -16,7 +16,31 @@
  * (midnight UTC vs local broke a real daily once).
  *
  * Results are untouched. A finished board still banks through migrate; this
- * table is only the journey, and the row is cleared when the journey ends.
+ * table is only the journey.
+ *
+ * A BANKED BOARD'S JOURNEY IS OVER, and since 26 Sep 2026 the server says so
+ * rather than trusting every device to know. The owner finished crossword No. 9
+ * (result banked 21:45 UTC); eight minutes later a device holding a save from
+ * that morning -- no letters, 50 seconds on the clock -- pushed it, this
+ * endpoint stamped it newest, and every other device adopted an empty board
+ * over a finished one: "It says I already played but nothing filled in". So,
+ * for a key the player has a result for:
+ *
+ *   - an UNFINISHED snapshot is refused (409), and any unfinished row there is
+ *     deleted on the way;
+ *   - a FINISHED snapshot (complete: true) is stored -- the device that
+ *     finished sends its final grid here instead of clearing, so another
+ *     device reopens the board finished rather than empty;
+ *   - a read returns a finished row, and deletes an unfinished one.
+ *
+ * WHY THE PLAYER'S OWN GRID AND NOT THE SOLUTION. The obvious fix is to serve
+ * the answers to a player with a solved result. A result is a claim the
+ * browser makes through migrate and a play is not tied to a user, so that
+ * would hand today's answers to anyone who posted a fake result first. What
+ * is stored here is only ever what this player's own device sent.
+ *
+ * This is the one place the server reads inside a snapshot, and it reads one
+ * field: `complete`.
  */
 import { currentUser, csrfOk } from "../../_lib/auth.js";
 import { validGame } from "../../_lib/games.js";
@@ -30,6 +54,21 @@ const json = (obj, status = 200) =>
     headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
   });
 const bad = (m) => json({ error: m }, 400);
+
+/* Has this player banked this board? The key is the results table's own
+   entry_key -- the same "daily:9" / "ws:2026-09-26" -- so one lookup answers. */
+async function banked(env, userId, game, key) {
+  const row = await env.DB.prepare(
+    `SELECT 1 AS hit FROM results WHERE user_id = ? AND game = ? AND entry_key = ? LIMIT 1`)
+    .bind(userId, game, key).first();
+  return !!(row && row.hit);
+}
+function finished(state) {
+  try { const s = JSON.parse(state); return !!(s && s.complete === true); } catch (e) { return false; }
+}
+const dropRow = (env, userId, game, key) => env.DB.prepare(
+  `DELETE FROM board_state WHERE user_id = ? AND game = ? AND entry_key = ?`)
+  .bind(userId, game, key).run();
 
 /* The key is validated by SHAPE, not against the games module's composer —
    the composer needs a full row, and this endpoint only ever sees the key.
@@ -58,6 +97,13 @@ export async function onRequestGet({ request, env }) {
       WHERE user_id = ? AND game = ? AND entry_key = ?`)
     .bind(user.id, game, key).first();
 
+  /* A banked board hands back only a FINISHED grid; an unfinished row there is
+     the stale journey this rule exists for, and goes. */
+  if (await banked(env, user.id, game, key)) {
+    if (row && finished(row.state)) return json({ state: row.state, updatedAt: row.updated_at, banked: true });
+    if (row) await dropRow(env, user.id, game, key);
+    return json({ state: null, banked: true });
+  }
   /* No row is a normal answer, not an error: most boards were never started
      elsewhere. */
   return json(row ? { state: row.state, updatedAt: row.updated_at }
@@ -95,6 +141,16 @@ export async function onRequestPost({ request, env }) {
     return bad("State is not an object.");
   }
 
+  /* THE JOURNEY IS OVER once the board is banked: only its final grid may be
+     written. The unfinished row a refused device was about to overwrite goes
+     too, so no other device adopts it; a finished row stays. */
+  if (!parsed.complete && await banked(env, user.id, game, key)) {
+    const held = await env.DB.prepare(
+      `SELECT state FROM board_state WHERE user_id = ? AND game = ? AND entry_key = ?`)
+      .bind(user.id, game, key).first();
+    if (held && !finished(held.state)) await dropRow(env, user.id, game, key);
+    return json({ error: "That board is finished.", banked: true }, 409);
+  }
   /* The server's clock, the only clock. Returned so the client can remember
      what "my last push" means in server time. */
   const now = new Date().toISOString();

@@ -22,9 +22,16 @@ function t(name, ok, note) {
    the behaviour under test. The auth_test stub that modelled a schema its
    endpoint had stopped using turned a passing suite into a statement about
    nothing; this one enforces exactly what migration 021 creates. */
-function stubEnv(rows) {
+/* AND THE RESULTS TABLE, since the banked rule reads it: a player's results by
+   (user_id, game, entry_key), the unique index 020 creates. Without this every
+   first() answered from board_state and a results lookup read a journey as a
+   banked board. */
+function stubEnv(rows, results = []) {
   return { DB: { prepare: (sql) => ({ bind: (...b) => ({
     first: async () => {
+      if (/FROM results/.test(sql)) {
+        return results.some((x) => x.user_id === b[0] && x.game === b[1] && x.entry_key === b[2]) ? { hit: 1 } : null;
+      }
       const r = rows.find((x) => x.user_id === b[0] && x.game === b[1] && x.entry_key === b[2]);
       return r ? { state: r.state, updated_at: r.updated_at } : null;
     },
@@ -53,8 +60,8 @@ function stubEnv(rows) {
    helper accepts. Simplest honest route: monkey-patch is not possible on an
    ESM import, so the handlers are exercised through a fake session row the
    stub serves. currentUser queries `sessions`; teach the stub to answer it. */
-function envWithUser(rows) {
-  const base = stubEnv(rows);
+function envWithUser(rows, results) {
+  const base = stubEnv(rows, results);
   const inner = base.DB.prepare;
   base.DB.prepare = (sql) => {
     if (/FROM sessions/.test(sql)) {
@@ -122,6 +129,51 @@ console.log("The endpoint, executed");
     j.cleared === true && rows.length === 0);
 }
 
+console.log("\nA banked board's journey is over");
+/* The owner's crossword No. 9, 26 Sep 2026: banked at 36, then a device with a
+   morning save -- no letters, 50 seconds -- pushed it, the endpoint stamped it
+   newest, and the other devices adopted an empty board over a finished one. */
+{
+  const bRows = [], bResults = [{ user_id: "u1", game: "crossword", entry_key: "daily:9" }];
+  const benv = envWithUser(bRows, bResults);
+  const post = (state) => onRequestPost({ request: req("POST", "/api/account/state",
+    { game: "crossword", key: "daily:9", state }), env: benv });
+  const get = () => onRequestGet({ request: req("GET", "/api/account/state?game=crossword&key=daily:9"), env: benv });
+
+  /* A row that got there before the rule: the stale journey itself. */
+  bRows.push({ user_id: "u1", game: "crossword", entry_key: "daily:9",
+    state: JSON.stringify({ letters: {}, elapsed: 50, complete: false }), updated_at: "2026-09-26T21:52:59.836Z" });
+  const g1 = await get(); const j1 = await g1.json();
+  t("a read of a banked board does not hand back an unfinished journey",
+    g1.status === 200 && j1.state === null && j1.banked === true, JSON.stringify(j1));
+  t("and the stale row is gone, so no other device adopts it", bRows.length === 0, bRows.length + " rows");
+
+  const r1 = await post({ letters: { "1,1": "M" }, elapsed: 60, complete: false });
+  const k1 = await r1.json();
+  t("an unfinished save of a banked board is refused, and says why",
+    r1.status === 409 && k1.banked === true, "HTTP " + r1.status + " " + JSON.stringify(k1));
+  t("and nothing was stored", bRows.length === 0);
+
+  const fin = { letters: { "1,1": "M", "1,2": "O" }, elapsed: 2567, complete: true };
+  const r2 = await post(fin);
+  const k2 = await r2.json();
+  t("the finished grid is stored -- the device that finished sends it here",
+    r2.status === 200 && !!k2.updatedAt && bRows.length === 1 && JSON.parse(bRows[0].state).complete === true);
+
+  const r3 = await post({ letters: {}, elapsed: 50, complete: false });
+  t("a late unfinished save cannot replace it",
+    r3.status === 409 && bRows.length === 1 && JSON.parse(bRows[0].state).complete === true);
+
+  const g2 = await get(); const j2 = await g2.json();
+  t("and a read hands the finished grid back, marked banked",
+    g2.status === 200 && j2.banked === true && !!j2.state && JSON.parse(j2.state).complete === true && !!j2.updatedAt);
+
+  /* The rule is the banked board's only: another board's journey is untouched. */
+  const r4 = await onRequestPost({ request: req("POST", "/api/account/state",
+    { game: "crossword", key: "daily:10", state: { letters: { "1,1": "A" }, elapsed: 5 } }), env: benv });
+  t("a board with no result is saved as before", r4.status === 200 && bRows.length === 2);
+}
+
 console.log("\nWhat the endpoint refuses");
 {
   const cases = [
@@ -167,8 +219,11 @@ for (const [name, js] of [["crossword", cw], ["wordsearch", ws]]) {
     /statePushT = setTimeout\(pushStateNow, 2500\)/.test(js));
   t(`${name}: a failed sync logs and never degrades the game`,
     /accountNote\("state push"/.test(js) && /accountNote\("state pull"/.test(js));
-  t(`${name}: finishing clears the remote journey`,
-    /clearRemoteState\(/.test(js));
+  /* The crossword SENDS ITS FINAL GRID on finishing, since 26 Sep 2026, so
+     another device reopens the board finished; the word search still clears. */
+  t(`${name}: finishing ends the remote journey`, name === "crossword"
+    ? /The save is complete by now[\s\S]{0,400}?pushStateNow\(\);\s*return list;/.test(js) && !/clearRemoteState\(/.test(js)
+    : /clearRemoteState\(/.test(js));
   t(`${name}: the snapshot is the game's own save, verbatim — no second format`,
     js.indexOf("localStorage.getItem(" +
       (name === "crossword" ? 'slotKey("daily")' : "dailyStorageKey()")) > -1);
