@@ -71,6 +71,14 @@ jobs:
           # through a force-stop and relaunch, and proves cross-device adoption
           # still works. Five sabotages caught, one of them the original code.
           node football/crossword/unpushed_test.mjs
+          # ANOTHER DEVICE'S NEWER JOURNEY SURVIVES WHATEVER ANSWERS FIRST. Two
+          # board loads in flight painted in the network's order, and a board
+          # drawn before the session answered was never pulled; either way the
+          # older letters went up with the next keystroke, over the account's
+          # (26 Sep 2026). Every answer is held and released in the order under
+          # test. The original code fails 13; each half of the fix, removed,
+          # fails its own cases.
+          node football/crossword/rebuild_race_test.mjs
           # A GUEST'S RESULTS REACH THE ACCOUNT HOWEVER THE PLAYER SIGNED IN.
           # The crossword pushed only when the sign-in happened with its own page
           # open; the owner signed in elsewhere and his 86 never left the phone

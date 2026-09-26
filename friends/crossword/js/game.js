@@ -297,7 +297,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v002n";
+  var BUILD = "v002o";
   try {
     window.CROSSWORDXI_BUILD = BUILD;
     console.log("Crossword XI build " + BUILD);
@@ -818,6 +818,54 @@
       })
       .catch(function (e) { accountNote("state pull", e); then(null); });
   }
+  /* THE ACCOUNT'S JOURNEY FOR A DAILY, pulled and adopted if newer.
+     v001t: this lived INSIDE the clock-clamp branch of buildPuzzle — the one
+     entered only when the server's daily number disagrees with ours. On a
+     normal open the numbers agree, the branch is skipped, and the pull never
+     ran at all. The push was always fine; nothing was ever pulled, which is
+     why even a reload showed nothing: no snapshot ever reached the device.
+     Async on purpose: the board renders from the local copy immediately and
+     upgrades if the account knows better, rather than blocking first paint on
+     a network call.
+     ONE FUNCTION BECAUSE IT HAS TWO CALLERS, since 26 Sep 2026. A load pulls
+     only when the page already knows it is signed in, and the session and the
+     board are both asked for at boot, so which answers first is the
+     network's choice. When the board won, nothing was ever pulled: the device
+     kept its older letters and sent them with the next keystroke, over
+     another device's newer journey on the account. So the session's answer
+     pulls too, for a daily already on screen. Both may run; stateAdopted means
+     only one of them rebuilds. */
+  function pullJourney(no) {
+    pullState(no, function (remote) {
+      if (!remote || stateAdopted) return;
+      try {
+        var snap = JSON.parse(remote);
+        var local = readSlot("daily", { kind: "daily", no: no });
+        /* The letters-or-time floor, same as save(): a snapshot holding
+           neither never replaces one holding either. */
+        if (local && !local.complete &&
+            (Object.keys(local.letters || {}).length || local.elapsed) &&
+            !(Object.keys(snap.letters || {}).length || snap.elapsed)) return;
+        /* Addressed by the board this pull was FOR, not by whatever `board`
+           happens to be when the network answers — slotKey() reads the
+           CURRENT board, so a pull landing after the player moved on wrote
+           the snapshot into the wrong board's slot. */
+        localStorage.setItem(boardSlot({ kind: "daily", no: no }), remote);
+        if (board && board.kind === "daily" && board.no === no && !complete) {
+          /* A REBUILD, not a re-stamp. adoptServerBoard() only re-freezes the
+             identity object, and openBoard() on its own is the same: in this
+             codebase the repaint is always openBoard + newPuzzle, as
+             chooseMode's daily route does it. stateAdopted stops that
+             rebuild's own buildPuzzle from pulling and rebuilding for ever —
+             the crossword's version of the wordsearch's re-entry guard, which
+             it shipped without. */
+          stateAdopted = true;
+          openBoard({ kind: "daily", no: no }, snap);
+          newPuzzle(snap.seed != null ? snap.seed : FCW.dailySeed(no), snap);
+        }
+      } catch (e) { accountNote("state adopt", e); }
+    });
+  }
   /* What puzzle this actually is, as opposed to what it is called. A daily
      number or a practice token names a slot; the contents of that slot can
      change — a regenerated daily, a re-imported practice pool — and saved
@@ -1158,11 +1206,26 @@
                { usedClues: loadUsedClues() });
   }
 
+  /* THE NEWEST LOAD WINS. Every load used to paint whatever it was handed
+     when its answer arrived, so two in flight painted in the order the NETWORK
+     chose. Found 26 Sep 2026: a daily resumed at boot pulls the account's
+     journey; tap Menu then Daily before that pull answers, and the tap's load
+     sets off holding this device's older letters. The pull then adopts the
+     other device's newer journey and loads again — and if the tap's answer
+     lands after that, the older letters paint last, are saved over the adopted
+     journey, and go up with the next keystroke, overwriting the other device's
+     play on the account. Reproduced every time with the answers held in that
+     order (rebuild_race_test). A load that has been overtaken now does
+     nothing, and its promise follows the one that overtook it, so whoever
+     waits on it waits for the board that is actually drawn. */
+  var buildSeq = 0, latestBuild = null;
   function buildPuzzle(restore) {
+    var mine = ++buildSeq;
     builtFilter = JSON.stringify(activeFilter());
     builtExcludeIds = null;
     showLoading(true);
-    return requestPuzzle(restore).then(function (res) {
+    latestBuild = requestPuzzle(restore).then(function (res) {
+      if (mine !== buildSeq) return latestBuild;
       puzzle = res.puzzle;
       puzzleToken = res.token;
       /* The server decides which daily this is. It should already agree —
@@ -1226,52 +1289,14 @@
       verifiedScore = null; verifiedBreakdown = null;   // last game's, not this one's
       verifiedElapsed = null;   // reset with them, or one board's clock reaches the next
       showLoading(false);
-      /* THE ACCOUNT'S JOURNEY FOR THIS BOARD, pulled on every daily open.
-         v001t: this block lived INSIDE the clock-clamp branch above — the one
-         entered only when the server's daily number disagrees with ours. On a
-         normal open the numbers agree, the branch is skipped, and the pull
-         never ran at all. The push was always fine; nothing was ever pulled,
-         which is why even a reload showed nothing: no snapshot ever reached
-         the device. Guarded by mode alone now, and it takes the EFFECTIVE
-         number so a clamped open still pulls the board it landed on.
-         Async on purpose: the board renders from the local copy immediately
-         and upgrades if the account knows better, rather than blocking first
-         paint on a network call. */
-      if (res.mode === "daily") {
-        (function (no) {
-          pullState(no, function (remote) {
-            if (!remote || stateAdopted) return;
-            try {
-              var snap = JSON.parse(remote);
-              var local = readSlot("daily", { kind: "daily", no: no });
-              /* The letters-or-time floor, same as save(): a snapshot holding
-                 neither never replaces one holding either. */
-              if (local && !local.complete &&
-                  (Object.keys(local.letters || {}).length || local.elapsed) &&
-                  !(Object.keys(snap.letters || {}).length || snap.elapsed)) return;
-              /* Addressed by the board this pull was FOR, not by whatever
-                 `board` happens to be when the network answers — slotKey()
-                 reads the CURRENT board, so a pull landing after the player
-                 moved on wrote the snapshot into the wrong board's slot. */
-              localStorage.setItem(boardSlot({ kind: "daily", no: no }), remote);
-              if (board && board.kind === "daily" && board.no === no && !complete) {
-                /* A REBUILD, not a re-stamp. adoptServerBoard() only re-freezes
-                   the identity object, and openBoard() on its own is the same:
-                   in this codebase the repaint is always openBoard + newPuzzle,
-                   as chooseMode's daily route does it. stateAdopted stops that
-                   rebuild's own buildPuzzle from pulling and rebuilding for
-                   ever — the crossword's version of the wordsearch's re-entry
-                   guard, which it shipped without. */
-                stateAdopted = true;
-                openBoard({ kind: "daily", no: no }, snap);
-                newPuzzle(snap.seed != null ? snap.seed : FCW.dailySeed(no), snap);
-              }
-            } catch (e) { accountNote("state adopt", e); }
-          });
-        })(res.dailyNo || board.no);
-      }
+      /* THE ACCOUNT'S JOURNEY FOR THIS BOARD, pulled on every daily open —
+         pullJourney() says why, and the session's answer calls it too.
+         It takes the EFFECTIVE number so a clamped open still pulls the board
+         it landed on. */
+      if (res.mode === "daily") pullJourney(res.dailyNo || board.no);
       finishBuild(restore);
     }).catch(function (err) {
+      if (mine !== buildSeq) return latestBuild;
       showLoading(false);
       /* A BOARD THAT NEEDS AN ACCOUNT IS NOT A LOAD FAILURE. The calendar
          marks the locked days and asks before fetching, so this is the other
@@ -1287,6 +1312,7 @@
       }
       showLoadError(err);
     });
+    return latestBuild;
   }
 
   function showLoading(on) {
@@ -3167,6 +3193,11 @@
        /api/account/migrate skips what the account already has, so a repeat
        costs a request and changes nothing. */
     if (account) pushResults().then(pullAccountResults);
+    /* Signed in AFTER a daily was drawn: its load could not pull, so this
+       does — see pullJourney(). */
+    if (account && puzzle && board && board.kind === "daily" && board.no && !complete) {
+      pullJourney(board.no);
+    }
   }).catch(function () { renderAccount(); });
 
   /* ---------- How far people get ----------
