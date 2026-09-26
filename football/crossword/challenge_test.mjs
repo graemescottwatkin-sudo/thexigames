@@ -257,6 +257,77 @@ console.log("\nA table hands out nobody's play id");
   }
 }
 
+console.log("\nA result belongs to the first entrant who files it");
+{
+  /* The other half of the play-id leak: ids that were already published must
+     not work for anybody but their owner. EXECUTED, both routes that spend a
+     play id, and every refusal is proved to have WRITTEN NOTHING — a 403
+     after the insert would be the same leak with a worse error message. */
+  const OWNER = "owner-key-1234", STRANGER = "stranger-key-5678";
+  const chal = { id: "abc123", theme_id: "arsenal", board_no: 1, play_id: "seed" };
+  const verified = (id) => ({
+    play_id: id, game: "crossword", mode: "theme", board_key: "arsenal-1",
+    theme_key: "arsenal-1", srv_score: 88, started_at: "2026-09-06 10:00:00",
+    ended_at: "2026-09-06 10:05:00", srv_verified_at: "2026-09-06 10:05:00",
+    srv_elapsed_secs: 300,
+  });
+  /* Who has filed what: a guest's play, a signed-in player's, and one
+     nobody has filed yet. */
+  const CLAIMS = { guestplay: [OWNER], acctplay: ["u:7"], fresh: [] };
+  const USERS = { s7: { id: 7, display_name: "Seven" }, s9: { id: 9, display_name: "Nine" } };
+  /* Writes to the challenge tables only. The rate limiter counts every
+     request, refused or not, before any rule runs, and that is right. A
+     malformed key ("u:7" from a guest) is refused as 400 before this rule is
+     reached, which is still a refusal. */
+  let writes = [];
+  const env = { DB: { prepare: (sql) => ({
+    bind: (...args) => ({
+      first: async () => {
+        if (/FROM sessions/.test(sql)) return USERS[args[0]] || null;
+        if (/FROM challenges WHERE id/.test(sql)) return chal;
+        if (/FROM plays/.test(sql)) return args[0] === "seed"
+          ? { game: "crossword", board_key: "arsenal-1" } : verified(args[0]);
+        return null;
+      },
+      all: async () => ({ results: /FROM challenge_entries WHERE play_id/.test(sql)
+        ? (CLAIMS[args[0]] || []).map((k) => ({ entrant_key: k })) : [] }),
+      run: async () => { if (/^\s*INSERT/.test(sql) && !/rate_limits/.test(sql)) writes.push(sql.trim().split(/\s+/).slice(0, 5).join(" ")); return { meta: { changes: 1 } }; },
+    }),
+  }) } };
+  const call = (route, playId, entrantKey, session) => {
+    const headers = { "Content-Type": "application/json", "X-XI-Games": "1" };
+    if (session) headers.Cookie = "cxi_session=" + session;
+    const body = route === "entry"
+      ? { id: "abc123", playId, name: "Tester", entrantKey }
+      : { playId, name: "Tester", entrantKey, another: 1 };
+    const request = new Request("https://x/api/challenge" + (route === "entry" ? "/entry" : ""),
+      { method: "POST", headers, body: JSON.stringify(body) });
+    return (route === "entry" ? entryPost : challengePost)({ request, env });
+  };
+  const CASES = [
+    /* [what, play, device key, session, allowed] */
+    ["a stranger holding a guest's play id", "guestplay", STRANGER, null, false],
+    ["the guest who filed it", "guestplay", OWNER, null, true],
+    ["that guest after signing in, on the same device", "guestplay", OWNER, "s7", true],
+    ["a signed-in stranger holding it", "guestplay", STRANGER, "s9", false],
+    ["a guest holding a signed-in player's play id", "acctplay", STRANGER, null, false],
+    ["a guest who sends that player's account key as their own", "acctplay", "u:7", null, false],
+    ["the account that filed it, from another device", "acctplay", "any-device-000", "s7", true],
+    ["another account holding it", "acctplay", OWNER, "s9", false],
+    ["whoever files a play nobody has filed yet", "fresh", STRANGER, null, true],
+  ];
+  for (const route of ["challenge", "entry"]) {
+    for (const [what, pid, key, sid, allowed] of CASES) {
+      writes = [];
+      const res = await call(route, pid, key, sid);
+      const ok = allowed ? res.status === 200 && writes.length > 0
+                         : [400, 403].includes(res.status) && writes.length === 0;
+      t(`${route}: ${what} ${allowed ? "may use it" : "is refused, and nothing is written"}`,
+        ok, `${res.status}, ${writes.length} write(s)`);
+    }
+  }
+}
+
 console.log("\nPublished names");
 t("names are cleaned before they are stored", /cleanName/.test(src.entry) && /cleanName/.test(src.challenge));
 t("markup characters are removed rather than escaped later", /\[<>&/.test(src.names));

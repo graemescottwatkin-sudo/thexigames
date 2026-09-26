@@ -35,6 +35,48 @@ async function verifiedPlay(env, playId) {
   return row;
 }
 
+/* ---- WHOSE RESULT THIS IS ----------------------------------------------
+ *
+ * A play id is a bearer credential: whoever holds one can make a challenge
+ * from it or file it into a table, and neither route used to ask whose it
+ * was. Every challenge table published every entrant's id until 26 Sep 2026,
+ * so each of those ids was in other people's hands.
+ *
+ * `plays` cannot answer "whose" and must not be made to: it records no
+ * identity by design (migration 005, and the note in api/play.js), and a
+ * device key on every play would make every attempt linkable. The binding
+ * lives where identity already is — challenge_entries, which has held
+ * (play_id, entrant_key) since challenges began. So: THE FIRST ENTRANT TO
+ * FILE A PLAY OWNS IT, and nobody else may use it again, here or in a table.
+ * Every id that ever reached a table reached it with an entry under its
+ * owner's key, so every id that leaked is claimed.
+ *
+ * The caller's keys are both of theirs: the account's, and the device's the
+ * page always sends. A guest who files a play and then signs in is still the
+ * person who played it. A device key is not published anywhere, so sending
+ * somebody else's is not a way round this.
+ *
+ * What it does not do, said plainly: a play id that has never been filed is
+ * claimed by whoever files it first. Those ids were never published — they
+ * live in the player's own page — and closing that too would need identity on
+ * `plays`, which is the owner's call and not this function's. */
+export function callerKeys(user, bodyKey) {
+  const out = [];
+  const account = entrantKeyFor(user, null);
+  const device = validEntrantKey(bodyKey);
+  if (account) out.push(account);
+  if (device && out.indexOf(device) === -1) out.push(device);
+  return out;
+}
+
+export async function playHeldByAnother(env, playId, user, bodyKey) {
+  const rows = await env.DB.prepare(
+    "SELECT DISTINCT entrant_key FROM challenge_entries WHERE play_id = ?")
+    .bind(String(playId || "")).all();
+  const mine = callerKeys(user, bodyKey);
+  return (rows.results || []).some((r) => mine.indexOf(r.entrant_key) === -1);
+}
+
 /* ---- WHICH BOARD A CHALLENGE IS ABOUT, IN ANY GAME ----------------------
  *
  * This file was written when the crossword was the only game with a server
@@ -160,6 +202,11 @@ export async function onRequestPost({ request, env }) {
     : { theme_id: boardKey, board_no: 0 };
 
   const user = await currentUser(request, env);
+  /* Before anything is read back or written: the "already" branch below
+     would otherwise hand a stranger the link to somebody else's challenge. */
+  if (await playHeldByAnother(env, play.play_id, user, body.entrantKey)) {
+    return bad("That result belongs to somebody else.", 403);
+  }
   /* Two names, not one. The creator is a person — from the account where there
      is one, typed otherwise. The group is who it is being sent to, and is
      optional: a challenge to one friend does not need a label, and demanding

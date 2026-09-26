@@ -5,7 +5,7 @@
  * number into.
  */
 import { json, bad } from "../../_lib/puzzle.js";
-import { boardOfChallenge } from "./index.js";
+import { boardOfChallenge, playHeldByAnother } from "./index.js";
 import { hasDB } from "../../_lib/db.js";
 import { currentUser, newId, csrfOk } from "../../_lib/auth.js";
 import { cleanName, validEntrantKey, accountDisplayName , entrantKeyFor } from "../../_lib/names.js";
@@ -52,6 +52,11 @@ export async function onRequestPost({ request, env }) {
   if (!name) return bad("Choose a name of at least two characters.", 400);
   const key = entrantKeyFor(user, body.entrantKey);
   if (!key) return bad("Missing entrant key.", 400);
+  /* Somebody else's result, filed under a name typed here. See
+     playHeldByAnother: the first entrant to file a play owns it. */
+  if (await playHeldByAnother(env, play.play_id, user, body.entrantKey)) {
+    return bad("That result belongs to somebody else.", 403);
+  }
 
   /* Timed to the moment the score was computed, not to ended_at.
      ended_at is written when the tab closes or the page is hidden, which can be
