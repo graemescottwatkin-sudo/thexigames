@@ -443,9 +443,15 @@ if (eng.res.ok) {
   const ep = eng.text.match(/DAILY_EPOCH = \{ y: (\d+), m: (\d+), d: (\d+) \}/);
   if (pre && ep) {
     const first = new Date(Date.UTC(+ep[1], +ep[2], +ep[3] + 1));
-    const today = new Date();
-    const no = Math.max(1, Math.floor((Date.UTC(today.getFullYear(),
-      today.getMonth(), today.getDate()) - first.getTime()) / 86400000) + 1);
+    /* The SERVER's day, counted in UTC as the server counts it: the instant
+       from the Date header of the response just read, and its UTC date. This
+       took the local date of this machine's clock, so from local midnight to
+       UTC midnight — an hour every British summer night, a whole evening west
+       of UTC — it named a board the server was not serving. */
+    const said = Date.parse(eng.res.headers.get("date") || "");
+    const today = new Date(Number.isFinite(said) ? said : Date.now());
+    const no = Math.max(1, Math.floor((Date.UTC(today.getUTCFullYear(),
+      today.getUTCMonth(), today.getUTCDate()) - first.getTime()) / 86400000) + 1);
     const boundary = new Date(first.getTime() + (+pre) * 86400000);
     console.log(`\n      today is daily #${no}; ` +
       (no <= +pre
