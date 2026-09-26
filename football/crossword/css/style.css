@@ -2396,8 +2396,12 @@ body.flex-layout .tbar{
 /* The readings take the left of the row and the controls keep the right. They
    shrink before the buttons do: a clipped Check is a control you cannot use,
    a clipped clock is a number you can still read most of. */
+/* NO display HERE. It said flex, and on a phone this selector outranked the
+   .tb-readouts{display:none} that hands the readings to the family's top bar
+   -- so the clock, progress and points showed twice, in the bar and again
+   under it (MobileApp's re-shoot, 26 Sep 2026). */
 body.flex-layout .tbar > .tb-readouts{
-  display:flex;align-items:baseline;gap:9px;min-width:0;flex:0 1 auto;
+  align-items:baseline;gap:9px;min-width:0;flex:0 1 auto;
   overflow:hidden;
 }
 body.flex-layout .tbar > .tb-readouts .live-chip{white-space:nowrap}

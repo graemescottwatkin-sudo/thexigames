@@ -157,7 +157,11 @@ body{margin:0;font-family:var(--body)}
 #field{position:absolute; opacity:0; pointer-events:none; height:1px; width:1px}
 
 .gd-keys{display:flex; gap:8px; margin-bottom:6px}
-button{font-family:var(--disp); font-weight:600; font-size:16px; letter-spacing:.04em;
+/* THIS GAME'S buttons, not the site's. As a bare `button` it reached the
+   shared bar's "Sign in", which read SIGN IN here and Sign in on every other
+   game (26 Sep 2026). :where() keeps it at a bare element's weight, so every
+   class rule -- the family keyboard's .osk-key among them -- still wins. */
+:where(button:not([class*="xic-"])){font-family:var(--disp); font-weight:600; font-size:16px; letter-spacing:.04em;
   text-transform:uppercase; min-height:var(--tap); padding:0 16px;
   border-radius:var(--radius); border:1px solid var(--pitch);
   background:var(--pitch); color:#fff; cursor:pointer}

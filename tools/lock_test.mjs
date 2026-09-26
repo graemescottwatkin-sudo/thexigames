@@ -1937,8 +1937,18 @@ if (!ONLY || ONLY === "bar") {
         return { shown: r.height > 0 && getComputedStyle(bar).display !== "none",
           labels: [...bar.querySelectorAll(".xmb-l")].map((e) => e.textContent.trim()),
           name: bar.querySelector(".xmb-name").textContent.trim(),
-          left: Math.round(r.left), width: Math.round(r.width), top: Math.round(r.top), height: Math.round(r.height) };
+          left: Math.round(r.left), width: Math.round(r.width), top: Math.round(r.top), height: Math.round(r.height),
+          /* The site bar's own button, which a game's CSS must not restyle. */
+          signin: (() => { const s = document.querySelector(".xic-signin");
+            return s ? getComputedStyle(s).textTransform + " " + getComputedStyle(s).fontFamily.split(",")[0] : null; })(),
+          /* A reading the bar stands in for, still drawn beside it. */
+          twice: [...document.querySelectorAll(".tb-readouts")].filter((e) => e.getBoundingClientRect().height > 0 &&
+            getComputedStyle(e).display !== "none").length };
       });
+      /* ONE BAR, NOT TWO. MobileApp's re-shoot of 26 Sep 2026 found the
+         crossword's old readings -- 0' | 0/11 | 114 PTS -- still under the bar
+         on a phone, where a layout rule outranked the one hiding them. */
+      if (b && !b.missing) t(`${vp[0]} ${id}: nothing under the bar repeats its readings`, b.twice === 0, `${b.twice} shown`);
       t(`${vp[0]} ${id}: the family's bar, its five slots in order, naming the game`,
         !!b && b.shown && b.labels.join(",") === WANT.join(",") && / XI/.test(b.name), JSON.stringify(b));
       if (b) seen.push([id, b]);
@@ -1952,6 +1962,12 @@ if (!ONLY || ONLY === "bar") {
     const off = seen.filter(([, b]) => Math.abs(b.left - M.left) > 3 || Math.abs(b.width - M.width) > 6 ||
       Math.abs(b.top - M.top) > (vp[1].width >= 900 ? 18 : 6) || Math.abs(b.height - M.height) > 3)
       .map(([id, b]) => `${id} ${b.left},${b.top} ${b.width}x${b.height}`);
+    /* THE SITE BAR LOOKS THE SAME ON EVERY GAME: Grid's page-wide button rule
+       put its "Sign in" in capitals and nobody else's (26 Sep 2026). */
+    const looks = [...new Set(seen.map(([, b]) => b.signin))];
+    t(`${vp[0]}: the site bar's Sign in looks the same on every game`,
+      seen.length >= 10 && looks.length === 1 && looks[0] !== null,
+      seen.map(([id, b]) => `${id}=${b.signin}`).filter((x, i, all) => looks.length > 1 || i === 0).join("; "));
     t(`${vp[0]}: the bar sits at the same place and size on every game`, seen.length >= 10 && off.length === 0,
       off.length ? `off the family's ${M.left},${M.top} ${M.width}x${M.height}: ${off.join("; ")}` : `${seen.length} games at ${M.left},${M.top} ${M.width}x${M.height}`);
   }
