@@ -46,6 +46,8 @@ const ROUTES = {
 };
 
 let apiCalls = 0;
+const served = new Set();   // every static path the page asked for, for the boot report
+const refused = new Set();  // and every one answered 404: jsdom raises no page error for those
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, "http://127.0.0.1");
   const fn = ROUTES[url.pathname];
@@ -64,6 +66,7 @@ const server = http.createServer(async (req, res) => {
     return res.end(body);
   }
   const rel = url.pathname === "/" ? "/index.html" : url.pathname;
+  served.add(rel);
   /* The shared layer lives beside the game, not inside it: the page links
      ../shared/, which from the served root is /shared/. Served from the
      repository root, so the theme and play helpers load here as they do on
@@ -73,6 +76,10 @@ const server = http.createServer(async (req, res) => {
   const file = rel.startsWith("/shared/") ? path.join(ROOT, rel.slice(1)) : path.join(DIR, rel);
   if (!(file.startsWith(DIR) || file.startsWith(path.join(ROOT, "shared"))) ||
       !fs.existsSync(file) || fs.statSync(file).isDirectory()) {
+    /* Files only: /api/season and /api/auth/session are unrouted here and
+       404 on every healthy run, so listing them would bury the one that
+       matters. */
+    if (!rel.startsWith("/api/")) refused.add(rel);
     res.writeHead(404); return res.end("not found");
   }
   res.writeHead(200, { "Content-Type": TYPES[path.extname(file)] || "application/octet-stream" });
@@ -116,7 +123,30 @@ server.listen(0, "127.0.0.1", async () => {
   };
   const drawn = () => d.querySelectorAll("#grid .cell").length > 0;
   const kickedOff = () => !d.querySelector(".stage").classList.contains("prestart");
-  await until(() => d.readyState === "complete" && !!$("homeClubSelect") && $("homeClubSelect").options.length > 0, 30000);
+  const booted = await until(() => d.readyState === "complete" && !!$("homeClubSelect") && $("homeClubSelect").options.length > 0, 30000);
+  /* A PAGE THAT NEVER BOOTED IS ONE FAILURE, SAID ONCE, WITH ITS EVIDENCE.
+     This wait's answer used to be dropped. On 26 Sep 2026 a sweep ran past it
+     after thirty seconds with no clubs in the picker, failed two checks that
+     were only reading an empty page, and died on a TypeError one check later
+     — before the end of the run, so the errors collected above were never
+     printed and nothing said why the page had not booted. It passed 214/214
+     on every rerun, twelve of them concurrent, so the cause is not known;
+     what is known is that the next occurrence must say what it saw. */
+  const pageScripts = [...d.querySelectorAll("script[src]")]
+    .map((s) => new URL(s.getAttribute("src"), origin + "/").pathname);
+  const neverAsked = pageScripts.filter((p) => !served.has(p));
+  t("the page boots: its scripts run and the landing screen is built", booted,
+    booted ? "" : `readyState=${d.readyState}; club options=` +
+      ($("homeClubSelect") ? $("homeClubSelect").options.length : "no picker") +
+      `; scripts never requested: ${neverAsked.join(", ") || "none"}` +
+      `; answered 404: ${[...refused].join(", ") || "none"}` +
+      `; api calls=${apiCalls}; errors: ${errors.join(" ; ") || "none"}`);
+  if (!booted) {
+    console.log(`\n${pass} passed, ${fail} failed`);
+    dom.window.close();
+    server.close();
+    process.exit(1);
+  }
 
   /* The game now opens on a landing screen and loads nothing until a mode is
      chosen — the point of the change, since guessing was starting the daily's

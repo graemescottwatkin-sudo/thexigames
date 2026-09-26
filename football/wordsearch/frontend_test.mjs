@@ -91,6 +91,22 @@ const server = http.createServer(async (req, res) => {
 await new Promise((r) => server.listen(0, r));
 const PORT = server.address().port;
 
+/* WAIT FOR THE THING, NOT FOR A NUMBER OF MILLISECONDS. This suite slept a
+   fixed 500ms after load and 300ms after a click, and the page's work is
+   network round trips to the handlers above: on a loaded machine they had not
+   landed, and the away-time check clicked Today before /api/wordsearch/daily
+   had answered — the page, rightly, said "No Daily today", opened free play at
+   0', and the check read that as a lost away-time charge (26 Sep 2026). Each
+   wait now names what it is waiting for; the deadline stops one that cannot
+   end, returning false so the assertion after it fails as it always would
+   have. A wait that proves something did NOT happen stays a fixed one, because
+   a condition cannot prove that — the score-held and bonus-clock checks. */
+const until = async (ok, ms = 15000) => {
+  const end = Date.now() + ms;
+  while (!ok() && Date.now() < end) await new Promise((r) => setTimeout(r, 20));
+  return ok();
+};
+
 /* ---- load the page ---------------------------------------------------- */
 /* This jsdom has no window.fetch; hand it node's, resolved against the
    page's own address so the game's relative "/api/..." calls work. */
@@ -104,7 +120,14 @@ const dom = await JSDOM.fromURL(`http://localhost:${PORT}/football/wordsearch/`,
 });
 const w = dom.window, d = w.document;
 await new Promise((r) => w.addEventListener("load", r));
-await new Promise((r) => setTimeout(r, 500)); // let both fetches land
+/* Every fetch landed: the daily (window.__daily), the catalogue (the boards
+   card's count, empty in the markup) and the archive. The archive's is a
+   NUMBER of days: the markup ships "Every day so far" as its placeholder, and
+   a wait for the word "day" was satisfied by that before any archive had
+   arrived — found by delaying the daily, when the archive lost the race. */
+await until(() => !!w.__daily &&
+  /board/i.test((d.getElementById("homeThemedState") || {}).textContent || "") &&
+  /^\d+ days? so far$/.test((d.getElementById("homePreviousCount") || {}).textContent || ""));
 
 /* THE COUNT MOVED ONTO THE CARD IT DESCRIBES. #bankLine sat under a Kick off
    button on the card this landing replaced; the board count is on the boards
@@ -156,7 +179,8 @@ t("one H1, and it is the game's name, not the board's",
    mode tiles above it, where the button did different things depending on a
    selection made earlier; today is its own control now. */
 d.getElementById("homeDaily").click();
-await new Promise((r) => setTimeout(r, 250));
+await until(() => !d.getElementById("gameApp").classList.contains("hidden") &&
+  plays.length >= 1 && d.querySelectorAll("#grid .cell").length > 0);
 t("kick off opens the daily board", !d.getElementById("gameApp").classList.contains("hidden"));
 /* HOW FAR PEOPLE GET, now counted here too: the page posts a start naming
    this game and today's board, through the family's helper. */
@@ -264,7 +288,9 @@ t("the found name is struck in the list, and a highlight is drawn",
 /* a wrong drag is a foul */
 const before = d.getElementById("clock").textContent;
 drag([0, 1, 2]);
-await new Promise((r) => setTimeout(r, 50));
+/* The foul is the server's answer, so it is waited for: the clock moving is
+   the sign it has landed, and by then the count has had its chance to move. */
+await until(() => d.getElementById("clock").textContent !== before);
 t("a wrong selection is a foul, not a find",
   d.getElementById("count").textContent === "1");
 /* AND THE FOUL IS ACTUALLY APPLIED. `before` was captured above and then never
@@ -336,7 +362,8 @@ t("the finish prompt offers the secret hunt",
 await dragAndWait(cellsOf(SERVER_BOARD.bonus),
   () => d.getElementById("bonusState").textContent.indexOf("\u2605") === 0,
   "the secret");
-await new Promise((r) => setTimeout(r, 100));
+await until(() => d.getElementById("result").classList.contains("show") &&
+  plays.some((p) => p.event === "end"));
 t("finding the bonus after the XI ends the match at full time",
   d.getElementById("result").classList.contains("show"));
 /* The end: the same attempt, finished, with the eleven and the bonus in it.
@@ -487,9 +514,14 @@ t("the daily state carries saved_at for the away-time charge",
   await new Promise((r) => w2.addEventListener("load", r));
   w2.localStorage.setItem("xiws.daily." + day, stash);
   w2.localStorage.setItem("xiws.results", "[]");
-  await new Promise((r) => setTimeout(r, 500));
+  /* Today works only once the daily has arrived; before that the page says
+     "No Daily today" and opens free play, which is what this read as a lost
+     charge. */
+  await until(() => !!w2.__daily);
   d2.getElementById("homeDaily").click();
-  await new Promise((r) => setTimeout(r, 300));
+  await until(() => d2.getElementById("result").classList.contains("show") &&
+    !!d2.querySelector("#ftPanel .xft-stats") &&
+    JSON.parse(w2.localStorage.getItem("xiws.results") || "[]").length === 1);
   const clock = d2.getElementById("clock").textContent;
   /* 60s + capped 3600s = 3660s of 600s/90' => past full time => the board
      finishes at 90' immediately. Two hours away must NOT resume at 9'. */
@@ -513,8 +545,16 @@ t("the daily state carries saved_at for the away-time charge",
   });
   const w3 = dom3.window, d3 = w3.document;
   await new Promise((r) => w3.addEventListener("load", r));
-  await new Promise((r) => setTimeout(r, 500));
   const app3 = d3.getElementById("gameApp"), cover = d3.getElementById("kickCover");
+  /* The board named by ?b= has arrived and been drawn under its cover — and
+     the archive has landed too. Without it, opening Previous puzzles below
+     starts a second archive fetch while the boot's is in flight, the later
+     of the two redraws the list, and the row this suite is holding is a
+     detached element whose click reaches nothing (found by delaying the
+     archive 800ms). */
+  await until(() => d3.getElementById("kickTitle").textContent === released.theme &&
+    d3.querySelectorAll("#grid .cell").length === 14 * 12 &&
+    /^\d+ days? so far$/.test((d3.getElementById("homePreviousCount") || {}).textContent || ""));
   /* ON THE BOARD, not on a card back on the landing: the grid is drawn at
      its real size, the letters and the eleven are covered, the clock has
      not started, and the card over the grid names the board. */
@@ -546,7 +586,7 @@ t("the daily state carries saved_at for the away-time charge",
   drag3(cellsOf(rel.answers[0]));
   t("a drag under the cover finds nothing", d3.getElementById("count").textContent === "0");
   d3.getElementById("kickBtn").click();
-  await new Promise((r) => setTimeout(r, 100));
+  await until(() => !app3.classList.contains("covered"));
   t("kick off takes the cover off and starts free play on that board",
     !app3.classList.contains("covered") && cover.classList.contains("hidden") &&
     d3.getElementById("modeLabel").textContent === "Free play" &&
@@ -560,10 +600,11 @@ t("the daily state carries saved_at for the away-time charge",
      archive. The sample schedule has one day behind today, so one row, and
      it is there to play. */
   d3.querySelector('#gameMenu [data-act="menu"]').click();
-  await new Promise((r) => setTimeout(r, 100));
+  await until(() => !d3.getElementById("prematch").classList.contains("hidden"));
   t("back to menu returns to the landing", !d3.getElementById("prematch").classList.contains("hidden"));
   d3.getElementById("homePrevious").click();
-  await new Promise((r) => setTimeout(r, 300));
+  await until(() => !d3.getElementById("archivePanel").classList.contains("hidden") &&
+    d3.querySelectorAll("#archiveList .arch-row").length > 0);
   const panel = d3.getElementById("archivePanel");
   const rows = d3.querySelectorAll("#archiveList .arch-row");
   t("previous puzzles opens a list by day",
@@ -582,7 +623,13 @@ t("the daily state carries saved_at for the away-time charge",
     /1 day to play/.test(d3.getElementById("archiveSub").textContent),
     d3.getElementById("archiveSub").textContent);
   rows[0].click();
-  await new Promise((r) => setTimeout(r, 400));
+  /* Including the kicker: the day's board can share its theme with the one
+     opened above, so every other part of this can already be true of the
+     previous board's cover. */
+  await until(() => !app3.classList.contains("hidden") && app3.classList.contains("covered") &&
+    panel.classList.contains("hidden") &&
+    /PREVIOUS PUZZLE/.test(d3.getElementById("kickKicker").textContent) &&
+    d3.getElementById("kickTitle").textContent === archive.days[0].theme);
   t("a day opens on its board, covered, named by its date, and the list closes",
     !app3.classList.contains("hidden") && app3.classList.contains("covered") &&
     panel.classList.contains("hidden") &&
@@ -591,7 +638,7 @@ t("the daily state carries saved_at for the away-time charge",
     d3.getElementById("clock").textContent === "0'",
     d3.getElementById("kickKicker").textContent);
   d3.getElementById("kickBtn").click();
-  await new Promise((r) => setTimeout(r, 100));
+  await until(() => !app3.classList.contains("covered"));
   t("kick off starts that day's board as free play",
     !app3.classList.contains("covered") &&
     d3.getElementById("themeTitle").textContent === archive.days[0].theme &&
