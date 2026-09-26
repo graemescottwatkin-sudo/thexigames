@@ -489,6 +489,47 @@ const good = (s, extra = {}) => ({ token: TOK(s), platform: "android", tz: "Euro
     o(400, { error: { message: "Invalid value at 'message.android'", details: [{ errorCode: "INVALID_ARGUMENT" }] } }) === fcm.FAILED);
   t("a server error is retried, not deleted", o(503, null) === fcm.FAILED);
 
+  /* WHY GOOGLE SAID NO IS LOGGED, and nothing secret with it. push_run
+     counted "failed 2" all morning on 26 Sep 2026 and nothing kept the
+     reason. A refusal from FCM, and one from the token exchange, each leave a
+     line naming the status and Google's code -- and neither the phone's token
+     nor the access token. */
+  const warned = [];
+  const realWarn = console.warn;
+  console.warn = (...a) => warned.push(a.join(" "));
+  try {
+    fcmReply = { status: 403, body: { error: { status: "PERMISSION_DENIED",
+      message: "SenderId mismatch", details: [{ errorCode: "SENDER_ID_MISMATCH" }] } } };
+    const refused = await send(TOK("key"), msg);
+    const line = warned.find((w) => /FCM refused/.test(w)) || "";
+    t("a refusal from FCM is a failure, retried", refused === fcm.FAILED);
+    t("and it is LOGGED with the status and Google's code",
+      /403/.test(line) && /PERMISSION_DENIED/.test(line) && /SENDER_ID_MISMATCH/.test(line), line || "nothing logged");
+    t("and the log holds neither the phone's token nor the access token",
+      line && !line.includes(TOK("key")) && !line.includes("ya29.test"), line);
+
+    /* A REAL token's shape: an FCM registration token is ~150 characters,
+       an id, a colon and a long base64url run. TOK() is 32 and would slip
+       under the 40 the redaction looks for. */
+    const real = "fTHcc7QxRk2" + ":" + "APA91b" + "Hq_Z-0aB9".repeat(16);
+    const echo = fcm.describeRefusal(400, { error: { message: "bad token " + real } });
+    t("a message that ever echoed a token has it struck out",
+      !echo.includes(real) && !echo.includes("APA91b") && /redacted/.test(echo), echo);
+
+    warned.length = 0;
+    const refuseKey = async (url) => url.startsWith("https://oauth2")
+      ? new Response(JSON.stringify({ error: "invalid_grant", error_description: "Invalid JWT Signature." }), { status: 400 })
+      : new Response("{}", { status: 200 });
+    let thrown = "";
+    try { await fcm.fcmSender(sa, refuseKey, clock)(TOK("key"), msg); } catch (e) { thrown = e.message; }
+    t("a refused key says what Google said, and nothing of the key",
+      /400/.test(thrown) && /invalid_grant/.test(thrown) && /Invalid JWT Signature/.test(thrown) &&
+      !thrown.includes("PRIVATE KEY"), thrown);
+  } finally {
+    console.warn = realWarn;
+    fcmReply = { status: 200, body: { name: "projects/xi-test/messages/1" } };
+  }
+
   let msgText = "";
   try { fcm.readServiceAccount(JSON.stringify({ client_email: "a@b", project_id: "p", secret_bit: "SHOULD-NOT-PRINT" })); }
   catch (e) { msgText = e.message; }

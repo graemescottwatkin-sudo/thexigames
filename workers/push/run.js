@@ -53,7 +53,14 @@ export async function run(env, now, send) {
   /* SENT, GONE or FAILED; a GONE token's row is deleted here. */
   async function deliver(token, msg) {
     let out;
-    try { out = await send(token, { ...msg, address: addressOf(msg.url) }); } catch (e) { out = FAILED; }
+    try { out = await send(token, { ...msg, address: addressOf(msg.url) }); }
+    catch (e) {
+      /* The sender throws only before FCM is asked -- the key, or Google's
+         token exchange -- and its message says which, with nothing secret in
+         it (fcm.js). Logged, because a count of failures is not a reason. */
+      console.warn("[push] send failed: " + (e && e.message));
+      out = FAILED;
+    }
     if (out === SENT) { stats.sent++; return SENT; }
     if (out === GONE) {
       await db.prepare("DELETE FROM push_device WHERE token = ?").bind(token).run();
@@ -94,6 +101,7 @@ export async function run(env, now, send) {
         if (out === SENT) await mark("sent_streak", dev.token);
       }
     } catch (e) {
+      console.warn("[push] a device's run failed: " + (e && e.message));
       stats.failed++;
     }
   }

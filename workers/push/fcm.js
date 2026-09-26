@@ -66,6 +66,28 @@ export function readServiceAccount(raw) {
    the next run. */
 export const SENT = "sent", GONE = "gone", FAILED = "failed";
 
+/* WHY GOOGLE SAID NO, in one line that is safe to log.
+
+   Until 26 Sep 2026 a refusal was only ever counted: push_run said "failed 2"
+   every quarter hour from 08:00 to 11:00 UTC, both phones, and nothing said
+   whether it was the key, the project or the message. The owner checked the
+   API, the role and the project in the console and all three were right,
+   which left nothing to go on but Google's own answer -- and nothing kept it.
+
+   What is kept: the HTTP status, Google's status word, its error codes and
+   its message. What is not: a token, the key, the access token. Google's
+   messages do not echo a registration token, but a long unbroken run of
+   token characters is struck out anyway, so a message that ever did cannot
+   put one in the logs. */
+export function redact(text) {
+  return String(text || "").replace(/[A-Za-z0-9_:\-.]{40,}/g, "[redacted]").slice(0, 300);
+}
+export function describeRefusal(status, body) {
+  const err = (body && body.error) || {};
+  const codes = (err.details || []).map((d) => d && d.errorCode).filter(Boolean);
+  return [status, err.status, codes.join(","), redact(err.message)].filter(Boolean).join(" ");
+}
+
 export function outcomeOf(status, body) {
   if (status >= 200 && status < 300) return SENT;
   const err = (body && body.error) || {};
@@ -100,7 +122,10 @@ export function fcmSender(serviceAccount, fetchFn = fetch, clock = Date.now) {
             "&assertion=" + encodeURIComponent(assertion),
     });
     const j = await res.json().catch(() => ({}));
-    if (!res.ok || !j.access_token) throw new Error("Google refused the service account (" + res.status + ")");
+    if (!res.ok || !j.access_token) {
+      throw new Error("Google refused the service account (" + res.status + " " +
+        redact([j.error, j.error_description].filter(Boolean).join(": ")) + ")");
+    }
     cached = { token: j.access_token, until: now + (Number(j.expires_in) || 3600) * 1000 - 60000 };
     return cached.token;
   }
@@ -124,6 +149,8 @@ export function fcmSender(serviceAccount, fetchFn = fetch, clock = Date.now) {
         }),
       });
     const body = await res.json().catch(() => null);
-    return outcomeOf(res.status, body);
+    const out = outcomeOf(res.status, body);
+    if (out === FAILED) console.warn("[push] FCM refused a send: " + describeRefusal(res.status, body));
+    return out;
   };
 }

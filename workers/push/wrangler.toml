@@ -14,6 +14,11 @@ compatibility_date = "2026-09-01"
 workers_dev = false
 preview_urls = false
 
+# Logs are KEPT, not only streamed: a run's reason for failing is read after
+# the morning, not watched live at 08:00 UTC (26 Sep 2026).
+[observability]
+enabled = true
+
 [triggers]
 crons = ["*/15 * * * *"]
 
