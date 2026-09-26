@@ -1353,18 +1353,11 @@ footer button{background:none;border:0;color:var(--ink-faint);text-decoration:un
   .osk{--osk-h:clamp(30px,4.2vh,38px)}
 }
 
-/* ============ BUILD BADGE (temporary) ============
-   Pinned top-right so the deployed build is visible in any screenshot without
-   scrolling. Sits below the overlays (z-index 50+) so it never covers Kick Off
-   or Full Time. Delete this block and the element in index.html when the
-   layout is settled. */
-.build-badge{
-  position:fixed;top:0;right:0;z-index:40;border:none;cursor:pointer;
-  font-family:var(--disp);font-weight:700;font-size:11px;letter-spacing:.14em;
-  background:var(--gold);color:var(--gold-ink);
-  padding:3px 9px;border-radius:0 0 0 7px;
-  box-shadow:0 1px 3px rgba(0,0,0,.25);
-}
+/* ============ WHAT IS LIVE ============
+   The pinned gold build badge is gone -- no other game had one, and its own
+   comment said to delete it when the layout settled; the owner, 26 Sep 2026:
+   "remove the badge". The footer's build tag opens the same status panel. */
+#buildTag[role=button]{cursor:pointer;text-decoration:underline dotted;text-underline-offset:2px}
 
 /* ============ ACCOUNT SHEET ============
    Reuses the My Season sheet's furniture. Nothing here appears unless the
@@ -1450,7 +1443,6 @@ select {
   min-height:44px;
 }
 /* .osk-key's exemption moved with the keys, to shared/xi-keys.css. */
-.build-badge { min-height:0; }      /* status pill, not a control */
 
 
 /* The cost pill sits inside the button, so the button grows around it rather

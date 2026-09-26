@@ -234,22 +234,11 @@ server.listen(0, "127.0.0.1", async () => {
     const tag = d.getElementById("buildTag");
     return !!tag && !!w.CROSSWORDXI_BUILD && tag.textContent === w.CROSSWORDXI_BUILD;
   })(), w.CROSSWORDXI_BUILD);
-  t("the build badge is pinned, so it shows in any screenshot", (() => {
-    const badge = d.getElementById("buildBadge");
-    // `css` is declared further down; read the file directly here.
-    const flat = fs.readFileSync(path.join(DIR, "css/style.css"), "utf8").replace(/\s*\n\s*/g, "");
-    return !!badge && badge.textContent === w.CROSSWORDXI_BUILD &&
-      /\.build-badge\{position:fixed;top:0;right:0;z-index:40/.test(flat);
-  })(), d.getElementById("buildBadge") && d.getElementById("buildBadge").textContent);
-  t("the badge sits below the overlays, so it cannot cover Kick Off", (() => {
-    /* It used to ignore pointer events; now it is a button that opens the
-       status panel, so it must receive them. Overlays still cover it because
-       they sit at a higher z-index. */
-    const flat = fs.readFileSync(path.join(DIR, "css/style.css"), "utf8").replace(/\s*\n\s*/g, "");
-    return /\.build-badge\{[^}]*z-index:40/.test(flat) &&
-      !/\.build-badge\{[^}]*pointer-events:none/.test(flat) &&
-      /\.overlay\{[^}]*z-index:5[0-9]/.test(flat);
-  })());
+  /* THE PINNED BADGE IS GONE (the owner, 26 Sep 2026: "remove the badge") --
+     no other game had one. Its element and its rule both, so neither can
+     come back half-way. */
+  t("there is no pinned build badge", !d.getElementById("buildBadge") &&
+    !/\.build-badge\s*\{/.test(fs.readFileSync(path.join(DIR, "css/style.css"), "utf8")));
   t("the clue bank is not in the page", !/FCW_DATA/.test(d.documentElement.outerHTML));
   t("the engine loaded", !!w.FCW && typeof w.FCW.computeScore === "function");
   t("the game fetched its puzzle from the API", apiCalls > 0, apiCalls + " API calls");
@@ -1626,18 +1615,19 @@ server.listen(0, "127.0.0.1", async () => {
   })());
 
   console.log("\nWhat's live");
-  t("the build badge is a button that opens the status panel", (() => {
-    const badge = d.getElementById("buildBadge");
-    return !!badge && badge.tagName === "BUTTON" && badge.textContent === w.CROSSWORDXI_BUILD;
-  })(), d.getElementById("buildBadge") && d.getElementById("buildBadge").textContent);
+  t("the footer's build tag is a control that opens the status panel", (() => {
+    const tag = d.getElementById("buildTag");
+    return !!tag && tag.getAttribute("role") === "button" && tag.getAttribute("tabindex") === "0" &&
+      tag.textContent === w.CROSSWORDXI_BUILD;
+  })(), d.getElementById("buildTag") && d.getElementById("buildTag").outerHTML);
   t("the panel opens and closes", (() => {
     const sheet = d.getElementById("statusSheet");
-    $("buildBadge").dispatchEvent(new w.Event("click", { bubbles: true }));
+    $("buildTag").dispatchEvent(new w.Event("click", { bubbles: true }));
     const opened = sheet.classList.contains("show");
     $("statusClose").dispatchEvent(new w.Event("click", { bubbles: true }));
     return opened && !sheet.classList.contains("show");
   })());
-  $("buildBadge").dispatchEvent(new w.Event("click", { bubbles: true }));
+  $("buildTag").dispatchEvent(new w.Event("click", { bubbles: true }));
   /* The panel fills from /api/status. Opening it blanks the rows and says
      "Checking…" until an answer arrives, success or failure. */
   await until(() => !/Checking/.test($("statusSub").textContent));

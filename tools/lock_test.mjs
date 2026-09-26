@@ -1941,14 +1941,22 @@ if (!ONLY || ONLY === "bar") {
           /* The site bar's own button, which a game's CSS must not restyle. */
           signin: (() => { const s = document.querySelector(".xic-signin");
             return s ? getComputedStyle(s).textTransform + " " + getComputedStyle(s).fontFamily.split(",")[0] : null; })(),
-          /* A reading the bar stands in for, still drawn beside it. */
-          twice: [...document.querySelectorAll(".tb-readouts")].filter((e) => e.getBoundingClientRect().height > 0 &&
-            getComputedStyle(e).display !== "none").length };
+          /* A reading the bar stands in for, still drawn beside it. Each is
+             named: the crossword's readouts, HiLo's on offer and banked,
+             Ballpark's seconds-and-points line and its pips (the pips alone
+             carry aria-label=Progress; Who Am I's #ladder is a control), and
+             Word Search's "0 of 11" and bar. The owner, 26 Sep 2026: "Remove
+             the duplicates". */
+          twice: [".tb-readouts", "#callWorth", "#banked", "#tension", "#ladder[aria-label=Progress]",
+            "#side .foundCount", "#side .progress"]
+            .flatMap((q) => [...document.querySelectorAll(q)])
+            .filter((e) => { const r = e.getBoundingClientRect(); return r.height > 0 && r.width > 0; })
+            .map((e) => e.id || e.className).join(" ") };
       });
       /* ONE BAR, NOT TWO. MobileApp's re-shoot of 26 Sep 2026 found the
          crossword's old readings -- 0' | 0/11 | 114 PTS -- still under the bar
          on a phone, where a layout rule outranked the one hiding them. */
-      if (b && !b.missing) t(`${vp[0]} ${id}: nothing under the bar repeats its readings`, b.twice === 0, `${b.twice} shown`);
+      if (b && !b.missing) t(`${vp[0]} ${id}: nothing under the bar repeats its readings`, b.twice === "", b.twice ? "shown: " + b.twice : "");
       t(`${vp[0]} ${id}: the family's bar, its five slots in order, naming the game`,
         !!b && b.shown && b.labels.join(",") === WANT.join(",") && / XI/.test(b.name), JSON.stringify(b));
       if (b) seen.push([id, b]);

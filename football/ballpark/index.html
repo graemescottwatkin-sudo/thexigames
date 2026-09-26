@@ -37,7 +37,7 @@
 <!-- The theme, stamped before first paint: light unless the player chose
      dark, decided in one shared place for every page of the family. -->
 <script src="/shared/xi-theme.js?v=v67"></script>
-<link rel="stylesheet" href="css/style.css?v=v001w">
+<link rel="stylesheet" href="css/style.css?v=v001x">
 <!-- NO data-game ON <html>, DELIBERATELY. The accent palette lives in
      shared/xi-tokens.css, which every page of the site loads, and this game has
      not launched — naming it there would name it to everybody. QuickFire XI is
@@ -235,17 +235,17 @@
         </div>
       </div>
 
-      <!-- Eleven pips, one per question: where you are and how it has gone. -->
+      <!-- Eleven pips, one per question. NOT SHOWN since 26 Sep 2026: the
+           top bar's Progress says where you are (css/style.css). -->
       <div class="ladder" id="ladder" aria-label="Progress"></div>
 
       <section class="stage">
         <p class="eyebrow" id="modeLabel">Today</p>
         <h2 class="q" id="q"></h2>
 
-        <!-- The clock and what the question is worth, beside the number being
-             set. Same two values as the scoreboard, from the same tick — one
-             fact, rendered twice, because the cost of hesitating has to be
-             visible at the moment of hesitating. -->
+        <!-- The clock and what the question is worth. NOT SHOWN since 26 Sep
+             2026: the family's top bar carries both, and the owner ruled the
+             second copy out (css/style.css). -->
         <p class="tension" id="tension" aria-hidden="true">
           <span id="tSecs">20<i>sec</i></span>
           <span id="tPts">10<i>pts</i></span>
@@ -382,7 +382,7 @@
 <!-- The rules, the same file the server grades with. It holds the ladders, the
      clock and what a substitution costs — and no answers, which is the whole
      arrangement: see the note at the top of it. -->
-<script src="js/rules.js?v=v001w"></script>
-<script src="js/game.js?v=v001w"></script>
+<script src="js/rules.js?v=v001x"></script>
+<script src="js/game.js?v=v001x"></script>
 </body>
 </html>

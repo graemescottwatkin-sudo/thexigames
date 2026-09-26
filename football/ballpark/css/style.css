@@ -529,6 +529,12 @@ body{margin:0;font-family:var(--body)}
    its own where there is room, and on a phone the pips carry it. */
 /* The family's top bar stands in for the scoreboard (shared/xi-matchbar.css). */
 #screenGame .board{display:none}
+/* AND FOR THE PIPS AND THE SECONDS-AND-POINTS LINE: Progress, Clock and Worth
+   are in the bar, a thumb's width above. The line was kept as "one fact,
+   rendered twice" for the moment of hesitating; the owner, 26 Sep 2026:
+   "Remove the duplicates". Hidden rather than unbuilt: game.js still writes
+   them, harmlessly, and the Full Time card's eleven is untouched. */
+#screenGame .ladder,#screenGame .tension{display:none}
 body.locked{height:100vh; height:100dvh; overflow:hidden; display:flex; flex-direction:column}
 body.locked>*{flex:none}
 body.locked>footer{display:none}

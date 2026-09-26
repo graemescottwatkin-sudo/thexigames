@@ -252,8 +252,8 @@ body.locked>.app{flex:1 1 auto;min-height:0;width:100%;box-sizing:border-box;dis
 body.locked .app>:not(#screenGame):not(#screenResults){display:none}
 body.locked #screenGame{flex:1 1 auto;min-height:0;display:flex;flex-direction:column}
 body.locked .game{flex:1 1 auto;min-height:0;width:100%;box-sizing:border-box;padding:6px 10px 8px;gap:8px;
-  align-items:stretch;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto;
-  grid-template-areas:"stage" "dug"}
+  align-items:stretch;grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr);
+  grid-template-areas:"stage"}
 
 body.locked .stage{grid-area:stage;min-height:0;display:flex;flex-direction:column;overflow:hidden;padding:10px 12px}
 body.locked .stage>:not(.rows){flex:none}
@@ -301,22 +301,12 @@ body.locked .call{min-height:max(56px,7vh)}
    of its panel on a 360x640 phone. */
 body.locked .duel.live .player .sub{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 
-/* This call's clock, as a strip: what is on offer, what is banked and the
-   substitutions on one row, the bar under them. */
-body.locked .dug{grid-area:dug;gap:0;min-height:0}
-body.locked .dug>:not(:first-child){display:none}
-body.locked .dug>.card:first-child{padding:6px 12px;display:grid;grid-template-columns:auto auto 1fr;
-  grid-template-areas:"worth banked subs" "bar bar bar";align-items:end;column-gap:14px}
-body.locked .dug .card h2,body.locked .dug .rule{display:none}
-body.locked .dug .clock{display:contents}
-body.locked .clock .worth{grid-area:worth}
-body.locked .clock .banked{grid-area:banked;text-align:left}
-body.locked .clock .worth b{font-size:26px}
-body.locked .clock .banked b{font-size:22px}
-body.locked .clock .worth span,body.locked .clock .banked span{font-size:10px}
-body.locked .dug .subs{grid-area:subs;margin:0;justify-content:flex-end;align-self:center}
-body.locked .dug .subs span{display:none}
-body.locked .dug .bar{grid-area:bar;margin-top:6px}
+/* NO STRIP UNDER THE GAME. It was this call's card redrawn as a row -- on
+   offer, banked, the substitutions and the call's countdown -- and every one
+   of those is in the family's top bar as Worth, Score, Subs and Clock. The
+   owner, 26 Sep 2026: "Remove the duplicates". On a phone the rest of the
+   dugout is hidden while playing, so the dugout goes with it. */
+body.locked .dug{display:none}
 @media (max-height:700px){
   body.locked .cat small{font-size:12px}
   body.locked .ask{font-size:13.5px;margin-top:4px}
@@ -332,14 +322,7 @@ body.locked.fulltime .ftcard{max-width:560px;margin:0 auto;padding:16px}
 @media (min-width:821px){
   body.locked .game{grid-template-columns:minmax(0,1fr) 300px;grid-template-rows:minmax(0,1fr);
     grid-template-areas:"stage dug";max-width:1180px;margin:0 auto}
-  body.locked .dug{overflow:auto;gap:14px}
-  body.locked .dug>:not(:first-child){display:block}
-  body.locked .dug .card h2,body.locked .dug .rule{display:block}
-  body.locked .dug>.card:first-child{display:block;padding:14px 16px}
-  body.locked .dug .clock{display:flex}
-  body.locked .dug .subs{margin-top:10px;justify-content:flex-start}
-  body.locked .dug .subs span{display:inline}
-  body.locked .dug .bar{margin-top:10px}
+  body.locked .dug{display:flex;grid-area:dug;min-height:0;overflow:auto;gap:14px}
 }
 @media (min-width:1100px){
   body.locked.fulltime .dug{display:flex}

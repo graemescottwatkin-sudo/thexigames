@@ -130,10 +130,11 @@ const MEASURE = `() => {
     "button, select, input, [role=button], a.btn"
   )].filter(visible);
 
-  /* #buildBadge is the "what's live" status pill, not a gameplay control.
-     Exempt it so the number reflects controls a player actually needs. */
+  /* #buildTag, the footer's build tag, opens the "what's live" panel; it is
+     not a gameplay control. Exempt it so the number reflects controls a
+     player actually needs. */
   const small = controls
-    .filter((e) => e.id !== "buildBadge")
+    .filter((e) => e.id !== "buildTag")
     /* The on-screen keyboard's keys are exempt. Ten must fit a row, so they are
        sized like a native keyboard's — and making them 44px tall would push the
        board further under the keyboard, worsening C1 while appearing to fix C3.

@@ -159,6 +159,11 @@ h1,h2,h3{font-family:var(--disp);letter-spacing:.01em;margin:0}
 .foundCount strong{font-family:var(--disp);font-size:16px;color:var(--ink)}
 .progress{height:5px;border-radius:99px;background:var(--tint);overflow:hidden;margin-bottom:8px;flex:none}
 .progress div{height:100%;width:0;background:var(--pitch);border-radius:99px;transition:width .25s}
+/* NOT SHOWN: "0 of 11" and the bar under it are the family top bar's
+   Progress, a second copy. The owner, 26 Sep 2026: "Remove the duplicates".
+   Hidden rather than unbuilt -- game.js still keeps #count, and its suites
+   read the count from it. */
+#side .foundCount,#side .progress{display:none}
 /* The scroll rule from the brief: too many names, the LIST scrolls — never
    the panel past the board, never the page. */
 .words{flex:1 1 auto;min-height:0;overflow-y:auto;display:grid;gap:5px;align-content:start;padding-right:2px}

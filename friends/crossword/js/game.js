@@ -297,14 +297,12 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v002l";
+  var BUILD = "v002m";
   try {
     window.CROSSWORDXI_BUILD = BUILD;
     console.log("Crossword XI build " + BUILD);
     var tag = document.getElementById("buildTag");
     if (tag) tag.textContent = BUILD;
-    var badge = document.getElementById("buildBadge");
-    if (badge) badge.textContent = BUILD;
   } catch (e) {}
 
   /* ---------- Server API ----------
@@ -3863,7 +3861,21 @@
           statusRow("Status", String(err.message || err), false);
       });
   }
-  on("buildBadge", "click", showStatus);
+  /* WHAT IS LIVE, from the footer's build tag now the pinned badge is gone.
+     The tag stays a bare <span id="buildTag"> in the markup -- the gates and
+     the live check read it by exactly that pattern -- and is made a control
+     here. */
+  (function () {
+    var tag = $("buildTag");
+    if (!tag) return;
+    tag.setAttribute("role", "button");
+    tag.setAttribute("tabindex", "0");
+    tag.title = "What is live — build and data";
+    tag.addEventListener("click", showStatus);
+    tag.addEventListener("keydown", function (e) {
+      if (e.key === "Enter" || e.key === " ") { e.preventDefault(); showStatus(); }
+    });
+  })();
   on("statusClose", "click", function () { $("statusSheet").classList.remove("show"); });
 
   on("skipToggle", "click", function () {
