@@ -268,7 +268,16 @@ body.locked .keys{margin-top:6px}
    open squares are the crossword's cell and line tokens rather than tiles in
    a dark frame. Everywhere, not only on a locked screen. */
 .cw-pitch{position:relative;padding:8px;border-radius:var(--r-lg,10px);margin:0 auto}
-/* The pitch itself, and its markings, are shared/xi-board.{css,js}. */
+/* The pitch itself, and its markings, are shared/xi-board.{css,js}.
+   THE PITCH IS THE BOARD'S WHOLE BOX, not a square hugging the grid. The
+   owner, 26 Sep 2026: "the width of the background should be the width of the
+   other elements i.e. crossword is full screen width". The square board on a
+   phone is as tall as the screen allows and no wider, and a pitch drawn only
+   round it sat narrower than the keys under it and the bar over it. So the
+   .pitch-bg takes the box (.gridbox) for its frame: the same width as the
+   keyboard, and the grid stays square and centred on the turf. */
+.gridbox{position:relative}
+.gridbox>.cw-pitch{position:static}
 .cw-pitch .grid{position:relative;z-index:1;gap:0;padding:0;background:transparent;border-radius:2px}
 .cw-pitch .cell{background:var(--grid-cell)}
 .cw-pitch .cell.block{background:transparent;border-color:transparent}

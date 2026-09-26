@@ -1087,11 +1087,23 @@ function measureCodeword() {
     cardCut: card.scrollHeight > card.clientHeight + 1,
     offscreen,
     deadSpace: vis(keys) ? Math.round(rect(card).bottom - pad - rect(keys).bottom) : 0,
+    /* THE PITCH IS THE CARD'S WIDTH, the width of the keys in it, not a
+       square hugging the grid. The owner, 26 Sep 2026: "the width of the
+       background should be the width of the other elements". How far its two
+       edges sit from the card's content edges, in px. */
+    pitchOff: (() => {
+      const p = document.querySelector("#grid")?.parentElement?.querySelector(".pitch-bg");
+      if (!p) return 999;
+      const cs = getComputedStyle(card), c = rect(card), b = rect(p);
+      const left = c.left + parseFloat(cs.paddingLeft) + parseFloat(cs.borderLeftWidth);
+      const right = c.right - parseFloat(cs.paddingRight) - parseFloat(cs.borderRightWidth);
+      return Math.round(Math.max(Math.abs(b.left - left), Math.abs(b.right - right)));
+    })(),
     vh: innerHeight,
   };
 }
-const cwOk = (m) => m.locked && m.scrollY <= 1 && m.scrollX <= 1 && m.square && m.whole && m.cell >= 18 && !m.cardCut && m.offscreen === 0 && m.deadSpace <= 24;
-const cwSay = (m) => `locked ${m.locked}, scroll ${m.scrollY}/${m.scrollX}, grid ${m.square ? "square" : "NOT SQUARE"}${m.whole ? "" : " and NOT WHOLE"} at ${m.cell}px a square${m.cardCut ? ", board card overflows" : ""}, off screen ${m.offscreen}, empty below ${m.deadSpace}px`;
+const cwOk = (m) => m.locked && m.scrollY <= 1 && m.scrollX <= 1 && m.square && m.whole && m.cell >= 18 && !m.cardCut && m.offscreen === 0 && m.deadSpace <= 24 && m.pitchOff <= 2;
+const cwSay = (m) => `locked ${m.locked}, scroll ${m.scrollY}/${m.scrollX}, grid ${m.square ? "square" : "NOT SQUARE"}${m.whole ? "" : " and NOT WHOLE"} at ${m.cell}px a square${m.cardCut ? ", board card overflows" : ""}, off screen ${m.offscreen}, empty below ${m.deadSpace}px, pitch ${m.pitchOff}px off the card's width`;
 
 async function openCodeword(game, [name, viewport, touch]) {
   const context = await browser.newContext({ viewport, hasTouch: touch, isMobile: touch, deviceScaleFactor: 1 });
