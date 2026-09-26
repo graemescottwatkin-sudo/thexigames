@@ -2088,6 +2088,31 @@ if (!ONLY || ONLY === "crossword") {
      its own stylesheet. Drawn with the sample rather than by solving a board:
      offline_test plays the real page to the whistle and reads what it drew;
      what is under test here is where it sits, at its fullest. */
+  /* THE KEYS SCALE UP ON A TABLET. The owner, twice from an iPad on its side
+     on 26 Sep 2026: "Keyboard is still far too small on iPad". The keys were
+     92px wide and 34px tall -- a landscape cap meant for short screens caught
+     the iPad too. On a tablet they take the family's tablet size
+     (shared/xi-keys.css), the letters grow with them, and the page still
+     does not scroll: the board takes what is left, as it always has. */
+  console.log(`\ncrossword: the keys on a tablet`);
+  for (const [label, viewport] of [["ipad-air on its side", { width: 1180, height: 820 }], ["ipad on its side", { width: 1024, height: 768 }], ["ipad-air upright", { width: 820, height: 1180 }]]) {
+    const { page, context } = await openCrossword([label, viewport, true]);
+    const k = await page.evaluate(() => {
+      const key = document.querySelector(".osk-key:not(.wide):not(.go)");
+      const r = key.getBoundingClientRect();
+      const vis = (e) => getComputedStyle(e).display !== "none" && e.getBoundingClientRect().width > 0;
+      const cell = [...document.querySelectorAll(".cell")].find((c) => vis(c) && !c.classList.contains("block"));
+      return { w: Math.round(r.width), h: Math.round(r.height), font: parseFloat(getComputedStyle(key).fontSize),
+        cell: cell ? Math.round(cell.getBoundingClientRect().width) : 0, scroll: document.documentElement.scrollHeight - innerHeight };
+    });
+    t(`${label}: the keys are tablet-sized -- at least 48px tall, letters at least 22px -- and the page does not scroll`,
+      k.h >= 48 && k.font >= 22 && k.scroll <= 1, JSON.stringify(k));
+    /* The height comes out of the board, so the board is held to what the
+       other tablet checks hold it to: its squares at reading size. */
+    t(`${label}: and the squares keep their reading size (32px or more)`, k.cell >= 32, JSON.stringify({ cell: k.cell }));
+    if (process.env.LOCK_SHOTS) await page.screenshot({ path: path.join(process.env.LOCK_SHOTS, `crossword-${label.replace(/ /g, "-")}-keys.png`) });
+    await context.close();
+  }
   console.log(`\ncrossword: Full Time`);
   for (const vp of [VIEWPORTS[0], VIEWPORTS[1], VIEWPORTS[3]]) {
     const { page, context } = await openCrossword(vp);
