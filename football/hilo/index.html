@@ -26,17 +26,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/shared/xi-tokens.css?v=v67">
-<link rel="stylesheet" href="/shared/xi-landing.css?v=v67">
-<link rel="stylesheet" href="/shared/xi-chrome.css?v=v67">
-<link rel="stylesheet" href="/shared/xi-matchbar.css?v=v67">
-<link rel="stylesheet" href="/shared/xi-share.css?v=v67">
-<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v67">
-<link rel="stylesheet" href="/shared/xi-table.css?v=v67">
+<link rel="stylesheet" href="/shared/xi-tokens.css?v=v68">
+<link rel="stylesheet" href="/shared/xi-landing.css?v=v68">
+<link rel="stylesheet" href="/shared/xi-chrome.css?v=v68">
+<link rel="stylesheet" href="/shared/xi-matchbar.css?v=v68">
+<link rel="stylesheet" href="/shared/xi-share.css?v=v68">
+<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v68">
+<link rel="stylesheet" href="/shared/xi-table.css?v=v68">
 <!-- The theme, stamped before first paint: light unless the player chose
      dark, decided in one shared place for every page of the family. -->
-<script src="/shared/xi-theme.js?v=v67"></script>
-<link rel="stylesheet" href="css/style.css?v=v002o">
+<script src="/shared/xi-theme.js?v=v68"></script>
+<link rel="stylesheet" href="css/style.css?v=v002p">
 </head>
 <body>
 
@@ -299,28 +299,11 @@
 
   <section class="screen ft" id="screenResults" hidden>
     <div class="ftcard">
-      <div class="k">Full time &middot; HiLo XI</div>
-      <h3><span id="ftScore">0</span> <span class="of">/ 114</span></h3>
-      <span class="res W" id="ftRes">Win</span>
-      <p class="line" id="ftLine"></p>
-      <!-- Whether the number above is the server's. Empty until it
-           answers, and empty for good on a round it could not verify:
-           the card is the player's own arithmetic either way, and has
-           always been honest about that. -->
-      <p class="line verified" id="ftVerified"></p>
-      <!-- Where the shared challenge draws its button, or the standings when
-           this round came from one. Empty until then: the flow is
-           shared/xi-challenge.js and this game owns only the place it sits. -->
-      <div class="ftChallenge" id="ftChallenge"></div>
-      <textarea id="shareText" rows="5" readonly aria-label="Shareable result"></textarea>
-      <div class="xic-community"></div>
-      <div class="row">
-        <div id="shareRow"></div>
-    <!-- Filled by shared/xi-fulltime.js: the next game in this theme that
-     has not been played today. Empty when there is nothing to suggest. -->
-    <div id="nextUpRow" data-game="hilo"></div>
-        <button class="btn" id="resultMenuBtn">Back to menu</button>
-      </div>
+      <!-- THE FAMILY'S FULL TIME (shared/xi-fulltime.js, XIFullTime.panel):
+           the result, keep it, share, challenge, then the next game -- the
+           owner's approved mockup of 26 Sep 2026. -->
+      <div id="ftPanel"></div>
+      <button class="btn quiet" id="resultMenuBtn">Back to menu</button>
     </div>
   </section>
 
@@ -331,20 +314,20 @@
 <!-- THE SHARED FOOTER, AT TOP LEVEL. It carries the family disclaimer. -->
 <footer class="xic-foot"></footer>
 
-<script src="/shared/xi-seasons.js?v=v67"></script>
-<script src="/shared/xi-clubs.js?v=v67"></script>
-<script src="/shared/xi-table.js?v=v67"></script>
-<script src="/shared/xi-chrome.js?v=v67"></script>
-<script src="/shared/xi-matchbar.js?v=v67"></script>
-<script src="/shared/xi-season.js?v=v67"></script>
-<script src="/shared/xi-menu.js?v=v67"></script>
-<script src="/shared/xi-plays.js?v=v67"></script>
-<script src="/shared/xi-challenge.js?v=v67"></script>
-<script src="/shared/xi-share.js?v=v67"></script>
+<script src="/shared/xi-seasons.js?v=v68"></script>
+<script src="/shared/xi-clubs.js?v=v68"></script>
+<script src="/shared/xi-table.js?v=v68"></script>
+<script src="/shared/xi-chrome.js?v=v68"></script>
+<script src="/shared/xi-matchbar.js?v=v68"></script>
+<script src="/shared/xi-season.js?v=v68"></script>
+<script src="/shared/xi-menu.js?v=v68"></script>
+<script src="/shared/xi-plays.js?v=v68"></script>
+<script src="/shared/xi-challenge.js?v=v68"></script>
+<script src="/shared/xi-share.js?v=v68"></script>
 <!-- xi-played.js first: xi-fulltime.js asks it what has been played today. -->
-<script src="/shared/xi-played.js?v=v67"></script>
-<script src="/shared/xi-fulltime.js?v=v67"></script>
-<script src="js/scoring.js?v=v002o"></script>
-<script src="js/game.js?v=v002o"></script>
+<script src="/shared/xi-played.js?v=v68"></script>
+<script src="/shared/xi-fulltime.js?v=v68"></script>
+<script src="js/scoring.js?v=v002p"></script>
+<script src="js/game.js?v=v002p"></script>
 </body>
 </html>

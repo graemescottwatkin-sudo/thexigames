@@ -31,7 +31,7 @@
  * link so a friend could replay the exact eleven, and that is now a board
  * number in the fragment, which is shorter and does not describe the board.
  */
-var BUILD = "v001q";
+var BUILD = "v001r";
 
 (function bootstrap() {
   'use strict';
@@ -221,7 +221,7 @@ function start() {
   ['screenStart', 'screenGame', 'screenResults', 'screenArchive', 'kickOff',
     'startDate', 'startBlurb', 'stripFill', 'progress', 'clockValue', 'clue',
     'options', 'feedback', 'passQuestion', 'subCost', 'runningScore', 'worthNow',
-    'resultsBody', 'shareText', 'copyShare', 'copyChallenge', 'challengeHint',
+    'ftPanel',
     'playAgain', 'startKicker', 'challengeNote', 'playWeekly', 'weeklyLabel',
     'weeklyState', 'screenLoading', 'showArchive', 'archiveCount', 'archiveList',
     'archiveBack'].forEach(function (id) {
@@ -787,80 +787,46 @@ function start() {
     };
   }
 
-  function shareTextFor(s) {
-    var line = s.played.map(function (x) {
-      return x.correct ? String(x.minute).padStart(2, '0') + "'" : '—';
-    }).join(' ');
-    return [
-      'QUICKFIRE XI',
-      'No. ' + board.no + ' — ' + formatDate(board.day),
-      '',
-      s.correct + '/' + s.total + ' ⚽',
-      s.score + '/' + s.maxScore,
-      '',
-      'Goal times:',
-      line,
-      '',
-      s.average === null ? 'Average: —' : 'Average: ' + s.average + "'",
-      'Subs: ' + s.subs + (s.subCost ? ' (−' + s.subCost + ')' : '') +
-        (s.bonus ? '  ·  All eleven +' + s.bonus : '')
-    ].join('\n');
-  }
-
-  function row(label, value) {
-    return '<div class="row"><span class="rowLabel">' + label + '</span>' +
-      '<span>' + value + '</span></div>';
+  /* FULL TIME, THE FAMILY'S WAY (shared/xi-fulltime.js): this game hands over
+     its result and the panel draws the four blocks every game shows. The
+     boxes are the eleven in the order played: green with the minute of the
+     goal, red for a wrong pick, grey where the clock ran out. */
+  function boxesOf() {
+    var played = state.results.filter(function (x) { return !x.passed; });
+    var boxes = played.map(function (x) {
+      return x.correct ? { s: 'g', m: x.minute } : x.timedOut ? { s: 'x' } : { s: 'r' };
+    });
+    while (boxes.length < CONFIG.QUESTIONS_PER_DAILY) boxes.push({ s: 'x' });
+    return boxes.slice(0, CONFIG.QUESTIONS_PER_DAILY);
   }
 
   function showResults(r) {
     var s = summarise(r);
-    var html = '';
-    html += '<div class="verdict"><span class="verdictCount">' + s.correct + '</span>' +
-      '<span class="verdictOf">/ ' + s.total + ' correct</span></div>';
-    html += '<div class="bigscore">' + s.score + ' <span class="of">/ ' + s.maxScore + ' points</span></div>';
-    html += '<div class="rows">';
-    html += row('Average goal', s.average === null ? 'No goals' : s.average + "'");
-    html += row('Fastest goal', s.fastest === null ? 'No goals' : s.fastest + "'");
-    html += row('Latest goal', s.latest === null ? 'No goals' : s.latest + "'");
-    html += row('Subs used', s.subs + ' of ' + CONFIG.SUBS_PER_DAILY +
-      (s.subCost ? '  (−' + s.subCost + ')' : ''));
-    if (s.bonus) html += row('All eleven right', '+' + s.bonus);
-    html += '</div>';
-    html += '<ol class="breakdown">';
-    state.results.forEach(function (x) {
-      var cls = x.correct ? 'hit' : 'missed';
-      var minute = x.timedOut ? 'FT' : x.minute + "'";
-      /* THE PICK, AND NOW THE ANSWER WHERE THERE WAS ONE TO LEARN.
-         This said "this page is never sent the answer", which was true until
-         the answer endpoint began returning it for a question the round has
-         settled and got WRONG. The old note also gave the reason — "the board
-         may still be somebody else's to play" — and that reason still holds
-         for every question this player has NOT answered, which is why the
-         server sends nothing for those. For one they answered and missed, the
-         answer was already on screen when they missed it; withholding it from
-         the card they read afterwards teaches them nothing and looks like the
-         game keeping score without saying why. */
-      var shown = x.pick === null ? 'No answer' : x.pick;
-      var was = (!x.correct && x.answer) ? x.answer : null;
-      html += '<li class="' + cls + '">' +
-        '<span class="bdMin">' + minute + '</span>' +
-        '<span class="bdAnswer">' + escapeHtml(shown) +
-          (was ? '<span class="bdWas"> — ' + escapeHtml(was) + '</span>' : '') + '</span>' +
-        '<span class="bdPts">' + (x.points || 0) + '</span></li>';
-    });
-    html += '</ol>';
-    el.resultsBody.innerHTML = html;
-    el.shareText.value = shareTextFor(s);
-    /* THE FAMILY'S SHARE ROW. The same buttons, the same platforms and the same
-       copy fallback every other game offers, from shared/xi-share.js — this
-       game had a bare "Copy result" and nothing to send it with. Mounted once:
-       the text is read when a button is pressed, not when the row is built, so
-       a later result does not need a remount. */
-    var shareRow = document.getElementById("shareRow");
-    if (window.XIShare && shareRow) {
-      window.XIShare.mount(shareRow, {
-        text: function () { return el.shareText.value; },
-        url: function () { return location.href; },
+    var boxes = boxesOf();
+    var wrong = s.played.length - s.correct;
+    var stats = s.correct + ' right · ' + wrong + ' wrong' +
+      (s.average === null ? '' : " · Average " + s.average + "'") +
+      (s.bonus ? ' · All eleven +' + s.bonus : '') +
+      (s.subs ? ' · Subs ' + s.subs + ' of ' + CONFIG.SUBS_PER_DAILY : '');
+    if (window.XIFullTime && XIFullTime.panel) {
+      XIFullTime.panel(el.ftPanel, {
+        game: 'quickfire', name: 'QuickFire XI', no: board.no,
+        date: XIFullTime.dayLabel(board.day),
+        score: s.score, max: s.maxScore, boxes: boxes, stats: stats,
+        /* THE PICK, AND THE ANSWER WHERE THERE WAS ONE TO LEARN: sent by the
+           server only for a question this round has settled and got wrong. */
+        answers: s.played.map(function (x) {
+          return { s: x.correct ? 'g' : x.timedOut ? 'x' : 'r',
+                   m: x.timedOut ? null : x.minute,
+                   text: x.pick === null ? 'No answer' : x.pick,
+                   was: (!x.correct && x.answer) ? x.answer : null,
+                   points: x.points || 0 };
+        }),
+        share: function () {
+          return 'QuickFire XI · No. ' + board.no + ' · ' + s.score + '/' + s.maxScore + '\n' +
+            XIFullTime.squares(boxes);
+        },
+        url: challengeLink,
       });
     }
     show('screenResults');
@@ -1024,32 +990,7 @@ function start() {
     return location.href.split('#')[0] + '#b=' + board.no;
   }
 
-  function copyToClipboard(text, button, done) {
-    var ok = false;
-    if (navigator.clipboard) {
-      navigator.clipboard.writeText(text).catch(function () {});
-      ok = true;
-    } else {
-      var scratch = document.createElement('textarea');
-      scratch.value = text;
-      scratch.style.position = 'fixed';
-      scratch.style.opacity = '0';
-      document.body.appendChild(scratch);
-      scratch.select();
-      try { ok = document.execCommand('copy'); } catch (err) { ok = false; }
-      document.body.removeChild(scratch);
-    }
-    var original = button.textContent;
-    button.textContent = ok ? 'Copied' : 'Copy failed';
-    setTimeout(function () { button.textContent = done || original; }, 1600);
-  }
 
-  el.copyChallenge.addEventListener('click', function () {
-    copyToClipboard(challengeLink(), el.copyChallenge, 'Copy board link');
-  });
-  el.copyShare.addEventListener('click', function () {
-    copyToClipboard(el.shareText.value, el.copyShare, 'Copy result');
-  });
   el.playAgain.addEventListener('click', function () {
     try { localStorage.removeItem(PREFIX + storageKey); } catch (err) {}
     location.reload();
@@ -1061,9 +1002,6 @@ function start() {
   el.playWeekly.hidden = true;
 
   el.showArchive.hidden = false;
-  el.copyChallenge.textContent = 'Copy board link';
-  el.challengeHint.textContent = 'That link opens this exact board — No. ' +
-    board.no + '.';
 
   describeBoard();
 

@@ -32,18 +32,18 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/shared/xi-tokens.css?v=v67">
-<link rel="stylesheet" href="/shared/xi-chrome.css?v=v67">
-<link rel="stylesheet" href="/shared/xi-matchbar.css?v=v67">
-<link rel="stylesheet" href="/shared/xi-share.css?v=v67">
-<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v67">
+<link rel="stylesheet" href="/shared/xi-tokens.css?v=v68">
+<link rel="stylesheet" href="/shared/xi-chrome.css?v=v68">
+<link rel="stylesheet" href="/shared/xi-matchbar.css?v=v68">
+<link rel="stylesheet" href="/shared/xi-share.css?v=v68">
+<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v68">
 <!-- The family's pre-match card, which every other game's landing screen is
      built from. QuickFire drew its own until it launched; a game that looks
      like itself on the front door and like nothing else once you are inside is
      the fault the shared layer exists to stop. -->
-<link rel="stylesheet" href="/shared/xi-landing.css?v=v67">
-<script src="/shared/xi-theme.js?v=v67"></script>
-<link rel="stylesheet" href="css/style.css?v=v001q">
+<link rel="stylesheet" href="/shared/xi-landing.css?v=v68">
+<script src="/shared/xi-theme.js?v=v68"></script>
+<link rel="stylesheet" href="css/style.css?v=v001r">
 </head>
 <body>
 
@@ -158,20 +158,10 @@
   </section>
 
   <section class="screen" id="screenResults" hidden>
-    <div class="eyebrow">Full time</div>
-    <div id="resultsBody"></div>
-    <div class="share">
-      <textarea id="shareText" rows="11" readonly aria-label="Shareable result"></textarea>
-      <div class="xic-community"></div>
-      <button class="btn" id="copyShare">Copy result</button>
-      <div id="shareRow"></div>
-    <!-- Filled by shared/xi-fulltime.js: the next game in this theme that
-     has not been played today. Empty when there is nothing to suggest. -->
-    <div id="nextUpRow" data-game="quickfire"></div>
-      <button class="btn" id="copyChallenge">Copy challenge link</button>
-      <p class="tiny" id="challengeHint">The link plays this exact XI — same
-        questions, same order, same bench, same reveals.</p>
-    </div>
+    <!-- THE FAMILY'S FULL TIME (shared/xi-fulltime.js, XIFullTime.panel): the
+         result, keep it, share, challenge, then the next game -- the same four
+         blocks on every game, the owner's approved mockup of 26 Sep 2026. -->
+    <div id="ftPanel"></div>
     <button class="btn quiet" id="playAgain">Clear today's Daily and replay</button>
   </section>
 
@@ -199,15 +189,15 @@
 <!-- THE SHARED FOOTER, AT TOP LEVEL. It carries the family disclaimer. -->
 <footer class="xic-foot"></footer>
 
-<script src="/shared/xi-chrome.js?v=v67"></script>
-<script src="/shared/xi-matchbar.js?v=v67"></script>
-<script src="/shared/xi-share.js?v=v67"></script>
+<script src="/shared/xi-chrome.js?v=v68"></script>
+<script src="/shared/xi-matchbar.js?v=v68"></script>
+<script src="/shared/xi-share.js?v=v68"></script>
 <!-- xi-played.js first: xi-fulltime.js asks it what has been played today. -->
-<script src="/shared/xi-played.js?v=v67"></script>
-<script src="/shared/xi-fulltime.js?v=v67"></script>
-<script src="js/config.js?v=v001q"></script>
-<script src="/shared/xi-season.js?v=v67"></script>
-<script src="/shared/xi-plays.js?v=v67"></script>
-<script src="js/game.js?v=v001q"></script>
+<script src="/shared/xi-played.js?v=v68"></script>
+<script src="/shared/xi-fulltime.js?v=v68"></script>
+<script src="js/config.js?v=v001r"></script>
+<script src="/shared/xi-season.js?v=v68"></script>
+<script src="/shared/xi-plays.js?v=v68"></script>
+<script src="js/game.js?v=v001r"></script>
 </body>
 </html>

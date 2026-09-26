@@ -28,6 +28,17 @@ console.log("One row, four games");
 for (const g of GAMES) {
   const html = read(`${gameDir(g)}/index.html`);
   const js = read(`${gameDir(g)}/js/game.js`);
+  /* OR THE FAMILY'S FULL TIME (shared/xi-fulltime.js), which carries share
+     and challenge itself: the owner's approved mockup, 26 Sep 2026. Games move
+     onto it one at a time, and a game on it is wired for sharing through it. */
+  if (/XIFullTime\.panel\(/.test(js)) {
+    t(`${g} is on the family's Full Time panel, which shares for it`,
+      /id="ftPanel"/.test(html) && /shared\/xi-fulltime\.js/.test(html) && /shared\/xi-fulltime\.css/.test(html));
+    t(`${g} hands the panel a function for its own text, not a string`, /share:\s*function/.test(js));
+    t(`${g} keeps no platform buttons of its own`,
+      !/wa\.me|twitter\.com\/intent|reddit\.com\/submit/.test(js), "the URLs live in shared/xi-share.js");
+    continue;
+  }
   t(`${g} links the shared share module, script and stylesheet`,
     /shared\/xi-share\.js/.test(html) && /shared\/xi-share\.css/.test(html));
   t(`${g} has somewhere to mount it, and mounts it`,

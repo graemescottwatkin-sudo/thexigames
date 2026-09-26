@@ -15,7 +15,7 @@
  *   - no practice. There is now an archive picker and a finals catalogue; what
  *     is still missing is a practice mode, which this game may never want.
  */
-var BUILD = "v001y";
+var BUILD = "v001z";
 
 (function () {
   "use strict";
@@ -1486,7 +1486,8 @@ var BUILD = "v001y";
       sending = false;
       if (r.error) return say(r.error, "bad");
       if (r.solvedId) {
-        state.solved[r.solvedId] = { name: r.name, clubs: r.clubs, how: "solved" };
+        state.solved[r.solvedId] = { name: r.name, clubs: r.clubs, how: "solved",
+          m: SCORING.matchMinute(Math.max(0, Math.round((Date.now() - state.startedAt) / 1000))) };
         /* The player has just earned this one; it is the active card by any
            reading of the word, so its career is the one on screen. */
         state.reading = String(r.solvedId);
@@ -1557,8 +1558,53 @@ var BUILD = "v001y";
       revealed: Object.keys(state.solved).filter(function (k) {
         return state.solved[k] && state.solved[k].how === "revealed";
       }).length,
+      /* The eleven boxes, in the order of the board, so a board reopened
+         later draws its own: "g12" solved at 12', "a" given, "g" free. */
+      boxes: boxesOf().map(function (b) { return b.s + (b.m != null ? b.m : ""); }).join(" "),
       at: Date.now(),
     });
+  }
+
+  /* A BOX PER NAME, in the board's order: green with the minute it was
+     unravelled, amber where it was given off the bench, green with no minute
+     where the tile arrived free, grey where it was never reached. */
+  function boxesOf() {
+    return state.board.slots.map(function (s) {
+      var got = state.solved[s.id] || {};
+      if (got.how === "solved") return { s: "g", m: got.m != null ? got.m : null };
+      if (got.how === "free") return { s: "g" };
+      if (got.how === "revealed") return { s: "a" };
+      return { s: "x" };
+    });
+  }
+
+  /* FULL TIME, THE FAMILY'S WAY (shared/xi-fulltime.js): this game hands over
+     its result and the panel draws the four blocks every game shows. */
+  var ftShown = null;
+  function drawFullTime(o) {
+    ftShown = o;
+    if (!window.XIFullTime || !XIFullTime.panel) return;
+    XIFullTime.panel($("ftPanel"), {
+      game: "vowels", name: "Vowels XI", no: o.no, date: o.day ? XIFullTime.dayLabel(o.day) : "",
+      score: o.score, max: SCORING.MAX_SCORE, boxes: o.boxes, stats: o.stats +
+        (o.verified ? " · Verified by the server" : ""),
+      share: function () {
+        return "Vowels XI" + (o.no != null ? " · No. " + o.no : "") + " · " + o.score + "/" + SCORING.MAX_SCORE +
+          (o.boxes ? "\n" + XIFullTime.squares(o.boxes) : "");
+      },
+      url: function () { return location.href.split("#")[0]; },
+      /* A REAL CHALLENGE where the server will make one -- the finals, once
+         verified; it refuses a daily, and then the board and the score to
+         beat go instead. */
+      challenge: function (sendBoard) {
+        var id = playIdOf();
+        if (!o.verified || !o.iconic || !id || !window.XIChallenge || !XIChallenge.create) { sendBoard(); return; }
+        XIChallenge.create(id).then(sendBoard, function () { sendBoard(); });
+      },
+    });
+  }
+  function helpLine(mins, secs, help) {
+    return mins + "m " + (secs < 10 ? "0" : "") + secs + "s" + (help ? " · " + help + " off the bench" : "");
   }
 
   /* ONE VERIFICATION, TWO READERS. The card wants the number and the
@@ -1577,18 +1623,19 @@ var BUILD = "v001y";
     list.forEach(function (fn) { try { fn(verifiedAnswer); } catch (e) {} });
   }
 
-  function verifyScore(local, scoreEl, note) {
+  function verifyScore() {
     var id = playIdOf();
     if (!id || !state.board) { settleVerified(false); return; }
     post("finish", { playId: id })
       .then(function (v) {
         settleVerified(!!(v && v.verified));
-        if (!v || !v.verified) return;
-        scoreEl.textContent = v.score + " / " + SCORING.MAX_SCORE;
-        note.textContent = v.score === local
-          ? "Verified by the server."
-          : "Verified by the server — " + v.score + " rather than " + local +
-            ", timed from when the board was pulled.";
+        if (!v || !v.verified || !ftShown) return;
+        /* THE SERVER'S NUMBER WINS: its clock runs from when the board was
+           pulled and does not pause, which is deliberate. */
+        var o = {};
+        for (var k in ftShown) o[k] = ftShown[k];
+        o.score = v.score; o.verified = true;
+        drawFullTime(o);
       })
       .catch(function () { settleVerified(false); /* the card keeps its own number */ });
   }
@@ -1610,131 +1657,30 @@ var BUILD = "v001y";
      eleven solved slots — and none of it survives a reload, so it would print
      a fresh zero and call it the score. */
   function showBanked(rec) {
-    var body = $("resultsBody");
-    body.innerHTML = "";
-    var score = document.createElement("div");
-    score.className = "ftScore";
-    score.textContent = rec.score + " / " + SCORING.MAX_SCORE;
-    body.appendChild(score);
-    var line = document.createElement("p");
-    line.className = "ftLine";
-    var mins = Math.floor((rec.elapsedSeconds || 0) / 60);
-    var secs = (rec.elapsedSeconds || 0) % 60;
-    /* No DOT constant in this game — the separator is written out. */
-    line.textContent = "Played · " + mins + "m " + (secs < 10 ? "0" : "") + secs + "s" +
-      (rec.help ? " · " + rec.help + " off the bench" : "");
-    body.appendChild(line);
-    var note = document.createElement("p");
-    note.className = "ftNote";
-    note.textContent = "You finished this board. The daily is one attempt.";
-    body.appendChild(note);
-    if ($("shareText")) $("shareText").value =
-      "Vowels XI · board " + rec.no + " · " +
-      rec.score + "/" + SCORING.MAX_SCORE;
-    if (window.XIShare && $("shareRow")) {
-      window.XIShare.mount($("shareRow"), {
-        text: function () { return $("shareText").value; },
-        url: function () { return location.href; },
-      });
-    }
+    var mins = Math.floor((rec.elapsedSeconds || 0) / 60), secs = (rec.elapsedSeconds || 0) % 60;
+    var boxes = typeof rec.boxes === "string" && rec.boxes
+      ? rec.boxes.split(" ").map(function (t) { return { s: t.charAt(0), m: t.length > 1 ? Number(t.slice(1)) : null }; })
+      : null;
+    drawFullTime({ no: rec.no, day: null, score: rec.score, boxes: boxes,
+                   stats: helpLine(mins, secs, rec.help) + " · The daily is one attempt" });
     show("screenResults");
   }
 
   function showResults() {
     var res = SCORING.computeScore(state.elapsed, state.help);
     var mins = Math.floor(state.elapsed / 60), secs = state.elapsed % 60;
-    var body = $("resultsBody");
-    body.innerHTML = "";
-
-    var score = document.createElement("div");
-    score.className = "ftScore";
-    score.textContent = res.score + " / " + SCORING.MAX_SCORE;
-    body.appendChild(score);
-
-    /* THE SERVER'S OWN NUMBER, ASKED FOR AFTER THE CARD IS DRAWN. It marked
-       every guess, sold every reveal and timed the board from a clock it
-       started, so it can work the score out without being told any of it —
-       and it writes plays.srv_score, which is what a challenge table reads.
-
-       The card keeps the device's number until the answer comes back, and
-       keeps it for good on a round nothing could verify. Where the two
-       differ the server wins and the line says why: its clock runs from when
-       the board was pulled and does not pause, which is deliberate — an
-       unverifiable pause is exactly where a table would be gamed. */
-    var vnote = document.createElement("p");
-    vnote.className = "ftLine ftVerified";
-    body.appendChild(vnote);
-    verifyScore(res.score, score, vnote);
-
-    /* AND THE CHALLENGE, if this board can carry one. Somebody who followed a
-       challenge joins its table; somebody who played on their own is offered
-       the chance to send it. Both need a score the SERVER has verified, so
-       this waits for the same answer verifyScore is waiting for rather than
-       racing it — an entry posted before the play row is scored is refused,
-       and refused silently, which would read as a challenge that does nothing.
-       Only the finals: the server will not make a challenge from a daily, and
-       offering a button that is always refused is worse than no button. */
-    var chal = document.createElement("div");
-    chal.className = "ftChallenge";
-    body.appendChild(chal);
-    if (window.XIChallenge && state.board && state.board.iconic) {
-      whenVerified(function (ok) {
-        if (ok) window.XIChallenge.finished(playIdOf(), chal);
-      });
+    var boxes = boxesOf();
+    var solved = boxes.filter(function (b) { return b.s === "g" && b.m != null; }).length;
+    drawFullTime({ no: state.board.no, day: state.board.day || null, score: res.score, boxes: boxes,
+                   iconic: !!state.board.iconic,
+                   stats: solved + " of " + boxes.length + " unravelled · " + helpLine(mins, secs, state.help) });
+    /* The server's own number, asked for AFTER the panel is drawn; and the
+       challenge's table, joined on the same answer by somebody who came from
+       one. */
+    verifyScore();
+    if (window.XIChallenge && XIChallenge.joining && XIChallenge.joining()) {
+      whenVerified(function (ok) { if (ok) XIChallenge.finished(playIdOf(), null); });
     }
-
-    var line = document.createElement("p");
-    line.className = "ftLine";
-    line.textContent = state.board.title + " \u00B7 " + mins + "m " + secs + "s \u00B7 " +
-      res.timePenalty + " off the clock, " + res.helpPenalty + " off the bench";
-    body.appendChild(line);
-
-    var list = document.createElement("ul");
-    list.className = "ftList";
-    state.board.slots.forEach(function (s) {
-      var got = state.solved[s.id] || {};
-      var li = document.createElement("li");
-      var who = document.createElement("span");
-      who.className = "who";
-      who.textContent = s.pos + "  " + String(got.name || "").toUpperCase();
-      var how = document.createElement("span");
-      how.className = "how";
-      how.textContent = got.how === "revealed" ? "given" : "unravelled";
-      li.appendChild(who); li.appendChild(how);
-      list.appendChild(li);
-    });
-    body.appendChild(list);
-
-    /* The honest note, and it has changed: the result IS recorded now, on the
-       device and on the account. What is still true is that the SCORE was
-       assembled in this browser — there is no play row the server timed — so
-       it is banked as a result and not offered as a verified one. */
-    var note = document.createElement("p");
-    note.className = "ftUnverified";
-    note.textContent = "Kept in your record. The score is worked out in your " +
-      "browser, so it is not a verified time.";
-    body.appendChild(note);
-
-    /* UNRAVELLED MEANS UNRAVELLED. A tile that arrived free was not solved
-       and was not bought, so it is neither — counted separately and named,
-       rather than folded into "given" and claimed as either. Written for N
-       even though no board has more than one today, and printed only when
-       there is one, so an anagram share reads exactly as it always did. */
-    var solvedCount = 0, freeCount = 0;
-    state.board.slots.forEach(function (s) {
-      var how = (state.solved[s.id] || {}).how;
-      if (how === "solved") solvedCount++;
-      else if (how === "free") freeCount++;
-    });
-    var givenCount = state.board.slots.length - solvedCount - freeCount;
-    $("shareText").value =
-      (state.board.no == null ? "Vowels XI" : "Vowels XI #" + state.board.no) + "\n" +
-      state.board.title + "\n" +
-      solvedCount + " of 11 unravelled, " + givenCount + " given" +
-      (freeCount ? ", " + freeCount + " free" : "") + "\n" +
-      res.score + "/" + SCORING.MAX_SCORE + " in " + mins + "m " + secs + "s\n" +
-      "thexigames.com/football/vowels/";
-
     show("screenResults");
   }
 
@@ -2236,18 +2182,6 @@ var BUILD = "v001y";
   $("benchClose").addEventListener("click", function () {
     state.picked = null; hideBench(); drawPitch(); paintEcho();
   });
-
-  /* THE SHARE ROW, THE FAMILY'S. This game hands over its own text and the
-     address of the board it was scored on; shared/xi-share.js owns the
-     buttons, the platforms and the copy fallback, so every game offers the
-     same way out. Mounted once — the text is read when a button is pressed,
-     not when it is built. */
-  if (window.XIShare && $("shareRow")) {
-    window.XIShare.mount($("shareRow"), {
-      text: function () { return $("shareText").value; },
-      url: function () { return location.href; },
-    });
-  }
 
   $("playAgain").addEventListener("click", function () {
     try { localStorage.removeItem(storeKey()); } catch (e) { /* ignore */ }

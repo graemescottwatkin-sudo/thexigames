@@ -143,17 +143,11 @@ body{margin:0;font-family:var(--body)}
 
 /* ---- full time ---- */
 .ft{max-width:520px;margin:0 auto;padding:24px 16px 40px}
-.ftcard{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px;box-shadow:var(--shadow-1)}
-.ftcard .k{font-family:var(--disp);font-size:14px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-soft)}
-.ftcard h3{font-family:var(--disp);font-weight:700;font-size:44px;margin:0;line-height:1;text-transform:uppercase;color:var(--ink)}
-.ftcard h3 .of{font-size:22px;color:var(--ink-soft)}
-.ftcard .res{display:inline-block;margin-top:8px;padding:4px 12px;border-radius:999px;font-family:var(--disp);font-weight:700;letter-spacing:.14em;text-transform:uppercase;font-size:14px;color:#fff}
-.ftcard .res.W{background:var(--correct)} .ftcard .res.D{background:var(--draw,#8A8340)} .ftcard .res.L{background:var(--loss,var(--wrong))}
-.ftcard .line{margin:12px 0 0;color:var(--ink-soft);font-size:14px}
-.ftcard textarea{width:100%;box-sizing:border-box;background:var(--tint);border:1px solid var(--line);border-radius:8px;padding:12px;font:13px/1.5 ui-monospace,Menlo,Consolas,monospace;color:var(--ink);margin:14px 0;resize:vertical}
-.ftcard .row{display:flex;gap:8px;flex-wrap:wrap}
-.ftcard .row .btn{flex:1;justify-content:center;display:flex;align-items:center;min-height:42px;padding:8px 12px;border:1px solid var(--ink);border-radius:999px;background:var(--card);color:var(--ink);font-family:var(--disp);font-weight:700;font-size:16px;letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
-.ftcard .row .btn.primary{background:var(--pitch);border-color:var(--pitch);color:var(--on-pitch,#fff)}
+/* FULL TIME is the family's panel (shared/xi-fulltime.css); this is only its
+   column, and the way back to the menu under it. */
+.ftcard{display:flex;flex-direction:column;gap:8px}
+#resultMenuBtn{align-self:center;min-height:var(--tap);padding:8px 14px;border:0;background:none;
+  color:var(--ink-soft);font-family:var(--body);font-weight:600;font-size:14px;cursor:pointer}
 
 /* ---- previous puzzles, by day (the same drawer the word search uses) ---- */
 .archive{margin:0 0 12px;text-align:left}
@@ -317,7 +311,7 @@ body.locked .dug{display:none}
 body.locked.fulltime .dug{display:none}
 body.locked.fulltime .app>#screenResults{flex:0 1 auto;min-height:0;max-height:52%;overflow:auto;
   width:100%;max-width:none;box-sizing:border-box;padding:8px 10px 12px;border-top:1px solid var(--line)}
-body.locked.fulltime .ftcard{max-width:560px;margin:0 auto;padding:16px}
+body.locked.fulltime .ftcard{max-width:560px;margin:0 auto}
 
 @media (min-width:821px){
   body.locked .game{grid-template-columns:minmax(0,1fr) 300px;grid-template-rows:minmax(0,1fr);

@@ -37,6 +37,9 @@ const t = (n, ok, d) => { ok ? pass++ : fail++; console.log(`${ok ? "  ok  " : "
 const html = fs.readFileSync(path.join(DIR, "index.html"), "utf8");
 const game = fs.readFileSync(path.join(DIR, "js", "game.js"), "utf8");
 const config = fs.readFileSync(path.join(DIR, "js", "config.js"), "utf8");
+/* THE FAMILY'S FULL TIME, the real file: the panel is part of what this page
+   owes a player at the whistle, so it is loaded rather than stubbed. */
+const fulltime = fs.readFileSync(path.join(DIR, "..", "..", "shared", "xi-fulltime.js"), "utf8");
 
 const PER_DAILY = 11;
 
@@ -209,6 +212,7 @@ async function open(opts = {}) {
   const seasons = [];
   w.XISeason = { record: (day) => seasons.push(day) };
 
+  w.eval(fulltime);
   w.eval(config);
   w.eval(game);
   await settle(w);
@@ -292,10 +296,21 @@ console.log("\n=== A round, played end to end ===");
   t("the round was totalled by the server, not added up here",
     srv.calls.some((c) => c.pathname === "/api/quickfire/finish"));
 
-  const shown = doc.getElementById("resultsBody").textContent;
+  /* THE FAMILY'S FULL TIME (shared/xi-fulltime.js): the four blocks in the
+     approved order -- result, keep it, share and challenge -- then next up. */
+  const panel = doc.getElementById("ftPanel");
+  t("Full Time is the family's panel, its blocks in order", (() => {
+    const kids = panel ? [...panel.children].map((e) => e.className.split(" ")[0]) : [];
+    return kids.join(",") === "xft-card,xft-keep,xft-act,xft-next";
+  })(), panel ? [...panel.children].map((e) => e.className).join(" | ") : "no #ftPanel");
+  const stats = panel && panel.querySelector(".xft-stats");
   t("and it reports the server's count of correct answers",
-    new RegExp(`${expectedCorrect}\\s*/\\s*${PER_DAILY}`).test(shown.replace(/\s+/g, " ")),
-    `expected ${expectedCorrect}/${PER_DAILY}`);
+    !!stats && new RegExp(`^${expectedCorrect} right`).test(stats.textContent),
+    stats ? stats.textContent : "no stats line");
+  t("eleven boxes, a green one for every right answer", (() => {
+    const b = panel ? [...panel.querySelectorAll(".xft-boxes .xft-b")] : [];
+    return b.length === PER_DAILY && b.filter((x) => x.classList.contains("g")).length === expectedCorrect;
+  })(), panel ? `${panel.querySelectorAll(".xft-boxes .xft-b.g").length} green of ${panel.querySelectorAll(".xft-boxes .xft-b").length}` : "");
 
   /* WHAT A MISSED ROW SHOWS. This asserted the answer was NEVER on the card,
      on the reason that the page was never told it. The page IS told it now,
@@ -310,14 +325,14 @@ console.log("\n=== A round, played end to end ===");
      "3Current run" — a pattern looking for a value in concatenated text
      matches nothing however right the value is. */
   t("a missed row shows the pick AND what the answer was", (() => {
-    const missed = [...doc.querySelectorAll("#resultsBody .breakdown li.missed")];
+    const missed = [...doc.querySelectorAll("#ftPanel .xft-answers li.xft-a.r")];
     const row = missed.find((li) => /Wrong2a/.test(li.textContent));
-    const was = row && row.querySelector(".bdWas");
+    const was = row && row.querySelector(".xft-a-was");
     return missed.length > 0 && !!was && was.textContent.includes("Right2");
   })(), "being marked wrong and not told why teaches nothing");
   t("and a scored row names no answer, having nothing to disclose", (() => {
-    const hits = [...doc.querySelectorAll("#resultsBody .breakdown li.hit")];
-    return hits.length > 0 && hits.every((li) => !li.querySelector(".bdWas"));
+    const hits = [...doc.querySelectorAll("#ftPanel .xft-answers li.xft-a.g")];
+    return hits.length > 0 && hits.every((li) => !li.querySelector(".xft-a-was"));
   })(), "the server sends an answer only for a settled, wrong question")
 
   t("the result was banked under the family's key", (() => {

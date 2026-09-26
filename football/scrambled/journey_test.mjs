@@ -113,7 +113,13 @@ window.Response = Response;
 /* The drawn keyboard is loaded too, because the page loads it: a name typed
    on the keys has to reach the same place a name typed on a real keyboard
    does, and leaving it out would test one of the two ways in. */
-for (const f of ["shared/xi-plays.js", "shared/xi-keys.js", "football/scrambled/js/config.js", "football/scrambled/js/scoring.js", "football/scrambled/js/game.js"]) {
+/* THE FAMILY'S FULL TIME, the real file, and a share sheet that records
+   what it was handed: the panel is part of what the page owes a player at the
+   whistle, so it is loaded rather than stubbed. */
+const sharedTexts = [];
+Object.defineProperty(window.navigator, "share", { configurable: true,
+  value: (o) => { sharedTexts.push(o && o.text); return Promise.resolve(); } });
+for (const f of ["shared/xi-plays.js", "shared/xi-keys.js", "shared/xi-fulltime.js", "football/scrambled/js/config.js", "football/scrambled/js/scoring.js", "football/scrambled/js/game.js"]) {
   window.eval(fs.readFileSync(f, "utf8"));
 }
 
@@ -727,38 +733,30 @@ t("and the tiles read the names rather than the cypher",
     "the bench belongs to picked, not to reading");
 }
 
+/* THE FAMILY'S FULL TIME (shared/xi-fulltime.js): the four blocks in the
+   approved order, the score out of 114, a box per name in the board's order. */
+const ftp = $("ftPanel");
+t("Full Time is the family's panel, its blocks in order",
+  !!ftp && [...ftp.children].map((e) => e.className.split(" ")[0]).join(",") === "xft-card,xft-keep,xft-act,xft-next",
+  ftp ? [...ftp.children].map((e) => e.className).join(" | ") : "no #ftPanel");
 t("the Full Time card shows a score out of 114",
-  /\/ 114$/.test(doc.querySelector(".ftScore").textContent),
-  doc.querySelector(".ftScore").textContent);
-t("it lists all eleven", doc.querySelectorAll(".ftList li").length === 11);
-t("and separates unravelled from given", (() => {
-  const hows = [...doc.querySelectorAll(".ftList .how")].map((e) => e.textContent);
-  return hows.filter((h) => h === "given").length === 1 &&
-         hows.filter((h) => h === "unravelled").length === 10;
-})());
-/* THE NOTE CHANGED WITH THE GAME. It used to say nothing was recorded, which
-   was true when there was no result store; the game banks a result now, on
-   the device and on the account. What is still true is that the SCORE was
-   worked out in the browser with no play row behind it, so the card says that
-   and does not claim a verified time.
-
-   Both halves are asserted, because a note that dropped either would be
-   wrong in a different direction: silent about the record, or overclaiming
-   the score. */
-t("the card says the result is kept", (() => {
-  const note = doc.querySelector(".ftUnverified");
-  return !!note && /record/i.test(note.textContent);
-})());
-t("and does not claim the score is verified", (() => {
-  const note = doc.querySelector(".ftUnverified");
-  return !!note && /not a verified/i.test(note.textContent);
-})(), (doc.querySelector(".ftUnverified") || {}).textContent);
-t("the share text does not leak the names", (() => {
-  const share = $("shareText").value;
-  return board.slots.every((s) => share.indexOf(s.name) === -1);
-})(), "a shared result must be shareable before the other person has played");
-t("but it does say how many were unravelled",
-  /10 of 11 unravelled, 1 given/.test($("shareText").value), $("shareText").value.split("\n")[2]);
+  /\/ 114$/.test((ftp.querySelector(".xft-score") || {}).textContent || ""),
+  (ftp.querySelector(".xft-score") || {}).textContent);
+t("it has a box for all eleven", ftp.querySelectorAll(".xft-boxes .xft-b").length === 11);
+t("and separates unravelled from given: ten green, each with its minute, one amber", (() => {
+  const b = [...ftp.querySelectorAll(".xft-boxes .xft-b")];
+  return b.filter((x) => x.classList.contains("g") && /'$/.test(x.textContent)).length === 10 &&
+         b.filter((x) => x.classList.contains("a")).length === 1;
+})(), [...ftp.querySelectorAll(".xft-boxes .xft-b")].map((x) => x.className.split(" ").pop() + x.textContent).join(" "));
+t("and the stats line says how many were unravelled",
+  /^10 of 11 unravelled/.test((ftp.querySelector(".xft-stats") || {}).textContent || ""),
+  (ftp.querySelector(".xft-stats") || {}).textContent);
+ftp.querySelector(".xft-act .xft-primary").click();
+const share = sharedTexts[0] || "";
+t("the share text does not leak the names", !!share && board.slots.every((s) => share.indexOf(s.name) === -1),
+  "a shared result must be shareable before the other person has played");
+t("but it is the score and the eleven squares",
+  /\/114/.test(share) && (share.match(/🟩/g) || []).length === 10 && (share.match(/🟨/g) || []).length === 1, JSON.stringify(share));
 
 console.log("\n=== What the wire actually carried ===");
 /* The SAME board the assertions below are about. Fetching the default here

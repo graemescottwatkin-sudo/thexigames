@@ -10,7 +10,7 @@
  * more, 114 the ceiling. This file is the page: the landing the family
  * shares, the ladder of two rows, the clock, the answers list, the share.
  */
-var BUILD = "v002o";
+var BUILD = "v002p";
 
 (function () {
   "use strict";
@@ -22,7 +22,7 @@ var BUILD = "v002o";
   var $ = function (id) { return document.getElementById(id); };
   var PREFIX = "xihl.";
   var RESULTS_KEY = PREFIX + "results";
-  var DOT = "·", SQ_ON = "🟩", SQ_OFF = "🟥", SQ_NONE = "⬜";
+  var DOT = "·";
 
   /* ---- state ---------------------------------------------------------- */
   var serverDay = null, todayBoard = null, catalog = null, archiveDays = null;
@@ -502,6 +502,7 @@ var BUILD = "v002o";
                   progress: null, clock: null, score: 0, worth: null, subs: null });
     }
     g = freshRound(board, mode, meta);
+    g.meta = meta || {};
     /* Mounted per ROUND, before the board is drawn: drawBoard reports the
        banked score and the table has to exist to receive it. The token comes
        from the server with the board, so a player opening yesterday's board
@@ -797,25 +798,50 @@ var BUILD = "v002o";
      none of it survives a reload. What can honestly be shown is the record. */
   function showBanked(rec) {
     if (!rec) return;
-    var words = { W: "Win", D: "Draw", L: "Loss" };
-    $("ftScore").textContent = rec.score;
-    var rr = $("ftRes");
-    rr.textContent = words[rec.result] || "";
-    rr.className = "res " + (rec.result || "");
-    $("ftLine").textContent = rec.right + " right, " + rec.wrong + " wrong" +
-      (rec.bonus ? ", " + rec.bonus + " for the runs" : "") + ".";
-    /* No verified note: that belongs to a round the server has just judged. */
-    if ($("ftVerified")) $("ftVerified").textContent = "";
-    $("shareText").value = "HiLo XI " + DOT + " " + rec.right + "/11 right " + DOT + " " +
-      rec.score + "/114 " + DOT + " " + (words[rec.result] || "") +
-      String.fromCharCode(10) + "thexigames.com/hilo";
-    if (window.XIShare && $("shareRow")) {
-      window.XIShare.mount($("shareRow"), {
-        text: function () { return $("shareText").value; },
-        url: function () { return location.href; },
-      });
+    /* The calls in order where the record kept them (since 26 Sep 2026);
+       before that only the counts were banked, so the boxes are the right
+       ones first and the wrong ones after -- the same result, told honestly
+       without an order nobody kept. */
+    var calls = typeof rec.calls === "string" && rec.calls.length === S.CALLS
+      ? rec.calls.split("").map(function (c) { return c === "Y" ? true : c === "N" ? false : null; })
+      : null;
+    if (!calls) {
+      calls = [];
+      for (var i = 0; i < S.CALLS; i++) calls.push(i < rec.right ? true : i < rec.right + rec.wrong ? false : null);
     }
+    drawFullTime({ score: rec.score, right: rec.right, wrong: rec.wrong, bonus: rec.bonus,
+                   res: rec.result, calls: calls, daily: true, no: rec.no != null ? rec.no : null, day: rec.day });
     show("screenResults");
+  }
+
+  /* FULL TIME, THE FAMILY'S WAY (shared/xi-fulltime.js): this game hands over
+     its result and the panel draws the four blocks every game shows. A box
+     per call: green right, red wrong, grey not made. */
+  var ftShown = null;
+  function drawFullTime(o) {
+    ftShown = o;
+    if (!window.XIFullTime || !XIFullTime.panel) return;
+    var words = { W: "Win", D: "Draw", L: "Loss" };
+    var boxes = o.calls.map(function (c) { return { s: c === true ? "g" : c === false ? "r" : "x" }; });
+    var stats = o.right + " right · " + o.wrong + " wrong" + (o.bonus ? " · Runs +" + o.bonus : "") +
+      " · " + (words[o.res] || "") + (o.daily ? "" : " · Free play, not counted in your run") +
+      (o.verified ? " · Verified by the server" : "");
+    XIFullTime.panel($("ftPanel"), {
+      game: "hilo", name: "HiLo XI", no: o.no, date: o.day ? XIFullTime.dayLabel(o.day) : "",
+      score: o.score, max: 114, boxes: boxes, stats: stats,
+      share: function () {
+        return "HiLo XI" + (o.no != null ? " · No. " + o.no : "") + " · " + o.score + "/114\n" + XIFullTime.squares(boxes);
+      },
+      url: function () { return location.href.split("#")[0]; },
+      /* A REAL CHALLENGE where the server will make one: a club board this
+         device played and the server verified. It refuses a daily, and then
+         the board and the score to beat go instead. */
+      challenge: function (sendBoard) {
+        var id = playIdOf();
+        if (!o.verified || o.daily || !id || !window.XIChallenge || !XIChallenge.create) { sendBoard(); return; }
+        XIChallenge.create(id).then(sendBoard, function () { sendBoard(); });
+      },
+    });
   }
 
   /* ---- full time ------------------------------------------------------- */
@@ -828,19 +854,16 @@ var BUILD = "v002o";
     var right = 0, wrong = 0;
     for (var i = 0; i < S.CALLS; i++) { if (g.results[i] === true) right++; else if (g.results[i] === false) wrong++; }
     var bonus = S.runBonus(g.results);
-    var words = { W: "Win", D: "Draw", L: "Loss" };
-    var squares = "";
-    for (var k = 0; k < S.CALLS; k++) squares += g.results[k] === true ? SQ_ON : g.results[k] === false ? SQ_OFF : SQ_NONE;
-    var share = "HiLo XI " + DOT + " " + g.board.category + "\n" + squares + "\n" +
-      right + "/11 right " + DOT + " " + score + "/114 " + DOT + " " + words[res] + "\nthexigames.com/hilo";
-    $("ftScore").textContent = score;
-    var rr = $("ftRes"); rr.textContent = words[res]; rr.className = "res " + res;
-    $("ftLine").textContent = right + " right, " + wrong + " wrong" + (bonus ? ", " + bonus + " for the runs" : "") +
-      (g.mode === "daily" ? "." : " " + DOT + " Free play, not counted in your run.");
-    $("shareText").value = share;
+    var calls = g.results.slice(0, S.CALLS);
+    while (calls.length < S.CALLS) calls.push(null);
+    drawFullTime({ score: score, right: right, wrong: wrong, bonus: bonus, res: res, calls: calls,
+                   daily: g.mode === "daily", no: g.meta && g.meta.no != null ? g.meta.no : null,
+                   day: (g.meta && g.meta.boardDay) || g.day || null });
     if (g.mode === "daily" && g.day) {
       recordResult({ game: "hilo", day: g.day, boardId: g.board.id, score: score, right: right, wrong: wrong,
-        bonus: bonus, result: res, elapsedSeconds: g.elapsed, at: Date.now() });
+        bonus: bonus, result: res, elapsedSeconds: g.elapsed, at: Date.now(),
+        /* The calls in order, so a result reopened later draws its own boxes. */
+        calls: calls.map(function (c) { return c === true ? "Y" : c === false ? "N" : "-"; }).join("") });
     }
     playsEnd(true);
     show("screenResults");
@@ -868,32 +891,31 @@ var BUILD = "v002o";
      neither. */
   function verifyScore(local) {
     var id = playIdOf();
-    var note = $("ftVerified");
-    if (!id || !note) return;
+    if (!id) return;
     /* AND THE CHALLENGE, on the same answer. Asking the server twice would
        post two finishes for one round and time the second from a clock that
        had already stopped, so the challenge waits on this one — an entry
        posted before the play row is scored is refused, silently, which would
        read as a button that does nothing. Club boards only: the server will
        not make a challenge from a daily. */
-    var chal = $("ftChallenge");
     fetch("/api/hilo/finish", {
       method: "POST", headers: { "Content-Type": "application/json", "X-XI-Games": "1" },
       credentials: "same-origin",
       body: JSON.stringify({ playId: id }),
     }).then(function (r) { return r.ok ? r.json() : null; })
       .then(function (v) {
-        if (!v || !v.verified) { note.textContent = ""; return; }
-        if (chal && window.XIChallenge && g && g.mode !== "daily") {
-          window.XIChallenge.finished(playIdOf(), chal);
-        }
-        $("ftScore").textContent = v.score;
-        note.textContent = v.score === local
-          ? "Verified by the server."
-          : "Verified by the server — " + v.score + " rather than " + local +
-            ", timed from when each call reached it.";
+        if (!v || !v.verified || !ftShown) return;
+        /* Somebody who came from a challenge joins its table now. */
+        if (window.XIChallenge && XIChallenge.joining && XIChallenge.joining()) XIChallenge.finished(id, null);
+        /* THE SERVER'S NUMBER WINS, and the panel says it was checked. They
+           should agree -- one rule, one file -- and a gap is the network,
+           which can only go against the player. */
+        var o = {};
+        for (var k in ftShown) o[k] = ftShown[k];
+        o.score = v.score; o.verified = true;
+        drawFullTime(o);
       })
-      .catch(function () { note.textContent = ""; });
+      .catch(function () { /* the card stands as the player's own arithmetic */ });
   }
 
   function goToMenu() {
@@ -1056,17 +1078,6 @@ var BUILD = "v002o";
       else if (ev.key === "ArrowDown" || ev.key === "l" || ev.key === "L") { call("lower"); ev.preventDefault(); }
       else if (ev.key === "Enter" && g && g.awaitingNext) { nextCall(); ev.preventDefault(); }
     });
-    /* THE SHARE ROW, THE FAMILY'S. This game hands over its own text and the
-       address of the board it was scored on; shared/xi-share.js owns the
-       buttons, the platforms and the copy fallback, so every game offers the
-       same way out. Mounted once — the text is read when a button is pressed,
-       not when the row is built. */
-    if (window.XIShare && $("shareRow")) {
-      window.XIShare.mount($("shareRow"), {
-        text: function () { return $("shareText").value; },
-        url: function () { return location.href; },
-      });
-    }
     $("resultMenuBtn").onclick = goToMenu;
     $("navToday").onclick = function () { if ($("screenStart").hidden) goToMenu(); };
 

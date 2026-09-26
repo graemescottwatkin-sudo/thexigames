@@ -66,7 +66,13 @@ const doc = window.document;
 window.fetch = routedFetch;
 window.Request = Request; window.Response = Response;
 window.scrollTo = () => {};
-for (const f of ["shared/xi-plays.js", "football/hilo/js/scoring.js", "football/hilo/js/game.js"]) window.eval(fs.readFileSync(f, "utf8"));
+/* THE FAMILY'S FULL TIME, the real file, and a share sheet that records
+   what it was handed: the panel is part of what this page owes a player at
+   the whistle, so it is loaded rather than stubbed. */
+const sharedTexts = [];
+Object.defineProperty(window.navigator, "share", { configurable: true,
+  value: (o) => { sharedTexts.push(o && o.text); return Promise.resolve(); } });
+for (const f of ["shared/xi-plays.js", "shared/xi-fulltime.js", "football/hilo/js/scoring.js", "football/hilo/js/game.js"]) window.eval(fs.readFileSync(f, "utf8"));
 const $ = (id) => doc.getElementById(id);
 const shown = (id) => !$(id).hidden;
 
@@ -290,13 +296,25 @@ t("and every settled call is still shown",
   doc.querySelectorAll("#rows .duel.settled").length + " settled rows");
 const S = window.HL_SCORING;
 const expected = S.score([...Array(10).fill(true), false], [...Array(10).fill(10), 0]);
+/* THE FAMILY'S FULL TIME (shared/xi-fulltime.js): the four blocks in the
+   approved order, the score out of 114, a box per call. */
+const ftp = $("ftPanel");
+t("Full Time is the family's panel, its blocks in order",
+  !!ftp && [...ftp.children].map((e) => e.className.split(" ")[0]).join(",") === "xft-card,xft-keep,xft-act,xft-next",
+  ftp ? [...ftp.children].map((e) => e.className).join(" | ") : "no #ftPanel");
+const scoreShown = ftp && ftp.querySelector(".xft-score b");
 t("the score is ten right at full value plus the run bonus, out of 114",
-  Number($("ftScore").textContent) === expected && expected === 100 + 4, $("ftScore").textContent);
-t("one wrong is still a win", $("ftRes").textContent === "Win");
-const share = $("shareText").value;
-t("the share is eleven outcome squares — ten green, one red — then right, score and result",
+  !!scoreShown && Number(scoreShown.textContent) === expected && expected === 100 + 4 &&
+  /\/ 114/.test(ftp.querySelector(".xft-score").textContent), scoreShown ? scoreShown.textContent : "no score");
+t("a box per call: ten green, one red",
+  ftp.querySelectorAll(".xft-boxes .xft-b.g").length === 10 && ftp.querySelectorAll(".xft-boxes .xft-b.r").length === 1);
+t("one wrong is still a win", /\bWin\b/.test((ftp.querySelector(".xft-stats") || {}).textContent || ""),
+  (ftp.querySelector(".xft-stats") || {}).textContent);
+ftp.querySelector(".xft-act .xft-primary").click();
+const share = sharedTexts[0] || "";
+t("the share is the score and eleven outcome squares — ten green, one red — and the board's address",
   (share.match(/🟩/g) || []).length === 10 && (share.match(/🟥/g) || []).length === 1 &&
-  share.includes("10/11 right") && share.includes(expected + "/114") && share.includes("Win") && !/\d{4}/.test(share.split("\n")[1] || ""));
+  share.includes(expected + "/114") && /https?:\/\//.test(share), JSON.stringify(share));
 t("the share names no value from the board", board.chain.every((r) => !share.includes(String(r.value))));
 t("the play ended as finished, with ten right and the wrong count in detail",
   plays.some((p) => p.event === "end" && p.completed === true && p.solved === 10 && p.detail && p.detail.wrong === 1));

@@ -353,37 +353,7 @@ html, body {
 
 /* ---- Full time ---------------------------------------------------------- */
 
-#resultsBody { margin: 10px 0 16px; }
-
-.ftScore { font-family: var(--disp); font-weight: 700; font-size: 46px; line-height: 1; }
-.ftLine { font-size: 14.5px; color: var(--ink-soft); margin: 6px 0 0; }
-.ftUnverified { font-size: 12.5px; color: var(--ink-faint); margin: 10px 0 0; }
-
-.ftList { list-style: none; margin: 16px 0 0; padding: 0; }
-.ftList li {
-  display: flex;
-  justify-content: space-between;
-  gap: 10px;
-  padding: 7px 0;
-  border-bottom: 1px solid var(--line);
-  font-size: 14.5px;
-}
-.ftList .who { font-weight: 600; }
-.ftList .how { color: var(--ink-soft); font-size: 13px; }
-
-.share { display: flex; flex-direction: column; gap: 8px; }
-.share textarea {
-  width: 100%;
-  font-family: ui-monospace, Menlo, Consolas, monospace;
-  font-size: 13px;
-  line-height: 1.5;
-  color: var(--ink);
-  background: var(--card);
-  border: 1px solid var(--line);
-  border-radius: var(--radius);
-  padding: 10px;
-  resize: vertical;
-}
+/* The rest of Full Time is the family's panel (shared/xi-fulltime.css). */
 
 @media (min-width: 620px) {
   .pitch { aspect-ratio: 4 / 5; }
@@ -595,18 +565,6 @@ body.touch.playing #screenGame {
 /* A little air between the finished board and the card under it, so they read
    as two things rather than one run-on. */
 .screen.finished { padding-bottom: 4px; }
-
-/* Whether the score above is the server's. A note about the number, not part
-   of it, and absent on a round nothing could verify. */
-.ftVerified { font-size: 12px; color: var(--ink-faint); margin-top: 2px; }
-.ftVerified:empty { display: none; }
-
-/* Where the shared challenge draws its button and, for a round that came from
-   one, its standings. The panel itself is shared — .xic-panel and .xic-ch-* in
-   shared/xi-chrome.css — and this is only the space it sits in on this game's
-   Full Time card. */
-.ftChallenge { margin-top: 14px; }
-.ftChallenge:empty { display: none; }
 
 /* A consonant board lifts nothing, so its tiles give up the line that would
    hold the lifted letters. */

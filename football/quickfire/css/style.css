@@ -170,37 +170,7 @@ h1,h2{font-family:var(--disp);letter-spacing:.01em;margin:0}
 
 /* ---- full time --------------------------------------------------------- */
 
-.verdict{display:flex;align-items:baseline;gap:10px;margin-top:2px}
-.verdictCount{font-family:var(--disp);font-weight:700;font-size:64px;line-height:.9}
-.verdictOf{color:var(--ink-soft);font-size:14px}
-.bigscore{margin:10px 0 20px;font-family:var(--disp);font-weight:700;font-size:28px;
-  color:var(--xi-ink)}
-.bigscore .of{font-family:var(--body);font-weight:400;font-size:13px;color:var(--ink-soft)}
-
-.rows{border-top:1px solid var(--line)}
-.row{display:flex;justify-content:space-between;gap:12px;padding:11px 0;
-  border-bottom:1px solid var(--line);font-size:14px}
-.rowLabel{color:var(--ink-soft)}
-
-.breakdown{list-style:none;margin:22px 0 0;padding:0;font-size:14px}
-.breakdown li{display:grid;grid-template-columns:3.4em 1fr auto;gap:10px;align-items:baseline;
-  padding:9px 0;border-bottom:1px solid var(--line)}
-.bdMin{font-family:var(--disp);font-weight:700;color:var(--ok)}
-.breakdown li.missed .bdMin{color:var(--danger)}
-.breakdown li.subbed .bdMin{color:var(--ink-faint)}
-.breakdown li.missed .bdAnswer,.breakdown li.subbed .bdAnswer{color:var(--ink-soft)}
-.breakdown li.subbed .bdAnswer{text-decoration:line-through}
-/* THE ANSWER THEY MISSED, beside the pick they made. Not struck through and
-   not dimmed with the pick: it is the one part of a missed row worth reading,
-   so it takes the ink colour while the pick keeps the soft one. */
-.breakdown li.missed .bdWas{color:var(--ink)}
-.breakdown li.subbed .bdWas{text-decoration:none}
-.bdPts{color:var(--ink-soft)}
-.breakdown li.subbed .bdPts{color:var(--xi-ink)}
-
-.share{margin-top:24px;display:flex;flex-direction:column;gap:10px}
-#shareText{width:100%;padding:12px;border:1px solid var(--line);border-radius:10px;
-  background:var(--card);color:var(--ink);font-size:13px;line-height:1.5;resize:vertical}
+/* The rest of Full Time is the family's panel (shared/xi-fulltime.css). */
 
 .btn{min-height:var(--tap);padding:9px 14px;border:1px solid var(--line);border-radius:10px;
   background:var(--card);color:var(--ink);font-weight:600;font-size:14px}

@@ -303,6 +303,23 @@
       return Promise.resolve(null);
     },
 
+    /* MAKE ONE AND HAND BACK ITS LINK, for the family's Full Time panel
+       (shared/xi-fulltime.js), whose own "Challenge friends" button sends it
+       with the share sheet. Rejects with the server's reason -- a daily, for
+       one, is refused -- so the panel can fall back to sending the board. */
+    create: function (playId) {
+      if (!CFG || !playId) return Promise.reject({ error: "no challenge here" });
+      return post("/api/challenge", { playId: playId, name: accountName() || undefined,
+                                      entrantKey: entrantKey() })
+        .then(function (c) {
+          return location.origin + "/football/" + CFG.game + "/?c=" + encodeURIComponent(c.id);
+        });
+    },
+
+    /* Whether this round came from somebody's challenge, so Full Time joins
+       its table rather than offering a new one. */
+    joining: function () { return !!current; },
+
     /* The button that makes one. Drawn into whatever the game hands over, so a
        game decides where it sits on its own Full Time card and nothing here
        has an opinion about that game's layout. */

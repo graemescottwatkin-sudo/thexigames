@@ -66,3 +66,54 @@
   font-size: 0.9rem;
   color: var(--ink-soft);
 }
+
+/* ---- THE PANEL (XIFullTime.panel) ------------------------------------------
+   The owner's approved mockup, 26 Sep 2026: the same four blocks on every
+   game -- the result, keep it, share, challenge -- then the next game. */
+.xft { display: flex; flex-direction: column; gap: 10px; max-width: 560px; margin: 0 auto; width: 100%; box-sizing: border-box; }
+.xft-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+.xft-head { display: flex; justify-content: space-between; align-items: baseline; }
+.xft-kick { font-family: var(--disp); font-weight: 700; font-size: 13px; letter-spacing: .16em; text-transform: uppercase; color: var(--pitch-ink); }
+.xft-date { font-size: 12px; color: var(--ink-soft); }
+.xft-name { margin: 0; font-family: var(--disp); font-weight: 700; font-size: 22px; line-height: 1; color: var(--ink); }
+.xft-score { margin: 0; display: flex; align-items: baseline; gap: 6px; }
+.xft-score b { font-family: var(--disp); font-weight: 700; font-size: 64px; line-height: .9; color: var(--ink); }
+.xft-score span { font-family: var(--disp); font-weight: 600; font-size: 24px; color: var(--ink-soft); }
+.xft-bar { height: 8px; border-radius: var(--r-pill); background: var(--tint-strong); overflow: hidden; }
+.xft-bar i { display: block; height: 100%; border-radius: var(--r-pill); background: var(--pitch); }
+.xft-boxes { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); gap: 4px; }
+.xft-b { height: 30px; border-radius: var(--r-xs); display: flex; align-items: center; justify-content: center; font-family: var(--disp); font-weight: 600; font-size: 13px; }
+.xft-b.g { background: var(--pitch); color: var(--on-pitch); }
+.xft-b.a { background: var(--gold); color: var(--gold-ink); }
+.xft-b.r { background: var(--danger); color: var(--card); font-family: var(--body); font-weight: 700; font-size: 14px; }
+.xft-b.x { background: var(--tint); border: 1px dashed var(--line); box-sizing: border-box; color: var(--ink-faint); }
+.xft-door { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: var(--r-md); background: var(--paper); border: 1px solid var(--line); }
+.xft-door p { margin: 0; }
+.xft-door-l { font-size: 12px; letter-spacing: var(--track-caps); text-transform: uppercase; color: var(--ink-soft); }
+.xft-door-v { font-family: var(--disp); font-weight: 700; font-size: 20px; color: var(--ink); }
+.xft-rungs { display: flex; gap: 4px; }
+.xft-rungs i { flex: 1 1 0; height: 10px; border-radius: 3px; background: var(--tint-strong); }
+.xft-rungs i.paid { background: var(--gold); }
+.xft-stats, .xft-gaveup { margin: 0; font-size: 14px; color: var(--ink); }
+.xft-gaveup { font-weight: 600; color: var(--ink-soft); }
+.xft-league { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 14px; font-weight: 600; color: var(--ink); }
+.xft-link { background: none; border: 0; padding: 0; min-height: 0; font: inherit; font-weight: 500; font-size: 13px; color: var(--pitch-ink); text-decoration: underline; cursor: pointer; }
+.xft-keep { font-size: 14px; color: var(--ink); }
+.xft-keep p { margin: 0 0 8px; font-size: 13px; }
+.xft-signin { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 10px 12px; }
+.xft-saved { padding: 2px 4px; font-weight: 600; color: var(--pitch-ink); }
+.xft-act { display: flex; flex-direction: column; gap: 8px; }
+.xft-btn { min-height: var(--tap); height: 48px; width: 100%; border-radius: var(--r-md); font-family: var(--disp); font-weight: 700; font-size: 18px; letter-spacing: .06em; text-transform: uppercase; cursor: pointer; }
+.xft-primary { border: 0; background: var(--pitch); color: var(--on-pitch); }
+.xft-secondary { border: 1.5px solid var(--pitch); background: var(--card); color: var(--pitch-ink); }
+.xft-ghost { height: var(--tap); border: 1px solid var(--line); background: var(--card); color: var(--ink); font-family: var(--body); font-size: 14px; letter-spacing: 0; text-transform: none; }
+.xft-table:empty { display: none; }
+.xft-next .xift-next { margin-top: 4px; }
+.xft-answers { border-top: 1px solid var(--line); padding-top: 8px; font-size: 14px; }
+.xft-answers summary { cursor: pointer; color: var(--pitch-ink); font-size: 13px; min-height: 24px; }
+.xft-answers ol { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.xft-a { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; gap: 8px; align-items: baseline; }
+.xft-a-m { font-family: var(--disp); font-weight: 600; color: var(--ink-soft); }
+.xft-a.r .xft-a-pick, .xft-a.x .xft-a-pick { color: var(--ink-soft); text-decoration: line-through; }
+.xft-a-was { color: var(--ink); font-weight: 600; }
+.xft-a-p { font-family: var(--disp); font-weight: 700; }

@@ -991,7 +991,12 @@ t("every game is wired for the family's share row", (() => {
     const placed = /id="shareRow"/.test(html) || /id=.shareRow./.test(js);
     const mounted = /XIShare\.mount/.test(js);
     const loaded = /xi-share\.js/.test(html);
-    return !(placed && mounted && loaded);
+    /* OR THE FAMILY'S FULL TIME, which carries share and challenge itself
+       (shared/xi-fulltime.js, the owner's approved mockup of 26 Sep 2026).
+       Games move onto it one at a time; either wiring is a finished board
+       that can be shared. */
+    const panel = /XIFullTime\.panel\(/.test(js) && /id="ftPanel"/.test(html) && /xi-fulltime\.js/.test(html);
+    return !(panel || (placed && mounted && loaded));
   }).map((g) => g.name);
   return GAMES.length > 0 && missing.length === 0;
 })(), `${GAMES.length} games checked`);
@@ -1013,7 +1018,9 @@ t("every game's results card carries the community box", (() => {
   const missing = GAMES.filter((g) => {
     const html = has(`${g.dir}/index.html`) ? read(`${g.dir}/index.html`) : "";
     const js = has(`${g.dir}/js/game.js`) ? read(`${g.dir}/js/game.js`) : "";
-    return !/xic-community/.test(html) && !/xic-community/.test(js);
+    /* The family's Full Time panel places the box itself. */
+    const panel = /XIFullTime\.panel\(/.test(js) && /xic-community/.test(read("shared/xi-fulltime.js"));
+    return !panel && !/xic-community/.test(html) && !/xic-community/.test(js);
   }).map((g) => g.name);
   return GAMES.length > 0 && missing.length === 0;
 })(), `${GAMES.length} games checked`);
@@ -1036,8 +1043,10 @@ t("and no game writes the link itself", (() => {
   return guilty.length === 0;
 })(), "the href lives once, in shared/xi-chrome.js");
 
-const SHARED_TAG = "v67";
-/* The bytes that ship AS v67, AND THE TAG HAD TO MOVE FOR THEM.
+const SHARED_TAG = "v68";
+/* The bytes that ship AS v68, AND THE TAG HAD TO MOVE FOR THEM.
+   v67 WAS LIVE when the family's Full Time panel went into shared/xi-fulltime.{js,css}, so v67 -> v68 across every page and site-page.js's constant.
+   The note below is the move before this one.
    v66 WAS LIVE when the family keyboard moved into Grid and Codeword (data-key on every key, a row for a game's own keys), so v66 -> v67 across every page and site-page.js's constant.
    The note below is the move before this one.
    v65 WAS LIVE when every game's play screen took the family's one top bar, shared/xi-matchbar.{css,js}, so v65 -> v66 across every page and site-page.js's constant.
@@ -1077,7 +1086,7 @@ const SHARED_TAG = "v67";
    v53, which is this project's oldest fault in miniature: a measurement left
    standing after it stopped being true, in the comment that tells the next
    reader whether they may leave the tag alone. */
-const SHARED_HASH = "1c53b248313af5f9";
+const SHARED_HASH = "0fba3b81b70df703";
 /* MOVED AGAIN WITHOUT THE TAG MOVING, which is the other half of the rule
    above and is worth showing rather than only stating. xi-chrome.js changed a
    second time in the same unpushed run -- the Friends squad slot going from

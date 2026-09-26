@@ -7,12 +7,13 @@
  * them is the shape of the ending — you scored something, you can share it, and
  * there is another game today you have not played.
  *
- * So this does not render a panel. It renders the pieces a panel mounts, and
- * the game keeps its own. That is the opposite of the usual instinct and it is
- * deliberate: a shared component that owns the whole screen would have to grow
- * an option for every difference between ten games, and the options would
- * outnumber the shared part within a month.
+ * That was the rule until 26 Sep 2026, when the owner looked at the ten
+ * endings side by side and ruled for one: XIFullTime.panel() below draws the
+ * whole of it, the same four blocks on every game, and a game hands over data
+ * rather than markup. The worry above -- an option for every difference --
+ * is answered by keeping the data small: a score, eleven boxes, one line.
  *
+ *   XIFullTime.panel(el, data)                      -> the panel (see below)
  *   XIFullTime.nextUp(el, { game: "crossword" })   -> Promise<slot|null>
  *
  * WHY THE SUGGESTION IS WORTH ANYTHING. A daily game is finished in four
@@ -195,5 +196,231 @@
     document.addEventListener("DOMContentLoaded", autoMount);
   } else { autoMount(); }
 
-  window.XIFullTime = { nextUp: nextUp, watch: watch };
+  /* ---------------------------------------------------------------------
+     THE PANEL. The owner, 26 Sep 2026, approving the mockup: every game ends
+     the same way -- "Be consistent", "about 4 sections". This reverses the
+     header above, which kept each game's panel its own on purpose; the owner
+     looked at ten different endings and ruled for one. What stays the game's
+     is the DATA it hands over: its score, its eleven, its one line of stats.
+
+       XIFullTime.panel(el, {
+         game: "quickfire",            // id: next-up, share, the squad
+         name: "QuickFire XI", no: 9, date: "Sat 26 Sep",
+         score: 62, max: 114,
+         boxes: [{ s: "g", m: 12 }, { s: "r" }, …],   // g right, a partial,
+                                       // r wrong, x not answered; m = minute
+         door: { label, rungs, paid }, // Who Am I, in place of boxes
+         stats: "8 right · 3 wrong",   // one line
+         gaveUp: "Gave up at 34'",     // in place of stats, when so
+         league: { text: "5th · Aston Villa", open: fn },
+         share: function () { return "text"; },   // spoiler-free
+         url: function () { return "board address"; },
+         challenge: fn | undefined,    // a game's own; else the board and score
+       })
+
+     THE FOUR BLOCKS, IN ORDER, ALWAYS: the result; keep it (sign in, or
+     "Saved to your account"); share; challenge. Then the next game. */
+  var BOX_WORD = { g: "right", a: "part right", r: "wrong", x: "not answered" };
+
+  function panel(target, d) {
+    if (!target || !d) return null;
+    target.innerHTML = "";
+    target.classList.add("xft");
+
+    /* 1. THE RESULT */
+    var card = el("div", "xft-card");
+    var head = el("div", "xft-head");
+    head.appendChild(el("span", "xft-kick", "Full time"));
+    if (d.date) head.appendChild(el("span", "xft-date", esc(d.date)));
+    card.appendChild(head);
+    card.appendChild(el("h2", "xft-name", esc(d.name) + (d.no != null ? " · No. " + esc(d.no) : "")));
+    var max = Number(d.max) || 0, score = Number(d.score) || 0;
+    card.appendChild(el("p", "xft-score", "<b>" + score + "</b><span>/ " + max + "</span>"));
+    var bar = el("div", "xft-bar");
+    bar.setAttribute("role", "img");
+    bar.setAttribute("aria-label", score + " of " + max);
+    var fill = el("i");
+    fill.style.width = (max ? Math.max(1, Math.min(100, Math.round(100 * score / max))) : 0) + "%";
+    bar.appendChild(fill);
+    card.appendChild(bar);
+
+    if (d.door) {
+      var door = el("div", "xft-door");
+      door.appendChild(el("p", "xft-door-l", "Your door"));
+      door.appendChild(el("p", "xft-door-v", esc(d.door.label)));
+      var rungs = el("div", "xft-rungs");
+      for (var r = 0; r < (Number(d.door.rungs) || 0); r++) {
+        rungs.appendChild(el("i", r < (Number(d.door.paid) || 0) ? "paid" : ""));
+      }
+      rungs.setAttribute("aria-label", (Number(d.door.paid) || 0) + " of " + (Number(d.door.rungs) || 0) + " clues used");
+      door.appendChild(rungs);
+      card.appendChild(door);
+    } else if (d.boxes && d.boxes.length) {
+      var ol = el("ol", "xft-boxes");
+      d.boxes.forEach(function (b, i) {
+        var s = BOX_WORD[b.s] ? b.s : "x";
+        var li = el("li", "xft-b " + s);
+        /* The minute in a right answer's box, where the game has a clock; a
+           cross in a wrong one, so right and wrong differ by more than hue. */
+        li.textContent = s === "r" ? "×" : s === "x" ? "–" : b.m != null ? b.m + "'" : s === "a" ? "~" : "✓";
+        li.setAttribute("aria-label", (i + 1) + ": " + BOX_WORD[s] + (b.m != null && s !== "r" && s !== "x" ? " at " + b.m + " minutes" : ""));
+        ol.appendChild(li);
+      });
+      card.appendChild(ol);
+    }
+    if (d.gaveUp) card.appendChild(el("p", "xft-gaveup", esc(d.gaveUp)));
+    else if (d.stats) card.appendChild(el("p", "xft-stats", esc(d.stats)));
+    /* YOUR ANSWERS, folded away: what was picked and, for a miss, what it
+       was -- a game that tells a player "no" owes them the answer. Folded so
+       the four blocks stay the four blocks. */
+    if (d.answers && d.answers.length) {
+      var det = el("details", "xft-answers");
+      det.appendChild(el("summary", "", "Your answers"));
+      var al = el("ol", "");
+      d.answers.forEach(function (a) {
+        var s = BOX_WORD[a.s] ? a.s : "x";
+        var li = el("li", "xft-a " + s);
+        li.innerHTML = '<span class="xft-a-m">' + esc(a.m != null ? a.m + "'" : "") + "</span>" +
+          '<span class="xft-a-t"><span class="xft-a-pick">' + esc(a.text) + "</span>" +
+          (a.was ? '<span class="xft-a-was"> — ' + esc(a.was) + "</span>" : "") + "</span>" +
+          '<span class="xft-a-p">' + esc(a.points != null ? a.points : "") + "</span>";
+        al.appendChild(li);
+      });
+      det.appendChild(al);
+      card.appendChild(det);
+    }
+    if (d.league && d.league.text) {
+      var lg = el("div", "xft-league");
+      lg.appendChild(el("span", "", esc(d.league.text)));
+      if (typeof d.league.open === "function") {
+        var see = el("button", "xft-link", "See the table");
+        see.type = "button";
+        see.addEventListener("click", d.league.open);
+        lg.appendChild(see);
+      }
+      card.appendChild(lg);
+    }
+    target.appendChild(card);
+
+    /* 2. KEEP IT. Redrawn when the account changes, so signing in from here
+       turns the row into the saved line without leaving the panel. */
+    var keep = el("div", "xft-keep");
+    target.appendChild(keep);
+    function drawKeep() {
+      var A = window.XIChrome && XIChrome.account;
+      var avail = !A || !A.available || A.available();
+      keep.innerHTML = "";
+      if (A && A.user && A.user()) {
+        keep.className = "xft-keep xft-saved";
+        keep.appendChild(el("span", "", "✓ Saved to your account"));
+      } else if (A && avail) {
+        keep.className = "xft-keep xft-signin";
+        keep.appendChild(el("p", "", "Sign in to keep this result and your streak"));
+        var sb = el("button", "xft-btn xft-ghost", "Sign in");
+        sb.type = "button";
+        sb.addEventListener("click", function () { A.open(); });
+        keep.appendChild(sb);
+      } else {
+        keep.className = "xft-keep";
+      }
+    }
+    drawKeep();
+    if (!target.xftAcct) {
+      target.xftAcct = true;
+      document.addEventListener("xi:account", function () { if (target.contains(keep)) drawKeep(); });
+    }
+
+    /* 3. SHARE and 4. CHALLENGE: two intents, two buttons, never a toggle. */
+    var act = el("div", "xft-act");
+    var share = el("button", "xft-btn xft-primary", "Share result");
+    share.type = "button";
+    share.addEventListener("click", function () {
+      var text = typeof d.share === "function" ? d.share() : "";
+      var url = typeof d.url === "function" ? d.url() : location.href;
+      send(share, text + (url ? "\n" + url : ""), "Share result");
+    });
+    act.appendChild(share);
+    var ch = el("button", "xft-btn xft-secondary", "Challenge friends");
+    ch.type = "button";
+    /* THE BOARD AND THE SCORE TO BEAT, which every game can send. A game with
+       a real challenge (a table on the server) is handed this as its way out
+       when the server will not make one -- a daily, say -- and passes the
+       challenge's own link to it when it does. */
+    function sendBoard(link) {
+      var text = (typeof d.share === "function" ? d.share() : "") + "\nCan you beat " + score + "/" + max + "?";
+      var url = link || (typeof d.url === "function" ? d.url() : location.href);
+      send(ch, text + (url ? "\n" + url : ""), "Challenge friends");
+    }
+    ch.addEventListener("click", function () {
+      if (typeof d.challenge === "function") { d.challenge(sendBoard, ch); return; }
+      sendBoard();
+    });
+    act.appendChild(ch);
+    var table = el("div", "xft-table");
+    table.id = "xftTable";
+    act.appendChild(table);
+    /* THE COMMUNITY LINE, under the two buttons: an empty box the chrome fills
+       from its one href (xi-chrome.js community()), empty in a theme with no
+       community. */
+    act.appendChild(el("div", "xic-community"));
+    target.appendChild(act);
+    if (window.XIChrome && typeof XIChrome.community === "function") XIChrome.community(target);
+
+    /* THEN THE NEXT GAME. */
+    var next = el("div", "xft-next");
+    next.id = "nextUpRow";
+    next.setAttribute("data-game", d.game || "");
+    target.appendChild(next);
+    next.xiftDone = true;           // this panel announces it, not the watcher
+    nextUp(next, { game: d.game });
+
+    return { share: share, challenge: ch, table: table };
+  }
+
+  /* The phone's own share sheet where there is one; copy where there is not
+     (desktop), said on the button that was pressed. */
+  function send(button, text, label) {
+    function done(ok) {
+      button.textContent = ok ? "Copied" : "Copy failed";
+      setTimeout(function () { button.textContent = label; }, 1800);
+    }
+    function copy() {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(function () { done(true); }, function () { done(false); });
+        return;
+      }
+      done(false);
+    }
+    if (navigator.share) { navigator.share({ text: text }).catch(function (e) {
+      if (!e || e.name !== "AbortError") copy();
+    }); return; }
+    copy();
+  }
+
+  /* The spoiler-free line every game shares: its boxes as squares. */
+  function squares(boxes) {
+    var SQ = { g: "🟩", a: "🟨", r: "🟥", x: "⬜" };
+    return (boxes || []).map(function (b) { return SQ[b.s] || SQ.x; }).join("");
+  }
+
+  function esc(v) {
+    return String(v == null ? "" : v).replace(/[&<>"]/g, function (c) {
+      return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c];
+    });
+  }
+
+  /* A board's day as the panel prints it, "Sat 26 Sep", from its YYYY-MM-DD.
+     Read in UTC because a board's day is the server's. */
+  /* BY HAND, NOT toLocaleDateString: en-GB prints "Sept" in newer engines and
+     "Sep" in older ones, so the same board read differently by device. */
+  var DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
+  var MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+  function dayLabel(iso) {
+    var t = Date.parse(String(iso || "").slice(0, 10) + "T12:00:00Z");
+    if (isNaN(t)) return "";
+    var d = new Date(t);
+    return DAYS[d.getUTCDay()] + " " + d.getUTCDate() + " " + MONTHS[d.getUTCMonth()];
+  }
+
+  window.XIFullTime = { nextUp: nextUp, watch: watch, panel: panel, squares: squares, dayLabel: dayLabel, send: send };
 })();

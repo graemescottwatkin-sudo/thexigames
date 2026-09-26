@@ -252,6 +252,24 @@ const browser = await chromium.launch();
     return c;
   };
 }
+/* THE FAMILY'S FULL TIME (shared/xi-fulltime.js): the four blocks, in ORDER
+   in the page, the result and the two buttons SHOWN -- the owner's approved
+   mockup of 26 Sep 2026. Keep-it may be empty here: this server offers no
+   accounts, and then there is nothing to sign in to. Screenshot with
+   LOCK_SHOTS, for the owner and the app's sheet. */
+async function panelCheck(page, label, id) {
+  const blocks = await page.evaluate(() => {
+    const p = document.querySelector("#ftPanel");
+    if (!p) return "no panel";
+    const shown = (q) => { const e = p.querySelector(q); return !!e && e.getBoundingClientRect().height > 0; };
+    return [...p.children].map((e) => e.className.split(" ")[0]).join(",") +
+      (shown(".xft-card") && shown(".xft-act .xft-primary") && shown(".xft-act .xft-secondary") ? "" : " (not all shown)");
+  });
+  t(`${label}: Full Time is the family's panel, result, keep it, share and challenge`,
+    blocks === "xft-card,xft-keep,xft-act,xft-next", blocks);
+  if (process.env.LOCK_SHOTS) await page.screenshot({ path: path.join(process.env.LOCK_SHOTS, `${id}-${label}-fulltime.png`) });
+}
+
 async function announcedCheck(page, label) {
   const n = await page.evaluate(() => window.__ft);
   t(`${label}: Full Time is announced once it shows, without scrolling to the foot of it`, n >= 1, `${n} announcement(s)`);
@@ -543,6 +561,7 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
     await announcedCheck(page, vp[0]);
     t(`${vp[0]}: and the result is a panel inside the screen`,
       !!m.results && m.results[0] >= 0 && m.results[1] <= m.vh + 1, JSON.stringify(m.results));
+    await panelCheck(page, vp[0], id);
     await context.close();
   }
 }
@@ -698,6 +717,7 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "q
     await announcedCheck(page, vp[0]);
     t(`${vp[0]}: and the result is a panel inside the screen, scrolling in itself`,
       !!m.results && m.results[0] >= 0 && m.results[1] <= m.vh + 1, JSON.stringify(m.results));
+    await panelCheck(page, vp[0], id);
     await context.close();
   }
 }
@@ -1058,6 +1078,7 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "d
     await announcedCheck(page, vp[0]);
     t(`${vp[0]}: and the result is a panel inside the screen`,
       !!m.results && m.results[0] >= 0 && m.results[1] <= m.vh + 1, JSON.stringify(m.results));
+    await panelCheck(page, vp[0], id);
     await context.close();
   }
 }
