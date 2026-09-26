@@ -241,10 +241,15 @@ server.listen(0, "127.0.0.1", async () => {
   /* A change to a key this window is not playing is none of its business. */
   asAnotherTab(w, "fcw.v04.practice", null);
   await wait(500);   // fixed: the handler ran inside dispatchEvent, so nothing is in flight to wait on
+  /* Measured against the count just before P, not `first`: EN already put
+     the record above `first`, so a window wrongly stood down by that event —
+     saving nothing more — passed this check on EN's letters alone. */
+  const beforeP = letters(rec(w));
   saved = changed(w);
-  type(w, "P"); await until(saved);
-  t("a change to the other mode's slot is ignored", letters(rec(w)) > first,
-    letters(rec(w)) + " letters");
+  type(w, "P");
+  const pSaved = await until(saved);
+  t("a change to the other mode's slot is ignored: the next letter is still saved",
+    pSaved && letters(rec(w)) > beforeP, beforeP + " then " + letters(rec(w)) + " letters");
   w.close();
 
   /* ---- 4. the reload window in the admin tools ----
