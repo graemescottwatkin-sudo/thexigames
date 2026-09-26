@@ -32,7 +32,7 @@
 
   var R = window.XIGR_RULES;
   var $ = function (id) { return document.getElementById(id); };
-  var BUILD = "v002o";
+  var BUILD = "v002p";
 
   var S = {
     board: null,          // the PUBLIC board: shape, lengths, crossings. No letters.
@@ -404,19 +404,24 @@
     var ks = e ? keyState(e) : {};
     var dead = S.over || S.busy || (e && S.solved[e.n]);
     $("gdKbdCap").textContent = e ? "Letters — " + label(e).toLowerCase() + " only" : "Letters";
-    var rows = ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"];
-    $("gdKbd").innerHTML = rows.map(function (row, ri) {
-      var inner = row.split("").map(function (L) {
-        return '<button class="gd-k ' + (SHORT[ks[L]] || "") + '" data-k="' + L + '"' +
-          (dead ? " disabled" : "") + ">" + L + "</button>";
-      }).join("");
-      if (ri === 2) {
-        inner = '<button class="gd-k wide" data-k="DEL"' + (dead ? " disabled" : "") + ">Del</button>" +
-          inner +
-          '<button class="gd-k wide go" data-k="GO"' + (dead ? " disabled" : "") + ">Guess</button>";
-      }
-      return '<div class="gd-krow">' + inner + "</div>";
-    }).join("");
+    /* THE FAMILY'S KEYBOARD (shared/xi-keys.js), the same three rows, Enter
+       bottom left and delete bottom right as in every game that types -- the
+       owner, 25 Sep 2026. Built once; each render paints this entry's marks
+       onto its keys. */
+    var kb = $("gdKbd");
+    if (!kb.firstChild && window.XIKeys) {
+      XIKeys.build(kb, {
+        letter: function (L) { if (!keysDead()) typeLetter(L); },
+        back: function () { if (!keysDead()) backspace(); },
+        enter: function () { if (!keysDead()) submit(); },
+      });
+    }
+    Array.prototype.forEach.call(kb.querySelectorAll(".osk-key"), function (k) {
+      var L = k.getAttribute("data-key");
+      k.classList.remove("c", "p", "a");
+      if (L.length === 1 && SHORT[ks[L]]) k.classList.add(SHORT[ks[L]]);
+      k.disabled = !!dead;
+    });
 
     var h = e ? (S.hist[e.n] || []) : [];
     $("gdHist").innerHTML = h.length > 1
@@ -630,15 +635,15 @@
 
   /* ---- input ------------------------------------------------------------- */
 
+  /* The keys answer nothing while a guess is in flight, the board is over,
+     or the entry is already solved -- the same test the keys are drawn
+     disabled by. */
+  function keysDead() {
+    var e = entry();
+    return !!(S.over || S.busy || (e && S.solved[e.n]));
+  }
+
   function wire() {
-    $("gdKbd").addEventListener("click", function (ev) {
-      var b = ev.target.closest ? ev.target.closest(".gd-k") : null;
-      if (!b || b.disabled) return;
-      var k = b.getAttribute("data-k");
-      if (k === "GO") return submit();
-      if (k === "DEL") return backspace();
-      typeLetter(k);
-    });
     $("gdEntries").addEventListener("click", function (ev) {
       var b = ev.target.closest ? ev.target.closest(".gd-chip") : null;
       if (!b) return;

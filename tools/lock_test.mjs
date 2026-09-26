@@ -1198,7 +1198,7 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "c
     await page.evaluate(() => {
       const st = document.createElement("style");
       st.id = "lock-test-big";
-      st.textContent = ".keys button{height:160px!important}";
+      st.textContent = "#keys .osk-key{height:160px!important}";
       document.head.appendChild(st);
       dispatchEvent(new Event("resize"));
     });
@@ -1354,7 +1354,7 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "g
     await page.evaluate(() => {
       const st = document.createElement("style");
       st.id = "lock-test-big";
-      st.textContent = ".gd-k{height:120px!important}";
+      st.textContent = "#gdKbd .osk-key{height:120px!important}";
       document.head.appendChild(st);
       dispatchEvent(new Event("resize"));
     });
@@ -1955,6 +1955,73 @@ if (!ONLY || ONLY === "bar") {
     t(`${vp[0]}: the bar sits at the same place and size on every game`, seen.length >= 10 && off.length === 0,
       off.length ? `off the family's ${M.left},${M.top} ${M.width}x${M.height}: ${off.join("; ")}` : `${seen.length} games at ${M.left},${M.top} ${M.width}x${M.height}`);
   }
+}
+
+/* ---- the family's keyboard -------------------------------------------------
+   The owner, 25 Sep 2026: "make the keyboards the same on every game too but
+   obviously only where a keyboard is needed". WHICH GAMES TYPE is read from
+   the pages -- a game that loads shared/xi-keys.js -- not listed here, so a
+   game that gains a keyboard is asked about by existing. Each is opened in
+   play on a touch phone and asked: the family's three QWERTY rows, Enter at
+   the left of the bottom row where the game has one and delete at the right,
+   a game's own keys only in one row above the letters -- and no keyboard at
+   all on a game that does not type. */
+if (!ONLY || ONLY === "keys") {
+  console.log(`\nthe family's keyboard`);
+  const fs = await import("node:fs");
+  const types = (dir) => /shared\/xi-keys\.js/.test(fs.readFileSync(dir + "/index.html", "utf8"));
+  const openers = {
+    pitch: (g, vp) => open(g, 1, vp), quiz: openQuiz, slider: openSlider, duel: openDuel,
+    codeword: openCodeword, grid: openGrid, profile: openProfile, wordsearch: openWS,
+  };
+  const vp = VIEWPORTS[1];
+  const games = [...Object.entries(LOCKED).map(([id, g]) => [id, g.path.replace(/^\/|\/$/g, ""), () => openers[g.kind](g, vp)]),
+                 ["crossword", "football/crossword", () => openCrossword(vp)]];
+  const ROWS = ["QWERTYUIOP", "ASDFGHJKL", "ZXCVBNM"];
+  let typing = 0;
+  for (const [id, dir, go] of games) {
+    const wants = types(dir);
+    const { page, context } = await go();
+    await wait(300);
+    const k = await page.evaluate(() => {
+      const boards = [...document.querySelectorAll(".osk")].filter((e) => e.getBoundingClientRect().height > 0 &&
+        getComputedStyle(e).display !== "none");
+      if (!boards.length) return null;
+      const rows = [...boards[0].querySelectorAll(".osk-row")].map((r) => ({
+        extra: r.classList.contains("osk-extra"),
+        keys: [...r.querySelectorAll(".osk-key")].map((b) => b.getAttribute("data-key")),
+      }));
+      return { count: boards.length, rows };
+    });
+    if (!wants) {
+      t(`${id}: types nothing, so draws no keyboard`, k === null, k ? JSON.stringify(k) : "");
+    } else {
+      typing++;
+      const letters = k ? k.rows.filter((r) => !r.extra) : [];
+      const extra = k ? k.rows.filter((r) => r.extra) : [];
+      const bare = letters.map((r) => r.keys.filter((x) => x.length === 1).join(""));
+      const last = letters[2] ? letters[2].keys : [];
+      const enterOk = !last.includes("ENTER") || last[0] === "ENTER";
+      const backOk = last.includes("BACK") && last[last.length - 1] === "BACK";
+      const extraOk = k && (extra.length === 0 || (extra.length === 1 && k.rows[0].extra));
+      t(`${id}: the family's keyboard -- the three QWERTY rows, Enter bottom left if it has one, delete bottom right, its own keys in one row above`,
+        !!k && k.count === 1 && bare.join("|") === ROWS.join("|") && letters.length === 3 && enterOk && backOk && extraOk,
+        k ? JSON.stringify(k.rows) : "no keyboard on screen");
+      if (id === "codeword") {
+        t("codeword: Pencil and Clear are its row above, and it has no Enter (a codeword submits nothing)",
+          !!extra[0] && extra[0].keys.join(",") === "Pencil,Clear" && !last.includes("ENTER"), JSON.stringify(extra));
+      }
+      if (id === "grid" || id === "crossword") {
+        t(`${id}: has an Enter, bottom left`, last[0] === "ENTER", JSON.stringify(last));
+      }
+    }
+    await context.close();
+  }
+  /* A floor derived from the pages, so a run that opened nothing cannot
+     pass: every game that loads the keyboard was asked about. */
+  const expected = games.filter(([, dir]) => types(dir)).length;
+  t("every game that loads the keyboard was asked about", typing === expected && expected >= 5,
+    `${typing} of ${expected}`);
 }
 
 await browser.close();

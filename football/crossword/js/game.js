@@ -297,7 +297,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v004g";
+  var BUILD = "v004h";
   try {
     window.CROSSWORDXI_BUILD = BUILD;
     console.log("Crossword XI build " + BUILD);
@@ -4155,6 +4155,11 @@
     window.XIKeys.build($("osk"), {
       letter: function (ch) { typeLetter(ch); startTimer(); },
       back: function () { backspace(); },
+      /* THE SAME KEYBOARD AS EVERY GAME THAT TYPES, Enter bottom left (the
+         owner, 25 Sep 2026). A crossword has nothing to submit -- a word is
+         judged as its last square fills -- so Enter moves on to the next clue,
+         which is what a finished word wants next. */
+      enter: function () { if ($("jumpList").hidden) stepClue(1); },
     });
   } else {
     console.warn("shared/xi-keys.js did not load: no on-screen keyboard");

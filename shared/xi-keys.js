@@ -16,7 +16,15 @@
  *     letter: function (ch) { ... },   // a letter was pressed
  *     back:   function () { ... },     // the backspace key
  *     enter:  function () { ... },     // optional; no handler, no enter key
- *   });
+ *     extra:  [{ label, press, cls }],  // optional: a game's own keys, one row
+ *   });                                 // above the letters (Codeword's
+ *                                       // Pencil and Clear)
+ *
+ * Every key carries data-key (the letter, "ENTER", "BACK", or the extra key's
+ * label), so a game can mark keys -- Grid colours them by what its guesses
+ * found, Codeword greys the letters already placed -- without a keyboard of
+ * its own. The owner, 25 Sep 2026: "make the keyboards the same on every game
+ * too but obviously only where a keyboard is needed". 
  *
  * pointerdown rather than click, and preventDefault on it: a click waits for
  * the pointer to come up, which on a phone is a visible delay per letter, and
@@ -36,11 +44,12 @@
     return !!coarse;
   }
 
-  function key(cls, label, onPress) {
+  function key(cls, label, onPress, name) {
     var b = document.createElement("button");
     b.type = "button";
     b.className = "osk-key" + (cls ? " " + cls : "");
     b.textContent = label;
+    b.setAttribute("data-key", name || label);
     b.addEventListener("pointerdown", function (ev) { ev.preventDefault(); onPress(); });
     return b;
   }
@@ -49,6 +58,14 @@
     if (!mount || !handlers) return false;
     var h = handlers;
     mount.innerHTML = "";
+    /* A GAME'S OWN KEYS, one row of their own above the letters, so the
+       letters are the same three rows in every game. */
+    if (h.extra && h.extra.length) {
+      var top = document.createElement("div");
+      top.className = "osk-row osk-extra";
+      h.extra.forEach(function (x) { top.appendChild(key("wide" + (x.cls ? " " + x.cls : ""), x.label, x.press)); });
+      mount.appendChild(top);
+    }
     ROWS.forEach(function (letters, ri) {
       var row = document.createElement("div");
       row.className = "osk-row";
@@ -57,14 +74,14 @@
          not next to each other — a mis-tap that submits is worse than one
          that deletes. Absent entirely when the game has no use for it. */
       if (ri === 2 && typeof h.enter === "function") {
-        row.appendChild(key("wide go", "ENTER", h.enter));
+        row.appendChild(key("wide go", "ENTER", h.enter, "ENTER"));
       }
       letters.split("").forEach(function (ch) {
         row.appendChild(key("", ch, function () { h.letter(ch); }));
       });
       if (ri === 2 && typeof h.back === "function") {
         /* U+232B, the erase-to-the-left character. */
-        row.appendChild(key("wide", "⌫", h.back));
+        row.appendChild(key("wide", "⌫", h.back, "BACK"));
       }
       mount.appendChild(row);
     });

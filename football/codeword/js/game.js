@@ -3,7 +3,7 @@
   /* THE BUILD, PAIRED WITH THE ?v= ON THIS FILE'S OWN SCRIPT TAG. A stale
      cached script is otherwise invisible: the page loads, the game runs, and
      it is yesterday's code. aligned_test asserts the two agree. */
-  var BUILD = "v001t";
+  var BUILD = "v001u";
   if (window.XIPlays && document.documentElement) {
     document.documentElement.setAttribute("data-build", BUILD);
   }
@@ -361,17 +361,25 @@ function boot(BOARD){
     });
   });
 
-  "ABCDEFGHIJKLMNOPQRSTUVWXYZ".split("").forEach(function(l){
-    var b = document.createElement("button"); b.type="button"; b.textContent = l; b.dataset.l = l;
-    if (!present[l]) b.classList.add("absent");
-    b.addEventListener("click", function(e){ typeLetter(e.currentTarget.dataset.l); });
-    keysEl.appendChild(b);
-  });
-  var pen = document.createElement("button"); pen.type="button"; pen.className="wide"; pen.id="pen"; pen.textContent="Pencil";
-  pen.addEventListener("click", function(){ pencilMode = !pencilMode; paint(); });
-  keysEl.appendChild(pen);
-  var del = document.createElement("button"); del.type="button"; del.className="wide"; del.textContent="Clear";
-  del.addEventListener("click", clearSelected); keysEl.appendChild(del);
+  /* THE FAMILY'S KEYBOARD (shared/xi-keys.js): the same QWERTY rows as every
+     game that types, delete bottom right, and this game's own two keys --
+     Pencil and Clear -- in one row above the letters (the owner, 25 Sep
+     2026). A codeword submits nothing, so it has no Enter. */
+  if (window.XIKeys) {
+    XIKeys.build(keysEl, {
+      letter: function(l){ typeLetter(l); },
+      back: function(){ clearSelected(); },
+      extra: [
+        { label: "Pencil", press: function(){ pencilMode = !pencilMode; paint(); } },
+        { label: "Clear", press: function(){ clearSelected(); } },
+      ],
+    });
+    Array.prototype.forEach.call(keysEl.querySelectorAll(".osk-key"), function(b){
+      var l = b.getAttribute("data-key");
+      if (l.length === 1) { b.dataset.l = l; if (!present[l]) b.classList.add("absent"); }
+      if (l === "Pencil") b.id = "pen";
+    });
+  }
 
   var hintEls = [];
   (function(){
@@ -529,8 +537,11 @@ function boot(BOARD){
       return used[l] ? "<s>" + l + "</s>" : l;
     }).join(" ") + '<span class="cap">' + nPresent + " letters on this board" +
       (absentList.length ? " · no " + absentList.join(", ") : "") + "</span>";
-    Array.prototype.forEach.call(keysEl.children, function(b){ if (b.dataset.l) b.classList.toggle("used", !!used[b.dataset.l]); });
-    document.getElementById("pen").classList.toggle("on", pencilMode);
+    Array.prototype.forEach.call(keysEl.querySelectorAll("[data-l]"), function(b){ b.classList.toggle("used", !!used[b.dataset.l]); });
+    /* The Pencil key is the shared keyboard's, so it exists only once
+       shared/xi-keys.js has built it; the board must still draw without. */
+    var pen = document.getElementById("pen");
+    if (pen) pen.classList.toggle("on", pencilMode);
 
     var rNum = document.getElementById("rNum"), rHint = document.getElementById("rHint");
     if (selected === null){ rNum.textContent = ""; rHint.textContent = "Tap a square to select its number"; }

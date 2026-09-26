@@ -62,12 +62,18 @@ button{font:inherit;color:inherit;cursor:pointer}
 .readout b{font-family:var(--disp);font-size:17px;letter-spacing:.04em;color:var(--sel-line)}
 .readout span{font-size:13px;color:var(--ink-soft)}
 
-.keys{display:grid;grid-template-columns:repeat(9,1fr);gap:4px;margin-top:10px}
-.keys button{height:38px;border:1px solid var(--line);border-radius:6px;background:var(--card);font-family:var(--disp);font-weight:700;font-size:17px}
-.keys button:hover{background:var(--tint)}
-.keys button.used{color:var(--ink-faint);background:var(--tint)}
-.keys button.wide{grid-column:span 3;font-size:13px;letter-spacing:.06em;text-transform:uppercase}
-.keys button.on{background:var(--gold);border-color:var(--gold);color:var(--gold-ink)}
+/* THE FAMILY'S KEYBOARD (shared/xi-keys.css), drawn on every device here --
+   its keys carry which letters are placed and which the puzzle does not use,
+   which a physical keyboard cannot show -- and in the card, not pinned. */
+.keys.osk{display:block;position:static;border-top:0;background:none;padding:0;margin-top:10px}
+.keys .osk-key.absent{opacity:.35}
+.keys .osk-key.used{background:var(--tint);color:var(--ink-faint)}
+.keys .osk-key.on{background:var(--gold);border-color:var(--gold);color:var(--gold-ink)}
+/* LOCKED, THE KEYS TAKE WHAT THEY TOOK BEFORE: 4.6% of the screen a row, down
+   to 28px. The family's default floor is 34px, and four rows of it (Pencil and
+   Clear above the letters) cost a 360x640 phone the ~20px its grid needed, so
+   the page fell back to scrolling. The same keyboard, sized for this card. */
+body.locked .keys.osk{--osk-h:clamp(28px,4.6vh,52px);--osk-gap:3px}
 
 /* the key is the puzzle, so it gets room */
 .key{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:4px}
@@ -84,7 +90,6 @@ button{font:inherit;color:inherit;cursor:pointer}
 .alpha s{color:var(--ink-faint);text-decoration-thickness:1px}
 .alpha s.out{color:var(--ink-faint);opacity:.42;text-decoration-style:double}
 .alpha .cap{display:block;font-family:var(--body);font-size:11px;letter-spacing:.02em;color:var(--ink-faint);margin-top:5px}
-.keys button.absent{opacity:.3}
 
 .clock{display:flex;justify-content:space-between;align-items:flex-end;font-variant-numeric:tabular-nums}
 .clock .min{font-family:var(--disp);font-weight:700;font-size:40px;line-height:1}
@@ -183,7 +188,6 @@ body.locked .cw-here{margin:4px 0 0;min-height:1.3em;font-size:14px;line-height:
 body.locked .cw-here:empty{display:none}
 body.locked .readout{margin-top:6px;min-height:0}
 body.locked .keys{margin-top:6px}
-body.locked .keys button{height:clamp(30px,4.6vh,52px)}
 .cw-answers-btn,.cw-answers-close{display:none}
 
 @media (max-width:860px){

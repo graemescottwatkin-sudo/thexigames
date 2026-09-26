@@ -190,6 +190,14 @@ button:focus-visible,.gd-cell.on:focus-visible,.gd-chip:focus-visible{outline:2p
    Evidence is scoped to the answer it was gathered against. A letter that is
    not in SCHMEICHEL says nothing whatever about BLOMQVIST, so each entry
    carries its own keyboard and the marks reset when you move. */
+/* THE FAMILY'S KEYBOARD (shared/xi-keys.css), drawn on every device here,
+   not only on touch: its keys carry this game's marks, which a physical
+   keyboard cannot show. In the page's flow, not pinned to the foot. */
+.gd-kbd.osk{display:block; position:static; border-top:0; background:none; padding:0; margin-bottom:16px}
+.gd-kbd .osk-key.c{background:var(--pitch); border-color:var(--pitch); color:#fff}
+.gd-kbd .osk-key.p{background:var(--present); border-color:var(--present); color:#fff}
+.gd-kbd .osk-key.a{background:var(--dead); border-color:var(--dead); color:#fff; opacity:.75}
+.gd-kbd .osk-key:disabled{opacity:.4; cursor:default}
 .gd-kbd{display:flex; flex-direction:column; gap:6px; margin-bottom:16px}
 .gd-krow{display:flex; gap:5px; justify-content:center}
 .gd-k{flex:1 1 0; min-width:0; height:50px; border-radius:6px;
