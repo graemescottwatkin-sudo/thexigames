@@ -308,6 +308,8 @@ server.listen(0, "127.0.0.1", async () => {
   console.log("\nPlaying still saves");
   dom = await open(null);
   w = dom.window; $ = (id) => w.document.getElementById(id);
+  /* Boards served to this window, from here: case 5 reads it. */
+  const servedAtOpen = dailyServed;
   ($("dailyBtn") || $("homeDaily")).click();
   await until(() => kickCard(w));
   if ($("kickOffBtn")) { $("kickOffBtn").click(); await until(() => !kickCard(w)); }
@@ -350,11 +352,20 @@ server.listen(0, "127.0.0.1", async () => {
   await until(() => $("homeOverlay").classList.contains("show"));
   const asked = dailyServed;
   ($("dailyBtn") || $("homeDaily")).click();
-  await until(() => dailyServed > asked && !building(w));
+  const reopened = await until(() => dailyServed > asked && !building(w));
   const binds = w.__clubBinds || {};
   console.log("      bindings per control: " + JSON.stringify(binds));
   const most = Math.max(0, ...Object.values(binds));
-  t("the club lists were rebuilt several times over", Object.keys(binds).length >= 2,
+  /* THE REBUILDS ARE WHAT MAKE "ONE LISTENER" MEAN ANYTHING. This used to ask
+     only that two controls had ever been bound — true after the first build —
+     so both checks here passed with the reopened board never arriving, and
+     "exactly one" was a count taken after a single populate. Asked of the
+     boards actually served to this window instead: the open and the reopen,
+     each of which runs syncClubSelect() and syncKickSelect(). */
+  const builds = dailyServed - servedAtOpen;
+  t("the daily was built twice in this window, the open and the reopen",
+    reopened && builds >= 2, `${builds} board(s) served, reopen finished ${reopened}`);
+  t("the club controls are bound", Object.keys(binds).length >= 2,
     Object.keys(binds).join(", "));
   t("each club control has exactly one change listener", most === 1,
     "highest count " + most);
