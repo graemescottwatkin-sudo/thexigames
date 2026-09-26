@@ -15,7 +15,7 @@
  *   - no practice. There is now an archive picker and a finals catalogue; what
  *     is still missing is a practice mode, which this game may never want.
  */
-var BUILD = "v001x";
+var BUILD = "v001y";
 
 (function () {
   "use strict";
@@ -139,7 +139,7 @@ var BUILD = "v001x";
   function renderLanding() {
     var today = state.todayNo || 0;
     if (today > 0) {
-      var utc = todayUTC();
+      var utc = dateForNo(today).getTime();
       var pick = (Math.floor(utc / 604800000) % today) + 1;
       $("homeFeaturedName").textContent = "Board #" + pick;
       $("homeFeaturedState").textContent = "One of " + today + " released";
@@ -183,19 +183,28 @@ var BUILD = "v001x";
      and nothing said which days had been played. The crossword answered this
      with a month grid and the same answer belongs here.
 
-     THE DATES ARE DERIVED, NOT STORED A SECOND TIME. Board #N ran (today - N)
-     days before today, and the server said what today is — so there is no
-     epoch written down here to drift from the one the server keeps. UTC
-     throughout, because the server decides what day it is. */
+     THE DATES ARE DERIVED, NOT STORED A SECOND TIME. Board #N ran (M - N)
+     days before board #M, and the server said which day #M was — so there is
+     no epoch written down here to drift from the one the server keeps. UTC
+     throughout, because the server decides what day it is.
+
+     COUNTED FROM THE SERVER'S DAY, NOT THE DEVICE'S. This counted back from
+     the device's own UTC date, which is a second clock that has to agree with
+     the server's: a phone set wrong, or a tab left open past UTC midnight
+     (one in the morning in a British summer), slid every board onto the day
+     beside its own. calendar_test sets the two clocks apart. The device's
+     date is left only for a board that came with no day at all. */
   var DAY_MS = 86400000;
   var calMonth = null;   // {y, m} of the month on screen, in UTC
+  var dayAnchor = null;  // {no, ms}: a board the server served, and its day
 
   function todayUTC() {
     var n = new Date();
     return Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate());
   }
-  function dateForNo(no) { return new Date(todayUTC() - ((state.todayNo || 0) - no) * DAY_MS); }
-  function noForDate(ms) { return (state.todayNo || 0) - Math.round((todayUTC() - ms) / DAY_MS); }
+  function anchor() { return dayAnchor || { no: state.todayNo || 0, ms: todayUTC() }; }
+  function dateForNo(no) { var a = anchor(); return new Date(a.ms + (no - a.no) * DAY_MS); }
+  function noForDate(ms) { var a = anchor(); return a.no + Math.round((ms - a.ms) / DAY_MS); }
 
   /* WHICH DAYS ARE BEHIND THE LOCK. The window comes down with the board —
      the server owns the rule and the page only draws it — and a signed-in
@@ -1902,6 +1911,12 @@ var BUILD = "v001x";
            computed here: the server decides what day it is. A board off the
            ring carries no `today`, so the count already established stands. */
         if (board.today) state.todayNo = board.today;
+        /* And the day this board ran, which every other date is counted from.
+           Only a board on the ring: a final is not a day. */
+        if (board.today && typeof board.no === "number" &&
+            /^\d{4}-\d{2}-\d{2}$/.test(board.day || "")) {
+          dayAnchor = { no: board.no, ms: Date.parse(board.day + "T00:00:00Z") };
+        }
         /* THE FAMILY'S TOP BAR, named with this board: its number, its day
            (the same date the calendar gives it) and whether it is today's. */
         if (window.XIBar) {

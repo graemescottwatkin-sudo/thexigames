@@ -490,6 +490,11 @@ jobs:
           # break it and the id space becomes a way to read the schedule.
           node football/scrambled/iconic_test.mjs
           node football/scrambled/journey_test.mjs
+          # Every board on its own day whatever the device's clock says: the
+          # calendar and the bar count from the day the server names, and a
+          # phone set wrong or a tab open past UTC midnight slid them a day.
+          # Scrambled and Vowels both, each through its own page.
+          node football/scrambled/calendar_test.mjs
           # The score the SERVER computes. It already marked every guess and
           # sold every reveal; the clock is its own now, and so is the count of
           # how many slots the board has — which the page used to be asked for,

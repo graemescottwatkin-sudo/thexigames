@@ -10,7 +10,7 @@ import {
   publicBoard, boardForNumber, scKey, json, bad, loadBoards, playableTokenNo,
   consonantsPublic,
 } from "../../_lib/sc-board.js";
-import { dailyNumber } from "../../_lib/daily.js";
+import { dailyNumber, dailyDayKey } from "../../_lib/daily.js";
 import { mayOpenArchive, archiveRefusal, backForBoard, FREE_ARCHIVE_DAYS } from "../../_lib/archive.js";
 
 export async function onRequestGet({ request, env }) {
@@ -65,6 +65,11 @@ export async function onRequestGet({ request, env }) {
 
   return json({
     ...publicBoard(board, no, scKey(no, mode)), today, token: scKey(no, mode), source,
+    /* The board's own day. The page drew every date by counting back from
+       the DEVICE's date, so a phone with a wrong clock, or a tab open across
+       UTC midnight, slid the whole calendar a day. A number and its day is a
+       fact that never goes stale, so the page counts from this instead. */
+    day: dailyDayKey(no),
     /* For the calendar's locked days; the rule stays here, the page draws it. */
     freeArchiveDays: FREE_ARCHIVE_DAYS,
   });
