@@ -71,7 +71,10 @@
    The owner's approved mockup, 26 Sep 2026: the same four blocks on every
    game -- the result, keep it, share, challenge -- then the next game. */
 .xft { display: flex; flex-direction: column; gap: 10px; max-width: 560px; margin: 0 auto; width: 100%; box-sizing: border-box; }
-.xft-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 10px; }
+/* LEFT, STATED: the card reads left to right in every game, and a sheet
+   that centres its own text (the crossword's .result) must not centre the
+   panel's lines while its score stays at the left edge. */
+.xft-card { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 14px 16px 16px; display: flex; flex-direction: column; gap: 10px; text-align: left; }
 .xft-head { display: flex; justify-content: space-between; align-items: baseline; }
 .xft-kick { font-family: var(--disp); font-weight: 700; font-size: 13px; letter-spacing: .16em; text-transform: uppercase; color: var(--pitch-ink); }
 .xft-date { font-size: 12px; color: var(--ink-soft); }
@@ -100,7 +103,7 @@
 .xft-stats, .xft-gaveup { margin: 0; font-size: 14px; color: var(--ink); }
 .xft-gaveup { font-weight: 600; color: var(--ink-soft); }
 .xft-league { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; padding-top: 8px; border-top: 1px solid var(--line); font-size: 14px; font-weight: 600; color: var(--ink); }
-.xft-link { background: none; border: 0; padding: 0; min-height: 0; font: inherit; font-weight: 500; font-size: 13px; color: var(--pitch-ink); text-decoration: underline; cursor: pointer; }
+.xft-link { background: none; border: 0; padding: 0; min-height: 0; font: inherit; font-weight: 500; font-size: 13px; color: var(--pitch-ink); text-decoration: underline; cursor: pointer; white-space: nowrap; flex: none; }
 .xft-keep { font-size: 14px; color: var(--ink); }
 .xft-keep p { margin: 0 0 8px; font-size: 13px; }
 .xft-signin { background: var(--card); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 10px 12px; }

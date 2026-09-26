@@ -297,7 +297,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v004m";
+  var BUILD = "v004n";
   try {
     window.CROSSWORDXI_BUILD = BUILD;
     console.log("Crossword XI build " + BUILD);
@@ -317,6 +317,9 @@
   var puzzleToken = null;
   var verified = {};          // entry index -> true|false, as last judged server-side
   var verifySent = {};        // entry index -> the text last sent, to avoid re-asking
+  /* The match minute each entry was FIRST judged right, for the boxes on
+     Full Time. Kept in the save, so a reopened board draws the same boxes. */
+  var entryMinute = {};
   var gridStats = { wrongCells: 0, wrongEntries: 0 };
 
   function api(path, body) {
@@ -432,6 +435,7 @@
       jobs.push(api("/api/verify", { token: puzzleToken, entry: i, guess: text })
         .then(function (r) {
           verified[i] = !!r.correct;
+          if (r.correct && entryMinute[i] == null) entryMinute[i] = FCW.matchMinute(elapsed);
           /* The citation rides with the yes, and only with the yes. */
           if (r.correct) noteSource(i, r.source);
           setOffline(false);
@@ -943,6 +947,7 @@
         revealedCells: Object.keys(revealedCells),
         revealAnswerCells: Object.keys(revealAnswerCells),
         revealedEntries: Object.keys(revealedEntries).map(Number),
+        entryMinute: entryMinute,
         checks: checksUsed, checkAlls: checkAllsUsed, elapsed: elapsed, complete: complete,
         subbedCells: Object.keys(subbedCells), subs: subsUsed,
         excludeIds: builtExcludeIds,
@@ -1267,7 +1272,7 @@
         recordUsedClues(res.puzzle.entries.map(function (e) { return e.row.id; }));
       }
       renderCirculation();
-      verified = {}; verifySent = {}; gridStats = { wrongCells: 0, wrongEntries: 0 };
+      verified = {}; verifySent = {}; entryMinute = {}; gridStats = { wrongCells: 0, wrongEntries: 0 };
       verifiedScore = null; verifiedBreakdown = null;   // last game's, not this one's
       verifiedElapsed = null;   // reset with them, or one board's clock reaches the next
       showLoading(false);
@@ -1394,6 +1399,7 @@
           ? themeLabel + " \u00B7 Crossword XI"
           : "Practice \u00B7 Crossword XI");
     letters = {}; wrong = {}; revealedEntries = {}; revealedCells = {}; revealAnswerCells = {};
+    entryMinute = {};
     sources = {};
     pauseCount = 0; pausedMs = 0; pauseStartedAt = null;
     subbedCells = {}; subsUsed = 0;
@@ -1436,6 +1442,7 @@
       (restore.subbedCells || []).forEach(function (k) { subbedCells[k] = true; });
       subsUsed = restore.subs || 0;
       (restore.revealedEntries || []).forEach(function (i) { revealedEntries[i] = true; });
+      entryMinute = restore.entryMinute || {};
       checksUsed = restore.checks || 0;
       checkAllsUsed = restore.checkAlls || 0;
       elapsed = restore.elapsed || 0;
@@ -3058,9 +3065,6 @@
           : "Log in / register";
       }
       who.title = account ? "Your account" : "Save your results across devices";
-    }
-    if ($("resSignIn")) {
-      $("resSignIn").style.display = (!account && accountsAvailable) ? "" : "none";
     }
     if ($("acctUnavailable")) {
       $("acctUnavailable").style.display = accountsAvailable ? "none" : "";
@@ -5273,13 +5277,73 @@
      separate paths set it — the local calculation, the server's verified score,
      and the re-render after verification. Three writes to one element became
      six the moment there were two elements, which is how they drift. */
-  /* The result line: position, score and what was available.
+  /* THE FAMILY'S FULL TIME (shared/xi-fulltime.js), the owner's approved
+     mockup of 26 Sep 2026: every game ends with the same four blocks. What
+     stays this game's is the data -- its score, its eleven clues, and the
+     league position, which is behind "See the table" rather than twenty rows
+     deep in the panel.
 
-     "20TH \u2014 15 PTS" over "15 / 114 pts" was one number said twice. The
-     ceiling is the only thing the second line carried, so it lives here now. */
-  function setResultLine(pos, score) {
-    $("rPos").textContent = (FCW.ordinal(pos) + "  \u00B7  " + score +
-      " / " + FCW.SCORING.MAX_SCORE).toUpperCase();
+     ONE BOX PER CLUE, in the grid's own order. Green with the match minute
+     it was first judged right; amber where help was shown in it (a revealed
+     letter or the whole answer). A substitute's letters are never scored, so
+     they do not turn a box amber. */
+  function crosswordBoxes() {
+    if (!puzzle) return [];
+    return puzzle.entries.map(function (e, i) {
+      var m = entryMinute[i] != null ? entryMinute[i] : null;
+      if (revealedEntries[i]) return { s: "a" };
+      var helped = e.cells.some(function (c) {
+        var k = K(c.x, c.y);
+        return !!(revealedCells[k] || revealAnswerCells[k]);
+      });
+      return { s: helped ? "a" : "g", m: m };
+    });
+  }
+  function helpLine() {
+    var bits = [];
+    function n(count, one, many) { if (count) bits.push(count + " " + (count === 1 ? one : many)); }
+    n(checksUsed, "check", "checks");
+    n(checkAllsUsed, "grid check", "grid checks");
+    n(revealedLetterCount(), "letter shown", "letters shown");
+    n(revealedAnswerCount(), "answer shown", "answers shown");
+    return bits.length ? bits.join(" \u00B7 ") : "no help";
+  }
+  function openLeague() {
+    var wrap = $("resTableWrap");
+    if (!wrap) return;
+    wrap.hidden = false;
+    var you = $("finalTableBody").querySelector("tr.you");
+    if (you && you.scrollIntoView) you.scrollIntoView({ block: "center" });
+    else if (wrap.scrollIntoView) wrap.scrollIntoView({ block: "start" });
+  }
+  /* WHAT THE PANEL CALLS THIS GAME, and whether it has a league to show.
+     One line, so tools/build_friendscrossword.js rewrites it in one place:
+     the Friends board has its own name, its own word for the end, and no
+     league to finish in. */
+  var FT = { name: "Crossword XI", kicker: null, league: true };
+  /* Drawn at the whistle and again when the server's score replaces this
+     device's -- the panel is redrawn whole rather than patched. */
+  function drawFullTime(score, pos) {
+    if (!window.XIFullTime || !window.XIFullTime.panel || !$("ftPanel")) return;
+    var msg = FCW.outcomeMessage(club, pos);
+    var ord = FCW.ordinal(pos);
+    var name = board.kind === "daily" ? FT.name
+      : board.kind === "theme" && themeLabel ? themeLabel : FT.name + " \u00B7 practice";
+    var stats = "Solved at " + FCW.matchClockLabel(elapsed) + " \u00B7 " + helpLine();
+    window.XIFullTime.panel($("ftPanel"), {
+      game: "crossword", name: name, no: board.kind === "daily" ? board.no : null,
+      kicker: FT.kicker,
+      date: board.kind === "daily" ? window.XIFullTime.dayLabel(FCW.localDateKey(FCW.dailyDate(board.no))) : null,
+      score: score, max: FCW.SCORING.MAX_SCORE,
+      boxes: crosswordBoxes(),
+      stats: FT.league ? stats : msg + " " + stats,
+      league: FT.league
+        ? { text: msg.indexOf(ord) > -1 ? msg : ord + " \u00B7 " + msg, open: openLeague }
+        : null,
+      share: shareText,
+      url: shareLink,
+      challenge: challengeFromPanel,
+    });
   }
 
   var shownScore = null;
@@ -5317,9 +5381,8 @@
     if ($("rClockNote")) $("rClockNote").style.display = "none";
     showPauseNote();
     updateScoreUI();
-    $("rClub").textContent = club + (season ? "  \u00B7  " + season.season : "");
-    setResultLine(pos, res.score);
-    $("rMsg").textContent = FCW.outcomeMessage(club, pos);
+    lastPosition = pos;
+    drawFullTime(res.score, pos);
     $("bClock").textContent = FCW.matchClockLabel(elapsed);
     $("bTime").textContent = fmt(elapsed);
     $("bTimePen").textContent = "\u2212" + res.timePenalty;
@@ -5333,19 +5396,14 @@
     $("bAnswerPen").textContent = helpMins("revealAnswer", revealedAnswerCount());
     setFinalScore(res.score);
     renderLeagueRows($("finalTableBody"), table, false); // Full Time: all 20
+    /* The table waits behind "See the table": the panel leads with the
+       result, and twenty rows under it pushed Share off a phone's screen. */
+    if ($("resTableWrap")) $("resTableWrap").hidden = true;
+    if ($("chMake")) $("chMake").hidden = true;
     $("doneOverlay").classList.add("show");
-    /* THE NEXT GAME, ASKED FOR WHEN THE PANEL OPENS rather than at page load.
-       What has been played today changes while this page is open — another
-       tab, another device, or this very game a moment ago — and a suggestion
-       worked out at load would offer a board the player has since finished.
-       Asking here rather than in checkComplete means a reopened board gets a
-       fresh suggestion too, which is the case that most needs one: the player
-       came back later, and more of the day has happened. */
-    if (window.XIFullTime && $("nextUpRow")) {
-      window.XIFullTime.nextUp($("nextUpRow"), { game: "crossword" });
-    }
-    var youRow = $("finalTableBody").querySelector("tr.you");
-    if (youRow && youRow.scrollIntoView) youRow.scrollIntoView({ block: "center" });
+    /* THE NEXT GAME is the panel's own last block, asked for each time it is
+       drawn -- so a reopened board gets a fresh suggestion, the case that
+       most needs one. */
   }
 
   /* A FINISHED BOARD, OPENED AGAIN, SHOWS ITS RESULT. Asked for directly:
@@ -5568,6 +5626,23 @@
   /* The loop: a new challenge from the result just earned, without replaying.
      Chains rather than single hops are the point — challenge, play, challenge
      again — so this is the strongest thing to offer at Full Time. */
+  /* FROM THE PANEL'S "Challenge friends". A daily is everybody's board
+     already and the server will not make a challenge of it, so a daily sends
+     the board and the score to beat. Anything else opens the two-field form
+     below the panel; the challenge it makes is sent the same way, with its
+     own link. */
+  var panelSend = null;
+  function challengeFromPanel(sendBoard) {
+    if (board.kind === "daily") { sendBoard(); return; }
+    panelSend = sendBoard;
+    var f = $("chMake");
+    if (f) {
+      f.hidden = false;
+      if (f.scrollIntoView) f.scrollIntoView({ block: "center" });
+      var first = accountName() ? $("chGroup") : $("chFrom");
+      if (first && first.focus) first.focus();
+    }
+  }
   on("challengeBtn", "click", function () {
     var out = $("challengeOut");
     if (verifiedScore === null) {
@@ -5593,10 +5668,13 @@
       challengeMade = true;
       var url = SHARE_URL + "/?c=" + r.id;
       out.textContent = url;
-      try {
-        navigator.clipboard.writeText(url);
-        toast("Challenge link copied", "Send it to whoever you want to beat.", "win");
-      } catch (e) {}
+      if (panelSend) panelSend(url);
+      else {
+        try {
+          navigator.clipboard.writeText(url);
+          toast("Challenge link copied", "Send it to whoever you want to beat.", "win");
+        } catch (e) {}
+      }
       $("challengeBtn").textContent = "Challenge another group";
     }).catch(function (err) { out.textContent = String(err.message || err); });
   });
@@ -5778,18 +5856,10 @@
         if (r.score !== shownScore) {
           var table = FCW.buildTable(club, r.score, season);
           var pos = FCW.playerPosition(table);
-          setResultLine(pos, r.score);
+          lastPosition = pos;
           setFinalScore(r.score);
-          $("rMsg").textContent = FCW.outcomeMessage(club, pos);
+          drawFullTime(r.score, pos);
           renderLeagueRows($("finalTableBody"), table, false);
-          /* Re-scrolled, because re-rendering the rows throws the scroll back
-             to the top. It barely showed while the window was ten rows deep;
-             at five it would leave you looking at the top of the league rather
-             than at where you finished. */
-          var youAgain = $("finalTableBody").querySelector("tr.you");
-          if (youAgain && youAgain.scrollIntoView) {
-            youAgain.scrollIntoView({ block: "center" });
-          }
           if (note) {
             note.textContent = "verified \u2014 timed from when the board was opened, " +
               "which does not pause";
@@ -5913,9 +5983,11 @@
        posting: a reader sees how you did and can still play it cold. */
     var line = shareStrip(res.score) + "\n" +
       res.score + " pts \u00B7 " + FCW.ordinal(pos) + " \u00B7 " + fmt(elapsed);
-    var invite = board.kind === "daily" ? SHARE_URL : "Beat it: " + shareLink();
-    // "Manchester United #3" is the whole point of numbering them.
-    return name + "\n" + line + "\n" + invite;
+    /* THE LINK RIDES AS THE PANEL'S url (shareLink, below the text), so it
+       is written once: the daily's address, or the board's own for a themed
+       or practice board -- "Manchester United #3" is the whole point of
+       numbering them. */
+    return name + "\n" + line;
   }
 
   /* The copy fallback lived here and wrote its result back onto the button it
@@ -5924,18 +5996,8 @@
 
 
 
-  /* THE SHARE ROW, THE FAMILY'S. This game hands over its own text and the
-     address of the board it was scored on; shared/xi-share.js owns the
-     buttons, the platforms and the copy fallback, so every game offers the
-     same way out. Mounted once — the text is read when a button is pressed,
-     not when it is built. */
-  if (window.XIShare && $("shareRow")) {
-    window.XIShare.mount($("shareRow"), {
-      text: shareText,
-      url: function () { return SHARE_URL; },
-      challenge: false,
-    });
-  }
+  /* THE SHARE ROW WENT with the family's Full Time: the panel's "Share
+     result" sends shareText with shareLink under it. */
 
   function startPractice() {
     openBoard({ kind: "practice" });
@@ -7506,10 +7568,6 @@
     $("doneOverlay").classList.remove("show");
     var b = $("dailyBtn");
     if (b) b.click(); else chooseMode("daily");
-  });
-  on("resSignInBtn", "click", function () {
-    var b = $("accountToggle");
-    if (b) b.click();
   });
 
   on("themeClose", "click", function () { $("themeSheet").classList.remove("show"); });

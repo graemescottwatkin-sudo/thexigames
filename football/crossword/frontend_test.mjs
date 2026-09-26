@@ -580,14 +580,12 @@ server.listen(0, "127.0.0.1", async () => {
   t("and shows the verified number rather than its own when it arrives", (() => {
     const js = fs.readFileSync(path.join(DIR, "js/game.js"), "utf8");
     const fn = js.slice(js.indexOf("function verifyScore"), js.indexOf("on(\"viewGridBtn\""));
-    /* rScore is gone: the result line carried the score twice — "20TH — 15
-       PTS" over "15 / 114 pts" — and the second said nothing the first did not
-       except the ceiling, which is now folded into it. setResultLine() writes
-       the one that remains.
+    /* The result line went with the family's Full Time (26 Sep 2026): the
+       panel carries the score, and the server's number redraws it whole.
 
        The property is unchanged: when the server's number arrives it replaces
        the browser's on screen and in the variable. */
-    return /setResultLine\(pos, r\.score\)/.test(fn) &&
+    return /drawFullTime\(r\.score, pos\)/.test(fn) &&
       /verifiedScore = r\.score/.test(fn);
   })());
   /* A verified score has to reconcile with the sum printed under it. Updating
@@ -1009,8 +1007,10 @@ server.listen(0, "127.0.0.1", async () => {
        "beat this" is a real invitation. The daily needs no link — everybody
        gets the same puzzle. */
     const js = fs.readFileSync(path.join(DIR, "js/game.js"), "utf8");
+    /* The link rides as the Full Time panel's url, under the text; the
+       panel's Challenge adds "Can you beat" to the same address. */
     return /function shareLink/.test(js) && /SHARE_URL \+ "\/\?p=" \+ m\[1\]/.test(js) &&
-      /Beat it: /.test(js);
+      /url: shareLink,/.test(js);
   })());
   t("and following that link opens the puzzle, not a menu", (() => {
     const js = fs.readFileSync(path.join(DIR, "js/game.js"), "utf8");
@@ -1031,9 +1031,13 @@ server.listen(0, "127.0.0.1", async () => {
   t("the share carries a link, which is the point of sharing", (() => {
     /* The old text had none: somebody read "Arsenal finished 1st, 106/114" and
        had no way to reach the game. */
+    /* Handed to the family's panel as its url, which it writes under the
+       text (shared/xi-fulltime.js; tools/fulltime_panel_test.mjs proves the
+       panel does). The daily's is the game's own address. */
     const js = fs.readFileSync(path.join(DIR, "js/game.js"), "utf8");
-    return /var invite = board\.kind === "daily" \? SHARE_URL/.test(js) &&
-      /name \+ "\\n" \+ line \+ "\\n" \+ invite/.test(js);
+    const draw = js.slice(js.indexOf("function drawFullTime"), js.indexOf("var shownScore"));
+    return /share: shareText,/.test(draw) && /url: shareLink,/.test(draw) &&
+      /if \(board\.kind === "daily"\) return SHARE_URL;/.test(js);
   })());
   t("and that link is the game's real address, RUN rather than read", (() => {
     /* THIS CHECK USED TO BE THE STALE FACT. It asserted the literal
@@ -1111,12 +1115,13 @@ server.listen(0, "127.0.0.1", async () => {
      it; shared/xi-share.js owns them now and tools/share_test.mjs checks
      them for all four. What is left to check HERE is that this game asks for
      the shared row and keeps no second copy of it. */
-  t("it mounts the family's share row rather than keeping its own", (() => {
+  t("it ends on the family's Full Time panel rather than keeping its own", (() => {
     const js = fs.readFileSync(path.join(DIR, "js/game.js"), "utf8");
     const html = fs.readFileSync(path.join(DIR, "index.html"), "utf8");
-    return /XIShare\.mount\(/.test(js) && /id="shareRow"/.test(html) &&
+    return /window\.XIFullTime\.panel\(\$\("ftPanel"\)/.test(js) && /id="ftPanel"/.test(html) &&
+      !/XIShare\.mount\(/.test(js) && !/id="shareRow"/.test(html) &&
       !/wa\.me|twitter\.com\/intent|reddit\.com\/submit/.test(js);
-  })(), "see tools/share_test.mjs for what the row itself must do");
+  })(), "see tools/fulltime_panel_test.mjs for what the panel itself must do");
 
   console.log("\nThe new home");
   t("no active code path names the old hostname", (() => {

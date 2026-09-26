@@ -2052,6 +2052,22 @@ if (!ONLY || ONLY === "crossword") {
       b.there && b.short && !b.long && b.h <= 50 && b.scroll <= 1, JSON.stringify(b));
     await context.close();
   }
+  /* THE FAMILY'S FULL TIME, on the crossword's own sheet (#doneOverlay) with
+     its own stylesheet. Drawn with the sample rather than by solving a board:
+     offline_test plays the real page to the whistle and reads what it drew;
+     what is under test here is where it sits, at its fullest. */
+  console.log(`\ncrossword: Full Time`);
+  for (const vp of [VIEWPORTS[0], VIEWPORTS[1], VIEWPORTS[3]]) {
+    const { page, context } = await openCrossword(vp);
+    await page.evaluate((sample) => {
+      window.XIFullTime.panel(document.getElementById("ftPanel"),
+        Object.assign({}, sample, { league: { text: "3rd · Arsenal qualified for the Champions League.", open() {} } }));
+      document.getElementById("doneOverlay").classList.add("show");
+    }, FT_SAMPLE("crossword", "Crossword XI"));
+    await wait(400);                                  // the sheet's pop-in
+    await panelCheck(page, vp[0], "crossword");
+    await context.close();
+  }
 }
 
 /* ---- the family's top bar --------------------------------------------------

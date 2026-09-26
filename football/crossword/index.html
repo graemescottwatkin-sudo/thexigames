@@ -113,18 +113,18 @@
      width:var(--tap) was invalid, not because it was styled small. Order
      matters — style.css comes after and still wins wherever the crossword
      genuinely differs. -->
-<link rel="stylesheet" href="/shared/xi-tokens.css?v=v69">
-<link rel="stylesheet" href="/shared/xi-landing.css?v=v69">
-<link rel="stylesheet" href="/shared/xi-chrome.css?v=v69">
-<link rel="stylesheet" href="/shared/xi-keys.css?v=v69">
-<link rel="stylesheet" href="/shared/xi-board.css?v=v69">
-<link rel="stylesheet" href="/shared/xi-matchbar.css?v=v69">
-<link rel="stylesheet" href="/shared/xi-share.css?v=v69">
-<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v69">
+<link rel="stylesheet" href="/shared/xi-tokens.css?v=v70">
+<link rel="stylesheet" href="/shared/xi-landing.css?v=v70">
+<link rel="stylesheet" href="/shared/xi-chrome.css?v=v70">
+<link rel="stylesheet" href="/shared/xi-keys.css?v=v70">
+<link rel="stylesheet" href="/shared/xi-board.css?v=v70">
+<link rel="stylesheet" href="/shared/xi-matchbar.css?v=v70">
+<link rel="stylesheet" href="/shared/xi-share.css?v=v70">
+<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v70">
 <!-- The theme, stamped before first paint: light unless the player chose
      dark, decided in one shared place for every page of the family. -->
-<script src="/shared/xi-theme.js?v=v69"></script>
-<link rel="stylesheet" href="css/style.css?v=v004m">
+<script src="/shared/xi-theme.js?v=v70"></script>
+<link rel="stylesheet" href="css/style.css?v=v004n">
 </head>
 <body>
 <!-- The page's only H1, first thing in the body.
@@ -961,13 +961,12 @@
 
 <div class="overlay" id="doneOverlay">
   <div class="result">
-    <h3>Full Time</h3>
-    <div class="res-club" id="rClub">&mdash;</div>
-    <!-- One line, not two. The position line said "20TH — 15 PTS" and the line
-         under it said "15 / 114 pts": the same number twice, and the only thing
-         the second added was the ceiling. Folded in. -->
-    <div class="res-pos" id="rPos">&mdash;</div>
-    <p class="res-msg" id="rMsg"></p>
+    <!-- THE FAMILY'S FULL TIME (shared/xi-fulltime.js), the owner's approved
+         mockup of 26 Sep 2026: the result, keep it, share, challenge, then
+         the next game. Filled by paintFullTime(). What follows it is this
+         game's own and stays: the notes, how it was scored, the tables, the
+         challenge form the panel's button opens, and the way on. -->
+    <div id="ftPanel"></div>
     <p class="res-msg" id="rClockNote" style="display:none"></p>
     <!-- Where today's field put you, when this is the board of the day.
          Anonymous: a rank and a count, no names. A named table is a wider
@@ -1006,7 +1005,7 @@
          earlier: a target before play turns solving into arithmetic. -->
     <div id="challengeTable" class="challenge-table" hidden></div>
 
-    <div class="res-table-wrap">
+    <div class="res-table-wrap" id="resTableWrap" hidden>
       <table class="league"><tbody id="finalTableBody"></tbody></table>
     </div>
     <!-- Which number this is. The page used to compute its own score and show
@@ -1015,12 +1014,6 @@
          as unverified rather than passed off. -->
     <div class="verify-note" id="rVerified"></div>
 
-    <!-- Offered here, not on the landing screen. The landing screen is the
-         point of lowest willingness — nothing has happened yet, so "keep your
-         results" is a promise about results that do not exist. At Full Time the
-         score is on the page and the offer is about something real.
-
-         Hidden when signed in, and hidden when accounts are not configured. -->
     <!-- The daily, offered at the moment somebody has just finished something.
 
          Full Time offered Challenge, Share, New puzzle and View grid — all of
@@ -1038,47 +1031,22 @@
       <div class="rd-note" id="rdNote"></div>
     </div>
 
-    <div class="res-signin" id="resSignIn" style="display:none">
-      <p>This score is saved on this device only.</p>
-      <button class="btn secondary" id="resSignInBtn">Sign in to keep it</button>
-      <span class="res-signin-note">Your results follow you to any device you
-        sign in on. <a href="privacy.html">What we store</a>.</span>
-    </div>
-
-
     <!-- The loop. Creating a challenge from the result just earned, without
          replaying the board — which is what turns a single hop into a chain. -->
     <!-- Two fields, because they are two different things: who is sending it,
          and who it is going to. Signed in, the first is the account's and is not
          asked for. The group is optional — a challenge to one friend does not
          need a label. -->
-    <div class="ch-make">
+    <div class="ch-make" id="chMake" hidden>
       <input id="chFrom" type="text" maxlength="20" placeholder="Your name"
              autocomplete="nickname" aria-label="Your name">
       <input id="chGroup" type="text" maxlength="20" placeholder="Who to? e.g. five-a-side"
              aria-label="Who you are sending it to">
-      <button class="btn secondary" id="challengeBtn">Challenge</button>
+      <button class="btn secondary" id="challengeBtn">Make the challenge</button>
     </div>
     <div class="xic-panel-note" id="challengeOut"></div>
-    <!-- THE SHARE ROW IS THE FAMILY'S. Its buttons, the platforms and the
-         copy fallback were this game's alone while the other three had share
-         text and nowhere to send it; they are shared/xi-share.js now and every
-         game mounts the same row. The challenge form above keeps its own
-         button, so the shared row is asked for without one. -->
-    <div id="shareRow"></div>
-    <!-- THE NEXT GAME, filled by shared/xi-fulltime.js when Full Time opens.
-         Empty in the markup and empty if there is nothing to suggest: the
-         family has ten games and most players know about two, and this is the
-         one moment that fact is useful — the game they came for has ended. -->
-    <!-- NO data-game HERE, DELIBERATELY. xi-fulltime.js self-mounts any
-         #nextUpRow that carries one; this game calls nextUp() from the
-         function that paints Full Time, which knows exactly when the panel
-         opens and so refreshes on a REOPENED board too. Adding the
-         attribute would mount it twice. -->
-    <div id="nextUpRow"></div>
     <button class="btn primary" id="againBtn">New puzzle</button><br>
     <button class="view-grid" id="viewGridBtn">View the finished grid</button>
-    <div class="xic-community"></div>
   </div>
 </div>
 
@@ -1097,7 +1065,7 @@
 
 <footer>
   <button id="statsBtn">My Season</button> &middot; <span id="streakLine"></span><br>
-  Crossword <span class="xi">XI</span> by The <span class="xi">XI</span> Games &middot; unofficial word puzzle &middot; <span id="buildTag">v004m</span> &middot;
+  Crossword <span class="xi">XI</span> by The <span class="xi">XI</span> Games &middot; unofficial word puzzle &middot; <span id="buildTag">v004n</span> &middot;
   <a href="privacy.html">privacy</a> &middot;
   <button id="skipToggle">skip filled: off</button> &middot;
   <button id="bankToggle">letter bank: on</button> &middot;
@@ -1116,22 +1084,22 @@
      aligned_test only grepped for the class, which is true of an element
      sealed inside a hidden container. -->
 <footer class="xic-foot"></footer>
-<script src="/shared/xi-clubs.js?v=v69"></script>
-<script src="/shared/xi-chrome.js?v=v69"></script>
-<script src="/shared/xi-board.js?v=v69"></script>
-<script src="/shared/xi-matchbar.js?v=v69"></script>
-<script src="/shared/xi-season.js?v=v69"></script>
-<script src="/shared/xi-menu.js?v=v69"></script>
-<script src="/shared/xi-plays.js?v=v69"></script>
-<script src="/shared/xi-share.js?v=v69"></script>
+<script src="/shared/xi-clubs.js?v=v70"></script>
+<script src="/shared/xi-chrome.js?v=v70"></script>
+<script src="/shared/xi-board.js?v=v70"></script>
+<script src="/shared/xi-matchbar.js?v=v70"></script>
+<script src="/shared/xi-season.js?v=v70"></script>
+<script src="/shared/xi-menu.js?v=v70"></script>
+<script src="/shared/xi-plays.js?v=v70"></script>
+<script src="/shared/xi-share.js?v=v70"></script>
 <!-- xi-played.js first: xi-fulltime.js asks it what has been played today. -->
-<script src="/shared/xi-played.js?v=v69"></script>
-<script src="/shared/xi-fulltime.js?v=v69"></script>
-<script src="/shared/xi-keys.js?v=v69"></script>
-<script src="/shared/xi-seasons.js?v=v69"></script>
-<script src="/shared/xi-clubs.js?v=v69"></script>
-<script src="/shared/xi-table.js?v=v69"></script>
-<script src="js/engine.js?v=v004m"></script>
-<script src="js/game.js?v=v004m"></script>
+<script src="/shared/xi-played.js?v=v70"></script>
+<script src="/shared/xi-fulltime.js?v=v70"></script>
+<script src="/shared/xi-keys.js?v=v70"></script>
+<script src="/shared/xi-seasons.js?v=v70"></script>
+<script src="/shared/xi-clubs.js?v=v70"></script>
+<script src="/shared/xi-table.js?v=v70"></script>
+<script src="js/engine.js?v=v004n"></script>
+<script src="js/game.js?v=v004n"></script>
 </body>
 </html>

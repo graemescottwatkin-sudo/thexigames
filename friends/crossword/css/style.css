@@ -1099,27 +1099,6 @@ button.cl-src{background:none;border:0;padding:0;font-family:inherit;cursor:poin
 }
 @keyframes pop{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
 @media (prefers-reduced-motion:reduce){.result{animation:none}}
-.result h2{
-  font-family:var(--disp);font-weight:700;font-size:26px;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--ink-soft);
-}
-.res-pos{
-  font-family:var(--disp);font-weight:700;font-size:64px;line-height:1;
-  color:var(--pitch-ink);margin:6px 0 0;
-}
-.res-pos-label{
-  font-family:var(--disp);font-weight:600;font-size:13px;letter-spacing:.22em;
-  text-transform:uppercase;color:var(--ink-soft);margin-bottom:12px;
-}
-.res-score{
-  font-family:var(--disp);font-weight:700;font-size:30px;color:var(--pitch);
-  margin-bottom:16px;font-variant-numeric:tabular-nums;
-}
-.res-score small{font-size:17px;font-weight:600;color:var(--ink-soft)}
-.res-club{
-  font-family:var(--disp);font-weight:600;font-size:17px;letter-spacing:.14em;
-  text-transform:uppercase;color:var(--pitch);margin-top:2px;
-}
 .res-msg{font-size:14.5px;color:var(--ink);margin:0 0 14px;font-weight:500}
 .res-final{
   display:flex;justify-content:space-between;padding:7px 6px 0;font-size:14px;
@@ -1145,6 +1124,10 @@ button.cl-src{background:none;border:0;padding:0;font-family:inherit;cursor:poin
    one that matters rather than the top five of the league. */
 .res-table-wrap table.league td{padding:4px 6px}
 .res-table-wrap table.league{font-size:12.5px}
+/* Hidden until asked for: the table behind "See the table" and the
+   challenge form behind the panel's "Challenge friends". Both carry
+   display rules of their own, which beat the attribute's. */
+.res-table-wrap[hidden],.ch-make[hidden]{display:none}
 .view-grid{
   background:none;border:0;color:var(--ink-soft);text-decoration:underline;
   font-size:12.5px;margin-top:10px;
@@ -2509,15 +2492,6 @@ body.flex-layout .tb-help{display:none}
   background:var(--pitch);margin-right:7px;vertical-align:middle;
 }
 @media (max-width:520px){ .tbar-who{max-width:96px} }
-.res-signin{
-  margin:14px 0 4px;padding:12px;border:1px solid var(--line);border-radius:var(--r-md);
-  background:var(--paper);text-align:center;
-}
-.res-signin p{margin:0 0 8px;font-size:14px;color:var(--ink-soft)}
-.res-signin-note{
-  display:block;margin-top:8px;font-size:12px;color:var(--ink-faint);
-}
-.res-signin-note a{color:var(--ink-faint)}
 
 
 /* The running score, beside the clock. Only in the flex layout: the classic one

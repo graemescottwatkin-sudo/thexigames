@@ -34,7 +34,8 @@ for (const g of GAMES) {
   if (/XIFullTime\.panel\(/.test(js)) {
     t(`${g} is on the family's Full Time panel, which shares for it`,
       /id="ftPanel"/.test(html) && /shared\/xi-fulltime\.js/.test(html) && /shared\/xi-fulltime\.css/.test(html));
-    t(`${g} hands the panel a function for its own text, not a string`, /share:\s*function/.test(js));
+    t(`${g} hands the panel a function for its own text, not a string`, /share:\s*(function\b|shareText\b)/.test(js),
+      "the crossword hands over its own shareText, a function by name");
     t(`${g} keeps no platform buttons of its own`,
       !/wa\.me|twitter\.com\/intent|reddit\.com\/submit/.test(js), "the URLs live in shared/xi-share.js");
     continue;
@@ -156,9 +157,13 @@ console.log("\nThe challenge control");
     !dom3.window.document.querySelector(".xis-challenge") &&
     !!dom3.window.document.querySelector(".xis-share") &&
     dom3.window.document.querySelectorAll(".xis-target").length === 3);
-  t("and the crossword is the game that asks for that",
-    /challenge:\s*false/.test(read("football/crossword/js/game.js")),
-    "its results card already carries a challenge form");
+  /* THE CROSSWORD USED TO BE THE GAME THAT ASKED FOR THAT. It is on the
+     family's Full Time now, whose Challenge button opens its form -- one
+     button, and the form behind it, rather than two side by side. */
+  t("and the crossword's form is reached through the panel's one button",
+    /challenge:\s*challengeFromPanel/.test(read("football/crossword/js/game.js")) &&
+      !/XIShare\.mount\(/.test(read("football/crossword/js/game.js")),
+    "its results card carries a challenge form");
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

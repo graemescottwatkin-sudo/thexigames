@@ -203,6 +203,58 @@ console.log("A full, right grid, resumed with no signal");
   t("which the server answered complete", f[0] && /"complete":true/.test(f[0].answer || ""), f[0] && f[0].answer);
   await wait(6000);                                 // an absence: this one stays fixed
   t("and no second /finish afterwards", finishes().length === 1, `${finishes().length} sent`);
+
+  /* THE FAMILY'S FULL TIME, drawn by the real shared/xi-fulltime.js from the
+     real page -- RUN, not read. One box per clue, each green with the minute
+     it was judged right; the league behind "See the table"; and Share sends
+     text that gives nothing away, with the game's address under it. */
+  const ft = d.getElementById("ftPanel");
+  const boxes = ft ? [...ft.querySelectorAll(".xft-boxes .xft-b")] : [];
+  t("Full Time is the family's panel, one box per clue",
+    !!ft && !!ft.querySelector(".xft-card") && puzzle.entries.length > 0 &&
+      boxes.length === puzzle.entries.length,
+    `${boxes.length} boxes for ${puzzle.entries.length} clues`);
+  t("each one right, with the minute it was judged",
+    boxes.length > 0 && boxes.every((b) => b.classList.contains("g") && /^\d+'$/.test(b.textContent)),
+    boxes.map((b) => b.className.replace("xft-b ", "") + ":" + b.textContent).join(" "));
+  const score = ft && ft.querySelector(".xft-score b");
+  /* This harness has no database, so the server answers "not verified" and
+     the page shows its own figure, saying so. The property is one score,
+     wherever it appears: the panel and "How that was scored" agree. */
+  const final = d.getElementById("rFinal");
+  const kept = final ? Number((final.textContent.match(/^(\d+)/) || [])[1]) : NaN;
+  t("the score on it is the one How that was scored adds up to",
+    !!score && Number.isFinite(kept) && Number(score.textContent) === kept,
+    `${score && score.textContent} on the panel, ${final && final.textContent} below`);
+  const wrap = d.getElementById("resTableWrap");
+  const see = ft && ft.querySelector(".xft-league .xft-link");
+  t("the league waits behind See the table, naming the club",
+    !!wrap && wrap.hidden && !!see && /Manchester City/.test(ft.querySelector(".xft-league").textContent));
+  if (see) see.dispatchEvent(new dom.window.Event("click", { bubbles: true }));
+  t("and opens when asked", !!wrap && !wrap.hidden && !!d.querySelector("#finalTableBody tr.you"));
+  const sent = [];
+  Object.defineProperty(dom.window.navigator, "share", { configurable: true,
+    value: (o) => { sent.push(o && o.text); return Promise.resolve(); } });
+  const share = ft && ft.querySelector(".xft-act .xft-primary");
+  if (share) share.dispatchEvent(new dom.window.Event("click", { bubbles: true }));
+  const text = sent[0] || "";
+  const answers = puzzle.entries.map((e) => e.cells.map((c) => SOLUTION[c.x + "," + c.y]).join(""))
+    .filter((w) => w.length > 3);
+  t("Share sends the result and the game's address, and no answer",
+    /* The game's address is wherever the page was served from: the
+       harness serves it at its root, production at /football/crossword. */
+    sent.length === 1 && /^Crossword XI/.test(text) && text.trim().endsWith("\n" + origin) &&
+      answers.length > 0 && !answers.some((w) => text.toUpperCase().includes(w)),
+    text.replace(/\n/g, " / "));
+  /* A daily is everybody's board: its Challenge sends the board and the
+     score to beat rather than opening the form, which the server would
+     refuse for a daily. */
+  sent.length = 0;
+  const ch = ft && ft.querySelector(".xft-act .xft-secondary");
+  if (ch) ch.dispatchEvent(new dom.window.Event("click", { bubbles: true }));
+  t("a daily's Challenge sends the score to beat, not the form",
+    sent.length === 1 && /Can you beat \d+\/\d+\?/.test(sent[0]) && d.getElementById("chMake").hidden,
+    (sent[0] || "").replace(/\n/g, " / "));
   dom.window.close();
 }
 
