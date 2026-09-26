@@ -20,7 +20,7 @@
  * and a roster is a candidate list for the door.
  */
 var DECK_WORD = { main: 'Everyday', expert: 'Deep cut' };
-var BUILD = "v001i";
+var BUILD = "v001j";
 
 (function bootstrap() {
   'use strict';
@@ -216,7 +216,7 @@ function renderClock() {
    'commit', 'commitPick', 'playChoice', 'clues', 'ladder',
    'stripFill', 'clockValue', 'worthNow', 'giveUp',
    'guessInput', 'guessGo', 'suggest', 'feedback', 'tries',
-   'doneKicker', 'doneBody', 'shareText', 'copyShare', 'backToDoors']
+   'ftPanel', 'backToDoors']
     .forEach(function (id) { el[id] = document.getElementById(id); });
 
   /* ------------------------------------------------------------ helpers */
@@ -713,57 +713,40 @@ function renderTries() {
       });
   }
 
+  /* FULL TIME, THE FAMILY'S WAY (shared/xi-fulltime.js). One door a day,
+     not eleven answers, so the panel shows the door and the clue ladder it
+     took in place of boxes -- and, now the door has closed, who it was. */
 function showDone(r) {
     var solved = r ? r.solved : state.solved;
     var total = LADDER.length || 3;
     var used = r && r.subsUsed != null ? r.subsUsed + 1 : Math.min(state.stage || 1, total);
-    var row = function (k, v) {
-      return '<div class="row"><span class="rowLabel">' + k + '</span><span>' + v + '</span></div>';
-    };
-    el.doneKicker.textContent = solved ? 'Got them' : 'That\u2019s a wrap';
-    var html = '<div class="verdict">' + (solved ? 'Solved' : 'Not this time') + '</div>';
-    if (r && r.answer) {
-      html += '<div class="bigname">' + esc(r.answer) + '</div>';
-      if (r.section) html += '<div class="fw-door">Behind the <b>' + esc(r.section) + '</b> door</div>';
-    }
-    html += '<div class="fw-pips" aria-label="' + used + ' of ' + total + ' clues used">';
-    for (var i = 1; i <= total; i++) {
-      html += '<span class="fw-pip' + (i <= used ? ' on' : '') +
-        (solved && i === used ? ' won' : '') + '"></span>';
-    }
-    html += '</div><div class="rows">';
-    if (r && typeof r.score === 'number') html += row('Score', r.score + ' of ' + (MAX_SCORE || 10));
-    html += row('Clues used', used + ' of ' + total);
-    html += row('Names tried', r ? r.guesses : state.guesses.length);
-    if (r && r.nearMisses) html += row('Named someone else', r.nearMisses);
-    html += '</div>';
-    el.doneBody.innerHTML = html;
-    el.shareText.value = shareTextFor(r, solved);
-    var shareRow = document.getElementById("shareRow");
-    if (window.XIShare && shareRow) {
-      window.XIShare.mount(shareRow, {
-        text: function () { return el.shareText.value; },
-        url: function () { return location.href; },
+    var max = MAX_SCORE || 10, score = r && typeof r.score === 'number' ? r.score : 0;
+    if (window.XIFullTime && XIFullTime.panel) {
+      XIFullTime.panel(el.ftPanel, {
+        game: 'whoami_fr', name: 'Who Am I XI: Friends', no: BOARD.no, date: XIFullTime.dayLabel(BOARD.day),
+        /* "That's a wrap" rather than "Full time": the deck is a television
+           show, and full time is a football whistle in a game with no clock. */
+        kicker: 'That’s a wrap',
+        score: score, max: max,
+        door: { label: r && r.section ? 'Behind the ' + r.section + ' door' : '', rungs: total, paid: used,
+                answer: r && r.answer ? r.answer : null },
+        stats: (solved ? 'Solved' : 'Not this time') + ' · ' + used + ' of ' + total + ' clues · ' +
+          (function (n) { return n + (n === 1 ? ' name tried' : ' names tried'); })(r ? r.guesses : state.guesses.length) +
+          (r && r.nearMisses ? ' · named someone else ' + r.nearMisses : ''),
+        /* THE SHARE NAMES NOBODY. The other doors are still live for everybody
+           else today: it says how it went in squares, not who it was. */
+        share: function () {
+          var bar = '';
+          for (var i = 1; i <= total; i++) {
+            bar += i > used ? '⬜' : (solved && i === used ? '🟩' : '🟨');
+          }
+          return 'Who Am I XI: Friends · No. ' + BOARD.no + ' · ' + score + '/' + max + '\n' + bar +
+            (solved ? '  got them' : '  no luck');
+        },
+        url: function () { return location.href.split('#')[0]; },
       });
     }
     show('screenDone');
-  }
-
-function shareTextFor(r, solved) {
-    var total = LADDER.length || 3;
-    var used = r && r.subsUsed != null ? r.subsUsed + 1 : Math.min(state.stage || 1, total);
-    var bar = '';
-    for (var i = 1; i <= total; i++) {
-      bar += i > used ? '\u2B1C' : (solved && i === used ? '\uD83D\uDFE9' : '\uD83D\uDFE8');
-    }
-    return [
-      'WHO AM I XI: FRIENDS',
-      'No. ' + BOARD.no + ' \u2014 ' + formatDate(BOARD.day),
-      '',
-      bar + (solved ? '  got them' : '  no luck'),
-      (r && typeof r.score === 'number' ? r.score + '/' + (MAX_SCORE || 10) : ''),
-      'Names tried: ' + (r ? r.guesses : state.guesses.length)
-    ].join('\n');
   }
 
   /* ---- the durable record and the account ------------------------------ */
@@ -1003,19 +986,6 @@ function shareTextFor(r, solved) {
       .catch(function (e) { busy = false; el.giveUp.disabled = false; trouble(e); });
   });
 
-  el.copyShare.addEventListener('click', function () {
-    var ok = false;
-    if (navigator.clipboard) { navigator.clipboard.writeText(el.shareText.value).catch(function () {}); ok = true; }
-    else {
-      var t = document.createElement('textarea');
-      t.value = el.shareText.value; t.style.position = 'fixed'; t.style.opacity = '0';
-      document.body.appendChild(t); t.select();
-      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
-      document.body.removeChild(t);
-    }
-    el.copyShare.textContent = ok ? 'Copied' : 'Copy failed';
-    setTimeout(function () { el.copyShare.textContent = 'Copy result'; }, 1600);
-  });
 
   var saved = load();
   if (saved) {

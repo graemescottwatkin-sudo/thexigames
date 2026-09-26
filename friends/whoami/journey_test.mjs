@@ -36,6 +36,8 @@ const DIR = path.dirname(fileURLToPath(import.meta.url));
 const html = fs.readFileSync(path.join(DIR, "index.html"), "utf8");
 const game = fs.readFileSync(path.join(DIR, "js", "game.js"), "utf8");
 const config = fs.readFileSync(path.join(DIR, "js", "config.js"), "utf8");
+/* THE FAMILY'S FULL TIME, the real file (shared/xi-fulltime.js). */
+const fulltime = fs.readFileSync(path.join(DIR, "..", "..", "shared", "xi-fulltime.js"), "utf8");
 
 let pass = 0, fail = 0;
 const t = (n, ok, d) => {
@@ -240,7 +242,12 @@ async function open(opts = {}) {
     return { ok: res.ok, status: res.status, json: async () => JSON.parse(body) };
   };
   w.XIPlays = { start() {}, end() {}, active: () => true };
+  /* A share sheet that records what it was handed. */
+  w.__shared = [];
+  Object.defineProperty(w.navigator, "share", { configurable: true,
+    value: (o) => { w.__shared.push(o && o.text); return Promise.resolve(); } });
 
+  w.eval(fulltime);
   w.eval(config);
   w.eval(game);
   const settle = async () => { for (let i = 0; i < 6; i++) await new Promise((r) => setTimeout(r, 0)); };
@@ -379,16 +386,20 @@ console.log("\n=== Solving it ===");
 {
   await guess(p, "Rachel Green");
   await p.settle();
-  const done = p.text(p.$("doneBody"));
+  /* On the family's Full Time panel (shared/xi-fulltime.js). */
+  const done = p.text(p.$("ftPanel"));
   t("the end card is shown", !p.$("screenDone").hidden);
-  t("it names the card", /Rachel Green/.test(done), done);
+  t("it names the card", /It was Rachel Green/.test(done), done);
   t("and the door it was behind", /Behind the Loves & Exes door/.test(done));
-  t("scored out of ten", /Score\s*6 of 10/.test(done), done);
-  t("two of three clues used", /Clues used\s*2 of 3/.test(done));
-  t("the near miss is counted under this deck's word", /Named someone else\s*1/.test(done), done);
-  const share = p.$("shareText").value;
-  t("the share text names nobody", !/Rachel|Green|Loves/.test(share), share.replace(/\n/g, " / "));
-  t("and says which game it is", /^WHO AM I XI: FRIENDS/.test(share));
+  t("scored out of ten", /6\s*\/\s*10/.test(done), done);
+  t("two of three clues used", /2 of 3 clues/.test(done));
+  t("the near miss is counted under this deck's word", /named someone else 1/.test(done), done);
+  t("in this deck's words, not football's", /That\u2019s a wrap/.test(done) && !/Full time/i.test(done), done.slice(0, 60));
+  const btn = p.$("ftPanel").querySelector(".xft-act .xft-primary");
+  if (btn) await p.click(btn);
+  const share = (p.w || {}).__shared ? p.w.__shared[0] || "" : "";
+  t("the share text names nobody", !!share && !/Rachel|Green|Loves/.test(share), share.replace(/\n/g, " / "));
+  t("and says which game it is", /^Who Am I XI: Friends/.test(share), share.split("\n")[0]);
 }
 
 console.log("\n=== Nothing on screen says undefined, or football ===");

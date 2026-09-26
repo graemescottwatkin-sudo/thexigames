@@ -269,8 +269,8 @@ console.log("\nA whistle blown with no signal");
   const fin = log.filter((e) => e.what === "finish" && e.reached);
   t("the connection returning brings Full Time", ft.classList.contains("on"), ft.className);
   t("with the server's verdict, not one worked out on the page",
-    d.getElementById("ftScore").textContent === "97" && fin.length === 1,
-    `score ${d.getElementById("ftScore").textContent}, ${fin.length} finish reached`);
+    (d.querySelector("#ftPanel .xft-score b") || {}).textContent === "97" && fin.length === 1,
+    `score ${(d.querySelector("#ftPanel .xft-score b") || {}).textContent}, ${fin.length} finish reached`);
   await wait(6000);                                 // an absence: this one stays fixed
   t("and the whistle is asked for once, not again after it answered",
     log.filter((e) => e.what === "finish" && e.reached).length === 1);

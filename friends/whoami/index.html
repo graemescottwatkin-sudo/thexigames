@@ -30,14 +30,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/shared/xi-tokens.css?v=v68">
-<link rel="stylesheet" href="/shared/xi-landing.css?v=v68">
-<link rel="stylesheet" href="/shared/xi-chrome.css?v=v68">
-<link rel="stylesheet" href="/shared/xi-matchbar.css?v=v68">
-<link rel="stylesheet" href="/shared/xi-share.css?v=v68">
-<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v68">
-<script src="/shared/xi-theme.js?v=v68"></script>
-<link rel="stylesheet" href="css/style.css?v=v001i">
+<link rel="stylesheet" href="/shared/xi-tokens.css?v=v69">
+<link rel="stylesheet" href="/shared/xi-landing.css?v=v69">
+<link rel="stylesheet" href="/shared/xi-chrome.css?v=v69">
+<link rel="stylesheet" href="/shared/xi-matchbar.css?v=v69">
+<link rel="stylesheet" href="/shared/xi-share.css?v=v69">
+<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v69">
+<script src="/shared/xi-theme.js?v=v69"></script>
+<link rel="stylesheet" href="css/style.css?v=v001j">
 </head>
 <body>
 
@@ -285,17 +285,11 @@
 
   <!-- ---- what it came to ---- -->
   <section class="screen" id="screenDone" hidden>
-    <div class="eyebrow" id="doneKicker">That&rsquo;s a wrap</div>
-    <div id="doneBody"></div>
-    <div class="share">
-      <textarea id="shareText" rows="7" readonly aria-label="Shareable result"></textarea>
-      <button class="btn" id="copyShare">Copy result</button>
-      <div id="shareRow"></div>
-    <!-- Filled by shared/xi-fulltime.js: the next game in this theme that
-     has not been played today. Empty when there is nothing to suggest. -->
-    <div id="nextUpRow" data-game="whoami"></div>
-    </div>
-    <div class="xic-community"></div>
+    <!-- THE FAMILY'S FULL TIME (shared/xi-fulltime.js, XIFullTime.panel): the
+         result -- your door, the clues it took, and who it was -- then keep it,
+         share, challenge and the next game; the owner's approved mockup of
+         26 Sep 2026. -->
+    <div id="ftPanel"></div>
     <button class="btn quiet" id="backToDoors">Back to the board</button>
   </section>
 
@@ -304,14 +298,14 @@
 
 <footer class="xic-foot"></footer>
 
-<script src="/shared/xi-chrome.js?v=v68"></script>
-<script src="/shared/xi-matchbar.js?v=v68"></script>
-<script src="/shared/xi-share.js?v=v68"></script>
+<script src="/shared/xi-chrome.js?v=v69"></script>
+<script src="/shared/xi-matchbar.js?v=v69"></script>
+<script src="/shared/xi-share.js?v=v69"></script>
 <!-- xi-played.js first: xi-fulltime.js asks it what has been played today. -->
-<script src="/shared/xi-played.js?v=v68"></script>
-<script src="/shared/xi-fulltime.js?v=v68"></script>
-<script src="js/config.js?v=v001i"></script>
-<script src="/shared/xi-plays.js?v=v68"></script>
-<script src="js/game.js?v=v001i"></script>
+<script src="/shared/xi-played.js?v=v69"></script>
+<script src="/shared/xi-fulltime.js?v=v69"></script>
+<script src="js/config.js?v=v001j"></script>
+<script src="/shared/xi-plays.js?v=v69"></script>
+<script src="js/game.js?v=v001j"></script>
 </body>
 </html>

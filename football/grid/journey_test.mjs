@@ -405,8 +405,15 @@ server.listen(0, "127.0.0.1", async () => {
       `turns ${G.state().turns}`);
     t("full time is shown", d.getElementById("gdFullTime").hidden === false);
     t("with a score out of 114",
-      /\/114/.test(d.getElementById("gdFullTime").textContent),
-      d.querySelector("#gdFullTime .score") && d.querySelector("#gdFullTime .score").textContent);
+      /\/ ?114/.test((d.querySelector("#gdFullTime .xft-score") || {}).textContent || ""),
+      (d.querySelector("#gdFullTime .xft-score") || {}).textContent);
+    /* THE FAMILY'S FULL TIME (shared/xi-fulltime.js), the four blocks in the
+       approved order, with a box for every entry. */
+    const ftp = d.querySelector("#gdFullTime #ftPanel");
+    t("Full Time is the family's panel, its blocks in order",
+      !!ftp && [...ftp.children].map((e) => e.className.split(" ")[0]).join(",") === "xft-card,xft-keep,xft-act,xft-next",
+      ftp ? [...ftp.children].map((e) => e.className).join(" | ") : "no #ftPanel");
+    t("a box for every entry", !!ftp && ftp.querySelectorAll(".xft-boxes .xft-b").length === RULES.ENTRIES);
     /* AND ONLY NOW DO THE ANSWERS ARRIVE. Not before — the server sends them
        when the round it has been counting says the board is finished. */
     /* ---- the share row, and the community line, on the finished card ----
@@ -428,28 +435,30 @@ server.listen(0, "127.0.0.1", async () => {
        way — disabling the mount left this green. What mount() actually does is
        add .xis to the target and put a Share button inside it, so that is what
        is asked for. Caught by sabotage. */
-    const shareRow = d.querySelector("#gdFullTime #shareRow");
-    t("the finished card carries the family's share row",
-      !!shareRow && shareRow.classList.contains("xis") &&
-      !!shareRow.querySelector("button"),
-      shareRow ? "row is " + (shareRow.className || "(unfilled)")
-               : "a player with nothing to send it with is the fault this closes");
+    /* THE SHARE, FILLED NOT MERELY PRESENT: the panel's own Share button,
+       pressed, through a share sheet that records what it was handed. */
+    const sent = [];
+    Object.defineProperty(w.navigator, "share", { configurable: true,
+      value: (o) => { sent.push(o && o.text); return Promise.resolve(); } });
+    const shareBtn = d.querySelector("#gdFullTime .xft-act .xft-primary");
+    if (shareBtn) shareBtn.click();
+    t("the finished card can be shared", !!shareBtn && sent.length === 1 && /\/114/.test(sent[0] || ""),
+      JSON.stringify(sent));
     t("and the community line, pointing at the subreddit",
       !!d.querySelector("#gdFullTime .xic-community"),
-      "placed by the game, filled by the chrome");
+      "placed by the panel, filled by the chrome");
     /* AND THE SHARE TEXT NAMES THE BOARD AND THE SCORE, WITHOUT NAMING AN
        ANSWER. A share is read by people who have not played it yet. */
     t("the share text is the score, never an answer", (() => {
-      const row = d.querySelector("#gdFullTime #shareRow");
-      if (!row) return false;
-      const txt = row.textContent || "";
+      const txt = sent[0] || "";
+      if (!txt) return false;
       const answers = (BOARD.entries || []).map((e) => e.answer).filter(Boolean);
       return !answers.some((ans) => txt.indexOf(ans) >= 0);
-    })(), "eleven answers checked against the row");
+    })(), "eleven answers checked against the text sent");
     t("the answers arrive at full time, from the server", !!G.state().answers);
     t("and the grid fills in", letters().length > 0);
     t("the score the page shows is the one the server computed",
-      d.querySelector("#gdFullTime .score").textContent.indexOf(String(G.state().score.total)) === 0,
+      (d.querySelector("#gdFullTime .xft-score b") || {}).textContent === String(G.state().score.total),
       JSON.stringify(G.state().score));
   }
 
@@ -493,11 +502,9 @@ server.listen(0, "127.0.0.1", async () => {
        it — the one thing a finished board is most wanted for. Asked of the
        FILLED row, not the container: mount() adds .xis and a button, and the
        empty div is written by the same string either way. */
-    const shareRow2 = d2.querySelector("#gdFullTime #shareRow");
-    t("and the restored card can be shared",
-      !!shareRow2 && shareRow2.classList.contains("xis") &&
-      !!shareRow2.querySelector("button"),
-      shareRow2 ? "row is " + (shareRow2.className || "(unfilled)") : "no share row");
+    const share2 = d2.querySelector("#gdFullTime .xft-act .xft-primary");
+    t("and the restored card can be shared", !!share2,
+      share2 ? "" : "no Share button on the restored card");
     t("with the grid still playable underneath",
       d2.querySelectorAll("#gdBoard .gd-cell.on").length > 0,
       d2.querySelectorAll("#gdBoard .gd-cell.on").length + " cells");

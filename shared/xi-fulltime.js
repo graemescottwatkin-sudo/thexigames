@@ -230,7 +230,9 @@
     /* 1. THE RESULT */
     var card = el("div", "xft-card");
     var head = el("div", "xft-head");
-    head.appendChild(el("span", "xft-kick", "Full time"));
+    /* "Full time", or a theme's own word for the end (the Friends deck says
+       "That's a wrap": it is a television show with no whistle). */
+    head.appendChild(el("span", "xft-kick", esc(d.kicker || "Full time")));
     if (d.date) head.appendChild(el("span", "xft-date", esc(d.date)));
     card.appendChild(head);
     card.appendChild(el("h2", "xft-name", esc(d.name) + (d.no != null ? " · No. " + esc(d.no) : "")));
@@ -254,6 +256,10 @@
       }
       rungs.setAttribute("aria-label", (Number(d.door.paid) || 0) + " of " + (Number(d.door.rungs) || 0) + " clues used");
       door.appendChild(rungs);
+      /* WHO IT WAS, once the door has closed -- solved or given up. The
+         server sends it only then, and the share never carries it. */
+      if (d.door.answer) door.appendChild(el("p", "xft-door-a", "It was <b>" + esc(d.door.answer) + "</b>"));
+      if (d.door.career) door.appendChild(el("p", "xft-door-c", esc(d.door.career)));
       card.appendChild(door);
     } else if (d.boxes && d.boxes.length) {
       var ol = el("ol", "xft-boxes");
@@ -270,6 +276,13 @@
     }
     if (d.gaveUp) card.appendChild(el("p", "xft-gaveup", esc(d.gaveUp)));
     else if (d.stats) card.appendChild(el("p", "xft-stats", esc(d.stats)));
+    /* ONE LINK OUT, where a game has something to read after the whistle
+       (Who Am I's "Read about him"). */
+    if (d.link && d.link.href) {
+      var ln = el("a", "xft-more", esc(d.link.text || "Read more"));
+      ln.href = d.link.href; ln.target = "_blank"; ln.rel = "noopener";
+      card.appendChild(ln);
+    }
     /* YOUR ANSWERS, folded away: what was picked and, for a miss, what it
        was -- a game that tells a player "no" owes them the answer. Folded so
        the four blocks stay the four blocks. */

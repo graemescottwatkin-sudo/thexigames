@@ -183,15 +183,10 @@ h1,h2,h3{font-family:var(--disp);letter-spacing:.01em;margin:0}
 .action.quiet{border-color:transparent;color:var(--ink-soft)}
 .overlay{position:fixed;inset:0;background:color-mix(in srgb,var(--paper) 80%,transparent);backdrop-filter:blur(8px);z-index:100;display:grid;place-items:center;padding:18px;opacity:0;pointer-events:none;transition:opacity .18s}
 .overlay.show{opacity:1;pointer-events:auto}
-.modal{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:24px;max-width:380px;width:100%;text-align:center;display:grid;gap:9px}
-.modal h2{text-transform:uppercase;font-size:24px}
-.big{font-family:var(--disp);font-weight:700;font-size:56px;line-height:1;color:var(--pitch)}
-.resultEquation{font-size:13px;color:var(--ink-soft)}
-.resultMissed{font-size:12px;color:var(--ink-soft);background:var(--tint);border-radius:8px;padding:8px}
-.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
-.stat{background:var(--tint);border-radius:9px;padding:8px 4px}
-.stat b{font-family:var(--disp);font-size:18px;display:block}
-.stat span{font-size:10px;color:var(--ink-soft);text-transform:uppercase;letter-spacing:.05em}
+/* FULL TIME is the family's panel (shared/xi-fulltime.css); the overlay only
+   holds it, as a column that scrolls in itself when the screen is short. */
+.modal{max-width:560px;width:100%;max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:6px;align-items:stretch}
+.modal>.action.quiet{align-self:center}
 .penaltyPop{position:fixed;left:50%;top:26%;transform:translateX(-50%);background:var(--danger);color:#fff;font-family:var(--disp);font-weight:700;border-radius:999px;padding:7px 16px;opacity:0;pointer-events:none;z-index:90}
 .penaltyPop.show{animation:pop .9s ease}
 @keyframes pop{10%{opacity:1}80%{opacity:1}100%{opacity:0}}
@@ -229,8 +224,6 @@ h1,h2,h3{font-family:var(--disp);letter-spacing:.01em;margin:0}
 
 /* Whether the score is the server's. A footnote to the number, not part of it,
    and it takes no room when there is nothing to say. */
-.resultVerified{font-size:12px;color:var(--ink-faint,#8a968d);margin:2px 0 0}
-.resultVerified:empty{display:none}
 
 /* ---- THE LOCKED SCREEN ----------------------------------------------------
    The owner's ruling, 24 Sep 2026: while playing, the page is the screen and

@@ -15,7 +15,7 @@
      the family more time than any layout question: the footer line, the
      console, and the named window variable. If this is not the build just
      deployed, the deploy has not landed — do not start debugging the game. */
-  var BUILD = "v003a";
+  var BUILD = "v003b";
   window.WORDSEARCHXI_BUILD = BUILD;
   try { console.log("Wordsearch XI build " + BUILD); } catch (e) {}
 
@@ -63,6 +63,11 @@
      works out when day one was. */
   var serverNo = null;
   var found = new Set(), bonusFound = false;
+  /* The match minute each name was found, for its box at Full Time. */
+  var foundAt = {};
+  /* The number of the board open, where it has one (the daily, or an old
+     board from the archive), for Full Time's name line. */
+  var openNo = null;
   /* WHERE EACH FOUND WORD SITS, learned one word at a time.
      The daily's board no longer travels with its placements — the server
      judges a selection and hands back the placement of whatever it hit, which
@@ -255,6 +260,7 @@
       match_score: liveScore(), minute: footballMinute(),
       elapsed_seconds: elapsed, penalty_minutes: penaltyMinutes,
       found_count: found.size, found: Array.from(found), bonus_found: bonusFound,
+      found_at: foundAt,
       saved_at: Date.now(),
       completed_at: status === "complete" ? new Date().toISOString() : null,
     };
@@ -747,7 +753,7 @@
       drawHighlight(item, true);
       toast("★ Secret found · +10 at full time");
     } else {
-      found.add(item.grid);
+      found.add(item.grid); foundAt[item.grid] = footballMinute();
       drawHighlight(item, false);
       toast("Found · " + String(item.display).toUpperCase());
     }
@@ -824,7 +830,7 @@
     if (hit) {
       wrongRun = 0; clearTimeout(wrongResetTimer);
       if (hit.type === "answer") {
-        found.add(hit.item.grid); drawHighlight(hit.item, false);
+        found.add(hit.item.grid); foundAt[hit.item.grid] = footballMinute(); drawHighlight(hit.item, false);
         toast("Found · " + hit.item.display.toUpperCase());
       } else {
         bonusFound = true; drawHighlight(hit.item, true);
@@ -914,6 +920,8 @@
       var rem = remaining(); if (!rem.length) return;
       var t = rem[Math.floor(Math.random() * rem.length)];
       found.add(t.grid); drawHighlight(t, false);
+      /* Filled by help, not found: its box is amber. */
+      foundAt[t.grid] = "help";
       toast("Auto-fill · " + t.display.toUpperCase()); updateUI();
     },
     first: function () {
@@ -1016,18 +1024,13 @@
         if (!v) return;
         /* The secret, if the round is over. Redraw whichever lines name it. */
         if (v.secret && !secretWord) { secretWord = v.secret; updateUI(); }
-        if (!v.verified) return;
-        $("resultScore").textContent = v.score;
-        $("resultEquation").textContent = v.bonusFound
-          ? v.base + " base + " + v.bonus + " bonus = " + v.score
-          : v.score + " pts · bonus missed";
-        var note = $("resultVerified");
-        if (note) {
-          note.textContent = v.score === localScore
-            ? "Verified by the server."
-            : "Verified by the server — " + v.score + " rather than " + localScore +
-              ", timed from when the board was opened.";
-        }
+        if (!v.verified || !ftShown) return;
+        /* THE SERVER'S NUMBER WINS: it judged every selection and timed the
+           board from a clock it started. */
+        var o = {};
+        for (var k in ftShown) o[k] = ftShown[k];
+        o.score = v.score; o.verified = true;
+        drawFullTime(o);
       })
       .catch(function () { /* the card keeps its own number */ });
   }
@@ -1041,76 +1044,76 @@
     playsEnd(found.size >= 11);
     dragging = false; setPreview([]);
     $("finishPrompt").classList.remove("show");
-    var m = footballMinute(), matchScore = liveScore(), sc = finalScore();
-    $("resultScore").textContent = sc;
-    /* AND THE SERVER'S OWN NUMBER, ASKED FOR AFTER THE CARD IS DRAWN. It
-       judged every selection, timed the board from a clock it started, and
-       kept every foul in order — so it can work the score out without being
-       told any of it, and it writes plays.srv_score, which is what a challenge
-       table reads. The card keeps the device's number until the answer comes
-       back, and keeps it for good on a round nothing could verify.
-       The same request is what reveals a missed secret: the server decides the
-       round is over from its own rows, and only then says the word. */
-    askServerScore(reason, sc);
-    $("resultEquation").textContent = bonusFound
-      ? matchScore + " base + 10 bonus = " + sc
-      : sc + " pts · bonus missed";
-    $("resultClock").textContent = m + "'";
-    $("resultFound").textContent = found.size + "/11";
-    $("resultBonus").textContent = bonusFound ? "FOUND +10" : "MISSED";
+    var m = footballMinute(), sc = finalScore();
     var missed = puzzle.answers.filter(function (a) { return !found.has(a.grid); })
       .map(function (a) { return a.display; });
-    var pieces = [];
-    if (reason === "time") {
-      $("resultLine").textContent = "Full time — " + found.size + "/11 found." + (assisted ? " · Assisted" : "");
-      if (missed.length) pieces.push("Missed: " + missed.join(", "));
-      /* Named only if it is known: on the daily that means full time has
-         been reached and the server has said it. */
-      var missedSecret = secretWord || (puzzle.bonus && puzzle.bonus.display);
-      if (!bonusFound && missedSecret) pieces.push("Bonus: " + missedSecret);
-    } else {
-      var theSecret = secretWord || (puzzle.bonus && puzzle.bonus.display);
-      $("resultLine").textContent = (bonusFound ? "XI complete — secret bonus found too."
-        : theSecret ? "XI complete. Bonus missed: " + theSecret + "."
-        : "XI complete. The secret stayed hidden.") + (assisted ? " · Assisted" : "");
-    }
-    $("resultMissed").textContent = pieces.join(" · ");
-    $("resultMissed").classList.toggle("hidden", !pieces.length);
+    var theSecret = secretWord || (puzzle.bonus && puzzle.bonus.display);
+    drawFullTime({ score: sc, minute: m, bonus: bonusFound, missed: missed,
+                   secret: !bonusFound && (reason === "time" || found.size >= 11) ? theSecret : null,
+                   boxes: boxesOf(foundAt), daily: mode === "daily" });
+    /* AND THE SERVER'S OWN NUMBER, ASKED FOR AFTER THE PANEL IS DRAWN. It
+       judged every selection, timed the board from a clock it started, and
+       kept every foul in order -- and it writes plays.srv_score, which is
+       what a challenge table reads. The same request is what reveals a
+       missed secret: the server decides the round is over from its own rows,
+       and only then says the word. */
+    askServerScore(reason, sc);
     saveDailyComplete(reason);
     $("result").classList.add("show");
   }
 
-  /* ---- share — no squares until there is a season to draw -------------- */
-  /* v4.3 factorised one board's score into a fake 38-game strip; that is the
-     fault Crossword's season rules retire, not a convention to keep. Until a
-     real W/D/L record exists the share carries the true numbers and nothing
-     invented. Nothing names an answer, so a reader can still play it cold. */
-  function shareText() {
-    var label = mode === "daily" ? "Team of the day" : puzzle.theme;
-    var total = finalScore();
-    var scorePart = bonusFound ? liveScore() + " + 10 bonus = " + total + " pts"
-                               : total + " pts · bonus missed";
-    var line = scorePart + " · " + found.size + "/11 · " + footballMinute() + "'" + (assisted ? " · assisted" : "");
-    var url = "https://www.thexigames.com/football/wordsearch/";
-    var invite = mode === "daily" ? url : "Beat it: " + url + "#p=" + puzzle.id;
-    return "Wordsearch XI · " + label + "\n" + line + "\n" + invite;
-  }
-  function doShare() {
-    var text = shareText();
-    if (navigator.share) { navigator.share({ text: text }).catch(function () { copy(text); }); return; }
-    copy(text);
+  /* ---- Full Time, the family's way ----------------------------------- */
+  /* A BOX PER NAME, in the list's order: green with the minute it was found,
+     amber where help filled it, grey where the clock ran out first. */
+  function boxesOf(at) {
+    return puzzle.answers.map(function (a) {
+      if (!found.has(a.grid)) return { s: "x" };
+      var m = at && at[a.grid];
+      if (m === "help") return { s: "a" };
+      return { s: "g", m: typeof m === "number" ? m : null };
+    });
   }
 
-  /* THE SHARE ROW, THE FAMILY'S. This game hands over its own text and the
-     address of the board it was scored on; shared/xi-share.js owns the
-     buttons, the platforms and the copy fallback, so every game offers the
-     same way out. Mounted once — the text is read when a button is pressed,
-     not when it is built. */
-  if (window.XIShare && document.getElementById("shareRow")) {
-    window.XIShare.mount(document.getElementById("shareRow"), {
-      text: shareText,
-      url: function () { return location.href; },
+  /* shared/xi-fulltime.js draws the four blocks every game shows; this hands
+     over the result. Missed names and a missed secret go in "Your answers":
+     the round is over, and they are this player's to learn. */
+  var ftShown = null;
+  function drawFullTime(o) {
+    ftShown = o;
+    if (!window.XIFullTime || !XIFullTime.panel) return;
+    var n = o.boxes.filter(function (b) { return b.s !== "x"; }).length;
+    var stats = n + " of 11 found · Full time " + o.minute + "'" +
+      (o.bonus ? " · Bonus +10" : " · Bonus missed") + (assisted ? " · Assisted" : "") +
+      (o.stored ? " · The Daily is one attempt" : "") + (o.verified ? " · Verified by the server" : "");
+    var answers = puzzle.answers.map(function (a, i) {
+      var b = o.boxes[i];
+      return { s: b.s, m: b.m != null ? b.m : null, text: a.display, points: "" };
     });
+    if (o.secret) answers.push({ s: "x", m: null, text: "Secret bonus: " + o.secret, points: "" });
+    XIFullTime.panel($("ftPanel"), {
+      game: "wordsearch", name: "Wordsearch XI",
+      no: openNo,
+      date: mode === "daily" && serverDay ? XIFullTime.dayLabel(serverDay) : (puzzle.theme || ""),
+      score: o.score, max: 114, boxes: o.boxes, stats: stats,
+      answers: o.stored ? null : answers,
+      share: function () {
+        return "Wordsearch XI · " + (mode === "daily" ? "Team of the day" : puzzle.theme) + " · " + o.score + "/114\n" +
+          XIFullTime.squares(o.boxes);
+      },
+      url: function () {
+        return "https://www.thexigames.com/football/wordsearch/" + (mode === "daily" ? "" : "#p=" + puzzle.id);
+      },
+    });
+  }
+
+  /* THE SHARE BUTTON IN THE TOOLBAR, mid-round: how far this board has got,
+     naming nothing, through the same share sheet as Full Time. */
+  function doShare() {
+    var text = "Wordsearch XI · " + (mode === "daily" ? "Team of the day" : puzzle.theme) + " · " +
+      found.size + "/11 found\nhttps://www.thexigames.com/football/wordsearch/" +
+      (mode === "daily" ? "" : "#p=" + puzzle.id);
+    if (window.XIFullTime && XIFullTime.send) { XIFullTime.send($("shareBtn"), text, "Share"); return; }
+    copy(text);
   }
 
   function copy(t) {
@@ -1123,6 +1126,8 @@
   /* ---- loading and restoring boards ------------------------------------ */
   function enterBoard(p, label) {
     puzzle = p;
+    openNo = null;
+    foundAt = {};
     /* THE FAMILY'S TOP BAR. Named here, and given its number and day by the
        caller that knows them: today's daily, or an old board from the archive.
        A board opened from a theme has no number. */
@@ -1150,6 +1155,7 @@
   function startDaily(p) {
     mode = "daily";
     enterBoard(p, "Team of the day");
+    openNo = typeof serverNo === "number" ? serverNo : null;
     if (window.XIBar) XIBar.set({ no: serverNo, day: serverDay, old: false });
     /* The account may hold a NEWER journey, pushed by another device. Async:
        the board opens from the local record immediately and upgrades if the
@@ -1175,7 +1181,7 @@
     var rec = getDailyRecord();
     if (rec && rec.status === "complete") { showStoredResult(rec); return; }
     if (rec) {
-      found = new Set(rec.found || []); bonusFound = !!rec.bonus_found;
+      found = new Set(rec.found || []); bonusFound = !!rec.bonus_found; foundAt = rec.found_at || {};
       penaltyMinutes = rec.penalty_minutes || 0;
       elapsed = chargeAwayTime(rec);
       $("modeLabel").textContent = "Team of the day · resumed";
@@ -1192,15 +1198,9 @@
     $("modeLabel").textContent = "Team of the day · completed";
     $("clock").textContent = (rec.minute || 0) + "'";
     renderScore(rec.final_score);
-    $("resultScore").textContent = rec.final_score;
-    $("resultEquation").textContent = rec.bonus_found
-      ? rec.match_score + " base + 10 bonus = " + rec.final_score
-      : rec.final_score + " pts · bonus missed";
-    $("resultClock").textContent = (rec.minute || 0) + "'";
-    $("resultFound").textContent = rec.found_count + "/11";
-    $("resultBonus").textContent = rec.bonus_found ? "FOUND +10" : "MISSED";
-    $("resultLine").textContent = "Today's result · the Daily is one attempt.";
-    $("resultMissed").classList.add("hidden");
+    foundAt = rec.found_at || {};
+    drawFullTime({ score: rec.final_score, minute: rec.minute || 0, bonus: !!rec.bonus_found,
+                   missed: [], secret: null, boxes: boxesOf(foundAt), daily: true, stored: true });
     $("result").classList.add("show");
   }
   function startFree(p) {
@@ -1312,6 +1312,7 @@
       pending = { puzzle: r.puzzle, kicker: kicker, note: note };
       mode = "free";
       enterBoard(r.puzzle, "Free play");
+      openNo = board.no != null ? board.no : null;
       if (window.XIBar && board.no != null) XIBar.set({ no: board.no, day: board.day || null, old: true });
       $("kickKicker").textContent = kicker || "BOARD";
       $("kickTitle").textContent = r.puzzle.theme;

@@ -43,7 +43,7 @@ const SRC = "football/whoami";
 const OUT = "friends/whoami";
 
 /* THE TAG LIVES HERE, written into every generated file. Bump, regenerate. */
-const TAG = "v001i";
+const TAG = "v001j";
 
 const NAME = "Who Am I XI: Friends";
 /* THREE, NOT ELEVEN. This said eleven -- copied from football's shape before
@@ -194,13 +194,6 @@ function page() {
      `Open this door <span aria-hidden="true">&#8594;</span>`, "the play button"],
     [`<span class="ch-hint">Hints cost points. Your choice.</span>`,
      `<span class="ch-hint">Clues cost points. Your choice.</span>`, "the ladder hint"],
-    /* "That's a wrap" rather than "Full time", and it is the one place this
-       generator reaches for the theme's own language rather than neutral
-       wording: the deck is a television show, and full time is a football
-       whistle in a game that has no clock to stop. */
-    [`<div class="eyebrow" id="doneKicker">Full time</div>`,
-     `<div class="eyebrow" id="doneKicker">That&rsquo;s a wrap</div>`,
-     "the end-of-round kicker"],
   ];
   for (const [from, to, what] of COPY) s = once(s, from, to, what);
 
@@ -643,62 +636,38 @@ function script() {
   /* THE END OF A ROUND. The card's name, the door it was behind, the score out
      of what a door is worth, and how many of the three clues it took. No
      career, no article, no club: this deck has none of them to show. */
-  s = replaceFn(s, "showDone", "Got him", `
+  s = replaceFn(s, "showDone", "Read about him", `
   function showDone(r) {
     var solved = r ? r.solved : state.solved;
     var total = LADDER.length || 3;
     var used = r && r.subsUsed != null ? r.subsUsed + 1 : Math.min(state.stage || 1, total);
-    var row = function (k, v) {
-      return '<div class="row"><span class="rowLabel">' + k + '</span><span>' + v + '</span></div>';
-    };
-    el.doneKicker.textContent = solved ? 'Got them' : 'That\\u2019s a wrap';
-    var html = '<div class="verdict">' + (solved ? 'Solved' : 'Not this time') + '</div>';
-    if (r && r.answer) {
-      html += '<div class="bigname">' + esc(r.answer) + '</div>';
-      if (r.section) html += '<div class="fw-door">Behind the <b>' + esc(r.section) + '</b> door</div>';
-    }
-    html += '<div class="fw-pips" aria-label="' + used + ' of ' + total + ' clues used">';
-    for (var i = 1; i <= total; i++) {
-      html += '<span class="fw-pip' + (i <= used ? ' on' : '') +
-        (solved && i === used ? ' won' : '') + '"></span>';
-    }
-    html += '</div><div class="rows">';
-    if (r && typeof r.score === 'number') html += row('Score', r.score + ' of ' + (MAX_SCORE || 10));
-    html += row('Clues used', used + ' of ' + total);
-    html += row('Names tried', r ? r.guesses : state.guesses.length);
-    if (r && r.nearMisses) html += row('Named someone else', r.nearMisses);
-    html += '</div>';
-    el.doneBody.innerHTML = html;
-    el.shareText.value = shareTextFor(r, solved);
-    var shareRow = document.getElementById("shareRow");
-    if (window.XIShare && shareRow) {
-      window.XIShare.mount(shareRow, {
-        text: function () { return el.shareText.value; },
-        url: function () { return location.href; },
+    var max = MAX_SCORE || 10, score = r && typeof r.score === 'number' ? r.score : 0;
+    if (window.XIFullTime && XIFullTime.panel) {
+      XIFullTime.panel(el.ftPanel, {
+        game: 'whoami_fr', name: 'Who Am I XI: Friends', no: BOARD.no, date: XIFullTime.dayLabel(BOARD.day),
+        /* "That's a wrap" rather than "Full time": the deck is a television
+           show, and full time is a football whistle in a game with no clock. */
+        kicker: 'That\u2019s a wrap',
+        score: score, max: max,
+        door: { label: r && r.section ? 'Behind the ' + r.section + ' door' : '', rungs: total, paid: used,
+                answer: r && r.answer ? r.answer : null },
+        stats: (solved ? 'Solved' : 'Not this time') + ' \u00B7 ' + used + ' of ' + total + ' clues \u00B7 ' +
+          (function (n) { return n + (n === 1 ? ' name tried' : ' names tried'); })(r ? r.guesses : state.guesses.length) +
+          (r && r.nearMisses ? ' \u00B7 named someone else ' + r.nearMisses : ''),
+        /* THE SHARE NAMES NOBODY. The other doors are still live for everybody
+           else today: it says how it went in squares, not who it was. */
+        share: function () {
+          var bar = '';
+          for (var i = 1; i <= total; i++) {
+            bar += i > used ? '\u2B1C' : (solved && i === used ? '\uD83D\uDFE9' : '\uD83D\uDFE8');
+          }
+          return 'Who Am I XI: Friends \u00B7 No. ' + BOARD.no + ' \u00B7 ' + score + '/' + max + '\\n' + bar +
+            (solved ? '  got them' : '  no luck');
+        },
+        url: function () { return location.href.split('#')[0]; },
       });
     }
     show('screenDone');
-  }`);
-
-  /* THE SHARE TEXT NAMES NOBODY. The other two doors are still live for
-     everybody else today; a result pasted into a group chat says how it went
-     in squares, not who it was. */
-  s = replaceFn(s, "shareTextFor", "WHO AM I XI", `
-  function shareTextFor(r, solved) {
-    var total = LADDER.length || 3;
-    var used = r && r.subsUsed != null ? r.subsUsed + 1 : Math.min(state.stage || 1, total);
-    var bar = '';
-    for (var i = 1; i <= total; i++) {
-      bar += i > used ? '\\u2B1C' : (solved && i === used ? '\\uD83D\\uDFE9' : '\\uD83D\\uDFE8');
-    }
-    return [
-      'WHO AM I XI: FRIENDS',
-      'No. ' + BOARD.no + ' \\u2014 ' + formatDate(BOARD.day),
-      '',
-      bar + (solved ? '  got them' : '  no luck'),
-      (r && typeof r.score === 'number' ? r.score + '/' + (MAX_SCORE || 10) : ''),
-      'Names tried: ' + (r ? r.guesses : state.guesses.length)
-    ].join('\\n');
   }`);
 
   /* THE DOOR, NAMED ON THE CARD, when a round opens or resumes. And a resumed

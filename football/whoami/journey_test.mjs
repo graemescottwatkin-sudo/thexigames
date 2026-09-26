@@ -33,6 +33,9 @@ const t = (n, ok, d) => { ok ? pass++ : fail++; console.log(`${ok ? "  ok  " : "
 const html = fs.readFileSync(path.join(DIR, "index.html"), "utf8");
 const game = fs.readFileSync(path.join(DIR, "js", "game.js"), "utf8");
 const config = fs.readFileSync(path.join(DIR, "js", "config.js"), "utf8");
+/* THE FAMILY'S FULL TIME, the real file: the panel is part of what the page
+   owes a player when the door closes, so it is loaded rather than stubbed. */
+const fulltime = fs.readFileSync(path.join(DIR, "..", "..", "shared", "xi-fulltime.js"), "utf8");
 
 /* The scoring rule exactly as the server sends it, read from the game's own
    config and the family's curve rather than invented here. */
@@ -230,6 +233,11 @@ async function open(opts = {}) {
   const seasons = [];
   w.XISeason = { record: (d) => seasons.push(d) };
 
+  /* A share sheet that records what it was handed. */
+  w.__shared = [];
+  Object.defineProperty(w.navigator, "share", { configurable: true,
+    value: (o) => { w.__shared.push(o && o.text); return Promise.resolve(); } });
+  w.eval(fulltime);
   w.eval(config);
   w.eval(game);
   await settle(w);
@@ -532,7 +540,7 @@ console.log("=== Naming him ===");
   await settle(w);
 
   t("the right name ends the door", visible(doc, "screenDone"));
-  const body = doc.getElementById("doneBody").textContent;
+  const body = doc.getElementById("ftPanel").textContent;
   t("and only now is he named", body.includes(ANSWER));
   t("the career is shown once it is over", body.includes("Arsenal"));
   t("the result was banked under the family's key", (() => {
@@ -550,12 +558,17 @@ console.log("=== Naming him ===");
   /* THE SHARE TEXT IS THE LAST PLACE A LEAK HIDES. Ten doors are still live for
      everybody else today, so a result pasted into a group chat must not spoil
      them — and must not spoil this one either for somebody yet to play it. */
-  const share = doc.getElementById("shareText").value;
-  t("the share text names no player", !share.toUpperCase().includes("CECH"),
+  /* Pressed on the family's panel, through the share sheet. */
+  const shareBtn = doc.querySelector("#ftPanel .xft-act .xft-primary");
+  if (shareBtn) click(shareBtn);
+  const share = w.__shared[0] || "";
+  t("the share text names no player", !!share && !share.toUpperCase().includes("CECH"),
     share.split("\n").slice(0, 4).join(" / "));
-  t("but does say which door, the score and the substitutions",
-    /Chelsea/.test(share) && /114/.test(share) && /Subs:/.test(share),
+  t("but does say which door, the score and the clues it took",
+    /Chelsea/.test(share) && /114/.test(share) && /clues/.test(share),
     share.replace(/\n/g, " / "));
+  t("the panel shows the door in place of eleven boxes",
+    !!doc.querySelector("#ftPanel .xft-door") && !doc.querySelector("#ftPanel .xft-boxes"));
 }
 
 console.log("=== Buying the ladder, and giving up ===");
@@ -628,7 +641,7 @@ console.log("=== Buying the ladder, and giving up ===");
   await settle(w);
   await settle(w);
   t("giving up closes the door and names him", visible(doc, "screenDone") &&
-    doc.getElementById("doneBody").textContent.includes(ANSWER));
+    doc.getElementById("ftPanel").textContent.includes(ANSWER));
   t("and it is not recorded as solved", (() => {
     const rows = JSON.parse(w.localStorage.getItem("xiwa.results.v1") || "[]");
     return rows.length === 1 && rows[0].solved === false;

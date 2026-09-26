@@ -31,7 +31,7 @@
  * link so a friend could replay the exact eleven, and that is now a board
  * number in the fragment, which is shorter and does not describe the board.
  */
-var BUILD = "v001r";
+var BUILD = "v001s";
 
 (function bootstrap() {
   'use strict';
@@ -803,8 +803,11 @@ function start() {
   function showResults(r) {
     var s = summarise(r);
     var boxes = boxesOf();
-    var wrong = s.played.length - s.correct;
-    var stats = s.correct + ' right · ' + wrong + ' wrong' +
+    /* A TIMEOUT IS NOT A WRONG ANSWER: its box is grey, so the line says
+       unanswered, never wrong (the app's live re-shoot, 26 Sep 2026). */
+    var ranOut = boxes.filter(function (b) { return b.s === 'x'; }).length;
+    var wrong = boxes.filter(function (b) { return b.s === 'r'; }).length;
+    var stats = s.correct + ' right · ' + wrong + ' wrong' + (ranOut ? ' · ' + ranOut + ' unanswered' : '') +
       (s.average === null ? '' : " · Average " + s.average + "'") +
       (s.bonus ? ' · All eleven +' + s.bonus : '') +
       (s.subs ? ' · Subs ' + s.subs + ' of ' + CONFIG.SUBS_PER_DAILY : '');

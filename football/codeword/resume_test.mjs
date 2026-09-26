@@ -124,12 +124,13 @@ console.log("A device that has finished today's board");
   /* THE BANKED FIGURES, NOT RECOMPUTED ONES. The letters are not stored, so a
      card that worked its score out from the grid in front of it would read
      zero — the number has to come from the record. */
+  /* On the family's Full Time panel (shared/xi-fulltime.js). */
+  const shown = d.querySelector("#ftPanel .xft-score b");
+  const stats = d.querySelector("#ftPanel .xft-stats");
   t("and it shows the score that was banked",
-    (d.getElementById("ftScore") || {}).textContent === String(banked.score),
-    (d.getElementById("ftScore") || {}).textContent);
+    !!shown && shown.textContent === String(banked.score), shown ? shown.textContent : "no panel score");
   t("and the result that was banked",
-    (d.getElementById("ftRes") || {}).textContent === "Win",
-    (d.getElementById("ftRes") || {}).textContent);
+    !!stats && /\bWin\b/.test(stats.textContent), stats ? stats.textContent : "no stats line");
   dom.window.close();
 }
 

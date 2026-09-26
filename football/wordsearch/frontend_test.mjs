@@ -348,9 +348,18 @@ t("finding the bonus after the XI ends the match at full time",
     end.solved === 11 && end.detail && end.detail.bonusFound === true && typeof end.elapsed === "number",
     JSON.stringify(end || null));
 }
-t("the result equation shows base + 10 bonus",
-  /\+ 10 bonus/.test(d.getElementById("resultEquation").textContent),
-  d.getElementById("resultEquation").textContent);
+/* THE FAMILY'S FULL TIME (shared/xi-fulltime.js): the four blocks in order,
+   eleven green boxes, and the bonus said in the stats line. */
+{
+  const ftp = d.getElementById("ftPanel");
+  t("Full Time is the family's panel, its blocks in order",
+    !!ftp && [...ftp.children].map((e) => e.className.split(" ")[0]).join(",") === "xft-card,xft-keep,xft-act,xft-next",
+    ftp ? [...ftp.children].map((e) => e.className).join(" | ") : "no #ftPanel");
+  t("eleven boxes, all found", ftp && ftp.querySelectorAll(".xft-boxes .xft-b.g").length === 11);
+  t("the stats line says the bonus was found",
+    /Bonus \+10/.test((ftp && ftp.querySelector(".xft-stats") || {}).textContent || ""),
+    (ftp && ftp.querySelector(".xft-stats") || {}).textContent);
+}
 
 /* ---- the record survives ---------------------------------------------- */
 const results = JSON.parse(w.localStorage.getItem("xiws.results") || "[]");
@@ -486,7 +495,7 @@ t("the daily state carries saved_at for the away-time charge",
      finishes at 90' immediately. Two hours away must NOT resume at 9'. */
   t("two hours away is charged on resume (capped), not forgotten",
     d2.getElementById("result").classList.contains("show") &&
-    d2.getElementById("resultClock").textContent === "90'",
+    /Full time 90'/.test((d2.querySelector("#ftPanel .xft-stats") || {}).textContent || ""),
     "clock read " + clock);
   t("the late board banks as played, scored at the floor",
     JSON.parse(w2.localStorage.getItem("xiws.results")).length === 1);

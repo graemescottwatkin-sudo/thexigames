@@ -292,28 +292,13 @@ body{margin:0;font-family:var(--body)}
   position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex;
   align-items:center; justify-content:center; padding:20px; z-index:60;
 }
-.ftCard{
-  background:var(--card); border:1px solid var(--line); border-radius:16px;
-  padding:20px; max-width:420px; width:100%;
-}
-.ftCard h3{
-  font:700 44px/1 "Barlow Condensed",system-ui,sans-serif; color:var(--ink);
-  margin:0 0 6px; font-variant-numeric:tabular-nums;
-}
-.ftCard h3 .of{font-size:20px; color:var(--ink-faint)}
-.res{
-  display:inline-block; font:700 13px/1 "Public Sans",system-ui,sans-serif;
-  letter-spacing:.06em; text-transform:uppercase; padding:5px 9px;
-  border-radius:6px; margin:0 0 12px; color:var(--accent-on); background:var(--ink-faint);
-}
-.res.W{background:var(--form-w); color:var(--form-w-ink)}
-.res.D{background:var(--form-d); color:var(--form-d-ink)}
-.res.L{background:var(--form-l); color:var(--form-l-ink)}
-.ftShare{
-  background:var(--tint); border:1px solid var(--line); border-radius:10px;
-  padding:12px; margin:0 0 14px; white-space:pre-wrap; word-break:break-word;
-  font:500 13px/1.5 "Public Sans",system-ui,sans-serif; color:var(--ink-soft);
-}
+/* A SOLID COLUMN over the dimmed game: the panel's own card is solid, but its
+   community line, next game and way back are text, and on the see-through
+   overlay they read over the question underneath. The rest of Full Time is
+   the family's panel (shared/xi-fulltime.css). */
+.ftCard{max-width:560px; width:100%; display:flex; flex-direction:column; gap:6px;
+  background:var(--paper); border-radius:16px; padding:12px; box-sizing:border-box}
+.ftBack{align-self:center; padding:10px 14px; color:var(--ink-soft); font:600 14px/1.2 "Public Sans",system-ui,sans-serif}
 
 /* ---- previous boards ----------------------------------------------------
  *

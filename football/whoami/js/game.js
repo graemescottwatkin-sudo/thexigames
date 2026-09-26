@@ -19,7 +19,7 @@
  * one especially, because deciding it here would need the club's whole roster
  * and a roster is a candidate list for the door.
  */
-var BUILD = "v001u";
+var BUILD = "v001v";
 
 (function bootstrap() {
   'use strict';
@@ -216,7 +216,7 @@ function start() {
    'commit', 'commitPick', 'playChoice', 'clues', 'ladder',
    'stripFill', 'clockValue', 'worthNow', 'giveUp',
    'guessInput', 'guessGo', 'suggest', 'feedback', 'tries',
-   'doneKicker', 'doneBody', 'shareText', 'copyShare', 'backToDoors']
+   'ftPanel', 'backToDoors']
     .forEach(function (id) { el[id] = document.getElementById(id); });
 
   /* ------------------------------------------------------------ helpers */
@@ -783,69 +783,34 @@ function start() {
       });
   }
 
+  /* FULL TIME, THE FAMILY'S WAY (shared/xi-fulltime.js). One door a day,
+     not eleven answers, so the panel shows the door and the clue ladder it
+     took in place of boxes -- and, now the door has closed, who it was. */
   function showDone(r) {
     var solved = r ? r.solved : state.solved;
-    el.doneKicker.textContent = solved ? 'Got him' : 'Full time';
-    var html = '';
-    html += '<div class="verdict">' + (solved ? 'Solved' : 'Not this time') + '</div>';
-    if (r && r.answer) {
-      html += '<div class="bigname">' + esc(r.answer) + '</div>';
-      if (r.club) html += '<div class="row"><span class="rowLabel">Your door</span><span>' +
-        esc(r.club) + '</span></div>';
-      if (r.career) html += '<div class="career">' + esc(r.career) + '</div>';
-      if (r.article) html += '<a class="more" href="' + esc(r.article) +
-        '" target="_blank" rel="noopener">Read about him</a>';
-    }
-    html += '<div class="rows">';
-    if (r && typeof r.score === 'number') {
-      html += '<div class="row"><span class="rowLabel">Score</span><span>' +
-        r.score + ' of ' + MAX_SCORE + '</span></div>';
-    }
-    if (r && r.minute != null) {
-      html += '<div class="row"><span class="rowLabel">Answered at</span><span>' +
-        r.minute + "'" + '</span></div>';
-    }
-    html += '<div class="row"><span class="rowLabel">Substitutions</span><span>' +
-      (r ? r.subsUsed : 0) + ' of ' + LADDER.filter(function (x) { return x.points; }).length +
-      (state.pointsSpent ? '  (−' + state.pointsSpent + ')' : '') + '</span></div>';
-    html += '<div class="row"><span class="rowLabel">Names tried</span><span>' +
-      (r ? r.guesses : state.guesses.length) + '</span></div>';
-    if (r && r.nearMisses) {
-      html += '<div class="row"><span class="rowLabel">Played there</span><span>' +
-        r.nearMisses + '</span></div>';
-    }
-    html += '</div>';
-    el.doneBody.innerHTML = html;
-    el.shareText.value = shareTextFor(r, solved);
-    /* THE FAMILY'S SHARE ROW. The same buttons, the same platforms and the same
-       copy fallback every other game offers, from shared/xi-share.js — this
-       game had a bare "Copy result" and nothing to send it with. Mounted once:
-       the text is read when a button is pressed, not when the row is built, so
-       a later result does not need a remount. */
-    var shareRow = document.getElementById("shareRow");
-    if (window.XIShare && shareRow) {
-      window.XIShare.mount(shareRow, {
-        text: function () { return el.shareText.value; },
-        url: function () { return location.href; },
+    var paid = LADDER.filter(function (x) { return x.points; });
+    var used = r ? r.subsUsed : 0;
+    if (window.XIFullTime && XIFullTime.panel) {
+      XIFullTime.panel(el.ftPanel, {
+        game: 'whoami', name: 'Who Am I XI', no: BOARD.no, date: XIFullTime.dayLabel(BOARD.day),
+        score: r && typeof r.score === 'number' ? r.score : 0, max: MAX_SCORE,
+        door: { label: r && r.club ? r.club : '', rungs: paid.length, paid: used,
+                answer: r && r.answer ? r.answer : null, career: r && r.career ? r.career : null },
+        stats: (solved ? 'Solved' + (r && r.minute != null ? ' at ' + r.minute + "'" : '') : 'Not this time') +
+          ' · ' + (function (n) { return n + (n === 1 ? ' name tried' : ' names tried'); })(r ? r.guesses : state.guesses.length) +
+          (r && r.nearMisses ? ' · ' + r.nearMisses + ' played there' : ''),
+        link: r && r.article ? { text: 'Read about him', href: r.article } : null,
+        /* NO NAME IN THE SHARE. Ten doors are still live for everybody else
+           today; the door and the clues taken say enough. */
+        share: function () {
+          return 'Who Am I XI · No. ' + BOARD.no + ' · ' + (r && typeof r.score === 'number' ? r.score : 0) + '/' + MAX_SCORE +
+            '\n' + (r && r.club ? r.club : '') + (solved ? ' — got him' : ' — no luck') +
+            ' · ' + used + ' of ' + paid.length + ' clues';
+        },
+        url: function () { return location.href.split('#')[0]; },
       });
     }
     show('screenDone');
-  }
-
-  function shareTextFor(r, solved) {
-    /* NO NAME IN THE SHARE TEXT. Ten doors are still live for everybody else
-       today, and a result pasted into a group chat must not be a spoiler for
-       the other ten. The door and the clues taken say enough. */
-    return [
-      'WHO AM I XI',
-      'No. ' + BOARD.no + ' — ' + formatDate(BOARD.day),
-      '',
-      (r && r.club ? r.club : '') + (solved ? ' — got him' : ' — no luck'),
-      (r && typeof r.score === 'number' ? r.score + '/' + MAX_SCORE : ''),
-      'Subs: ' + (r ? r.subsUsed : 0) +
-        (state.pointsSpent ? ' (−' + state.pointsSpent + ')' : ''),
-      'Names tried: ' + (r ? r.guesses : state.guesses.length)
-    ].join('\n');
   }
 
   /* ---- the durable record and the account ------------------------------ */
@@ -1085,19 +1050,6 @@ function start() {
       .catch(function (e) { busy = false; el.giveUp.disabled = false; trouble(e); });
   });
 
-  el.copyShare.addEventListener('click', function () {
-    var ok = false;
-    if (navigator.clipboard) { navigator.clipboard.writeText(el.shareText.value).catch(function () {}); ok = true; }
-    else {
-      var t = document.createElement('textarea');
-      t.value = el.shareText.value; t.style.position = 'fixed'; t.style.opacity = '0';
-      document.body.appendChild(t); t.select();
-      try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
-      document.body.removeChild(t);
-    }
-    el.copyShare.textContent = ok ? 'Copied' : 'Copy failed';
-    setTimeout(function () { el.copyShare.textContent = 'Copy result'; }, 1600);
-  });
 
   var saved = load();
   if (saved) {

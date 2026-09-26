@@ -32,7 +32,7 @@
 
   var R = window.XIGR_RULES;
   var $ = function (id) { return document.getElementById(id); };
-  var BUILD = "v002q";
+  var BUILD = "v002r";
 
   var S = {
     board: null,          // the PUBLIC board: shape, lengths, crossings. No letters.
@@ -539,64 +539,53 @@
     });
   }
 
+  /* FULL TIME, THE FAMILY'S WAY (shared/xi-fulltime.js): the four blocks
+     every game shows, drawn from this game's result. A box per entry in the
+     board's order: green solved, red where the turns ran out on it. Grid has
+     turns rather than a match clock, so the boxes carry no minute. */
+  function gridBoxes(solved) {
+    return (S.board.entries || []).map(function (e) { return { s: solved[e.n] ? "g" : "r" }; });
+  }
+  function drawGridFullTime(o) {
+    var el = $("gdFullTime");
+    if (!el) return;
+    el.hidden = false;
+    /* Built from a string on every full time, so the panel's box is written
+       with it -- and, for a board already played, the way back to the grid. */
+    el.innerHTML = '<div id="ftPanel"></div>' +
+      (o.banked ? '<p class="gd-replay"><button class="gd-ghost" id="gdReplay" type="button">Play it again</button></p>' : "");
+    if (!window.XIFullTime || !XIFullTime.panel) return;
+    XIFullTime.panel($("ftPanel"), {
+      game: "grid", name: "Grid XI", no: o.no, date: o.day ? XIFullTime.dayLabel(o.day) : "",
+      score: o.score, max: R.MAX_SCORE, boxes: o.boxes,
+      stats: o.solved + " of " + R.ENTRIES + " solved · " + o.misses + (o.misses === 1 ? " miss" : " misses") +
+        (o.hints ? " · " + o.hints + (o.hints === 1 ? " hint" : " hints") : "") +
+        (o.banked ? " · A replay is not recorded" : ""),
+      /* The answers, which the server sends at the whistle: solved or not,
+         the board is over and they are this player's to read. */
+      answers: o.answers,
+      share: function () {
+        return "Grid XI" + (o.no != null ? " · No. " + o.no : " · Free play") + " · " + o.score + "/" + R.MAX_SCORE +
+          (o.boxes ? "\n" + XIFullTime.squares(o.boxes) : "");
+      },
+      url: function () { return location.href.split("#")[0]; },
+    });
+  }
+
   function fullTime() {
     var el = $("gdFullTime");
     if (!el || !S.score) return;
-    var rows = (S.board.entries || []).map(function (e) {
-      var a = S.answers && S.answers[e.n];
-      return "<tr><td>" + e.n + (e.dir === "across" ? "a" : "d") + "</td><td" +
-        (S.solved[e.n] ? "" : ' class="miss"') + ">" + (a ? a.answer : "&mdash;") +
-        "</td><td>" + (S.solved[e.n] ? "&#10003;" : "&mdash;") + "</td></tr>";
-    }).join("");
-    el.hidden = false;
+    var boxes = gridBoxes(S.solved);
+    drawGridFullTime({
+      no: S.no, day: S.day || null, score: S.score.total, solved: S.score.solved, misses: S.misses,
+      hints: S.hints ? Object.keys(S.hints).length : 0, boxes: boxes,
+      answers: (S.board.entries || []).map(function (e) {
+        var a = S.answers && S.answers[e.n];
+        return { s: S.solved[e.n] ? "g" : "r", m: null,
+                 text: e.n + (e.dir === "across" ? "a" : "d") + " " + (a ? a.answer : "—"), points: "" };
+      }),
+    });
     queueRoom();
-    el.innerHTML = "<h2>Full time</h2>" +
-      '<p class="score">' + S.score.total + "<small>/" + R.MAX_SCORE + "</small></p>" +
-      "<p>" + S.score.solved + " of " + R.ENTRIES + " solved &middot; " +
-      S.misses + (S.misses === 1 ? " miss" : " misses") + "</p>" +
-      "<table>" + rows + "</table>" +
-      '<div id="shareRow"></div>' +
-      /* The next game in this theme that has not been played today. Grid builds
-         its results card in script rather than in the page, so the mount point
-         is written here with the rest of it; shared/xi-fulltime.js finds it by
-         data-game and fills it. */
-      '<div id="nextUpRow" data-game="grid"></div>' +
-      /* THE COMMUNITY LINE, WRITTEN INTO THE CARD RATHER THAN PLACED IN THE
-         PAGE. Every other game has a static results card and puts an empty
-         .xic-community in it; this one BUILDS its card from a string on every
-         full time, so a box placed in index.html would be thrown away by the
-         innerHTML above. The box is emitted here and filled below. */
-      '<div class="xic-community"></div>';
-    /* Filled after the write, because the element did not exist until now.
-       XIChrome fills any empty .xic-community and is idempotent, so a second
-       full time on the same page re-fills the fresh box rather than doubling
-       the line. */
-    if (window.XIChrome && window.XIChrome.community) window.XIChrome.community(el);
-    /* THE FAMILY'S SHARE ROW, AND THIS GAME HAD NO SHARE AT ALL — not a row,
-       not a copy button, not a line of text to send. Every other game offers
-       one, so a player who had just finished a Grid had nothing to do with it.
-       THE TEXT IS COMPOSED HERE because there was none to reuse, built to the
-       shape the other games already use: the game and its board number, the
-       score over the family's 114, and what it took. No answer and no letter
-       of one — a share is read by people who have not played it yet.
-       Mounted after the card is written, like the community line above and for
-       the same reason: neither element exists until that innerHTML has run,
-       and both are thrown away by the next one. */
-    if (window.XIShare && $("shareRow")) {
-      window.XIShare.mount($("shareRow"), {
-        text: function () {
-          return [
-            "GRID XI",
-            S.no != null ? "No. " + S.no : "Free play",
-            "",
-            S.score.total + "/" + R.MAX_SCORE,
-            S.score.solved + "/" + R.ENTRIES + " solved",
-            S.misses + (S.misses === 1 ? " miss" : " misses")
-          ].join(String.fromCharCode(10));
-        },
-        url: function () { return location.href; }
-      });
-    }
     if (window.XIPlays && window.XIPlays.active) {
       if (window.XIPlays.active()) window.XIPlays.end(S.score.solved === R.ENTRIES);
     }
@@ -611,6 +600,8 @@
         solved: S.score.solved,
         misses: S.misses,
         hints: S.hints ? Object.keys(S.hints).length : 0,
+        /* The boxes, so a board reopened later draws its own. */
+        boxes: boxes.map(function (x) { return x.s; }).join(""),
         at: Date.now(),
       });
     }
@@ -709,47 +700,13 @@
      banked, and it says plainly that the board is still there to replay. */
   function showBanked() {
     var rec = bankedFor(S.no);
-    var el = $("gdFullTime");
-    if (!rec || !el) return;
-    el.hidden = false;
-    el.innerHTML = "<h2>Full time</h2>" +
-      '<p class="score">' + rec.score + "<small>/" + R.MAX_SCORE + "</small></p>" +
-      "<p>" + rec.solved + " of " + R.ENTRIES + " solved &middot; " +
-      rec.misses + (rec.misses === 1 ? " miss" : " misses") + "</p>" +
-      "<p>You played this board. The grid is still here if you want" +
-      " another go — a replay is not recorded.</p>" +
-      /* The way back to it. On a locked play screen the card stands where the
-         answer row and the keys are, so "the grid below" could not be scrolled
-         to; this puts the card away and the keys back. */
-      '<p><button class="gd-ghost" id="gdReplay" type="button">Play it again</button></p>' +
-      '<div id="shareRow"></div>' +
-      /* The next game in this theme that has not been played today. Grid builds
-         its results card in script rather than in the page, so the mount point
-         is written here with the rest of it; shared/xi-fulltime.js finds it by
-         data-game and fills it. */
-      '<div id="nextUpRow" data-game="grid"></div>' +
-      '<div class="xic-community"></div>';
-    if (window.XIChrome && window.XIChrome.community) window.XIChrome.community(el);
-    /* AND IT IS SHAREABLE, like the card a live full time draws. The restore
-       had the community line and no share row, so coming back to a board you
-       had finished gave you something to read and no way to send it — the one
-       thing a finished board is most likely to be wanted for. The text is the
-       RECORD's, because that is all this path has. */
-    if (window.XIShare && $("shareRow")) {
-      window.XIShare.mount($("shareRow"), {
-        text: function () {
-          return [
-            "GRID XI",
-            rec.no != null ? "No. " + rec.no : "Free play",
-            "",
-            rec.score + "/" + R.MAX_SCORE,
-            rec.solved + "/" + R.ENTRIES + " solved",
-            rec.misses + (rec.misses === 1 ? " miss" : " misses")
-          ].join(String.fromCharCode(10));
-        },
-        url: function () { return location.href; }
-      });
-    }
+    if (!rec || !$("gdFullTime")) return;
+    drawGridFullTime({
+      banked: true, no: rec.no, day: S.day || null, score: rec.score, solved: rec.solved, misses: rec.misses,
+      hints: rec.hints || 0,
+      boxes: typeof rec.boxes === "string" && rec.boxes.length === R.ENTRIES
+        ? rec.boxes.split("").map(function (c) { return { s: c === "g" ? "g" : "r" }; }) : null,
+    });
   }
 
   /* A BOARD'S OWN ADDRESS. /football/grid/daily/4 is what the archive and the
@@ -771,7 +728,7 @@
         return;
       }
       S.board = r.board;
-      S.no = r.no;
+      S.no = r.no; S.day = r.day || null;
       S.today = r.today;
       /* THE FAMILY'S TOP BAR, named with the board the server sent. */
       if (window.XIBar) {

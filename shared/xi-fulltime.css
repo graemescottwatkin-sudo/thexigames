@@ -75,7 +75,10 @@
 .xft-head { display: flex; justify-content: space-between; align-items: baseline; }
 .xft-kick { font-family: var(--disp); font-weight: 700; font-size: 13px; letter-spacing: .16em; text-transform: uppercase; color: var(--pitch-ink); }
 .xft-date { font-size: 12px; color: var(--ink-soft); }
-.xft-name { margin: 0; font-family: var(--disp); font-weight: 700; font-size: 22px; line-height: 1; color: var(--ink); }
+/* Its own case and spacing, stated: a game's page-wide heading rule (Grid's
+   uppercases every h2) must not restyle the panel's. */
+.xft-name { margin: 0; font-family: var(--disp); font-weight: 700; font-size: 22px; line-height: 1; color: var(--ink);
+  text-transform: none; letter-spacing: normal; }
 .xft-score { margin: 0; display: flex; align-items: baseline; gap: 6px; }
 .xft-score b { font-family: var(--disp); font-weight: 700; font-size: 64px; line-height: .9; color: var(--ink); }
 .xft-score span { font-family: var(--disp); font-weight: 600; font-size: 24px; color: var(--ink-soft); }
@@ -117,3 +120,6 @@
 .xft-a.r .xft-a-pick, .xft-a.x .xft-a-pick { color: var(--ink-soft); text-decoration: line-through; }
 .xft-a-was { color: var(--ink); font-weight: 600; }
 .xft-a-p { font-family: var(--disp); font-weight: 700; }
+.xft-door-a { margin: 0; font-size: 16px; color: var(--ink); }
+.xft-door-c { margin: 0; font-size: 13px; line-height: 1.45; color: var(--ink-soft); }
+.xft-more { font-size: 13px; color: var(--pitch-ink); }

@@ -786,6 +786,14 @@ body.locked.fulltime .app > #screenResults {
   padding: 8px 4px 12px;
   border-top: 1px solid var(--line);
 }
+/* ON A PHONE THE PANEL TAKES THE SCREEN. Under the pitch it had half the
+   height, so at 412 the score sat on the bottom edge and Sign in, Share and
+   Challenge were below it (the app's live re-shoot of the new Full Time, 26
+   Sep 2026). A wide screen keeps the finished XI beside the panel, below. */
+@media (max-width: 959px) {
+  body.locked.fulltime .app > #screenGame { display: none; }
+  body.locked.fulltime .app > #screenResults { flex: 1 1 auto; max-height: none; border-top: 0; }
+}
 @media (min-width: 960px) {
   body.locked.fulltime > .app {
     display: grid;

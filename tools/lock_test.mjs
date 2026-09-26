@@ -316,6 +316,16 @@ const browser = await chromium.launch();
    mockup of 26 Sep 2026. Keep-it may be empty here: this server offers no
    accounts, and then there is nothing to sign in to. Screenshot with
    LOCK_SHOTS, for the owner and the app's sheet. */
+/* A full result for a game whose Full Time cannot be reached here without
+   solving its board: eleven boxes, a stats line and eleven answers. Data
+   only -- it crosses into the page, where functions cannot go. */
+const FT_SAMPLE = (game, name) => ({
+  game, name, no: 9, date: "Sat 26 Sep", score: 88, max: 114,
+  boxes: Array.from({ length: 11 }, (_, i) => (i === 7 ? { s: "x" } : { s: "g", m: 4 + i * 7 })),
+  stats: "10 of 11 · Full time 81'",
+  answers: Array.from({ length: 11 }, (_, i) => ({ s: i === 7 ? "x" : "g", m: i === 7 ? null : 4 + i * 7, text: "A name " + (i + 1), points: "" })),
+});
+
 async function panelCheck(page, label, id) {
   const blocks = await page.evaluate(() => {
     const p = document.querySelector("#ftPanel");
@@ -326,6 +336,38 @@ async function panelCheck(page, label, id) {
   });
   t(`${label}: Full Time is the family's panel, result, keep it, share and challenge`,
     blocks === "xft-card,xft-keep,xft-act,xft-next", blocks);
+  /* NOTHING PAINTS OVER IT. Codeword's Pencil/Clear row drew on top of its
+     Full Time -- the keys at z-index 20, the overlay at 10 (the app, 26 Sep
+     2026). A grid of points across the panel's visible part: the top of the
+     stack at each must belong to the panel or the box that holds it. */
+  const covered = await page.evaluate(() => {
+    const p = document.querySelector("#ftPanel");
+    if (!p) return ["no panel"];
+    const box = p.parentElement;
+    const r = p.getBoundingClientRect();
+    const top = Math.max(r.top, 0), bottom = Math.min(r.bottom, innerHeight);
+    const bad = [];
+    for (let i = 1; i <= 6; i++) for (let j = 1; j <= 4; j++) {
+      const x = r.left + (r.width * j) / 5, y = top + ((bottom - top) * i) / 7;
+      const hit = document.elementFromPoint(x, y);
+      if (hit && !box.contains(hit)) bad.push(Math.round(x) + "," + Math.round(y) + " " + hit.tagName + "." + String(hit.className).slice(0, 30));
+    }
+    return bad;
+  });
+  t(`${label}: and nothing paints over it`, covered.length === 0, covered.slice(0, 3).join("; "));
+  /* AND ON A PHONE, SHARE IS ON SCREEN WITHOUT SCROLLING. Under a board that
+     stayed, HiLo's, Scrambled's and Vowels' panels had their score on the
+     bottom edge and Share below it (the app's live re-shoot, 26 Sep 2026). */
+  if (/^phone/.test(label)) {
+    const share = await page.evaluate(() => {
+      const b = document.querySelector("#ftPanel .xft-act .xft-primary");
+      if (!b) return { there: false };
+      const r = b.getBoundingClientRect();
+      return { there: true, top: Math.round(r.top), bottom: Math.round(r.bottom), vh: innerHeight };
+    });
+    t(`${label}: and Share is on screen without scrolling`,
+      share.there && share.top >= 0 && share.bottom <= share.vh + 1, JSON.stringify(share));
+  }
   if (process.env.LOCK_SHOTS) await page.screenshot({ path: path.join(process.env.LOCK_SHOTS, `${id}-${label}-fulltime.png`) });
 }
 
@@ -952,6 +994,7 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "s
     t(`${vp[0]}: Full Time is locked, the page does not scroll, and the card is inside the screen`,
       m.locked && m.scrollY <= 1 && m.scrollX <= 1 && !!m.ft && m.ft[0] >= 0 && m.ft[1] <= m.vh + 1, sliderSay(m) + " | card " + JSON.stringify(m.ft));
     await announcedCheck(page, vp[0]);
+    await panelCheck(page, vp[0], id);
     await context.close();
   }
 }
@@ -1308,11 +1351,14 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "c
   }
 
   console.log(`\n${id}: Full Time`);
-  for (const vp of [VIEWPORTS[0], VIEWPORTS[3]]) {
+  for (const vp of [VIEWPORTS[0], VIEWPORTS[1], VIEWPORTS[3]]) {
     const { page, context } = await openCodeword(game, vp);
     /* The card is shown as the game shows it, by its class; what is under
        test is where it sits, not how a round is won. */
-    const m = await page.evaluate(async () => {
+    const m = await page.evaluate(async (sample) => {
+      /* THE PANEL AT ITS FULLEST, drawn into this game's overlay: the
+         placement is what is under test, measured with the most it holds. */
+      if (window.XIFullTime) window.XIFullTime.panel(document.getElementById("ftPanel"), sample);
       document.getElementById("ft").classList.add("on");
       /* Stays fixed: the stylesheet places the card at once, and the check
          is that nothing the page does about it unlocks or scrolls. */
@@ -1320,9 +1366,10 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "c
       const r = document.querySelector("#ft .ftcard").getBoundingClientRect();
       return { locked: document.body.classList.contains("locked"), scroll: document.documentElement.scrollHeight - innerHeight,
         top: Math.round(r.top), bottom: Math.round(r.bottom), vh: innerHeight };
-    });
+    }, FT_SAMPLE("codeword", "Codeword XI"));
     t(`${vp[0]}: the Full Time card sits inside the screen and the page does not scroll`,
       m.locked && m.scroll <= 1 && m.top >= 0 && m.bottom <= m.vh + 1, JSON.stringify(m));
+    await panelCheck(page, vp[0], id);
     await context.close();
   }
 }
@@ -1419,6 +1466,7 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "g
     const m = await page.evaluate(measureGrid);
     t("the Full Time card stands where the keys were, the board stays, and the page does not scroll",
       m.ft && !m.keys && m.locked && m.scrollY <= 1 && m.boardWhole, gridSay(m));
+    await panelCheck(page, VIEWPORTS[1][0], id);
     await page.click("#gdReplay");
     /* Stays fixed: the card goes at once, before the room check it queues,
        and that check keeps the page locked when it works. */
@@ -1641,6 +1689,7 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
     t(`${vp[0]}: Full Time is locked and the page does not scroll; the result scrolls in itself`,
       m.locked && m.scrollY <= 1 && m.scrollX <= 1 && m.screen === "screenDone", profileSay(m));
     await announcedCheck(page, vp[0]);
+    await panelCheck(page, vp[0], id);
     await context.close();
   }
 }
@@ -1752,7 +1801,11 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "w
     const { page, context } = await openWS(game, vp);
     /* The result card is shown as the game shows it, by its class: what is
        under test is where it sits, not how a board is finished. */
-    const m = await page.evaluate(async () => {
+    const m = await page.evaluate(async (sample) => {
+      /* THE PANEL AT ITS FULLEST, drawn into this game's overlay: a whole
+         eleven and every name under "Your answers" -- the placement is what
+         is under test, so it is measured with the most it will ever hold. */
+      if (window.XIFullTime) window.XIFullTime.panel(document.getElementById("ftPanel"), sample);
       document.getElementById("result").classList.add("show");
       /* Stays fixed: the result fades in on a transition, and is read once
          it has run. */
@@ -1760,8 +1813,9 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "w
       const r = document.querySelector("#result .modal").getBoundingClientRect();
       return { locked: document.body.classList.contains("locked"), scroll: document.documentElement.scrollHeight - innerHeight,
         top: Math.round(r.top), bottom: Math.round(r.bottom), vh: innerHeight };
-    });
+    }, FT_SAMPLE("wordsearch", "Wordsearch XI"));
     t(`${vp[0]}: the Full Time card sits inside the screen`, m.top >= 0 && m.bottom <= m.vh + 1, JSON.stringify(m));
+    await panelCheck(page, vp[0], id);
     await context.close();
   }
 }

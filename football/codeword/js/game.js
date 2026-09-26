@@ -3,7 +3,7 @@
   /* THE BUILD, PAIRED WITH THE ?v= ON THIS FILE'S OWN SCRIPT TAG. A stale
      cached script is otherwise invisible: the page loads, the game runs, and
      it is yesterday's code. aligned_test asserts the two agree. */
-  var BUILD = "v001v";
+  var BUILD = "v001w";
   if (window.XIPlays && document.documentElement) {
     document.documentElement.setAttribute("data-build", BUILD);
   }
@@ -63,7 +63,7 @@ function boot(BOARD){
   var BOARD_NO = "demo", BOARD_NO_N = null, BOARD_DAY = null;
   var HINTS = [];
   var BREAKS = [];
-  var DOT = "·", SQ_ON = "🟩", SQ_OFF = "🟥";
+  var DOT = "·";
 
   // A board from the daily queue replaces every one of the above. The stamped
   // values are what a review page uses and what the loader falls back to.
@@ -661,7 +661,9 @@ function boot(BOARD){
       asking = false;
       markOwed = false;
       var fresh = done.some(function(i){ return !solvedWords[i]; });
-      done.forEach(function(i){ solvedWords[i] = true; });
+      /* The minute each word came out, for its box at Full Time. An object,
+         so a word solved at 0' is still truthy wherever this is read as a flag. */
+      done.forEach(function(i){ if (!solvedWords[i]) solvedWords[i] = { m: matchMinute() }; });
       if (fresh) paint();
       if (missed) { missed = false; refreshSolved(); }
     }, function(){
@@ -937,7 +939,10 @@ function boot(BOARD){
       var list = readResults();
       for (var i = 0; i < list.length; i++) if (list[i] && list[i].no === d.no) return;
       list.push({ no: d.no, day: d.day || null, score: d.score, solved: d.solved,
-        minute: d.minute, result: d.result });
+        minute: d.minute, result: d.result,
+        /* The boxes, so a board reopened later draws its own: "g12" solved
+           at 12', "x" not reached. */
+        boxes: boxesOf().map(function (b) { return b.s + (b.m != null ? b.m : ""); }).join(" ") });
       localStorage.setItem(CW_KEY, JSON.stringify(list));
     } catch (e) { /* private browsing: play on without a record */ }
     pushResults();
@@ -1058,7 +1063,7 @@ function boot(BOARD){
       function(){ finishOwed = true; awaitConnection(); });
   }
 
-  function showFullTime(fromServer){
+  function showFullTime(fromServer, restored){
     var m = matchMinute(), solvedNow = Object.keys(solvedWords).length;
     var out = outcome(m, solvedNow, SLOTS.length), score = out.score, res = out.res;
     if (fromServer && typeof fromServer.score === "number"){
@@ -1068,25 +1073,35 @@ function boot(BOARD){
       m = typeof fromServer.minute === "number" ? fromServer.minute : m;
     }
     var words = {W:"Win",D:"Draw",L:"Loss"};
-    var solved = solvedNow;
-    var squares = ""; for (var i=0;i<10;i++){ squares += i < Math.round(score/MAX*10) ? SQ_ON : SQ_OFF; }
-    var share = "Codeword XI " + DOT + " board " + BOARD_NO + "\n" + squares + "\n" + score + " pts " + DOT + " " + solved + "/11 " + DOT + " " + minuteText(m) + "' " + DOT + " " + words[res] + "\nthexigames.com";
-    document.getElementById("ftScore").textContent = score;
-    var rr = document.getElementById("ftRes"); rr.textContent = words[res]; rr.className = "res " + res;
-    document.getElementById("ftShare").textContent = share;
-    /* THE FAMILY'S SHARE ROW. The same buttons, platforms and copy fallback
-       every other game offers, from shared/xi-share.js — this game had a bare
-       "Copy result" and nothing to send it with. Mounted once: the text is read
-       when a button is pressed, not when the row is built. */
-    var shareRow = document.getElementById("shareRow");
-    if (window.XIShare && shareRow) {
-      window.XIShare.mount(shareRow, {
-        text: function () { return document.getElementById("ftShare").textContent; },
-        url: function () { return location.href; },
+    /* THE FAMILY'S FULL TIME (shared/xi-fulltime.js). A box per word in the
+       board's order: green with the minute it came out, grey where the
+       whistle went first. A record from before the boxes were kept draws
+       none rather than guessing their order. */
+    var boxes = fromServer && typeof fromServer.boxes === "string"
+      ? fromServer.boxes.split(" ").map(function (t) { return { s: t.charAt(0), m: t.length > 1 ? Number(t.slice(1)) : null }; })
+      : (restored ? null : boxesOf());
+    var total = SLOTS.length;
+    var early = solvedNow < total;
+    if (window.XIFullTime && XIFullTime.panel) {
+      XIFullTime.panel(document.getElementById("ftPanel"), {
+        game: "codeword", name: "Codeword XI", no: BOARD_NO_N, date: BOARD_DAY ? XIFullTime.dayLabel(BOARD_DAY) : "",
+        score: score, max: MAX, boxes: boxes,
+        stats: solvedNow + " of " + total + " · Full time " + minuteText(m) + "' · " + words[res],
+        gaveUp: early && over ? "Blew the whistle at " + minuteText(m) + "' · " + solvedNow + " of " + total : null,
+        share: function () {
+          return "Codeword XI · No. " + BOARD_NO_N + " · " + score + "/" + MAX + (boxes ? "\n" + XIFullTime.squares(boxes) : "");
+        },
+        url: function () { return location.href.split("#")[0]; },
       });
     }
     document.getElementById("ft").classList.add("on");
-    document.getElementById("copy").onclick = function(){ try { navigator.clipboard.writeText(share); toast("Copied"); } catch(e){ toast("Select and copy the text"); } };
+  }
+
+  function boxesOf() {
+    return SLOTS.map(function (slot, i) {
+      var w = solvedWords[i];
+      return w ? { s: "g", m: w && typeof w.m === "number" ? w.m : null } : { s: "x" };
+    });
   }
   document.getElementById("whistle").addEventListener("click", function(){ if (!over) fullTime(); });
   document.getElementById("again").addEventListener("click", restart);
@@ -1118,7 +1133,7 @@ function boot(BOARD){
     for (var pi = 0; pi < past.length; pi++) {
       if (past[pi] && past[pi].day === BOARD_DAY) { mine = past[pi]; break; }
     }
-    if (mine) showFullTime(mine);
+    if (mine) showFullTime(mine, true);
   }
   function restart(){
     clearInterval(timer);

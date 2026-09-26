@@ -5,7 +5,7 @@
      it is yesterday's code. aligned_test asserts the two agree, and until
      this game launched it had no BUILD at all — three of its assets were on
      three different tags, which is the same fault with nobody checking. */
-  var BUILD = "v001x";
+  var BUILD = "v001y";
   if (window.XIPlays && document.documentElement) {
     document.documentElement.setAttribute("data-build", BUILD);
   }
@@ -36,7 +36,7 @@
   if (!R) return;
 
   var $ = function (id) { return document.getElementById(id); };
-  var DOT = "·", SQ_ON = "🟩", SQ_OFF = "🟥";
+  var DOT = "·";
 
   var board = null, token = null, playId = null, no = null, day = null;
   var step = 0, locked = false, touched = false, over = false;
@@ -782,39 +782,47 @@
     if (timer) { clearInterval(timer); timer = null; }
     scoreNow = typeof r.score === "number" ? r.score : scoreNow;
     resultLetter = r.result || "L";
-    var words = { W: "Win", D: "Draw", L: "Loss" };
     var green = results.filter(function (x) { return x === true; }).length;
-    var calls = results.map(function (x) { return x ? SQ_ON : SQ_OFF; }).join("");
-    var share = "Ballpark XI " + DOT + " " + (no ? "#" + no : "today") + "\n" + calls + "\n" +
-      green + "/" + R.QUESTIONS + " in the ballpark, " + bangOns + " bang on " + DOT + " " +
-      scoreNow + "/" + R.MAX_SCORE + " " + DOT + " " + (words[resultLetter] || "") +
-      "\nthexigames.com";
-    $("ftScore").textContent = scoreNow;
-    var rr = $("ftRes");
-    rr.textContent = words[resultLetter] || "";
-    rr.className = "res " + resultLetter;
-    $("ftShare").textContent = share;
-    /* THE FAMILY'S SHARE ROW. The same buttons, the same platforms and the same
-       copy fallback every other game offers, from shared/xi-share.js — this
-       game had a bare "Copy result" and nothing to send it with. Mounted once:
-       the text is read when a button is pressed, not when the row is built, so
-       a later result does not need a remount. */
-    if (window.XIShare && $("shareRow")) {
-      window.XIShare.mount($("shareRow"), {
-        text: function () { return $("ftShare").textContent; },
-        url: function () { return location.href; },
-      });
-    }
+    drawFullTime({ score: scoreNow, result: resultLetter, grades: grades.slice(0, R.QUESTIONS),
+                   inBallpark: green, bangOns: bangOns });
     $("ft").hidden = false;
     queueRoom();
     /* BANKED AT THE WHISTLE, after the score is settled and before anything
        else can go wrong. */
     recordResult();
     if (window.XIPlays && XIPlays.active()) XIPlays.end(true);
-    $("copy").onclick = function () {
-      try { navigator.clipboard.writeText(share); } catch (e) {}
-    };
     paint();
+  }
+
+  /* FULL TIME, THE FAMILY'S WAY (shared/xi-fulltime.js). A box per question:
+     green bang on, amber where the guess still earned something, red where it
+     earned nothing, grey where the clock ran out on it. The ladder is the
+     rules' own, read by name, so a strict question grades by its own terms. */
+  function boxFor(grade) {
+    if (grade == null) return { s: "x" };
+    var share = null;
+    (R.GRADES || []).concat(R.STRICT_GRADES || []).forEach(function (row) {
+      if (share === null && row[2] === grade) share = row[1];
+    });
+    if (grade === "Bang on") return { s: "g" };
+    return { s: share > 0 ? "a" : "r" };
+  }
+  function drawFullTime(o) {
+    if (!window.XIFullTime || !XIFullTime.panel) return;
+    var words = { W: "Win", D: "Draw", L: "Loss" };
+    var boxes = (o.grades || []).map(boxFor);
+    while (boxes.length && boxes.length < R.QUESTIONS) boxes.push({ s: "x" });
+    XIFullTime.panel($("ftPanel"), {
+      game: "ballpark", name: "Ballpark XI", no: no || null, date: day ? XIFullTime.dayLabel(day) : "",
+      score: o.score, max: R.MAX_SCORE, boxes: boxes.length ? boxes : null,
+      stats: (o.bangOns || 0) + " bang on · " + (o.inBallpark || 0) + " of " + R.QUESTIONS + " in the ballpark · " +
+        (words[o.result] || ""),
+      share: function () {
+        return "Ballpark XI" + (no ? " · No. " + no : "") + " · " + o.score + "/" + R.MAX_SCORE +
+          (boxes.length ? "\n" + XIFullTime.squares(boxes) : "");
+      },
+      url: function () { return location.href.split("#")[0]; },
+    });
   }
 
   function escapeHtml(s) {
@@ -1010,20 +1018,9 @@
   }
 
   function showBanked(rec) {
-    var words = { W: "Win", D: "Draw", L: "Loss" };
-    $("ftScore").textContent = rec.score;
-    var rr = $("ftRes");
-    rr.textContent = words[rec.result] || "";
-    rr.className = "res " + (rec.result || "");
-    $("ftShare").textContent = "Ballpark XI " + DOT + " " + rec.score + "/114 " + DOT + " " +
-      (rec.inBallpark || 0) + "/11 in the ballpark" +
-      (rec.bangOns ? " " + DOT + " " + rec.bangOns + " bang on" : "");
-    if (window.XIShare && $("shareRow")) {
-      window.XIShare.mount($("shareRow"), {
-        text: function () { return $("ftShare").textContent; },
-        url: function () { return location.href; },
-      });
-    }
+    drawFullTime({ score: rec.score, result: rec.result,
+                   grades: (rec.asked || []).map(function (a) { return a ? a.grade : null; }),
+                   inBallpark: rec.inBallpark, bangOns: rec.bangOns });
     /* THE CARD LIVES INSIDE THE GAME SCREEN, so that screen has to be up or the
        overlay is unhidden and nought pixels tall — which is exactly what
        happened the first time: no round started, and no card appeared either.
