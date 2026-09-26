@@ -13,10 +13,11 @@
  */
 import { SECRET_FIELDS, shapeQuestion, today } from "../../functions/_lib/qfdata.js";
 import { utcDay, dailyNoForDay, dailyNumber } from "../../functions/_lib/daily.js";
-import { serveQuestion, answerRound } from "../../functions/_lib/qf-play.js";
+import { serveQuestion, answerRound, finishRound } from "../../functions/_lib/qf-play.js";
 import {
   BANDS, PER_DAILY, SUBS, SUB_PENALTY, WRONG_PICK_MINUTES,
   pointsFor, minuteOf, norm, judge, totalFor, QUESTION_MS, MATCH_MINUTES,
+  BONUS, TOP_POINTS, MAX_SCORE, LEGACY, allCorrect, isLegacy, maxFor,
 } from "../../functions/_lib/qf-round.js";
 import CONFIG from "../../football/quickfire/js/config.js";
 import fs from "node:fs";
@@ -95,16 +96,29 @@ console.log("\n=== The numbers come from the game's own config ===");
   /* A SERVER COPY AND A PAGE COPY would agree the day they were written and
      disagree the first time anybody tuned one — and the symptom would be a
      player's score changing when they refreshed. */
-  t("the ceiling is derived from the bands rather than stated",
-    Math.max(...BANDS.map((b) => b.points)) * PER_DAILY === 1100,
-    "eleven questions at a hundred, and it moves if the bands move");
+  /* THE FAMILY'S 114, the owner's own sum (26 Sep 2026): eleven questions at
+     ten and four for getting them all. Derived from the bands and the bonus,
+     then held to the family total -- the number every other game plays to. */
+  t("the ceiling is derived from the bands and the bonus, and it is 114",
+    TOP_POINTS * PER_DAILY + BONUS === MAX_SCORE && MAX_SCORE === 114,
+    `${PER_DAILY} x ${TOP_POINTS} + ${BONUS} = ${MAX_SCORE}`);
 }
 
 console.log("\n=== What a question is worth, by the minute ===");
 {
-  t("full marks inside the first band", pointsFor(0) === 100 && pointsFor(9) === 100);
-  t("and a step down at its edge", pointsFor(10) === 85, "9 -> 100, 10 -> 85");
-  t("the last band is worth 36 at eighty-nine", pointsFor(89) === 36);
+  /* THE OWNER'S BANDS, 26 Sep 2026, in their words: "10 = upto 12 seconds,
+     7 = upto 20 seconds, 4 = any time". A question is 90 minutes in 30 real
+     seconds, so 12s is 36' and 20s is 60'. Asserted in minutes AND in real
+     milliseconds through the server's own clock, because the rule was given
+     in seconds and a band edge off by one minute is a third of a second of
+     somebody's score. */
+  t("10 inside twelve seconds", pointsFor(0) === 10 && pointsFor(36) === 10);
+  t("7 from there to twenty seconds", pointsFor(37) === 7 && pointsFor(60) === 7);
+  t("4 any time after, to the whistle", pointsFor(61) === 4 && pointsFor(89) === 4);
+  const at = (ms) => pointsFor(minuteOf({ question_ms: 1, started_ms: 1, penalty_minutes: 0 }, 1 + ms));
+  t("in real time: 12.0s is 10, 12.4s is 7", at(12000) === 10 && at(12400) === 7, `${at(12000)}, ${at(12400)}`);
+  t("in real time: 20.0s is 7, 20.4s is 4", at(20000) === 7 && at(20400) === 4, `${at(20000)}, ${at(20400)}`);
+  t("in real time: 29.9s is still 4, 30s is the whistle", at(29900) === 4 && at(30000) === 0, `${at(29900)}, ${at(30000)}`);
   /* PAST THE WHISTLE IS NOTHING, and that is the config's shape rather than a
      decision here: the bands stop at 89 and there is no ninetieth. */
   t("and nothing past the whistle", pointsFor(90) === 0 && pointsFor(200) === 0);
@@ -160,10 +174,12 @@ console.log("\n=== A wrong pick costs time, not points ===");
      typing game: 0 > 0 is false, and the test failed for saying nothing rather
      than for being wrong. A check that only works at one setting is a check
      that disappears when somebody tunes it. */
-  const early = pointsFor(5) - pointsFor(10);
-  const late = pointsFor(80) - pointsFor(85);
-  t("five minutes costs more early than late, because the curve is steepest there",
-    early > late, `${early} points at 5', ${late} at 80'`);
+  /* The owner's bands are three steps, not a curve, so "steepest early" no
+     longer describes them. What must hold at any setting: answering sooner is
+     never worth less. */
+  const drops = [];
+  for (let m = 1; m <= 90; m++) if (pointsFor(m) > pointsFor(m - 1)) drops.push(m);
+  t("sooner is never worth less, at any minute", drops.length === 0, drops.join(",") || "none");
 }
 
 console.log("\n=== The clock is per QUESTION, not per sitting ===");
@@ -183,9 +199,9 @@ console.log("\n=== The clock is per QUESTION, not per sitting ===");
     minuteOf({ started_ms: 0, question_ms: QUESTION_MS * 5, penalty_minutes: 0 },
       QUESTION_MS * 5) === 0,
     "five questions into the sitting, and this one has just started");
-  t("the eleventh question is worth a hundred if answered at once",
+  t("the eleventh question is worth the top band if answered at once",
     pointsFor(minuteOf({ started_ms: 0, question_ms: QUESTION_MS * 10, penalty_minutes: 0 },
-      QUESTION_MS * 10)) === 100,
+      QUESTION_MS * 10)) === TOP_POINTS,
     "it was worth 0 when the clock ran from kick-off");
   /* WHOLE MILLISECONDS, because that is what a clock hands over and because
      the first version of this line computed its own instant as perMinute * 20
@@ -436,15 +452,52 @@ console.log("\n=== Marking, which only this side can do ===");
 
 console.log("\n=== What a finished round scored ===");
 {
-  const three = [{ points: 100 }, { points: 100 }, { points: 100 }];
-  t("the points earned, less twenty a substitution",
-    totalFor(three, 1) === 300 - SUB_PENALTY, String(totalFor(three, 1)));
-  t("three substitutions cost sixty", totalFor(three, 3) === 300 - 3 * SUB_PENALTY);
-  /* A SCORE CANNOT GO NEGATIVE. Spending every substitution on a board you
-     scored little on should cost you the points you had, not put you in debt. */
-  t("and a round cannot end below nothing",
-    totalFor([{ points: 10 }], 3) === 0, "10 earned, 60 of penalties");
+  const row = (points, correct = 1) => ({ points, correct });
+  const three = [row(10), row(7), row(4)];
+  /* A PASS IS FREE: the owner, 26 Sep 2026, "No points". */
+  t("the points earned, and a pass costs nothing", SUB_PENALTY === 0 &&
+    totalFor(three, 1) === 21 && totalFor(three, 3) === 21, String(totalFor(three, 3)));
   t("an unanswered round is nought, not an error", totalFor([], 0) === 0);
+
+  /* THE BONUS: "4 for getting all 11 correct regardless of time taken". */
+  const elevenFast = Array.from({ length: 11 }, () => row(10));
+  const elevenSlow = Array.from({ length: 11 }, () => row(4));
+  const tenAndAMiss = [...Array.from({ length: 10 }, () => row(10)), row(0, 0)];
+  t("all eleven at the top band is 114", totalFor(elevenFast, 0) === 114, String(totalFor(elevenFast, 0)));
+  t("all eleven, however slowly, still earns the 4", totalFor(elevenSlow, 0) === 44 + BONUS,
+    String(totalFor(elevenSlow, 0)));
+  t("one wrong and there is no bonus", totalFor(tenAndAMiss, 0) === 100 && !allCorrect(tenAndAMiss),
+    String(totalFor(tenAndAMiss, 0)));
+  t("ten answered is not eleven: no bonus", totalFor(elevenFast.slice(1), 0) === 100);
+  /* "Yes, still counts": a passed question's slot is answered by its
+     replacement, so eleven right rows after three passes is eleven right. */
+  t("passes and the bonus still counts", totalFor(elevenFast, 3) === 114);
+
+  /* A ROUND FROM BEFORE THE BANDS CHANGED keeps its own terms: out of 1100,
+     twenty a pass, no bonus. Its per-answer points are stored, so it is
+     recognised by them and never re-scored. */
+  const old = [row(100), row(85), row(36)];
+  t("an old round is recognised by its stored points", isLegacy(old) && !isLegacy(three));
+  t("an old round keeps twenty a pass", totalFor(old, 1) === 221 - LEGACY.subPenalty && LEGACY.subPenalty === 20,
+    String(totalFor(old, 1)));
+  t("and is out of 1100, a new one out of 114", maxFor(old) === 1100 && maxFor(three) === 114);
+  const oldEleven = Array.from({ length: 11 }, () => row(100));
+  t("an old round never earns the new bonus", totalFor(oldEleven, 0) === 1100);
+  /* A SCORE CANNOT GO NEGATIVE, old rules or new. */
+  t("and a round cannot end below nothing", totalFor([row(36)], 3) === 0, "36 earned, 60 of old penalties");
+}
+
+console.log("\n=== The whistle says what the round was out of ===");
+{
+  /* finishRound, executed against a stubbed table: the page shows the total
+     the server banked and what it was out of, and the bonus when it was won. */
+  const finishDb = (rows) => ({ prepare() { const st = { bind() { return st; },
+    async all() { return { results: rows }; } }; return st; } });
+  const fin = async (rows, subs) => finishRound({ DB: finishDb(rows) }, { play_id: "p", subs_used: subs, question_ms: 1, started_ms: 1 });
+  const a = await fin(Array.from({ length: 11 }, (_, i) => ({ idx: i + 1, correct: 1, points: 10 })), 0);
+  t("eleven right: 114 of 114, bonus 4", a.score === 114 && a.max === 114 && a.bonus === 4, JSON.stringify(a));
+  const b = await fin([{ idx: 1, correct: 1, points: 100 }, { idx: 2, correct: 0, points: 0 }], 1);
+  t("an old round: its own total, out of 1100, no bonus", b.score === 80 && b.max === 1100 && b.bonus === 0, JSON.stringify(b));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

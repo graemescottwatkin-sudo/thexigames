@@ -10,7 +10,7 @@
  * page cannot mark itself without the answer, and handing it the answer is what
  * we are stopping. So it happens here.
  */
-import { PER_DAILY, SUBS, MATCH_MINUTES, WRONG_PICK_MINUTES, minuteOf, pointsFor, judge, totalFor } from "./qf-round.js";
+import { PER_DAILY, SUBS, MATCH_MINUTES, WRONG_PICK_MINUTES, minuteOf, pointsFor, judge, totalFor, allCorrect, isLegacy, maxFor, BONUS } from "./qf-round.js";
 
 const now = () => Date.now();
 const id = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
@@ -223,6 +223,11 @@ export async function finishRound(env, round) {
   const right = answers.filter((a) => a.correct).length;
   return {
     score, answered: answers.length, correct: right,
+    /* What it was out of, and the bonus if it was earned, so the page says the
+       same total the server banked -- including a round from before the bands
+       changed, which is out of its own 1100. */
+    max: maxFor(answers),
+    bonus: !isLegacy(answers) && allCorrect(answers) ? BONUS : 0,
     questions: PER_DAILY, subsUsed: Number(round.subs_used) || 0,
     minute: minuteOf(round, now()),
   };

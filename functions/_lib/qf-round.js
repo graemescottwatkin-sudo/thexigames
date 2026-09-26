@@ -24,6 +24,12 @@ export const PER_DAILY = CONFIG.QUESTIONS_PER_DAILY;
 export const SUBS = CONFIG.SUBS_PER_DAILY;
 export const SUB_PENALTY = CONFIG.SUB_POINT_PENALTY;
 export const MATCH_MINUTES = CONFIG.MATCH_DURATION_MINUTES;
+export const BONUS = CONFIG.ALL_CORRECT_BONUS || 0;
+/* The most one question can earn, and so the most a round can: eleven at the
+   top band plus the all-correct bonus. */
+export const TOP_POINTS = Math.max(...BANDS.map((b) => b.points));
+export const MAX_SCORE = PER_DAILY * TOP_POINTS + BONUS;
+export const LEGACY = CONFIG.LEGACY_SCORING;
 /* Real time for ONE question, which is what a match minute is measured in:
    the clock runs a question's worth of real seconds across the whole 90. */
 export const QUESTION_MS = CONFIG.QUESTION_DURATION_MS;
@@ -127,5 +133,22 @@ export function judge(question, pick) {
    silently become a different round. */
 export function totalFor(answers, subsUsed) {
   const earned = answers.reduce((a, r) => a + (Number(r.points) || 0), 0);
-  return Math.max(0, earned - (Number(subsUsed) || 0) * SUB_PENALTY);
+  if (isLegacy(answers)) return Math.max(0, earned - (Number(subsUsed) || 0) * LEGACY.subPenalty);
+  return Math.max(0, earned - (Number(subsUsed) || 0) * SUB_PENALTY + (allCorrect(answers) ? BONUS : 0));
+}
+
+/* ELEVEN RIGHT, whatever the clock said: one row per question, every one
+   correct. A passed question has no row -- its replacement has the slot. */
+export function allCorrect(answers) {
+  return answers.length === PER_DAILY && answers.every((a) => !!Number(a.correct));
+}
+
+/* A ROUND FROM BEFORE THE 27 SEP 2026 BANDS, told by its stored points: every
+   right answer then earned 36 or more, and none now earns more than the top
+   band. It keeps the total and the maximum it was played for. */
+export function isLegacy(answers) {
+  return answers.some((a) => (Number(a.points) || 0) > TOP_POINTS);
+}
+export function maxFor(answers) {
+  return isLegacy(answers) ? LEGACY.max : MAX_SCORE;
 }
