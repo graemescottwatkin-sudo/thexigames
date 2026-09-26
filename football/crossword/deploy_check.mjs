@@ -178,7 +178,7 @@ t("asset URLs carry a build tag so a cached copy cannot be reused", (() => {
    (>= v100) with a new-scheme build passes with a note. Once LAST_SHIPPED is
    new-scheme, ordering is strict again: number first, then letter, where
    "v001" < "v001b" < "v002". */
-const LAST_SHIPPED = "v004l";    // <- what is LIVE; bump after each deploy
+const LAST_SHIPPED = "v004m";    // <- what is LIVE; bump after each deploy
 /* What was last PRESENTED — a different question from what is live, and the
    burn rule is about this one: a tag dies the moment its package is handed
    over, deployed or not. One constant tried to answer both questions and the
@@ -262,7 +262,7 @@ t("the build tag never goes backwards",
    On failure this prints the value to paste, because a constant that is
    laborious to update is a constant that goes stale — which is how
    LAST_SHIPPED itself ended two releases behind. */
-const LAST_SHIPPED_ASSETS = "7a6b0f89e2c3750d";
+const LAST_SHIPPED_ASSETS = "4d7f9b8fe6fa3e8a";
 function ownAssetHash() {
   /* Discovered from the page, never a hardcoded list: an asset added to
      index.html is covered the day it is added, so this check cannot quietly
