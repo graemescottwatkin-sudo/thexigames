@@ -33,24 +33,29 @@
     ],
 
     /* --- Scoring ----------------------------------------------------- */
-    // Points awarded for a correct answer at or before each match minute.
-    // Shape: steep at the start, flattening out. Recognising it instantly is
-    // worth a lot more than recognising it at 25', but a player who needs the
-    // letters still walks away with something that reads like a result.
+    // Points for a correct answer at or before each match minute. A question
+    // plays 90 minutes in 30 real seconds, so a minute is a third of a second.
+    // THE OWNER'S BANDS, 26 Sep 2026: "10 = upto 12 seconds, 7 = upto 20
+    // seconds, 4 = any time" -- 12s is 36', 20s is 60', and 89' is the last
+    // minute before the whistle. Eleven questions at 10 is 110, and the bonus
+    // below makes 114, the family's total.
     SCORE_BANDS: [
-      { maxMinute: 9,  points: 100 },
-      { maxMinute: 19, points: 85 },
-      { maxMinute: 29, points: 72 },
-      { maxMinute: 39, points: 62 },
-      { maxMinute: 49, points: 54 },
-      { maxMinute: 59, points: 48 },
-      { maxMinute: 69, points: 43 },
-      { maxMinute: 79, points: 39 },
-      { maxMinute: 89, points: 36 }
+      { maxMinute: 36, points: 10 },
+      { maxMinute: 60, points: 7 },
+      { maxMinute: 89, points: 4 }
     ],
 
-    // Original spec v0.1 curve, kept for back-to-back comparison:
-    // 100, 95, 90, 80, 70, 55, 40, 25, 10
+    // All eleven answered correctly, at any speed: the owner, 26 Sep 2026,
+    // "bonus 4 for getting all 11 correct regardless of time taken". A question
+    // that was passed counts by its replacement.
+    ALL_CORRECT_BONUS: 4,
+
+    /* ROUNDS PLAYED BEFORE 27 SEP 2026 were scored out of 1100 -- 100 points
+       down to 36 a question, 20 a pass -- and their per-answer points are
+       stored, so they are recognised by them (any answer worth more than the
+       top band above) and totalled and shown on their own terms, never
+       re-scored. */
+    LEGACY_SCORING: { max: 1100, subPenalty: 20 },
 
     // Off by default, as specified. Set either to a positive number to test
     // whether a cost on wrong guesses restores the guess/wait tension.
@@ -89,7 +94,12 @@
        whether players finish at all. If rounds routinely run out of clock the
        fix is the band widths or the duration, and the penalty will look
        innocent throughout. */
-    WRONG_GUESS_MINUTE_PENALTY: 10,  // match minutes added per wrong pick
+    /* 0 SINCE 26 SEP 2026, BECAUSE THE 10 NEVER COST ANYTHING. A wrong pick
+       ends its question -- one answer per question, qf_answer's primary key --
+       and the minutes were added after it was scored, then cleared when the
+       next question was served. So the page said "10 minutes gone" and nothing
+       went. A wrong answer scores 0, which is the whole cost. */
+    WRONG_GUESS_MINUTE_PENALTY: 0,   // match minutes added per wrong pick
 
     // What survives on the board after a wrong guess:
     //   'correct-positions' keep every character that's in the right place and
@@ -112,7 +122,8 @@
     // Passing swaps the question for a fresh one off the bench, back at 0'.
     // The bench is fixed and shared, so everyone plays the same possible pool.
     SUBS_PER_DAILY: 3,
-    SUB_POINT_PENALTY: 20,         // deducted from the running total per sub
+    // The owner, 26 Sep 2026: a pass costs no points, only one of the three.
+    SUB_POINT_PENALTY: 0,          // deducted from the running total per sub
     SUB_MIN_MINUTE: 0,             // raise this to stop instant rerolling
 
     /* --- Storage ----------------------------------------------------- */

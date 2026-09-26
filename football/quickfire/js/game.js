@@ -31,7 +31,7 @@
  * link so a friend could replay the exact eleven, and that is now a board
  * number in the fragment, which is shorter and does not describe the board.
  */
-var BUILD = "v001p";
+var BUILD = "v001q";
 
 (function bootstrap() {
   'use strict';
@@ -274,7 +274,7 @@ function start() {
     var usable = left > 0 && current && !current.finished;
     el.passQuestion.disabled = !usable;
     el.subCost.textContent = left > 0
-      ? '−' + CONFIG.SUB_POINT_PENALTY + ' · ' + left + ' left'
+      ? (CONFIG.SUB_POINT_PENALTY ? '−' + CONFIG.SUB_POINT_PENALTY + ' · ' : '') + left + ' left'
       : 'none left';
     if (window.XIBar) XIBar.set({ subs: { left: Math.max(0, CONFIG.SUBS_PER_DAILY - state.subsUsed), of: CONFIG.SUBS_PER_DAILY } });
   }
@@ -607,7 +607,7 @@ function start() {
         el.runningScore.textContent = state.totalScore; if (window.XIBar) XIBar.set({ score: state.totalScore });
         renderOptions(q);
         renderSubButton();
-        setFeedback('SUBBED OFF — −' + CONFIG.SUB_POINT_PENALTY, 'sub');
+        setFeedback('SUBBED OFF' + (CONFIG.SUB_POINT_PENALTY ? ' — −' + CONFIG.SUB_POINT_PENALTY : ''), 'sub');
         anchorClock(r.minute || 0);
         renderClock(displayMinute());
         startTicking();
@@ -770,10 +770,17 @@ function start() {
       correct: r ? r.correct : solved.length,
       total: CONFIG.QUESTIONS_PER_DAILY,
       subs: state.subsUsed,
-      subCost: state.subsUsed * CONFIG.SUB_POINT_PENALTY,
+      /* What the SERVER charged and awarded, where it said: a round from
+         before 27 Sep 2026 is out of its old maximum with twenty a pass, and the page's
+         config no longer knows either number. */
+      subCost: r && r.max === CONFIG.LEGACY_SCORING.max
+        ? state.subsUsed * CONFIG.LEGACY_SCORING.subPenalty
+        : state.subsUsed * CONFIG.SUB_POINT_PENALTY,
+      bonus: r && r.bonus ? r.bonus : 0,
       played: answered,
       score: r ? r.score : state.totalScore,
-      maxScore: CONFIG.QUESTIONS_PER_DAILY * MAX_QUESTION_POINTS,
+      maxScore: r && r.max ? r.max
+        : CONFIG.QUESTIONS_PER_DAILY * MAX_QUESTION_POINTS + (CONFIG.ALL_CORRECT_BONUS || 0),
       average: minutes.length ? Math.round(minutes.reduce(function (a, b) { return a + b; }, 0) / minutes.length) : null,
       fastest: minutes.length ? Math.min.apply(null, minutes) : null,
       latest: minutes.length ? Math.max.apply(null, minutes) : null
@@ -795,7 +802,8 @@ function start() {
       line,
       '',
       s.average === null ? 'Average: —' : 'Average: ' + s.average + "'",
-      'Subs: ' + s.subs + (s.subs ? ' (−' + s.subCost + ')' : '')
+      'Subs: ' + s.subs + (s.subCost ? ' (−' + s.subCost + ')' : '') +
+        (s.bonus ? '  ·  All eleven +' + s.bonus : '')
     ].join('\n');
   }
 
@@ -815,7 +823,8 @@ function start() {
     html += row('Fastest goal', s.fastest === null ? 'No goals' : s.fastest + "'");
     html += row('Latest goal', s.latest === null ? 'No goals' : s.latest + "'");
     html += row('Subs used', s.subs + ' of ' + CONFIG.SUBS_PER_DAILY +
-      (s.subs ? '  (−' + s.subCost + ')' : ''));
+      (s.subCost ? '  (−' + s.subCost + ')' : ''));
+    if (s.bonus) html += row('All eleven right', '+' + s.bonus);
     html += '</div>';
     html += '<ol class="breakdown">';
     state.results.forEach(function (x) {
