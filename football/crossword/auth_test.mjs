@@ -12,6 +12,7 @@ import {
   destroySession, sessionCookie, clearedCookie, csrfOk, publicUser,
 } from "../../functions/_lib/auth.js";
 import { onRequestPost as googleSignIn } from "../../functions/api/auth/google.js";
+import { onRequestPost as appleSignIn, appleUser } from "../../functions/api/auth/apple.js";
 import { onRequestGet as sessionInfo } from "../../functions/api/auth/session.js";
 import { onRequestPost as signOut } from "../../functions/api/auth/signout.js";
 import { onRequestGet as getProfile, onRequestPost as setProfile } from "../../functions/api/account/profile.js";
@@ -140,6 +141,63 @@ for (const [name, claims, key] of [
 let threw = false;
 try { await verifyGoogleIdToken("not.a.token", CLIENT, jwks); } catch (e) { threw = true; }
 t("a malformed token is rejected", threw);
+
+/* SIGN IN WITH APPLE (the owner's go, 26 Sep 2026), verified exactly as
+   Google's is and proved the same way: REAL RS256 tokens from keys made here,
+   and every refusal its own case -- another key, another app, another issuer,
+   expired, no subject, a nonce that does not match, and no nonce at all. */
+console.log("\nSign in with Apple");
+const { verifyAppleIdToken, APPLE_AUDIENCE } = await import("../../functions/_lib/auth.js");
+const RAW_NONCE = "a-raw-nonce-from-the-app";
+const NONCE = crypto.createHash("sha256").update(RAW_NONCE).digest("hex");
+const appleValid = () => ({ iss: "https://appleid.apple.com", aud: APPLE_AUDIENCE, sub: "001234.apple-user.0001",
+  email: "x7abc@privaterelay.appleid.com", exp: now() + 600, iat: now(), nonce: NONCE });
+t("the audience is the app's bundle id", APPLE_AUDIENCE === "com.thexigames.app", APPLE_AUDIENCE);
+t("a properly signed Apple token is accepted", await (async () => {
+  const c = await verifyAppleIdToken(makeToken(appleValid()), APPLE_AUDIENCE, RAW_NONCE, jwks);
+  return c.sub === "001234.apple-user.0001";
+})());
+for (const [name, claims, key, raw] of [
+  ["an Apple token signed with another key is rejected", appleValid(), evil.privateKey, RAW_NONCE],
+  ["an Apple token for another app is rejected", { ...appleValid(), aud: "com.someone.else" }, good.privateKey, RAW_NONCE],
+  ["an Apple token from another issuer is rejected", { ...appleValid(), iss: "https://accounts.google.com" }, good.privateKey, RAW_NONCE],
+  ["an expired Apple token is rejected", { ...appleValid(), exp: now() - 10 }, good.privateKey, RAW_NONCE],
+  ["an Apple token with no subject is rejected", { ...appleValid(), sub: undefined }, good.privateKey, RAW_NONCE],
+  ["an Apple token whose nonce is not this request's is rejected", appleValid(), good.privateKey, "another-raw-nonce"],
+  ["an Apple token with no raw nonce sent is rejected", appleValid(), good.privateKey, ""],
+  ["an Apple token carrying no nonce is rejected", { ...appleValid(), nonce: undefined }, good.privateKey, RAW_NONCE],
+]) {
+  let threwA = false;
+  try { await verifyAppleIdToken(makeToken(claims, key), APPLE_AUDIENCE, raw, jwks); } catch (e) { threwA = true; }
+  t(name, threwA);
+}
+{
+  const aenv = { DB: makeDB() };
+  const first = await appleUser(aenv, appleValid(), { givenName: "Test", familyName: "Player" });
+  t("the first Apple sign-in makes an account named from what the app sent",
+    first.created && first.user.display_name === "Test Player" && first.user.provider === "apple",
+    first.user.display_name);
+  const again = await appleUser(aenv, appleValid(), {});
+  t("and a later one, which carries no name, finds it and leaves the name alone",
+    !again.created && again.user.id === first.user.id && again.user.display_name === "Test Player",
+    again.user.display_name);
+  const relay = await appleUser(aenv, { ...appleValid(), sub: "001234.apple-user.0002" }, {});
+  t("a relay address with no name is called Player, not its random local part",
+    relay.created && relay.user.display_name === "Player", relay.user.display_name);
+  const g = await findOrCreateUser(aenv, "google", "001234.apple-user.0001", { email: "g@x.y", name: "G" });
+  t("an Apple ID and a Google ID with the same subject are two accounts, not one",
+    g.created && g.user.id !== first.user.id);
+  const noNonce = await appleSignIn({ request: req({ method: "POST",
+    body: { identityToken: makeToken(appleValid()) } }), env: aenv });
+  t("the endpoint refuses a sign-in with no nonce before verifying anything", noNonce.status === 400);
+  const forged = await appleSignIn({ request: req({ method: "POST",
+    body: { identityToken: "not.a.token", rawNonce: RAW_NONCE } }), env: aenv });
+  t("and a token it cannot verify, with one generic answer",
+    forged.status === 401 && /Could not verify that sign-in/.test(await forged.text()));
+  const noHeader = await appleSignIn({ request: req({ method: "POST", csrf: false,
+    body: { identityToken: "x", rawNonce: "y" } }), env: aenv });
+  t("and a post without the family header", noHeader.status === 403);
+}
 
 console.log("\nUsers and sessions");
 const env = { DB: makeDB(), GOOGLE_CLIENT_ID: CLIENT };

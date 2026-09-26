@@ -389,7 +389,7 @@ body.flex-layout:not(.home-showing) .xic-aged-short {
 }
 .xic-sub { font-size: 12.5px; color: var(--ink-faint); margin-bottom: 16px; text-align: left; }
 .xic-why { font-size: 14.5px; line-height: 1.55; color: var(--ink-soft); margin: 0 0 16px; }
-.xic-gsi { display: flex; justify-content: center; min-height: 44px; margin-bottom: 10px; }
+.xic-gsi { display: flex; flex-direction: column; align-items: center; gap: 8px; min-height: 44px; margin-bottom: 10px; }
 /* The app's own Google button (xi-chrome.js nativeGoogle): shaped like the one
    Google's library draws on the web, so the sheet looks the same either way. */
 .xic-gbtn { display: inline-flex; align-items: center; gap: 10px;
@@ -397,6 +397,16 @@ body.flex-layout:not(.home-showing) .xic-aged-short {
   border: 1px solid var(--line); background: var(--card); color: var(--ink);
   font: inherit; font-weight: 600; cursor: pointer; }
 .xic-gmark { width: 18px; height: 18px; flex: none; }
+/* SIGN IN WITH APPLE, in the iOS app only (xi-chrome.js nativeApple). Black
+   with the Apple mark and Apple's own words, as its guidelines require, and
+   the same width as Google's beside it so neither is the lesser choice. The
+   colours are Apple's (--brand-apple in xi-tokens.css), not the theme's. */
+.xic-abtn, .xic-gsi .xic-gbtn { min-width: 240px; justify-content: center; }
+.xic-abtn { display: inline-flex; align-items: center; gap: 10px;
+  min-height: 44px; padding: 0 22px 0 14px; border-radius: var(--r-pill);
+  border: 1px solid var(--brand-apple); background: var(--brand-apple); color: var(--brand-apple-ink);
+  font: inherit; font-weight: 600; cursor: pointer; }
+.xic-amark { width: 16px; height: 19px; flex: none; }
 .xic-small { font-size: 12.5px; color: var(--ink-faint); margin: 12px 0 0; line-height: 1.45; }
 .xic-small a { color: var(--pitch-ink); }
 .xic-msg:empty { display: none; }

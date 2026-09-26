@@ -74,6 +74,70 @@ export async function verifyGoogleIdToken(idToken, clientId, keysFn = googleKeys
   return claims;
 }
 
+/* ---------- Sign in with Apple ----------
+   The owner's go, 26 Sep 2026 ("please action this"): App Store rule 4.8
+   requires it once the iOS app offers Google. The app's XiAppleSignIn plugin
+   hands the page an identity token and the raw nonce it hashed into the
+   request; the token is verified here exactly as Google's is -- Apple's
+   published keys, the signature first, then the claims.
+
+   THE AUDIENCE IS THE APP'S BUNDLE ID, one fact: a token Apple issued for any
+   other app is refused. APPLE_AUDIENCE in the environment may override it. */
+export const APPLE_AUDIENCE = "com.thexigames.app";
+const APPLE_ISSUER = "https://appleid.apple.com";
+let appleJwks = { keys: null, at: 0 };
+
+async function appleKeys() {
+  const hour = 3600000;
+  if (appleJwks.keys && Date.now() - appleJwks.at < hour) return appleJwks.keys;
+  const res = await fetch("https://appleid.apple.com/auth/keys");
+  if (!res.ok) throw new Error("Could not fetch Apple signing keys");
+  const body = await res.json();
+  appleJwks = { keys: body.keys || [], at: Date.now() };
+  return appleJwks.keys;
+}
+
+async function sha256hex(text) {
+  const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(String(text)));
+  return Array.from(new Uint8Array(d), (b) => b.toString(16).padStart(2, "0")).join("");
+}
+
+/* The nonce ties the token to the request this app made: the plugin sends
+   SHA-256(rawNonce) to Apple and the raw value here, so a token lifted from
+   another sign-in carries a nonce nobody here can answer. Required, never
+   optional: a missing nonce is a refusal, not a skipped check. */
+export async function verifyAppleIdToken(idToken, audience, rawNonce, keysFn = appleKeys) {
+  const parts = String(idToken || "").split(".");
+  if (parts.length !== 3) throw new Error("Malformed token");
+  const [h, p, sig] = parts;
+  const header = JSON.parse(new TextDecoder().decode(b64urlToBytes(h)));
+  const claims = JSON.parse(new TextDecoder().decode(b64urlToBytes(p)));
+
+  const keys = await keysFn();
+  const jwk = keys.find((k) => k.kid === header.kid);
+  if (!jwk) throw new Error("Unknown signing key");
+  if (header.alg && header.alg !== "RS256") throw new Error("Unexpected algorithm");
+
+  const key = await crypto.subtle.importKey(
+    "jwk", jwk, { name: "RSASSA-PKCS1-v1_5", hash: "SHA-256" }, false, ["verify"]);
+  const ok = await crypto.subtle.verify(
+    "RSASSA-PKCS1-v1_5", key, b64urlToBytes(sig),
+    new TextEncoder().encode(h + "." + p));
+  if (!ok) throw new Error("Bad signature");
+
+  /* Claims after the signature, never before. */
+  const now = Math.floor(Date.now() / 1000);
+  if (claims.iss !== APPLE_ISSUER) throw new Error("Wrong issuer");
+  if (claims.aud !== audience) throw new Error("Token was not issued for this app");
+  if (typeof claims.exp !== "number" || claims.exp < now) throw new Error("Token expired");
+  if (claims.iat && claims.iat > now + 300) throw new Error("Token issued in the future");
+  if (!claims.sub) throw new Error("Token has no subject");
+  if (!rawNonce || !claims.nonce || claims.nonce !== await sha256hex(rawNonce)) {
+    throw new Error("Nonce does not match");
+  }
+  return claims;
+}
+
 /* ---------- Users ---------- */
 
 export function newId() {

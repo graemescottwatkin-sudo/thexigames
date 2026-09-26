@@ -44,11 +44,14 @@ const GIS = 'script[src^="https://accounts.google.com/gsi/client"]';
 
 /* `cap`: undefined for a browser, or the Capacitor shape to fake. `signIn` is
    what the plugin does when asked. `server` is how /api/auth/google answers. */
-function page({ cap, signIn, server = { status: 200, body: { user: { id: "u1", displayName: "Sam", provider: "google" } } } } = {}) {
+/* `apple`: the iOS app's XiAppleSignIn plugin, as { signIn } -- absent on
+   Android and the web. `appleServer` is how /api/auth/apple answers. */
+function page({ cap, signIn, server = { status: 200, body: { user: { id: "u1", displayName: "Sam", provider: "google" } } },
+                apple, appleServer = { status: 200, body: { user: { id: "u2", displayName: "Ann", provider: "apple" } } } } = {}) {
   const dom = new JSDOM('<!doctype html><html><head></head><body><header class="xic-bar"></header></body></html>',
     { runScripts: "outside-only", url: "https://www.thexigames.com/football/hilo/" });
   const w = dom.window;
-  const calls = { fetch: [], signIn: [], signOut: 0 };
+  const calls = { fetch: [], signIn: [], signOut: 0, appleSignIn: 0 };
   w.fetch = async (url, init = {}) => {
     const u = String(url);
     calls.fetch.push({ url: u, method: init.method || "GET", headers: init.headers || {},
@@ -56,6 +59,7 @@ function page({ cap, signIn, server = { status: 200, body: { user: { id: "u1", d
     let status = 200, body = {};
     if (u === "/api/auth/session") body = { user: null, googleClientId: CLIENT };
     else if (u === "/api/auth/google") ({ status, body } = server);
+    else if (u === "/api/auth/apple") ({ status, body } = appleServer);
     else if (u === "/api/auth/signout") body = { ok: true };
     return new w.Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json" } });
   };
@@ -63,11 +67,14 @@ function page({ cap, signIn, server = { status: 200, body: { user: { id: "u1", d
   if (cap) {
     w.Capacitor = {
       isNativePlatform: () => cap.native !== false,
-      isPluginAvailable: (name) => cap.plugin !== false && name === "XiGoogleSignIn",
-      Plugins: cap.plugin === false ? {} : { XiGoogleSignIn: {
+      isPluginAvailable: (name) => (cap.plugin !== false && name === "XiGoogleSignIn") ||
+        (!!apple && name === "XiAppleSignIn"),
+      Plugins: Object.assign(cap.plugin === false ? {} : { XiGoogleSignIn: {
         signIn: async (opts) => { calls.signIn.push(opts); return signIn ? signIn(opts) : { idToken: "tok.native.id" }; },
         signOut: async () => { calls.signOut++; },
-      } },
+      } }, apple ? { XiAppleSignIn: {
+        signIn: async () => { calls.appleSignIn++; return apple.signIn(); },
+      } } : {}),
     };
   }
   w.eval(themeJs);
@@ -174,6 +181,65 @@ for (const [label, cap] of [["Capacitor that is not native", { native: false }],
   t("a double tap asks the plugin once", p.calls.signIn.length === 1, `${p.calls.signIn.length} asks`);
   release(); await settle();
   t("and posts once", posted(p).length === 1);
+}
+
+/* ---- SIGN IN WITH APPLE, the iOS app only (the owner's go, 26 Sep 2026) ---- */
+const abtn = (p) => p.doc.querySelector(".xic-gsi .xic-abtn");
+const applePosts = (p) => p.calls.fetch.filter((c) => c.url === "/api/auth/apple");
+const APPLE_OK = { identityToken: "tok.apple.id", rawNonce: "raw-nonce-1", givenName: "Ann", familyName: "Lee", email: "ann@privaterelay.appleid.com" };
+{
+  const p = page();
+  await openSheet(p);
+  t("on the web there is no Apple button", !abtn(p));
+}
+{
+  const p = page({ cap: {} });
+  await openSheet(p);
+  t("nor in the app without the Apple plugin (Android)", !abtn(p) && !!gbtn(p));
+}
+{
+  let events = [];
+  const p = page({ cap: {}, apple: { signIn: () => APPLE_OK } });
+  p.doc.addEventListener("xi:account", (e) => events.push(e.detail && e.detail.via));
+  await openSheet(p);
+  const b = abtn(p);
+  t("in the iOS app, Sign in with Apple is there, in Apple's words",
+    !!b && b.textContent.trim() === "Sign in with Apple", b && JSON.stringify(b.textContent));
+  t("first, above Google's -- at least as prominent, as Apple's guidelines ask",
+    !!b && !!gbtn(p) && b.compareDocumentPosition(gbtn(p)) === 4);
+  const mark = b && b.querySelector("svg.xic-amark");
+  t("with the Apple mark, hidden from screen readers", !!mark && mark.getAttribute("aria-hidden") === "true");
+  b.click(); await settle();
+  const a = applePosts(p)[0];
+  t("pressing it asks the plugin once", p.calls.appleSignIn === 1);
+  t("and posts the token, the raw nonce and the name to /api/auth/apple",
+    !!a && a.method === "POST" && a.body.identityToken === "tok.apple.id" && a.body.rawNonce === "raw-nonce-1" &&
+      a.body.givenName === "Ann" && a.body.familyName === "Lee", a && JSON.stringify(a.body));
+  t("with the CSRF header", !!a && (a.headers["X-XI-Games"] === "1" || a.headers["X-Crossword-XI"] === "1"));
+  t("and the player is signed in, by Apple", events.includes("apple") && /Signed in/.test(msg(p)), msg(p));
+  t("and nothing went to Google", posted(p).length === 0 && p.calls.signIn.length === 0);
+}
+{
+  const p = page({ cap: {}, apple: { signIn: () => { throw { code: "cancelled" }; } } });
+  await openSheet(p);
+  abtn(p).click(); await settle();
+  t("Apple cancelled: nothing posted and nothing said", applePosts(p).length === 0 && msg(p) === "", msg(p));
+}
+{
+  const p = page({ cap: {}, apple: { signIn: () => { throw { code: "failed", message: "ASAuthorizationError 1000" }; } } });
+  await openSheet(p);
+  abtn(p).click(); await settle();
+  t("an Apple plugin failure says so plainly, never its own message",
+    applePosts(p).length === 0 && /Apple sign-in did not finish/.test(msg(p)) && !/ASAuthorization/.test(msg(p)), msg(p));
+}
+{
+  const p = page({ cap: {}, apple: { signIn: () => APPLE_OK },
+    appleServer: { status: 401, body: { error: "Could not verify that sign-in." } } });
+  await openSheet(p);
+  abtn(p).click(); await settle();
+  t("an Apple refusal is shown in the server's words", /Could not verify that sign-in/.test(msg(p)), msg(p));
+  abtn(p).click(); await settle();
+  t("and the Apple button can be pressed again afterwards", p.calls.appleSignIn === 2, `${p.calls.appleSignIn} asks`);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

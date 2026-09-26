@@ -597,6 +597,44 @@
     } catch (e) { return null; }
   }
 
+  /* AND IN THE iOS APP, APPLE. App Store rule 4.8: an iOS app that offers
+     Google sign-in must offer Sign in with Apple beside it -- the owner's go,
+     26 Sep 2026. The app's XiAppleSignIn plugin returns an identity token and
+     the raw nonce it hashed into the request; /api/auth/apple verifies both.
+     Only where the plugin exists: on the web and on Android there is no Apple
+     button, which the rule allows, and web Apple sign-in would need a
+     Services ID this site does not have. Detected by asking Capacitor, as
+     Google's is. */
+  function nativeApple() {
+    try {
+      var cap = window.Capacitor;
+      if (!cap || !cap.isNativePlatform || !cap.isNativePlatform()) return null;
+      if (!cap.isPluginAvailable || !cap.isPluginAvailable("XiAppleSignIn")) return null;
+      return (cap.Plugins && cap.Plugins.XiAppleSignIn) || null;
+    } catch (e) { return null; }
+  }
+  var A_MARK = '<svg class="xic-amark" viewBox="0 0 814 1000" aria-hidden="true" focusable="false"><path fill="currentColor" d="M788.1 340.9c-5.8 4.5-108.2 62.2-108.2 190.5 0 148.4 130.3 200.9 134.2 202.2-.6 3.2-20.7 71.9-68.7 141.9-42.8 61.6-87.5 123.1-155.5 123.1s-85.5-39.5-164-39.5c-76.5 0-103.7 40.8-165.9 40.8s-105.6-57-155.5-127C46.7 790.7 0 663 0 541.8c0-194.4 126.4-297.5 250.8-297.5 66.1 0 121.2 43.4 162.7 43.4 39.5 0 101.1-46 176.3-46 28.5 0 130.9 2.6 198.3 99.2zm-234-181.5c31.1-36.9 53.1-88.1 53.1-139.3 0-7.1-.6-14.3-1.9-20.1-50.6 1.9-110.8 33.7-147.1 75.8-28.5 32.4-55.1 83.6-55.1 135.5 0 7.8 1.3 15.6 1.9 18.1 3.2.6 8.4 1.3 13.6 1.3 45.4 0 102.5-30.4 135.5-71.3z"/></svg>';
+  var appleBusy = false;
+  function appleSignIn(plugin) {
+    if (appleBusy) return;
+    appleBusy = true;
+    say("");
+    plugin.signIn().then(function (r) {
+      if (!r || !r.identityToken || !r.rawNonce) throw { code: "failed" };
+      return api("/api/auth/apple", {
+        identityToken: r.identityToken, rawNonce: r.rawNonce,
+        givenName: r.givenName || null, familyName: r.familyName || null, email: r.email || null,
+      }).then(function (u) {
+        setUser(u.user, "apple");
+        say("Signed in. Your results on this device are being saved to your account.");
+      }, function (e) { say(String(e && e.message || "Sign-in failed.")); });
+    }).catch(function (e) {
+      /* Closing Apple's sheet is a choice, not a fault: nothing is said. */
+      if (e && e.code === "cancelled") return;
+      say("Apple sign-in did not finish. Try again in a moment.");
+    }).then(function () { appleBusy = false; }, function () { appleBusy = false; });
+  }
+
   /* The sign-in's answer, the same for both doors. */
   function googleSignedIn(r) {
     setUser(r.user, "google");
@@ -634,9 +672,19 @@
   /* Google's button, into the sheet. Drawn when the sheet first opens, not at
      boot: most visitors never open it, and the script is not free. */
   function renderGoogle() {
-    if (!sheet || !acct.accounts || !acct.googleClientId) return;
+    if (!sheet || !acct.accounts) return;
     var mount = sheet.querySelector(".xic-gsi");
     mount.innerHTML = "";
+    /* Apple first where it exists: its guidelines ask for a button at least as
+       prominent as any other sign-in, and first in the list is that. */
+    var apple = nativeApple();
+    if (apple) {
+      var ab = el("button", "xic-abtn", A_MARK + "<span>Sign in with Apple</span>");
+      ab.type = "button";
+      ab.addEventListener("click", function () { appleSignIn(apple); });
+      mount.appendChild(ab);
+    }
+    if (!acct.googleClientId) return;
     var plugin = nativeGoogle();
     if (plugin) {
       /* WITH GOOGLE'S "G", as its sign-in branding guidelines ask and as the
