@@ -123,6 +123,10 @@ body.touch .osk { display: block; }
   :root {
     --osk-h-tablet: clamp(48px, 6.6vh, 64px);
     --osk-h: var(--osk-h-tablet);
+    /* And wider: the 92px ceiling filled an 11-inch iPad and left a 13-inch
+       one (1376 wide) with its keyboard in the middle 71%. The row still
+       decides -- see .osk-key -- so this only lets a big screen use it. */
+    --osk-key: clamp(27px, 9.4vw, 124px);
   }
   .osk-key { font-size: clamp(22px, calc(var(--osk-h) * .5), 32px); }
   .osk-key.wide { font-size: clamp(18px, calc(var(--osk-h) * .38), 26px); }

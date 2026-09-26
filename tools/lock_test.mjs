@@ -2095,18 +2095,26 @@ if (!ONLY || ONLY === "crossword") {
      (shared/xi-keys.css), the letters grow with them, and the page still
      does not scroll: the board takes what is left, as it always has. */
   console.log(`\ncrossword: the keys on a tablet`);
-  for (const [label, viewport] of [["ipad-air on its side", { width: 1180, height: 820 }], ["ipad on its side", { width: 1024, height: 768 }], ["ipad-air upright", { width: 820, height: 1180 }]]) {
+  /* The owner's own iPad is a 13-inch Pro: 1376 x 1008 on its side inside
+     the safe area (MobileApp, 26 Sep 2026). */
+  for (const [label, viewport] of [["ipad-pro-13 on its side", { width: 1376, height: 980 }], ["ipad-air on its side", { width: 1180, height: 820 }], ["ipad on its side", { width: 1024, height: 768 }], ["ipad-air upright", { width: 820, height: 1180 }]]) {
     const { page, context } = await openCrossword([label, viewport, true]);
     const k = await page.evaluate(() => {
       const key = document.querySelector(".osk-key:not(.wide):not(.go)");
       const r = key.getBoundingClientRect();
       const vis = (e) => getComputedStyle(e).display !== "none" && e.getBoundingClientRect().width > 0;
       const cell = [...document.querySelectorAll(".cell")].find((c) => vis(c) && !c.classList.contains("block"));
+      const row = [...document.querySelector(".osk-row").children].map((e) => e.getBoundingClientRect());
+      const span = row.length ? (row[row.length - 1].right - row[0].left) / innerWidth : 0;
       return { w: Math.round(r.width), h: Math.round(r.height), font: parseFloat(getComputedStyle(key).fontSize),
+        span: Math.round(span * 100),
         cell: cell ? Math.round(cell.getBoundingClientRect().width) : 0, scroll: document.documentElement.scrollHeight - innerHeight };
     });
     t(`${label}: the keys are tablet-sized -- at least 48px tall, letters at least 22px -- and the page does not scroll`,
       k.h >= 48 && k.font >= 22 && k.scroll <= 1, JSON.stringify(k));
+    /* And across: a keyboard in the middle of a wide screen is the same
+       complaint turned sideways. The top row spans most of the width. */
+    t(`${label}: and the top row spans at least 85% of the screen's width`, k.span >= 85, `${k.span}%`);
     /* The height comes out of the board, so the board is held to what the
        other tablet checks hold it to: its squares at reading size. */
     t(`${label}: and the squares keep their reading size (32px or more)`, k.cell >= 32, JSON.stringify({ cell: k.cell }));
