@@ -72,7 +72,7 @@ async function tableFor(env, id, mineKey) {
 
   /* Score first, then the faster of two equal scores. */
   const rows = await env.DB.prepare(
-    `SELECT name, score, elapsed_secs, checks, reveals, play_id, created_at,
+    `SELECT name, score, elapsed_secs, checks, reveals, created_at,
             reveal_letters, reveal_answers, check_answers, check_grids, entrant_key
        FROM challenge_entries
       WHERE challenge_id = ? AND hidden = 0
@@ -108,7 +108,14 @@ async function tableFor(env, id, mineKey) {
       revealAnswers: r.reveal_answers || 0,
       checkAnswers: r.check_answers || 0,
       checkGrids: r.check_grids || 0,
-      playId: r.play_id,
+      /* NO PLAY ID, for anybody. A play id is a bearer credential: POST
+         /api/challenge makes a challenge from the play it names and POST
+         /api/challenge/entry files it into a table under any name typed, and
+         neither asks whose it is. Every entry carried one until 26 Sep 2026,
+         so reading a table was enough to spend everybody else's results. The
+         page used it only to find its own row, which is `mine` above; a
+         player who needs their own id already holds it. Not even selected, so
+         it cannot come back by a spread or a copied line. */
     })),
   };
 }

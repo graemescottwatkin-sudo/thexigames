@@ -297,7 +297,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v004l";
+  var BUILD = "v004m";
   try {
     window.CROSSWORDXI_BUILD = BUILD;
     console.log("Crossword XI build " + BUILD);
@@ -5443,7 +5443,7 @@
         apiAuth("/api/challenge/table", { id: id, entrantKey: entrantKey() })
           .then(function (t) {
             if (!t || !t.played) return;
-            renderStandings($("chStandings"), t, null);
+            renderStandings($("chStandings"), t);
             $("chStandings").hidden = false;
             $("chPlay").textContent = "Play it again";
           })
@@ -5481,7 +5481,7 @@
      is, and among people who know each other that deters more than any
      validation could. */
   /* The standings, drawn the same way wherever they appear. */
-  function renderStandings(box, d, youPlayId) {
+  function renderStandings(box, d) {
     if (!box) return;
     var mine = (challenge && challenge.name || "").toLowerCase();
     var rows = (d.entries || []).map(function (e) {
@@ -5505,8 +5505,11 @@
       if (e.revealAnswers) help.push(e.revealAnswers + "A");
       /* Older entries carry only the merged totals and cannot be split. */
       if (!help.length && e.reveals) help.push(e.reveals + "?");
-      var you = (youPlayId && e.playId === youPlayId) ||
-        (!!mine && e.name.toLowerCase() === mine);
+      /* Yours by the server's word: `mine` is worked out from the entrant key
+         this page sent, and the table carries no play ids to compare — a play
+         id is what files a result and makes a challenge, so handing out
+         everybody's let any reader spend them. */
+      var you = !!e.mine || (!!mine && e.name.toLowerCase() === mine);
       /* Time hard against the score, help in brackets before it. Everything
          that explains the score sits beside the score, so a row reads right to
          left as "91, over 4:19, having used two letters" rather than making the
@@ -5532,14 +5535,23 @@
   function showChallengeTable() {
     var box = $("challengeTable");
     if (!box || !challenge) return;
-    api("/api/challenge/table?id=" + encodeURIComponent(challenge.id))
+    /* Asked WITH the entrant key, so the server can say which row is ours.
+       The entry was only just filed and may not have landed; then the key
+       matches nothing, the answer is { played: false }, and the public table
+       is still worth showing. */
+    apiAuth("/api/challenge/table", { id: challenge.id, entrantKey: entrantKey() })
+      .catch(function () { return null; })
+      .then(function (d) {
+        return d && d.played ? d
+          : api("/api/challenge/table?id=" + encodeURIComponent(challenge.id));
+      })
       .then(function (d) {
         /* One renderer. This built its own rows, so every change to the
            standings had to be made twice — and was not: the challenge screen
            got left-aligned names and a penalties column while Full Time kept
            the old markup and the old classes, which is why the same table
            looked different depending on where you saw it. */
-        renderStandings(box, d, playId);
+        renderStandings(box, d);
         if (challenge.alreadyScored) {
           /* One entry per person is what stops reveal-then-replay, but somebody
              who has just finished and cannot see their number needs telling

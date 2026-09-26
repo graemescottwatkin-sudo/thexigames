@@ -8,6 +8,8 @@
 import fs from "node:fs";
 import { onRequestPost as challengePost } from "../../functions/api/challenge/index.js";
 import { onRequestPost as entryPost } from "../../functions/api/challenge/entry.js";
+import { onRequestGet as tableGet, onRequestPost as tablePost }
+  from "../../functions/api/challenge/table.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 const DIR = path.dirname(fileURLToPath(import.meta.url));
@@ -190,6 +192,71 @@ console.log("\nWhich boards can be challenged, in any game");
     last.indexOf("hlb:296") > -1 && last.indexOf(0) > -1, JSON.stringify(last.slice(1, 4)));
 }
 
+console.log("\nA table hands out nobody's play id");
+{
+  /* A play id is a bearer credential: POST /api/challenge makes a challenge
+     from the play it names, and POST /api/challenge/entry files it into a
+     table under any name typed. Every entry in a table carried one until
+     26 Sep 2026, so anybody who could read a table could spend everybody
+     else's results. EXECUTED against the real handler, both verbs, with a
+     stub that returns play_id on every row whether or not it was selected —
+     so what is proved is what the handler emits, not what it asked for. And
+     searched for by VALUE as well as by name, so the id cannot come back
+     under another key. */
+  const KEY = "k".repeat(12);
+  const IDS = ["seed-play-0001", "entry-play-0001", "entry-play-0002", "entry-play-0003"];
+  const chal = { id: "abc123", theme_id: "arsenal", board_no: 1,
+                 creator_name: "Creator", group_name: null, play_id: IDS[0] };
+  const ROWS = IDS.slice(1).map((pid, i) => ({
+    name: "Player " + i, score: 90 - i, elapsed_secs: 300 + i, checks: 0, reveals: 0,
+    play_id: pid, created_at: "2026-09-06 10:00:00",
+    reveal_letters: 0, reveal_answers: 0, check_answers: 0, check_grids: 0,
+    entrant_key: i === 1 ? KEY : "other-key-" + i,
+  }));
+  const env = { DB: { prepare: (sql) => ({
+    bind: () => ({
+      first: async () => {
+        if (/FROM challenges/.test(sql)) return chal;
+        if (/FROM plays/.test(sql)) return { game: "crossword", board_key: "arsenal-1" };
+        if (/COUNT\(\*\)/.test(sql)) return { n: 5 };
+        if (/FROM challenge_entries/.test(sql)) return { id: "e1" };   // "have I played?"
+        return null;
+      },
+      all: async () => ({ results: /FROM challenge_entries/.test(sql) ? ROWS : [] }),
+      run: async () => ({}),
+    }),
+  }) } };
+  const ask = (verb) => verb === "GET"
+    ? tableGet({ env, request: new Request("https://x/api/challenge/table?id=abc123") })
+    : tablePost({ env, request: new Request("https://x/api/challenge/table", {
+        method: "POST", headers: { "Content-Type": "application/json", "X-XI-Games": "1" },
+        body: JSON.stringify({ id: "abc123", entrantKey: KEY }),
+      }) });
+  for (const verb of ["GET", "POST"]) {
+    const res = await ask(verb);
+    const text = await res.text();
+    let body = null; try { body = JSON.parse(text); } catch (e) {}
+    const entries = (body && body.entries) || [];
+    /* Absent input must not pass: a table with no entries has no play ids
+       either, so the count is asserted first. */
+    t(`${verb}: the table came back with every entry`, res.status === 200 &&
+      entries.length === ROWS.length, `${res.status}, ${entries.length} entries`);
+    const named = entries.filter((e) => "playId" in e || "play_id" in e);
+    t(`${verb}: no entry carries a playId or play_id field`, named.length === 0,
+      named.length + " of " + entries.length);
+    const leaked = IDS.filter((pid) => text.includes(pid));
+    t(`${verb}: no play id appears anywhere in the response`, leaked.length === 0,
+      leaked.join(", "));
+    /* And what the id was used for still works: the caller's row is marked
+       from the key they sent, and only that row. The GET has no key, so it
+       marks nobody. */
+    const marked = entries.filter((e) => e.mine).map((e) => e.name);
+    t(`${verb}: ${verb === "POST" ? "the caller's own row, and only theirs, is `mine`" : "no row is `mine` without a key"}`,
+      verb === "POST" ? marked.length === 1 && marked[0] === "Player 1" : marked.length === 0,
+      JSON.stringify(marked));
+  }
+}
+
 console.log("\nPublished names");
 t("names are cleaned before they are stored", /cleanName/.test(src.entry) && /cleanName/.test(src.challenge));
 t("markup characters are removed rather than escaped later", /\[<>&/.test(src.names));
@@ -343,7 +410,20 @@ console.log("\nThe interface keeps the same promise as the endpoints");
        Time — so every change to the table had to be made twice, and was not.
        The same table looked different depending on where you saw it. */
     return (js.match(/var rows = \(d\.entries/g) || []).length === 1 &&
-      /renderStandings\(box, d, playId\)/.test(js);
+      /renderStandings\(box, d\)/.test(js);
+  })());
+
+  t("your own row is the server's `mine`, in both crosswords, never a play id", (() => {
+    /* The table carries no play ids, so a page comparing them would mark
+       nobody. Full Time asks with the entrant key, because the plain GET has
+       nothing to set `mine` from. */
+    return ["js/game.js", "../../friends/crossword/js/game.js"].every((f) => {
+      const g = fs.readFileSync(path.join(DIR, f), "utf8").replace(/\/\*[\s\S]*?\*\//g, "");
+      const a = g.indexOf("function renderStandings"), b = g.indexOf("function showChallengeTable");
+      const fn = g.slice(a, b), show = g.slice(b, b + 600);
+      return a > -1 && b > a && /e\.mine/.test(fn) && !/playId/.test(fn) &&
+        /apiAuth\("\/api\/challenge\/table", \{ id: challenge\.id, entrantKey: entrantKey\(\) \}\)/.test(show);
+    });
   })());
 
   t("names start in the same place, so the column can be scanned", (() => {
