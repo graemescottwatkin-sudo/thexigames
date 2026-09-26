@@ -108,5 +108,110 @@ t("before the first day everything clamps to #1, so testing never runs it down",
   FCW.clearTrustedTime();
 }
 
+/* EVERY BOARD'S DATE, ACROSS THE CLOCK CHANGES, IN THREE ZONES.
+
+   dailyDate was local midnight of the epoch plus N x 24 hours. That is right
+   only while no clock change lies between, and every check above runs in one
+   zone near day one: from 26 October 2026 in the UK every board landed on the
+   day before its own, #38 and #39 both on the 25th, and recordDaily filed each
+   result — and so the account's played_on — a day early.
+
+   The zone is FIXTURE, set here (process.env.TZ is re-read by Node on
+   assignment), not whatever the machine running this happens to be. London
+   for the UK's two changes, New York west of UTC, Auckland east of it — whose
+   changes fall on other days, and whose spring one is in the southern
+   September, so a range that happened to fit London's would not cover it. */
+{
+  const srv = await import("../../functions/_lib/daily.js");
+  const DAY = 86400000;
+  const BOARDS = 800;   // over two years from day one: every zone's changes, twice
+  const keyUTC = (ms) => new Date(ms).toISOString().slice(0, 10);
+  const firstDay = Date.UTC(sy, sm, sd), lastDay = firstDay + (BOARDS - 1) * DAY;
+  const savedTZ = process.env.TZ;
+
+  for (const zone of ["Europe/London", "America/New_York", "Pacific/Auckland"]) {
+    process.env.TZ = zone;
+    /* THE FIXTURE MUST HAVE LANDED. A runtime without zone data answers every
+       zone as UTC, where 24-hour steps are exact and the old code passes — so
+       the zone is proved to observe DST before anything is asked of it. */
+    const jan = new Date(2027, 0, 1).getTimezoneOffset(), jul = new Date(2027, 6, 1).getTimezoneOffset();
+    t(`${zone}: the zone fixture took effect and has clock changes`, jan !== jul,
+      `offset January ${jan}, July ${jul}`);
+
+    /* AND THE RANGE HOLDS THEM. The days whose local length is not 24 hours,
+       found by walking the range rather than written down, so this cannot go
+       on passing after the range stops covering them. */
+    const changes = [], short = [], long = [];
+    for (let ms = firstDay; ms <= lastDay; ms += DAY) {
+      const d = new Date(ms), a = new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate());
+      const b = new Date(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1);
+      if (b - a === DAY) continue;
+      changes.push(keyUTC(ms));
+      (b - a < DAY ? short : long).push(keyUTC(ms));
+    }
+    t(`${zone}: boards 1..${BOARDS} span at least two autumn and two spring changes`,
+      short.length >= 2 && long.length >= 2,
+      `spring (23h) ${short.join(", ") || "none"}; autumn (25h) ${long.join(", ") || "none"}`);
+
+    const wrong = [], seen = new Map(), dup = [], trip = [];
+    for (let n = 1; n <= BOARDS; n++) {
+      const d = FCW.dailyDate(n), key = FCW.localDateKey(d), want = srv.dailyDayKey(n);
+      if (key !== want && wrong.length < 3) wrong.push(`#${n} ${key}, server ${want}`);
+      if (seen.has(key) && dup.length < 3) dup.push(`#${seen.get(key)} and #${n} on ${key}`);
+      seen.set(key, n);
+      /* The calendar's round trip: a cell's date goes to a number through
+         dailyNumber(at) and back through dailyDate, and "real" is the two
+         agreeing. Local midnight exactly, since the cell is built that way. */
+      if ((d.getHours() || d.getMinutes()) && trip.length < 3) trip.push(`#${n} at ${d.toString()}`);
+      else if (FCW.dailyNumber(d) !== n && trip.length < 3) trip.push(`#${n} -> #${FCW.dailyNumber(d)}`);
+    }
+    t(`${zone}: every board's local date is the server's dailyDayKey, 1..${BOARDS}`, !wrong.length,
+      wrong.join("; ") || `through ${srv.dailyDayKey(BOARDS)}`);
+    t(`${zone}: no two boards share a day`, !dup.length, dup.join("; "));
+    t(`${zone}: each board is local midnight and maps back to itself`, !trip.length, trip.join("; "));
+
+    /* THE GRACE RULE is arithmetic on dailyDate too: a board counts if
+       finished before the end of the day after its own. On the autumn change
+       "own + 24h" is still own's date, so it refused a next-day legacy row and
+       closed the grace an hour early. Asked of every board that has a change
+       on its own day or the next — the days that rule's arithmetic crosses. */
+    const graceWrong = [];
+    let asked = 0;
+    for (let n = 1; n <= BOARDS; n++) {
+      const own = srv.dailyDayKey(n), next = srv.dailyDayKey(n + 1), after = srv.dailyDayKey(n + 2);
+      if (!changes.includes(own) && !changes.includes(next)) continue;
+      asked++;
+      const [ay, am, ad] = after.split("-").map(Number);
+      const endOfGrace = new Date(ay, am - 1, ad).getTime();
+      const cases = [
+        [{ dailyNo: n, date: next }, true, "dated the next day"],
+        [{ dailyNo: n, at: endOfGrace - 60000 }, true, "a minute before the grace ends"],
+        [{ dailyNo: n, at: endOfGrace }, false, "the moment the grace ends"],
+        [{ dailyNo: n, date: after }, false, "dated the day after the grace"],
+      ];
+      for (const [r, want, what] of cases) {
+        if (FCW.onTimeResult(r) !== want && graceWrong.length < 4) graceWrong.push(`#${n} ${what}: ${!want}`);
+      }
+    }
+    t(`${zone}: the grace ends at local midnight after the next day, across every change`,
+      asked >= changes.length && !graceWrong.length, graceWrong.join("; ") || `${asked} boards asked`);
+  }
+  if (savedTZ === undefined) delete process.env.TZ; else process.env.TZ = savedTZ;
+}
+
+/* A BOARD'S DATE IS NEVER READ IN UTC. dailyDate is LOCAL midnight; its
+   toISOString is the evening before anywhere east of UTC, and the top bar
+   named yesterday's date on every British summer board that way. Read from
+   the code with comments stripped, and paired with the positive: the bar's
+   day is the local key, so removing the call cannot pass as "no UTC read". */
+{
+  const game = fs.readFileSync(path.join(DIR, "js/game.js"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+  const utc = game.match(/dailyDate\([^()]*\)\s*\.\s*(?:toISOString|toJSON|getUTC\w+)/g) || [];
+  t("no daily's date is read as a UTC instant", !utc.length, utc.join("; ") || "none");
+  t("the top bar's day is the board's local date key",
+    /XIBar\.set\([\s\S]{0,200}day:\s*isDaily \? FCW\.localDateKey\(FCW\.dailyDate\(board\.no\)\)/.test(game));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

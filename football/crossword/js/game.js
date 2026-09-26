@@ -297,7 +297,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v004j";
+  var BUILD = "v004k";
   try {
     window.CROSSWORDXI_BUILD = BUILD;
     console.log("Crossword XI build " + BUILD);
@@ -1328,12 +1328,15 @@
        newcomer they are late, and the date is what the calendar they came from
        was showing. */
     /* THE FAMILY'S TOP BAR, named with this board: a daily's number and date,
-       and whether it is today's; a practice board has no number. */
+       and whether it is today's; a practice board has no number.
+       The day is the LOCAL date's key: dailyDate is local midnight, and its
+       toISOString is the UTC instant, which is the evening before anywhere
+       east of UTC — so the bar named yesterday all British summer. */
     if (window.XIBar) {
       window.XIBar.mount($("xiBar"));
       var isDaily = board.kind === "daily";
       window.XIBar.set({ name: "Crossword XI", no: isDaily ? board.no : null,
-                  day: isDaily ? FCW.dailyDate(board.no).toISOString().slice(0, 10) : null,
+                  day: isDaily ? FCW.localDateKey(FCW.dailyDate(board.no)) : null,
                   old: isDaily && board.no !== today(),
                   progress: "0/" + puzzle.entries.length, clock: "0'", score: null, worth: null, subs: null });
     }

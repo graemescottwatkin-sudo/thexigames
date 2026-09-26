@@ -1372,12 +1372,16 @@ var FCW = (function () {
   function onTimeResult(r) {
     if (!r || typeof r.dailyNo !== "number") return false;
     var own = dailyDate(r.dailyNo);
+    /* Days after `own` by CALENDAR, not by 24-hour steps: a day with a clock
+       change in it is 23 or 25 hours long, and on the autumn one "own plus
+       24h" is still own's date — which refused a next-day result as late. */
+    function after(k) { return new Date(own.getFullYear(), own.getMonth(), own.getDate() + k); }
     if (typeof r.at === "number") {
-      return r.at < own.getTime() + (1 + GRACE_DAYS) * 86400000;
+      return r.at < after(1 + GRACE_DAYS).getTime();
     }
     if (!r.date) return true;   // pre-date legacy: the archive did not exist
     return r.date === localDateKey(own) ||
-           r.date === localDateKey(new Date(own.getTime() + 86400000));
+           r.date === localDateKey(after(1));
   }
   /* Streaks run on consecutive Daily numbers. Practice never appears here,
      because only Daily completions are recorded. */
@@ -1641,10 +1645,17 @@ var FCW = (function () {
 
      Beside it deliberately, and built from the same DAILY_EPOCH, so the two
      cannot drift. A calendar that disagreed with the puzzle by a day would be
-     worse than no calendar — you would tap the 14th and get the 13th. */
+     worse than no calendar — you would tap the 14th and get the 13th.
+
+     BUILT FROM CALENDAR COMPONENTS, and Date normalises the day overflow. It
+     was local midnight of the epoch plus N x 24 hours, which is right only
+     while no clock change lies between: from the UK's autumn change onward
+     every board landed on the day BEFORE its own (#38 and #39 both on 25
+     October 2026), so results were filed a day early, onto the account's
+     played_on, and the calendar lost a board. epoch_test holds this to the
+     server's dailyDayKey for every board across both changes, in three zones. */
   function dailyDate(number) {
-    var epoch = new Date(DAILY_EPOCH.y, DAILY_EPOCH.m, DAILY_EPOCH.d);
-    return new Date(epoch.getTime() + Math.max(1, number) * 86400000);
+    return new Date(DAILY_EPOCH.y, DAILY_EPOCH.m, DAILY_EPOCH.d + Math.max(1, number));
   }
 
   function dailySeed(number) {
