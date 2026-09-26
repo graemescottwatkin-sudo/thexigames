@@ -52,6 +52,7 @@
 import http from "node:http";
 import fs from "node:fs";
 import path from "node:path";
+import { Readable } from "node:stream";
 import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
@@ -130,7 +131,7 @@ const envFor = (p) => (p.startsWith("/api/quickfire/") ? QF_ENV : {});
 const TYPES = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript",
   ".json": "application/json", ".png": "image/png", ".svg": "image/svg+xml", ".webp": "image/webp",
   ".ico": "image/x-icon", ".woff2": "font/woff2" };
-const server = http.createServer(async (req, res) => {
+async function handle(req, res) {
   const url = new URL(req.url, "http://127.0.0.1");
   const p = decodeURIComponent(url.pathname);
   try {
@@ -179,9 +180,62 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(200, { "Content-Type": TYPES[path.extname(file)] || "application/octet-stream" });
     res.end(fs.readFileSync(file));
   } catch (e) { res.writeHead(500); res.end(String(e)); }
+}
+/* Requests from the browser that reached the socket anyway; the suite's last
+   check requires none. Node's own calls carry no browser user agent. */
+let browserOnSocket = 0, answeredHere = 0;
+const server = http.createServer((req, res) => {
+  if (/Chrome\//.test(req.headers["user-agent"] || "")) browserOnSocket++;
+  return handle(req, res);
 });
 await new Promise((r) => server.listen(0, "127.0.0.1", r));
 const ORIGIN = "http://127.0.0.1:" + server.address().port;
+
+/* EVERY REQUEST THE BROWSER MAKES IS ANSWERED IN THIS PROCESS, not over a
+   socket. Two copies of this suite at once used to hang on their first page
+   (page.goto: Timeout 30000ms exceeded), and six at once always did. Measured
+   26 Sep 2026 with the server timing each request: it answered every one in
+   under 10ms, but they ARRIVED ten seconds apart — 2.1s, 12.1s, 22.2s — while
+   the browser listed 27 still open. Something between Chromium and a loopback
+   socket was holding them (on the owner's machine, security software filters
+   local traffic; no proxy is configured). The server was never the slow part.
+   So the page's requests never touch the network: `handle` above is called
+   directly, with the request as the browser made it, and its answer handed
+   back through the route. Anything off this machine — Google Fonts, the only
+   one — is answered empty, as tools/local_resources.js does for jsdom. The
+   socket server stays for the few calls made from Node. */
+async function serve(method, href, headers, body) {
+  const u = new URL(href);
+  const req = Readable.from(body && body.length ? [body] : []);
+  Object.assign(req, { url: u.pathname + u.search, method, headers });
+  const out = { status: 200, headers: {}, chunks: [] };
+  await new Promise((done) => {
+    handle(req, {
+      writeHead(status, h) { out.status = status; Object.assign(out.headers, h || {}); },
+      end(b) { if (b != null) out.chunks.push(Buffer.from(b)); done(); },
+    });
+  });
+  return { status: out.status, headers: out.headers, body: Buffer.concat(out.chunks) };
+}
+const OFFSITE = { stylesheet: "text/css", script: "text/javascript", font: "font/woff2" };
+async function answerHere(route, href) {
+  const q = route.request();
+  const url = href || q.url();
+  if (!url.startsWith(ORIGIN + "/")) {
+    return route.fulfill({ status: 200, body: "", contentType: OFFSITE[q.resourceType()] || "application/octet-stream" });
+  }
+  const r = await serve(q.method(), url, q.headers(), q.postDataBuffer());
+  answeredHere++;
+  return route.fulfill({ status: r.status, headers: r.headers, body: r.body });
+}
+/* A rewritten body is a different length. */
+const withoutLength = (h) => Object.fromEntries(Object.entries(h).filter(([k]) => k.toLowerCase() !== "content-length"));
+/* The same answer for a route that rewrites it: status, headers and the JSON. */
+async function fetchHere(route, href) {
+  const q = route.request();
+  const r = await serve(q.method(), href || q.url(), q.headers(), q.postDataBuffer());
+  return { status: r.status, headers: r.headers, json: JSON.parse(r.body.toString("utf8") || "null") };
+}
 
 /* ---- the measurement, taken in the page ----------------------------------- */
 function measure() {
@@ -244,6 +298,9 @@ const browser = await chromium.launch();
   const make = browser.newContext.bind(browser);
   browser.newContext = async (o) => {
     const c = await make(o);
+    /* Every request answered in this process (see serve()). A page's own
+       route that rewrites a request falls back to this one. */
+    await c.route("**/*", (route) => answerHere(route));
     await c.addInitScript(() => { window.__ft = 0; document.addEventListener("xi:fulltime", () => { window.__ft++; }); });
     /* An exception in a page is said, not swallowed: a game that throws while
        it boots shows up here as a timeout somewhere else. */
@@ -316,7 +373,7 @@ async function open(game, board, [name, viewport, touch]) {
   await page.route("**" + game.api + "*", (route) => {
     const u = new URL(route.request().url());
     u.searchParams.set("no", String(board));
-    route.continue({ url: u.href });
+    route.fallback({ url: u.href });
   });
   await page.goto(ORIGIN + game.path, { waitUntil: "networkidle" });
   await page.click("#homeDaily");
@@ -778,14 +835,14 @@ async function openSlider(game, [name, viewport, touch]) {
   const context = await browser.newContext({ viewport, hasTouch: touch, isMobile: touch, deviceScaleFactor: 1 });
   const page = await context.newPage();
   await page.route("**/api/ballpark/daily*", async (route) => {
-    const res = await route.fetch();
-    const body = await res.json();
+    const res = await fetchHere(route);
+    const body = res.json;
     const q = body && body.board && body.board.questions && body.board.questions[0];
     if (q) {
       while ((q.question + (q.detail || "")).length < 290) q.question += PAD;
       q.question = q.question.slice(0, 290 - (q.detail || "").length);
     }
-    await route.fulfill({ response: res, json: body });
+    await route.fulfill({ status: res.status, headers: withoutLength(res.headers), json: body });
   });
   await page.goto(ORIGIN + game.path, { waitUntil: "networkidle" });
   await page.click("#homeDaily");
@@ -960,8 +1017,8 @@ async function openDuel(game, [name, viewport, touch]) {
        served AS today's: the page plays it as the daily it opened for. */
     const u = new URL(route.request().url());
     u.search = "?no=1";
-    const res = await route.fetch({ url: u.href });
-    const body = await res.json();
+    const res = await fetchHere(route, u.href);
+    const body = res.json;
     if (body && body.board) { body.day = body.today; body.no = body.todayNo; }
     const b = body && body.board;
     if (b) {
@@ -972,7 +1029,7 @@ async function openDuel(game, [name, viewport, touch]) {
         if (row.context !== undefined) row.context = longest(row.context, 77, " and so on");
       }
     }
-    await route.fulfill({ response: res, json: body });
+    await route.fulfill({ status: res.status, headers: withoutLength(res.headers), json: body });
   });
   await page.goto(ORIGIN + game.path, { waitUntil: "networkidle" });
   await page.click("#homeDaily");
@@ -2080,6 +2137,14 @@ if (!ONLY || ONLY === "keys") {
   t("every game that loads the keyboard was asked about", typing === expected && expected >= 5,
     `${typing} of ${expected}`);
 }
+
+/* NOTHING THE BROWSER ASKED FOR WENT OVER A SOCKET. A route that sends a
+   request to the network (route.continue, route.fetch) would bring back the
+   hang serve() exists to end, and it would pass every check here on a quiet
+   machine. Asked only when the run opened pages, so a run that reached none
+   cannot claim it. */
+t("every page request was answered in this process, none over the socket",
+  answeredHere > 0 && browserOnSocket === 0, `${answeredHere} answered here, ${browserOnSocket} over the socket`);
 
 await browser.close();
 server.close();
