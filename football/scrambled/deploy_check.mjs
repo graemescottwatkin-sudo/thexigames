@@ -35,8 +35,8 @@ const has = (p) => fs.existsSync(path.join(ROOT, p));
 
 /* WHAT IS LIVE. Bump both after a deploy, with tools/post_deploy.mjs, which
    derives them from the live page rather than trusting anyone's memory. */
-const LAST_SHIPPED = "v003d";
-const LAST_SHIPPED_ASSETS = "625db02b57a46323";
+const LAST_SHIPPED = "v003e";
+const LAST_SHIPPED_ASSETS = "d745e32436f270e7";
 
 let pass = 0, fail = 0;
 function t(name, ok, note) {
