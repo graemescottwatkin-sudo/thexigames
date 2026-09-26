@@ -127,7 +127,19 @@ const { utcDay } = await import(pathToFileURL(path.join(ROOT, "functions", "_lib
 /* One reading of the day, handed to the fixture and (through the real
    functions) to the page, so the two cannot disagree across midnight. */
 const QF_ENV = await quickfireEnv(utcDay());
-const envFor = (p) => (p.startsWith("/api/quickfire/") ? QF_ENV : {});
+/* THE FRIENDS CROSSWORD'S BOARD, through its REAL route over a stubbed D1 --
+   the same stub shape friends/crossword/daily_test.mjs uses, and the board
+   built by the real layout engine (fixture.mjs), never by hand. Without it the
+   harness answered that game's board with a 404, so no check here could see
+   whether the page drew one: it could not, live, on 26 Sep 2026. */
+const { makeBoard: frBoard } = await import(pathToFileURL(path.join(ROOT, "friends", "crossword", "fixture.mjs")).href);
+const FR_PAYLOAD = JSON.stringify({ puzzle: frBoard() });
+const FR_ENV = { DB: { prepare: (sql) => ({ bind: () => ({
+  first: async () => (/FROM fr_puzzles/.test(sql) && /mode = 'daily'/.test(sql) ? { payload: FR_PAYLOAD } : null),
+  all: async () => ({ results: [] }), run: async () => ({}),
+}) }) } };
+const envFor = (p) => (p.startsWith("/api/quickfire/") ? QF_ENV
+  : p.startsWith("/api/crossword/crossword_fr/") ? FR_ENV : {});
 const TYPES = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript",
   ".json": "application/json", ".png": "image/png", ".svg": "image/svg+xml", ".webp": "image/webp",
   ".ico": "image/x-icon", ".woff2": "font/woff2" };
@@ -152,7 +164,15 @@ async function handle(req, res) {
       return res.end(JSON.stringify(codewordStub(p.slice("/api/codeword/".length).split("/")[0], body)));
     }
     if (p.startsWith("/api/")) {
-      const file = path.join(ROOT, "functions", p.replace(/\/$/, "") + ".js");
+      let file = path.join(ROOT, "functions", p.replace(/\/$/, "") + ".js");
+      /* A DYNAMIC ROUTE, as Pages resolves one: /api/crossword/<game>/daily is
+         functions/api/crossword/[game]/daily.js with params.game. */
+      const params = {};
+      const dyn = /^\/api\/crossword\/([a-z_]+)\/([a-z-]+)\/?$/.exec(p);
+      if (!fs.existsSync(file) && dyn) {
+        file = path.join(ROOT, "functions", "api", "crossword", "[game]", dyn[2] + ".js");
+        params.game = dyn[1];
+      }
       if (!fs.existsSync(file)) { res.writeHead(404, { "Content-Type": "application/json" }); return res.end("{}"); }
       const mod = await import(pathToFileURL(file).href);
       const fn = mod["onRequest" + req.method[0] + req.method.slice(1).toLowerCase()] || mod.onRequest;
@@ -161,7 +181,7 @@ async function handle(req, res) {
       for await (const c of req) chunks.push(c);
       const request = new Request(url.href, { method: req.method, headers: req.headers,
         body: req.method === "GET" || req.method === "HEAD" || !chunks.length ? undefined : Buffer.concat(chunks) });
-      const out = await fn({ request, env: envFor(p), params: {}, waitUntil() {}, next() {} });
+      const out = await fn({ request, env: envFor(p), params, waitUntil() {}, next() {} });
       res.writeHead(out.status, Object.fromEntries(out.headers));
       return res.end(Buffer.from(await out.arrayBuffer()));
     }
@@ -1888,6 +1908,18 @@ if (!ONLY || ONLY === "perma") {
     }
     t(`${r}: /daily/${PERMA_N} asks the server for that board`, asked.includes(row.asks),
       asked.includes(row.asks) ? row.asks : "asked " + JSON.stringify(asked.filter((a) => !/season|auth|played/.test(a)).slice(0, 6)));
+    /* ASKING IS NOT LOADING, and the address is part of the board. The
+       Friends crossword asked for its board, threw while drawing it ("Could
+       not load the puzzle") and rewrote its own address to
+       /crossword_fr/daily/N, a 404 -- live on 26 Sep 2026 while the check
+       above stayed green. */
+    await wait(600);
+    const after = await page.evaluate(() => ({
+      path: location.pathname,
+      failed: (document.body.innerText.match(/Could not load[^\n]*/) || [""])[0],
+    }));
+    t(`${r}: and the address stays the game's own`, after.path.indexOf(`/${r}/`) === 0, after.path);
+    t(`${r}: and nothing on screen says the board could not load`, !after.failed, after.failed);
     if (row.label) {
       t(`${r}: and the page names board ${PERMA_N}, not today's`,
         new RegExp(`#\\s?${PERMA_N}\\b`).test(said) && !/today/i.test(said), said);

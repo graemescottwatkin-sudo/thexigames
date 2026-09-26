@@ -457,6 +457,29 @@ console.log("\nArriving at an old board from a link says so");
   t("today's board says nothing at all", !fresh.querySelector(".xic-aged"));
 }
 
+console.log("\nAn unlisted game's address is its own page's, not its id");
+/* The Friends crossword is UNLISTED, so its squad slot carries no href, and
+   its id is not its directory: "crossword_fr" lives at /friends/crossword/.
+   The permalink fell back to "/" + id + "/" and rewrote the address bar to
+   /crossword_fr/daily/3, a 404 to anyone who reloaded or shared it (found
+   live 26 Sep 2026). RUN on the real page, at the address a player opens. */
+{
+  const doc = render("friends/crossword/index.html", "https://www.thexigames.com/friends/crossword/daily/3");
+  const win = doc.defaultView;
+  win.XIChrome.permalink.show("crossword_fr", "5");
+  t("a Friends board's number is written under /friends/crossword/",
+    win.location.pathname === "/friends/crossword/daily/5", win.location.pathname);
+  win.XIChrome.permalink.aged("crossword_fr", 2);
+  const go = doc.querySelector(".xic-aged .xic-aged-go");
+  t("and its way to today's board stays in the game",
+    !!go && go.getAttribute("href") === "/friends/crossword/daily", go && go.getAttribute("href"));
+  win.XIChrome.permalink.clear("crossword_fr");
+  t("and today's board takes it back to the game's own page",
+    win.location.pathname === "/friends/crossword/", win.location.pathname);
+  t("the id never appears as a path",
+    !/crossword_fr/.test(win.location.href) && !(go && /crossword_fr/.test(go.getAttribute("href"))));
+}
+
 console.log("\nOne settings menu, and it is the family's");
 /* The word search had a cog of its own with a Theme row in it, duplicating
    the row in the bar's Settings — two controls for one setting on one page. */

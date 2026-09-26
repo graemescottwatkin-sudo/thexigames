@@ -212,7 +212,18 @@
       var h = ALL_SLOTS[i].href;
       if (h && h.slice(-(game.length + 2)) === "/" + game + "/") return h;
     }
-    return "/" + game + "/";
+    /* NOT FOUND IN THE SQUAD: THE PAGE'S OWN ADDRESS. An UNLISTED game's
+       slot carries no href by the owner's ruling of 21 Sep 2026, and a game's
+       id is not always its directory, so this fell back to "/" + game + "/"
+       and an unlisted game rewrote its own address to /<id>/daily/N, a 404
+       to anyone who reloaded or shared it (found live 26 Sep 2026). Every
+       caller is the permalink, which the game asks for on its own page, so
+       the page's path with any /daily... tail cut off is where it lives --
+       and this file still names no unlisted game's address. */
+    var p = location.pathname || "/";
+    var at = p.indexOf("/daily");
+    if (at > -1 && (p.length === at + 6 || p.charAt(at + 6) === "/")) p = p.slice(0, at + 1);
+    return p.charAt(p.length - 1) === "/" ? p : p + "/";
   }
 
   /* The pages every game shares. Kept here for the same reason as the squad:

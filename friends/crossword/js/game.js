@@ -297,7 +297,13 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v002q";
+  var BUILD = "v002r";
+  /* WHAT THIS GAME IS CALLED on its Full Time panel and in the tab, and whether it has a league to show.
+     One line, so tools/build_friendscrossword.js rewrites it in one place:
+     the Friends board has its own name, its own word for the end, and no
+     league to finish in. Up here, beside BUILD, because the tab title is
+     written long before Full Time is drawn. */
+  var FT = { name: "Crossword XI: Friends", kicker: "That\u2019s a wrap", league: false };
   try {
     window.CROSSWORDXI_BUILD = BUILD;
     console.log("Crossword XI build " + BUILD);
@@ -1411,11 +1417,13 @@
        strap is visible. */
     if ($("barBoard")) $("barBoard").textContent = $("strapText").textContent;
     $("dailyBtn").style.display = board.kind === "daily" ? "none" : "";
+    /* FT.name, not "Crossword XI": the Friends board is generated from this
+       file and its tab read football's name (26 Sep 2026). */
     document.title = board.kind === "daily"
-      ? FCW.dailyPhase(board.no).label + " \u00B7 Crossword XI"
+      ? FCW.dailyPhase(board.no).label + " \u00B7 " + FT.name
       : (board.kind === "theme" && themeLabel
-          ? themeLabel + " \u00B7 Crossword XI"
-          : "Practice \u00B7 Crossword XI");
+          ? themeLabel + " \u00B7 " + FT.name
+          : "Practice \u00B7 " + FT.name);
     letters = {}; wrong = {}; revealedEntries = {}; revealedCells = {}; revealAnswerCells = {};
     entryMinute = {};
     sources = {};
@@ -5140,8 +5148,15 @@
     if (started && !complete && !paused) announceMove(pos);
     // The position and running score are read off the league table itself —
     // a chip repeating them in the toolbar was saying the same thing twice.
-    $("tableSeason").textContent = season ? season.season : "";
-    renderLeagueRows($("leagueBody"), table, true);
+    /* THE PANEL MAY NOT EXIST. tools/build_friendscrossword.js cuts the
+       league table out of the Friends board, and a club is always settled
+       (settleClubAndSeason picks one at random), so this ran on every Friends
+       board and threw on the missing element -- inside the load, which
+       reported "Could not load the puzzle" and never offered Kick off. Found
+       live on 26 Sep 2026: every Friends board, today's included. */
+    var ts = $("tableSeason"), body = $("leagueBody");
+    if (ts) ts.textContent = season ? season.season : "";
+    if (body) renderLeagueRows(body, table, true);
   }
 
   /* ---------- Club selection (sidebar + kick-off card share state) ---------- */
@@ -5336,11 +5351,6 @@
     if (you && you.scrollIntoView) you.scrollIntoView({ block: "center" });
     else if (wrap.scrollIntoView) wrap.scrollIntoView({ block: "start" });
   }
-  /* WHAT THE PANEL CALLS THIS GAME, and whether it has a league to show.
-     One line, so tools/build_friendscrossword.js rewrites it in one place:
-     the Friends board has its own name, its own word for the end, and no
-     league to finish in. */
-  var FT = { name: "Crossword XI: Friends", kicker: "That\u2019s a wrap", league: false };
   /* Drawn at the whistle and again when the server's score replaces this
      device's -- the panel is redrawn whole rather than patched. */
   function drawFullTime(score, pos) {
