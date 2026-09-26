@@ -202,8 +202,8 @@ const ORIGIN = "http://127.0.0.1:" + server.address().port;
    So the page's requests never touch the network: `handle` above is called
    directly, with the request as the browser made it, and its answer handed
    back through the route. Anything off this machine — Google Fonts, the only
-   one — is answered empty, as tools/local_resources.js does for jsdom. The
-   socket server stays for the few calls made from Node. */
+   one — still goes to the network: see answerHere(). The socket server stays
+   for the few calls made from Node. */
 async function serve(method, href, headers, body) {
   const u = new URL(href);
   const req = Readable.from(body && body.length ? [body] : []);
@@ -217,13 +217,15 @@ async function serve(method, href, headers, body) {
   });
   return { status: out.status, headers: out.headers, body: Buffer.concat(out.chunks) };
 }
-const OFFSITE = { stylesheet: "text/css", script: "text/javascript", font: "font/woff2" };
 async function answerHere(route, href) {
   const q = route.request();
   const url = href || q.url();
-  if (!url.startsWith(ORIGIN + "/")) {
-    return route.fulfill({ status: 200, body: "", contentType: OFFSITE[q.resourceType()] || "application/octet-stream" });
-  }
+  /* OFF THIS MACHINE GOES TO THE NETWORK, as it always did: this suite
+     MEASURES LAYOUT, and the page's typeface is Google's Barlow Condensed.
+     Answered empty, the Linux runner drew the fallback — wider — and a
+     290-character question that fits in Barlow wrapped until the page rightly
+     unlocked (CI, 26 Sep 2026, phone-360). The hang was loopback only. */
+  if (!url.startsWith(ORIGIN + "/")) return route.continue();
   const r = await serve(q.method(), url, q.headers(), q.postDataBuffer());
   answeredHere++;
   return route.fulfill({ status: r.status, headers: r.headers, body: r.body });
