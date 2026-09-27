@@ -366,12 +366,15 @@ await section("What My Season counts", async (ctx) => {
      that it is not counted. */
   const days = rows.filter((r) => r.dailyNo !== otherPhaseDay);
   const results = JSON.stringify(rows);
-  /* Opened from the landing nav, not from the footer. #statsBtn lives in the
-     footer, which is display:none once a board is on screen — and on a phone
-     it never appears at all. My Season is a landing control now. */
+  /* OPENED THROUGH ITS OWN CONTROL. It was the landing's "My season" tab until
+     the tab row left the game page (27 Sep 2026: Daily, Other boards,
+     Streaks). A player reaches it from the Settings menu, whose first row is
+     a live mirror of #statsBtn (game.js SETTINGS); the footer button itself
+     is hidden on a phone. What this section proves is what the sheet COUNTS,
+     so it presses the control the menu row presses. */
   const page = await openGame(ctx, { seed: { "fcw.results.v1": results }, stayOnHome: true });
 
-  await page.click("#navSeason", { timeout: 5000 });
+  await page.evaluate(() => document.getElementById("statsBtn").click());
   await page.waitForTimeout(500);
   const sub = ((await page.textContent("#statsSub")) || "").trim();
   t("My Season counts every board that was played",
