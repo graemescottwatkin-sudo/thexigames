@@ -664,3 +664,10 @@ body.locked .rs-track.tight .rs-guess{top:2px}
    landed. It is still the focusable control for the keyboard. */
 .track{touch-action:none}
 .track input[type=range]{pointer-events:none}
+
+/* FULL WIDTH, as the result bar below it already is -- the owner, 27 Sep 2026:
+   "make the slider full width too". The 560px cap held the track to one sweep
+   of a thumb; a finger now slides the knob by as far as it moves (js/game.js),
+   so a wider track is finer control rather than a longer reach. The end
+   labels stay tied to the track's ends. */
+.track,.ends{max-width:none}
