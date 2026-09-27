@@ -2214,16 +2214,16 @@ body.flex-layout .nudge-row{
 @media (max-width:859px){
   body.flex-layout .clues-block{display:none}
 }
-/* AN iPAD HELD UPRIGHT GETS EVERY CLUE, UNDER THE BOARD. The owner, 24 Sep
-   2026: the bigger screens are "upscaled versions with maybe a little change
-   in the layout", and for a tablet upright, "lets try all clues under board".
-   Beside the board, as at 860px and up, a 340px panel would take the squares of
-   a 15x15 from about 54px to 32px on an iPad Air; under it, the board frame
-   gives up height instead and the board pans inside it, so the squares keep
-   their reading size. Across and Down side by side, in a panel that scrolls in
-   itself and follows the clue you are on (game.js scrolls it only when the
-   panel can scroll). The current clue still sits by the keys. Portrait only,
-   and 600px wide or more: a phone keeps its one clue. */
+/* A TABLET HELD UPRIGHT, UNDER 860px WIDE, SHOWS THE CURRENT CLUE ONLY.
+   The owner, 26 Sep 2026, over the Fire tablet's stacked lists: "I don't
+   think it's right to ever show both current and all questions below. If all
+   doesn't fit on the right then only show current." That REPLACES the 24 Sep
+   ruling that stood here ("lets try all clues under board"), which put Across
+   and Down in a panel under the board. Two layouts only now: every clue in a
+   column on the right where it fits (860px and up, above), or the current
+   clue alone under the board, as a phone has it -- here. The board takes the
+   height the panel had. What else this block does stays: the masthead and
+   the toolbar's repeats of the bar give the board its height, as on a phone. */
 @media (min-width:600px) and (max-width:859px) and (orientation:portrait){
   /* THE BOARD GETS THE HEIGHT, the way a phone's does. Measured in the app at
      720x1055 (25 Sep 2026): the masthead, a toolbar wrapped onto two rows and
@@ -2243,17 +2243,7 @@ body.flex-layout .nudge-row{
     font-size:11px;text-transform:uppercase;color:var(--pitch);
     white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 1 auto;min-width:0;
   }
-  body.flex-layout .clues-block{
-    display:block;order:1;flex:0 0 16%;min-height:0;
-    overflow-y:auto;overscroll-behavior:contain;
-    border-top:1px solid var(--line);margin:0;padding:4px 12px 10px;
-    max-width:none;width:auto;
-  }
-  body.flex-layout .clues-block .clues{grid-template-columns:1fr 1fr;gap:18px;max-width:none;margin-top:0}
-  body.flex-layout .clues-head{display:none}
-  body.flex-layout .clue-col h2{
-    position:sticky;top:-4px;background:var(--paper);z-index:1;padding:6px 0 4px;margin:0;
-  }
+  body.flex-layout .clues-block{display:none}
 }
 
 /* The frame. touch-action:none because pan and pinch are handled in script;

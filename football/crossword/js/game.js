@@ -297,7 +297,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v004r";
+  var BUILD = "v004s";
   /* WHAT THIS GAME IS CALLED on its Full Time panel and in the tab, and whether it has a league to show.
      One line, so tools/build_friendscrossword.js rewrites it in one place:
      the Friends board has its own name, its own word for the end, and no

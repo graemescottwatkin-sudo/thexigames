@@ -1935,11 +1935,12 @@ if (!ONLY || ONLY === "perma") {
 
 /* ---- the crossword's clues, by size --------------------------------------
    The crossword was locked before this suite existed and render_test measures
-   its board; what is proved here is the owner's layout rule of 24 Sep 2026 --
-   the bigger screens are "upscaled versions with maybe a little change in the
-   layout": a phone has the one clue under the board, a big screen has every
-   clue to the right, and an iPad held upright has every clue UNDER the board
-   ("lets try all clues under board"), without the squares shrinking to fit. */
+   its board; what is proved here is the owner's clue rule of 26 Sep 2026: "I
+   don't think it's right to ever show both current and all questions below.
+   If all doesn't fit on the right then only show current." Two layouts only:
+   every clue in a column to the RIGHT where it fits, or the current clue
+   alone under the board. It replaced the 24 Sep rule ("lets try all clues
+   under board") that these checks used to hold an upright iPad to. */
 async function openCrossword([name, viewport, touch]) {
   const context = await browser.newContext({ viewport, hasTouch: touch, isMobile: touch, deviceScaleFactor: 1 });
   const page = await context.newPage();
@@ -1974,11 +1975,13 @@ function measureClues() {
 }
 if (!ONLY || ONLY === "crossword") {
   console.log(`\ncrossword: the clues, by size`);
-  for (const [label, viewport] of [["ipad-air upright", { width: 820, height: 1180 }], ["ipad upright", { width: 768, height: 1024 }], ["app tablet upright", { width: 720, height: 1055 }]]) {
+  /* The owner's Fire tablet upright is 800 x 1208 (MobileApp, 27 Sep 2026):
+     it is where the stacked lists were seen. */
+  for (const [label, viewport] of [["fire-hd upright", { width: 800, height: 1208 }], ["ipad-air upright", { width: 820, height: 1180 }], ["ipad upright", { width: 768, height: 1024 }], ["app tablet upright", { width: 720, height: 1055 }]]) {
     const { page, context } = await openCrossword([label, viewport, true]);
     const m = await page.evaluate(measureClues);
-    t(`${label}: every clue, under the board, in a panel inside the screen, and the page does not scroll`,
-      m.shown && m.under && m.inside && m.lists >= 2 && m.items >= 10 && m.scroll <= 1, JSON.stringify(m));
+    t(`${label}: the current clue only -- no list of clues under the board -- and the page does not scroll`,
+      !m.shown && !m.under && m.nowClue && m.scroll <= 1, JSON.stringify(m));
     t(`${label}: the squares keep their reading size (32px or more) and the current clue is still by the keys`,
       m.cell >= 32 && m.nowClue, JSON.stringify({ cell: m.cell, nowClue: m.nowClue }));
     /* THE BOARD KEEPS THE HEIGHT. Found in the app at 720x1055 (25 Sep 2026):
@@ -2125,6 +2128,25 @@ if (!ONLY || ONLY === "crossword") {
        other tablet checks hold it to: its squares at reading size. */
     t(`${label}: and the squares keep their reading size (32px or more)`, k.cell >= 32, JSON.stringify({ cell: k.cell }));
     if (process.env.LOCK_SHOTS) await page.screenshot({ path: path.join(process.env.LOCK_SHOTS, `crossword-${label.replace(/ /g, "-")}-keys.png`) });
+    await context.close();
+  }
+  /* TURNED UPRIGHT, THE KEYS FOLLOW. The owner's iPad, 27 Sep 2026: "It seems
+     to sometimes open in reduced keyboard" -- after a rotation the keys and
+     the stats card sat in the middle 63% until a later rotation. Measured
+     here from the page's side: laid out on its side, then turned, the
+     keyboard must span the upright width. */
+  {
+    const { page, context } = await openCrossword(["ipad-pro-13 turned", { width: 1376, height: 980 }, true]);
+    await page.setViewportSize({ width: 1032, height: 1324 });
+    await wait(600);
+    const k = await page.evaluate(() => {
+      const row = [...document.querySelector(".osk-row").children].map((e) => e.getBoundingClientRect());
+      const card = document.querySelector("[class*=xmb]");
+      return { span: Math.round((row[row.length - 1].right - row[0].left) / innerWidth * 100),
+        card: card ? Math.round(card.getBoundingClientRect().width) : 0, vw: innerWidth };
+    });
+    t("ipad-pro-13 turned from its side to upright: the keys span the new width (85% or more)",
+      k.span >= 85, JSON.stringify(k));
     await context.close();
   }
   /* THE POSITIVE CONTROL for the check above: a phone on its side is still
