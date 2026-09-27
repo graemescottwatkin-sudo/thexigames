@@ -27,6 +27,14 @@ how a noindex outlives a launch and a live game never appears in a search
 result. DELETING A LINE FROM `UNLISTED` IS THE PUBLICATION: it turns the tree
 red in three places at once, so the gates say what is left to do.
 
+`UNLISTED` IS EMPTY, since 27 Sep 2026, when both Friends games went public by
+the owner's ruling: "yes go public with friends" and "go public but
+TheXIGames.com still shows Football only, only /Friends shows frineds games".
+So the table and `isListed` stay, and every guard that asks them is proved by a
+suite that marks a game unlisted FOR THE CHECK and puts it back (`push_test`,
+`lineup_test`), not by whatever the tree happens to hold. The Friends
+generators add the noindex only while their game is in `UNLISTED`.
+
 This line said FIVE for eight days after it stopped being true, and named the
 five. Four games launched in the week it went stale, and a session on 16 Sep
 planned work around it before checking. A COUNT IN A DOCUMENT IS A MEASUREMENT
@@ -53,9 +61,16 @@ server's game list, in its results rows, in its storage prefix — and it LIVES 
 assumed it. The id must not change when the theme does.
 
 Old paths 301 to the new ones and always will: `/crossword/daily/5` is somebody's
-link. `/football/` 302s to the hub — deliberately temporary, because the day a
-second theme lands `/` becomes the picker and `/football/` becomes the football
-hub. A 301 there would have to be un-cached from every browser that ever saw it.
+link.
+
+**THE ROOT IS FOOTBALL BY RULING, NOT BY COUNT.** This section used to say that
+the day a second theme was listed, `/` would become a theme picker. The owner
+ruled otherwise on 27 Sep 2026 (quoted above): `/` serves the football hub and
+names no Friends game, and `/friends/` is the Friends front door, with
+`/friends/archive/` behind it. `ROOT_THEME` in `functions/_lib/permalink.js` is
+the fact. The root route, the sitemap (which lists every OTHER listed theme's
+hub) and the crossword gate all read it. The picker code in
+`functions/index.js` is kept and unreachable.
 
 ## The tag law (non-negotiable)
 
@@ -432,7 +447,7 @@ Where facts live — extend these, never copy them:
   is one list per theme and `themeHere()` picks the reader's. A launch pushes
   that theme's tail down one and its squad loses an unsigned slot rather than
   growing a twelfth. Football wears ten with one slot unsigned; Friends wears
-  one. A NUMBER IS ONLY UNIQUE WITHIN ITS THEME — there are two number 1s and
+  two, both named, since 27 Sep 2026. A NUMBER IS ONLY UNIQUE WITHIN ITS THEME — there are two number 1s and
   `aligned_test` checks uniqueness per squad, not across the family.
   An UNLISTED game's slot carries NEITHER a name NOR an href — only its shirt
   number and a status, the same shape as a game in build. `shared/xi-chrome.js`

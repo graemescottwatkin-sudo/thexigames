@@ -33,7 +33,7 @@
  * permalinks shipped; this is the same mechanism one level up, so there is one
  * copy of the hub and two addresses for it rather than two files that drift.
  */
-import { THEMES, themeHubPath, themeOf, gamePath } from "./_lib/permalink.js";
+import { THEMES, themeHubPath, themeOf, gamePath, ROOT_THEME } from "./_lib/permalink.js";
 import { GAMES, isListed } from "./_lib/games.js";
 import { sitePage, htmlResponse, esc } from "./_lib/site-page.js";
 
@@ -94,19 +94,18 @@ function picker(themes) {
   });
 }
 
+/* THE ROOT IS FOOTBALL, BY RULING, whatever else is listed. The owner, 27 Sep
+   2026, publishing the Friends games: "go public but TheXIGames.com still
+   shows Football only, only /Friends shows frineds games". This was the
+   picker's branch -- two listed themes rendered a choice -- and the day
+   Friends was listed it would have put a Friends card on the most-linked page
+   on the site, the one thing the ruling rules out. The picker above stays,
+   unused, for the day the owner wants one; it is not reachable from here.
+   ROOT_THEME is permalink.js's, beside the other facts about where themes
+   live. */
+
 export async function onRequest(ctx) {
-  const themes = listedThemes();
-
-  /* NO LISTED THEME AT ALL is not a state this site can be in -- every game
-     would have to be unlisted at once -- but it is a state this FUNCTION can be
-     handed, and returning an empty picker would be a blank front door. Football
-     is the fallback, the same fallback themeOf() and themeHere() already use. */
-  if (themes.length <= 1) {
-    const only = themes[0] || "football";
-    return ctx.env.ASSETS.fetch(new URL(themeHubPath(only), ctx.request.url));
-  }
-
-  return htmlResponse(picker(themes), { maxAge: 300 });
+  return ctx.env.ASSETS.fetch(new URL(themeHubPath(ROOT_THEME), ctx.request.url));
 }
 
 /* The middleware derives HEAD from GET for every Function route, so there is

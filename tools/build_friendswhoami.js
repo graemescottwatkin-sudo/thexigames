@@ -29,7 +29,7 @@ import path from "node:path";
 import { readText, readTextIfExists } from "./text.js";
 import { fileURLToPath } from "node:url";
 import vm from "node:vm";
-import { entryKey } from "../functions/_lib/games.js";
+import { entryKey, UNLISTED } from "../functions/_lib/games.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(HERE, "..");
@@ -268,10 +268,15 @@ function page() {
             <path class="r" d="M228 102a15 15 0 0 1 30 0v22h-30Z"/>`,
     "the figure behind the open door");
 
-  /* NOINDEX, because this game is generated from an INDEXED page and is not
-     announced. Without it an unlisted game is one crawl from a search result. */
-  s = once(s, '<link rel="canonical"',
-    '<meta name="robots" content="noindex">\n<link rel="canonical"', "the noindex");
+  /* NOINDEX WHILE UNLISTED, because this game is generated from an INDEXED
+     page. Without it an unlisted game is one crawl from a search result.
+     Public since 27 Sep 2026 (the owner: "yes go public with friends"), so the
+     page follows functions/_lib/games.js's UNLISTED rather than always adding
+     it. */
+  if (UNLISTED.whoami_fr) {
+    s = once(s, '<link rel="canonical"',
+      '<meta name="robots" content="noindex">\n<link rel="canonical"', "the noindex");
+  }
 
   /* THE SEASON IS NOT THIS THEME'S — the owner's ruling for Friends is a
      genuine streak and no season. See NO_SEASON in functions/_lib/games.js. */

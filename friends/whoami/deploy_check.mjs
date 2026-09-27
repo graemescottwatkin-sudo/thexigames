@@ -179,45 +179,42 @@ t("nothing here assembles a path by hand", (() => {
   return guilty.length === 0;
 })());
 
-/* ---- not being found ---------------------------------------------------- */
+/* ---- being found ---------------------------------------------------------
+   PUBLIC SINCE 27 SEP 2026. This section held the game to "live, and
+   advertised nowhere" -- the owner's standing instruction from its launch --
+   until the owner's ruling that day: "yes go public with friends", found from
+   /friends/ and search and never from the football site ("only /Friends shows
+   frineds games"). So every check here is now the positive: listed, named and
+   linked in the Friends squad, indexable, and in the sitemap. Written as the
+   public state rather than as "listed || ...", because a check that passes in
+   both states cannot see either. */
 
-console.log("\nUnlisted: live, and advertised nowhere");
+console.log("\nPublic: listed, named and indexed");
 
 t("the game is launched", launched, LAUNCHED[GAME] || "not launched");
-t("and it is NOT listed, which is the owner's standing instruction for this theme",
-  launched && !listed, listed ? "LISTED — a name and an href are now required" : "unlisted");
+t("and it is listed, by the owner's ruling of 27 Sep 2026",
+  launched && listed, listed ? "listed" : "UNLISTED -- the owner made it public on 27 Sep 2026");
 
-/* THE SQUAD SLOT CARRIES NEITHER A NAME NOR AN HREF. shared/xi-chrome.js is
-   downloaded by every page on the site, so an href in it is the site STATING
-   where the game is — the one thing "not publicly visible" cannot allow. Read
-   from the RAW bytes rather than stripped code, because a comment naming the
-   address ships too: this file is served unminified. */
 const chrome = read("shared/xi-chrome.js");
-t("the Friends squad names no game and links to none", (() => {
-  const squad = (chrome.match(/friends:\s*\[([\s\S]*?)\n\s*\],/) || [])[1] || "";
-  return squad.length > 0 && !/name:/.test(squad) && !/href:/.test(squad);
-})());
-t("and the shipped chrome does not carry this game's address anywhere",
-  listed || chrome.indexOf(gamePath(GAME)) === -1,
-  "raw bytes, comments included — this file ships unminified, so a comment " +
-  "naming the address IS the site naming it");
+const squad = (chrome.match(/friends:\s*\[([\s\S]*?)\n\s*\],/) || [])[1] || "";
+t("the Friends squad names this game and links to it",
+  squad.includes('name: "Who Am I XI: Friends"') && squad.includes('href: "' + gamePath(GAME) + '"'),
+  squad ? "" : "no friends squad found");
 
 /* THE THEME STILL HAS A SQUAD. themeHere() falls back to football for an
    unknown first segment, so deleting the `friends` key would hand a Friends
-   player the FOOTBALL team sheet — worse for the reader and not one bit more
-   private. */
-t("but the theme still HAS a squad, so its own pages do not show football's",
+   player the FOOTBALL team sheet. */
+t("and the theme HAS a squad, so its own pages do not show football's",
   /friends:\s*\[/.test(chrome));
 
-t("the page is noindexed while the game is unlisted",
-  listed || /<meta[^>]+name="robots"[^>]+noindex/i.test(markup));
+t("the page is not noindexed now that the game is public",
+  !/<meta[^>]+name="robots"[^>]+noindex/i.test(markup));
 
-t("the sitemap advertises nothing of this game", (() => {
-  const sm = has("functions/sitemap.xml.js") ? read("functions/sitemap.xml.js")
-           : has("functions/_lib/sitemap.js") ? read("functions/_lib/sitemap.js") : "";
+t("the sitemap lists its front page", (() => {
+  const sm = has("functions/sitemap.xml.js") ? read("functions/sitemap.xml.js") : "";
   if (!sm) return false;                       // cannot check is not a pass
-  return noComments(sm).indexOf(GAME) === -1 && noComments(sm).indexOf("/friends/whoami") === -1;
-})());
+  return noComments(sm).indexOf('["' + gamePath(GAME) + '"') > -1;
+})(), gamePath(GAME));
 
 /* ---- the two decks must not bleed into each other ----------------------- */
 

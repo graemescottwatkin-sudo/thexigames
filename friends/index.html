@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<!--
+  The XI Games -- the Friends hub, /friends/.
+
+  PUBLIC SINCE 27 SEP 2026. The owner, publishing the Friends games: "yes go
+  public with friends", and of where they are found, "go public but
+  TheXIGames.com still shows Football only, only /Friends shows frineds games".
+  So this page is the Friends theme's front door, and the site root is not a
+  way here: functions/index.js serves the football hub at / whatever else is
+  listed. The Friends games are reached from this page and from search.
+
+  THE SAME SHELL AS EVERY PAGE: the shared tokens, bar, drawer and footer. The
+  drawer's team sheet is the FRIENDS squad here, because shared/xi-chrome.js
+  picks the squad from the first path segment; the football squad is never
+  shown on this page, and this squad is never shown on a football one.
+
+  NO SHOW IMAGERY. No logo, no stills, no cast, and no share-card image: the
+  owner accepted the trademark caution by choosing public, and the only
+  answer to it this page can give is to use nothing but its own words.
+-->
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>The XI Games — daily Friends puzzles</title>
+<meta name="description" content="Daily puzzles about the sitcom Friends: a crossword and a Who Am I, eleven clues each. A new board every day. Free to play.">
+<link rel="canonical" href="https://www.thexigames.com/friends/">
+<meta property="og:title" content="The XI Games — daily Friends puzzles">
+<meta property="og:description" content="A daily Friends crossword and a daily Friends Who Am I. Free to play.">
+<meta property="og:url" content="https://www.thexigames.com/friends/">
+<meta property="og:type" content="website">
+<meta name="twitter:card" content="summary">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%23123B27'/%3E%3Ctext x='16' y='22' font-family='Arial Narrow,Arial' font-size='15' font-weight='700' fill='%23F2C94C' text-anchor='middle'%3EXI%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/shared/xi-tokens.css?v=v76">
+<link rel="stylesheet" href="/shared/xi-chrome.css?v=v76">
+<script src="/shared/xi-theme.js?v=v76"></script>
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  "name": "The XI Games — daily Friends puzzles",
+  "url": "https://www.thexigames.com/friends/",
+  "hasPart": [
+    { "@type": "Game", "name": "Crossword XI: Friends", "url": "https://www.thexigames.com/friends/crossword/" },
+    { "@type": "Game", "name": "Who Am I XI: Friends", "url": "https://www.thexigames.com/friends/whoami/" }
+  ]
+}
+</script>
+<style>
+  body{margin:0;background:var(--paper);color:var(--ink);font-family:var(--body)}
+  .wrap{max-width:880px;margin:0 auto;padding:18px 16px 40px;box-sizing:border-box}
+  .hub-head h1{font-family:var(--disp);font-weight:700;font-size:clamp(28px,5vw,40px);margin:6px 0 6px;line-height:1.05}
+  .hub-intro{margin:0 0 18px;color:var(--ink-soft);font-size:15px;line-height:1.5}
+  .fr-games{display:grid;grid-template-columns:repeat(auto-fit,minmax(260px,1fr));gap:12px}
+  .fr-card{display:flex;flex-direction:column;gap:6px;padding:18px;border-radius:14px;
+    background:var(--pitch);color:var(--on-pitch);text-decoration:none;min-height:120px}
+  .fr-card:hover{background:var(--pitch-deep)}
+  .fr-card:focus-visible{outline:3px solid var(--ink);outline-offset:3px}
+  .fr-card .k{font-family:var(--disp);font-size:12px;letter-spacing:.16em;opacity:.85}
+  .fr-card .t{font-family:var(--disp);font-weight:700;font-size:26px;line-height:1.05}
+  .fr-card .n{font-size:14px;opacity:.9;line-height:1.4}
+  .fr-card .go{margin-top:auto;font-family:var(--disp);font-weight:700;letter-spacing:.08em;font-size:14px}
+  .fr-more{margin:18px 0 0;font-size:14.5px}
+  .fr-more a{color:var(--pitch-ink,var(--pitch));font-weight:600}
+  .about{margin:32px 0 0;padding-top:16px;border-top:1px solid var(--line);color:var(--ink-soft);font-size:13.5px;line-height:1.55}
+  .about h2{font-family:var(--disp);font-size:18px;color:var(--ink);margin:0 0 6px}
+</style>
+</head>
+<body>
+<header class="xic-bar"></header>
+
+<main class="wrap">
+  <section class="hub-head">
+    <h1>Daily Friends puzzles</h1>
+    <p class="hub-intro">Two games. Eleven clues each. A fresh board every day. Free to play.</p>
+  </section>
+
+  <section class="fr-games" aria-label="Today&#8217;s Friends games">
+    <a class="fr-card" href="/friends/crossword/">
+      <span class="k">1 &middot; DAILY</span>
+      <span class="t">Crossword XI: Friends</span>
+      <span class="n">Eleven clues about Friends, crossing in one grid.</span>
+      <span class="go">Play today &rsaquo;</span>
+    </a>
+    <a class="fr-card" href="/friends/whoami/">
+      <span class="k">2 &middot; DAILY</span>
+      <span class="t">Who Am I XI: Friends</span>
+      <span class="n">Three doors, one character behind each. Fewer clues, more points.</span>
+      <span class="go">Play today &rsaquo;</span>
+    </a>
+  </section>
+
+  <p class="fr-more"><a href="/friends/archive/">Browse previous dailies</a></p>
+
+  <section class="about">
+    <h2>About</h2>
+    <p>Unofficial fan puzzles about the television series Friends, from The XI Games. Not affiliated with, endorsed or sponsored by Warner Bros. or anyone connected with the show.</p>
+  </section>
+</main>
+
+<footer class="xic-foot"></footer>
+<script src="/shared/xi-chrome.js?v=v76"></script>
+</body>
+</html>

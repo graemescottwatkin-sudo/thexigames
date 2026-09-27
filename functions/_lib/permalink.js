@@ -386,6 +386,12 @@ export const themeOf = (game) => THEME_OF[game] || "football";
  * and roughly a dozen suites read the football hub by the literal "index.html".
  * They ask here now, so the next theme's hub is an entry and not a sweep. */
 export const themeHubPath = (theme) => "/" + theme + "/";
+/* THE THEME THE SITE ROOT SERVES, by ruling rather than by count. The owner,
+   27 Sep 2026, publishing the Friends games: "go public but TheXIGames.com
+   still shows Football only, only /Friends shows frineds games". Read by the
+   root (functions/index.js), the sitemap and the crossword's gate, so the
+   three cannot disagree about which hub is the front door. */
+export const ROOT_THEME = "football";
 export const themeHubFile = (theme) => theme + "/index.html";
 
 /* EVERY THEME THAT HAS A GAME, derived from THEME_OF rather than listed again.

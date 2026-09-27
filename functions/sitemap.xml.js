@@ -24,7 +24,7 @@
  * day — and this calls it rather than keeping a second copy that would drift
  * the first time either changed.
  */
-import { PERMA_GAMES, boardKeys, permalinkPath, gamePath, themeOf, themeHubPath }
+import { PERMA_GAMES, boardKeys, permalinkPath, gamePath, themeOf, themeHubPath, ROOT_THEME }
   from "./_lib/permalink.js";
 import { isListed } from "./_lib/games.js";
 
@@ -49,11 +49,14 @@ const LISTED_GAMES = () => Object.keys(PERMA_GAMES).filter(isListed);
    announcement makes two themes listed, the hubs appear here and the canonical
    gate in football/crossword/deploy_check.mjs refuses the page whose canonical
    has not moved with them. */
+/* SINCE 27 SEP 2026 THE ROOT IS FOOTBALL BY RULING, not a picker (the owner:
+   "TheXIGames.com still shows Football only, only /Friends shows frineds
+   games"). So the root's own hub stays out -- /football/ is the root's bytes
+   under a second address, canonical at "/" -- and every OTHER listed theme's
+   hub is in: /friends/ is the only way to its games besides search. */
 const THEME_HUBS = () => {
   const themes = [...new Set(LISTED_GAMES().map(themeOf))];
-  return themes.length > 1
-    ? themes.map((t) => [themeHubPath(t), "daily", "0.9"])
-    : [];
+  return themes.filter((t) => t !== ROOT_THEME).map((t) => [themeHubPath(t), "daily", "0.9"]);
 };
 
 const SITE = "https://www.thexigames.com";
@@ -85,6 +88,9 @@ const STATIC = [
   ["/football/quickfire/", "daily", "0.9"],
   ["/football/whoami/", "daily", "0.9"],
   ["/football/ballpark/", "daily", "0.9"],
+  /* The Friends games, public since 27 Sep 2026. */
+  ["/friends/crossword/", "daily", "0.9"],
+  ["/friends/whoami/", "daily", "0.9"],
   ["/football/crossword/how-to-play", "monthly", "0.5"],
   ["/football/crossword/privacy", "yearly", "0.3"],
 ];

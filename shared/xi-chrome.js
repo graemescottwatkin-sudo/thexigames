@@ -156,8 +156,13 @@
 
        The name AND the href both go in when functions/_lib/games.js stops
        calling this game UNLISTED, and the gates refuse the three disagreeing. */
+    /* PUBLIC SINCE 27 SEP 2026 (the owner: "yes go public with friends"), so
+       both slots carry a name and an address, as a launched game's does. Read
+       only on a Friends page -- themeHere() picks the reader's theme -- so no
+       football page lists them, which is the other half of the ruling: "only
+       /Friends shows frineds games". */
     friends: [
-      { n: 1,  status: "Unlisted" },
+      { n: 1,  name: "Crossword XI: Friends", href: "/friends/crossword/" },
       /* WHO AM I, FRIENDS — LAUNCHED 22 September 2026 and UNLISTED, so it
          takes the two: the next free number, which is what launching does.
 
@@ -177,7 +182,7 @@
 
          The name AND the href both go in when functions/_lib/games.js stops
          calling this game UNLISTED, and the gates refuse the three disagreeing. */
-      { n: 2,  status: "Unlisted" },
+      { n: 2,  name: "Who Am I XI: Friends", href: "/friends/whoami/" },
     ],
   };
 

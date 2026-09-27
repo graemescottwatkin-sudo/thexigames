@@ -175,13 +175,15 @@ export const NO_SEASON = {
 
 export const inSeason = (game) => !NO_SEASON[game];
 
-export const UNLISTED = {
-  crossword_fr: true,
-  /* THE SECOND ONE, AND THE OWNER'S STANDING INSTRUCTION FOR THIS THEME: live,
-     but no public way in. Deleting a line here is the publication, and it turns
-     the tree red in three places at once so nothing is left half-done. */
-  whoami_fr: true,
-};
+/* EMPTY SINCE 27 SEP 2026: THE FRIENDS GAMES ARE PUBLIC. The owner, that
+   day: "yes go public with friends" -- and, of where they are found, "go
+   public but TheXIGames.com still shows Football only, only /Friends shows
+   frineds games". Both Friends games were here from their launch (live, no
+   public way in); deleting their lines was the publication, and the gates
+   named what else it needed: the sitemap, the noindex, the Friends squad's
+   names. The root staying football is functions/index.js's, not this
+   object's. A game launched unlisted in future goes back in here. */
+export const UNLISTED = {};
 
 /* Launched AND advertised, which is the question every list on the site is
    actually asking. One function, because two lookups joined at each call site

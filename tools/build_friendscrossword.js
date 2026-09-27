@@ -43,6 +43,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { readText, readTextIfExists } from "./text.js";
 import { fileURLToPath } from "node:url";
+import { UNLISTED } from "../functions/_lib/games.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(HERE, "..");
@@ -220,10 +221,14 @@ function page() {
      is the only reason it was caught before the first deploy of a generated
      board rather than after.
      It comes off when functions/_lib/games.js stops calling the game UNLISTED,
-     and the gate refuses the two disagreeing in either direction. */
-  s = once(s, '<link rel="canonical"',
-    '<meta name="robots" content="noindex">\n<link rel="canonical"',
-    "the noindex");
+     and the gate refuses the two disagreeing in either direction -- which it
+     did on 27 Sep 2026, when the owner made the Friends games public ("yes go
+     public with friends"). Asked of UNLISTED, so the page follows the list. */
+  if (UNLISTED.crossword_fr) {
+    s = once(s, '<link rel="canonical"',
+      '<meta name="robots" content="noindex">\n<link rel="canonical"',
+      "the noindex");
+  }
 
   /* THE SEASON IS NOT THIS GAME'S. The owner's ruling is a genuine streak, +1
      a day, and no season at all -- so the page must not load the file that

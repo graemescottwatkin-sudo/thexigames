@@ -202,12 +202,26 @@ function freshDb() {
     push.streakAtRisk([{ day: "2026-09-18", games: ["hilo"] }], "2026-09-20") === 0);
 
   /* Which games may be named: derived from games.js, not written here. */
+  /* AN UNLISTED GAME, MADE ONE FOR THE CHECK. The Friends games were the
+     unlisted ones until they went public on 27 Sep 2026, so games.js has none
+     now; one is marked unlisted through the real table isListed reads, and
+     put back. A rule tested only while the tree happens to hold an example is
+     a rule that stops being tested the day it does not. */
   const listed = games.GAMES.filter((g) => games.isListed(g));
-  const hidden = games.GAMES.filter((g) => games.LAUNCHED[g] && !games.isListed(g));
-  t("games.js has both listed and unlisted games to test against", listed.length > 0 && hidden.length > 0,
-    `${listed.length} listed, ${hidden.length} unlisted`);
-  t("a challenge in an unlisted game makes no message at all",
-    hidden.every((g) => push.challengeMessage(g, "abc123", "Sam", 80) === null), hidden.join(", "));
+  const PROBE = "whoami_fr";
+  const had = games.UNLISTED[PROBE];
+  games.UNLISTED[PROBE] = true;
+  let hidden = [];
+  try {
+    hidden = games.GAMES.filter((g) => games.LAUNCHED[g] && !games.isListed(g));
+    t("games.js has listed games, and an unlisted one to test against", listed.length > 0 && hidden.includes(PROBE),
+      `${listed.length} listed, ${hidden.length} unlisted`);
+    t("a challenge in an unlisted game makes no message at all",
+      hidden.every((g) => push.challengeMessage(g, "abc123", "Sam", 80) === null), hidden.join(", "));
+  } finally {
+    if (had) games.UNLISTED[PROBE] = had; else delete games.UNLISTED[PROBE];
+  }
+  t("and the table is put back as it was", !!games.UNLISTED[PROBE] === !!had);
   const cm = push.challengeMessage("crossword", "abc123", "Sam", 80);
   t("a challenge message links the game's own path",
     games.isListed("crossword") && cm && cm.url === "/football/crossword/?c=abc123", cm && cm.url);

@@ -233,13 +233,20 @@ console.log("\n/football/archive/, run");
   t("it answers 200, and it is a page a crawler may index", r.status === 200 && !/noindex/.test(page));
   t("it links every listed football game's own archive",
     listed.length >= 10 && listed.every((g) => page.includes(`href="${gamePath(g)}archive/"`)), `${listed.length} games`);
-  t("and never an unlisted game, by address or by name",
-    hidden.length > 0 && hidden.every((g) => !page.includes(gamePath(g)) && !page.includes(PERMA_GAMES[g].name)),
-    hidden.join(", "));
-  /* THE CHECK ABOVE PASSES FOR A REASON THAT IS NOT THE GUARD: today's
-     unlisted games are all Friends ones, and the theme filter drops those
-     first. So a FOOTBALL game is made unlisted, through the real UNLISTED
-     table that isListed reads, and the page is run again. */
+  /* NEVER ANOTHER THEME'S GAME. This asked for "never an unlisted game" while
+     today's unlisted games were the Friends ones; they went public on 27 Sep
+     2026 (the owner: "only /Friends shows frineds games"), so the Friends
+     games are LISTED and must still never appear on a football page. The
+     unlisted rule itself is proved just below, on a football game made
+     unlisted through the real table. */
+  const others = Object.keys(PERMA_GAMES).filter((g) => themeOf(g) !== "football");
+  t("and never another theme's game, by address or by name",
+    others.length > 0 && others.every((g) => !page.includes(gamePath(g)) && !page.includes(PERMA_GAMES[g].name)),
+    others.join(", ") + (hidden.length ? "; unlisted: " + hidden.join(", ") : ""));
+  /* THE CHECK ABOVE IS THE THEME FILTER, NOT THE UNLISTED GUARD, and since
+     27 Sep 2026 no game is unlisted at all. So a FOOTBALL game is made
+     unlisted, through the real UNLISTED table that isListed reads, and the
+     page is run again. */
   const games = await import("../functions/_lib/games.js");
   games.UNLISTED.ballpark = true;
   let again = "";
@@ -250,6 +257,29 @@ console.log("\n/football/archive/, run");
   const { onRequestGet: sitemap } = await import("../functions/sitemap.xml.js");
   const xml = await (await sitemap({ env: {}, request: new Request("https://www.thexigames.com/sitemap.xml") })).text();
   t("the sitemap offers it", xml.includes("https://www.thexigames.com/football/archive/"));
+}
+
+/* THE FRIENDS HUB'S "Browse previous dailies", public since 27 Sep 2026. The
+   same route for the other theme, and the mirror of the check above: its own
+   games, and none of football's. */
+console.log("\n/friends/archive/, run");
+{
+  const { onRequestGet } = await import("../functions/friends/archive/index.js");
+  const { PERMA_GAMES, gamePath, themeOf } = await import("../functions/_lib/permalink.js");
+  const r = await onRequestGet({ env: {}, request: new Request("https://www.thexigames.com/friends/archive/") });
+  const page = await r.text();
+  const mine = Object.keys(PERMA_GAMES).filter((g) => themeOf(g) === "friends");
+  const theirs = Object.keys(PERMA_GAMES).filter((g) => themeOf(g) === "football");
+  t("it answers 200 and links both Friends games' archives",
+    r.status === 200 && mine.length >= 2 && mine.every((g) => page.includes(`href="${gamePath(g)}archive/"`)),
+    `${r.status}, ${mine.join(", ")}`);
+  t("and no football game, by address",
+    theirs.length >= 10 && theirs.every((g) => !page.includes(gamePath(g))));
+  const { onRequestGet: sitemap } = await import("../functions/sitemap.xml.js");
+  const xml = await (await sitemap({ env: {}, request: new Request("https://www.thexigames.com/sitemap.xml") })).text();
+  t("the sitemap offers /friends/ and both its games, and not /football/",
+    ["/friends/", "/friends/crossword/", "/friends/whoami/"].every((u) => xml.includes("https://www.thexigames.com" + u + "<"))
+      && !xml.includes("https://www.thexigames.com/football/<"));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

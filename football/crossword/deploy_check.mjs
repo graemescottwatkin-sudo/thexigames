@@ -78,7 +78,17 @@ t("and no stale hub is left at the root to be served beside it",
     !!canonical && !!og, `${canonical} / ${og}`);
 
   const themes = [...new Set(GAMES_ALL.filter(isListed).map(themeOf))];
-  const wantRoot = themes.length <= 1;
+  /* THE ROOT IS FOOTBALL BY RULING (the owner, 27 Sep 2026: "TheXIGames.com
+     still shows Football only"), not by counting themes: functions/index.js
+     serves permalink.js's ROOT_THEME hub at / whatever else is listed. Read
+     from permalink.js,
+     so the gate and the root cannot disagree about which it is. With the root
+     a theme's hub, that hub is canonical at the root, as it always was. */
+  const rootSrc = fs.readFileSync(path.join(ROOT, "functions", "_lib", "permalink.js"), "utf8")
+    .replace(/\/\*[\s\S]*?\*\//g, " ");
+  const rootTheme = (rootSrc.match(/export const ROOT_THEME = "([a-z]+)"/) || [])[1] || null;
+  t("PRECONDITION: the root states which theme it serves", !!rootTheme, String(rootTheme));
+  const wantRoot = rootTheme === "football";
   const want = wantRoot ? "https://www.thexigames.com/"
                         : "https://www.thexigames.com" + themeHubPath("football");
   /* EVERY LISTED THEME MUST HAVE A PAGE ITS CARD CAN POINT AT. A theme with one
