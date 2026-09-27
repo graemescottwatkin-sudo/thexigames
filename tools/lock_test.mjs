@@ -2097,7 +2097,10 @@ if (!ONLY || ONLY === "crossword") {
   console.log(`\ncrossword: the keys on a tablet`);
   /* The owner's own iPad is a 13-inch Pro: 1376 x 1008 on its side inside
      the safe area (MobileApp, 26 Sep 2026). */
-  for (const [label, viewport] of [["ipad-pro-13 on its side", { width: 1376, height: 980 }], ["ipad-air on its side", { width: 1180, height: 820 }], ["ipad on its side", { width: 1024, height: 768 }], ["ipad-air upright", { width: 820, height: 1180 }]]) {
+  /* And the owner's Fire tablet in the app: 1280 x 800 CSS less Android's
+     bars, about 1280 x 728 on its side (MobileApp, 27 Sep 2026). It was the
+     one that turned into "Turn your phone upright" when the keys grew. */
+  for (const [label, viewport] of [["fire-hd on its side", { width: 1280, height: 728 }], ["ipad-pro-13 on its side", { width: 1376, height: 980 }], ["ipad-air on its side", { width: 1180, height: 820 }], ["ipad on its side", { width: 1024, height: 768 }], ["ipad-air upright", { width: 820, height: 1180 }]]) {
     const { page, context } = await openCrossword([label, viewport, true]);
     const k = await page.evaluate(() => {
       const key = document.querySelector(".osk-key:not(.wide):not(.go)");
@@ -2108,17 +2111,54 @@ if (!ONLY || ONLY === "crossword") {
       const span = row.length ? (row[row.length - 1].right - row[0].left) / innerWidth : 0;
       return { w: Math.round(r.width), h: Math.round(r.height), font: parseFloat(getComputedStyle(key).fontSize),
         span: Math.round(span * 100),
-        cell: cell ? Math.round(cell.getBoundingClientRect().width) : 0, scroll: document.documentElement.scrollHeight - innerHeight };
+        cell: cell ? Math.round(cell.getBoundingClientRect().width) : 0, scroll: document.documentElement.scrollHeight - innerHeight,
+        rotate: document.body.classList.contains("rotate-needed") };
     });
     t(`${label}: the keys are tablet-sized -- at least 48px tall, letters at least 22px -- and the page does not scroll`,
       k.h >= 48 && k.font >= 22 && k.scroll <= 1, JSON.stringify(k));
     /* And across: a keyboard in the middle of a wide screen is the same
        complaint turned sideways. The top row spans most of the width. */
     t(`${label}: and the top row spans at least 85% of the screen's width`, k.span >= 85, `${k.span}%`);
+    /* A tablet plays on its side; only a phone is asked to turn. */
+    t(`${label}: and the board is played, not refused with "turn your phone upright"`, !k.rotate);
     /* The height comes out of the board, so the board is held to what the
        other tablet checks hold it to: its squares at reading size. */
     t(`${label}: and the squares keep their reading size (32px or more)`, k.cell >= 32, JSON.stringify({ cell: k.cell }));
     if (process.env.LOCK_SHOTS) await page.screenshot({ path: path.join(process.env.LOCK_SHOTS, `crossword-${label.replace(/ /g, "-")}-keys.png`) });
+    await context.close();
+  }
+  /* THE POSITIVE CONTROL for the check above: a phone on its side is still
+     asked to turn upright, so "no prompt" on a tablet is the rule working and
+     not the prompt gone. */
+  {
+    /* Opened by script, not openCrossword: the prompt this proves covers
+       the Kick off button that helper presses. */
+    const context = await browser.newContext({ viewport: { width: 915, height: 412 }, hasTouch: true, isMobile: true, deviceScaleFactor: 1 });
+    const page = await context.newPage();
+    await page.goto(ORIGIN + "/football/crossword/", { waitUntil: "networkidle" });
+    await page.evaluate(() => { const b = document.getElementById("dailyBtn") || document.getElementById("homeDaily"); if (b) b.click(); });
+    await page.waitForSelector("#kickOffBtn:not([disabled])", { timeout: 12000 });
+    await page.evaluate(() => document.getElementById("kickOffBtn").click());
+    await until(page, () => document.body.classList.contains("rotate-needed"));
+    const turned = await page.evaluate(() => document.body.classList.contains("rotate-needed"));
+    t("phone on its side (915 x 412): still asked to turn upright", turned === true, String(turned));
+    await context.close();
+  }
+  /* AND THE RULE ITSELF, where this harness can see it. Its sample board is
+     smaller than production's, so at the Fire's own 1280 x 728 it never
+     trips the prompt with or without the rule; at 1280 x 610 -- still a
+     tablet, above the 600px floor -- it does, so this is the case that
+     fails if a tablet is ever refused again. */
+  {
+    const context = await browser.newContext({ viewport: { width: 1280, height: 610 }, hasTouch: true, isMobile: true, deviceScaleFactor: 1 });
+    const page = await context.newPage();
+    await page.goto(ORIGIN + "/football/crossword/", { waitUntil: "networkidle" });
+    await page.evaluate(() => { const b = document.getElementById("dailyBtn") || document.getElementById("homeDaily"); if (b) b.click(); });
+    await page.waitForSelector("#kickOffBtn:not([disabled])", { timeout: 12000 });
+    await page.evaluate(() => document.getElementById("kickOffBtn").click());
+    await wait(1200);
+    const turned = await page.evaluate(() => document.body.classList.contains("rotate-needed"));
+    t("a short tablet on its side (1280 x 610) plays, and is not asked to turn", turned === false, String(turned));
     await context.close();
   }
   console.log(`\ncrossword: Full Time`);

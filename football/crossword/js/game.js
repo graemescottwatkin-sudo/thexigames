@@ -297,7 +297,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v004q";
+  var BUILD = "v004r";
   /* WHAT THIS GAME IS CALLED on its Full Time panel and in the tab, and whether it has a league to show.
      One line, so tools/build_friendscrossword.js rewrites it in one place:
      the Friends board has its own name, its own word for the end, and no
@@ -2137,6 +2137,8 @@
      being typed into outside the visible frame, which is worse than a small
      board — it is typing into something you cannot see. */
   var FX_MIN_FRAME = 150;
+  /* The height below which a landscape screen is a phone on its side. */
+  var ROTATE_BELOW_H = 600;
 
   function fitFlex() {
     var g = $("grid");
@@ -2161,7 +2163,15 @@
       var u = fxUsedBox();
       var whole = Math.min((wrapW - 12) / (u.cols * FX_BASE),
                            (fh - 12) / (u.rows * FX_BASE));
-      setRotatePrompt(FX_BASE * whole < 18 && vw > vh);
+      /* A PHONE ON ITS SIDE, NOT A TABLET. The owner's Fire tablet in the app
+         (about 1280 x 728 on its side) played in landscape until the tablet
+         keys grew on 26 Sep 2026 (shared v72); the frame lost ~45px, the
+         WHOLE-board fit dipped under 18px, and the whole page became "Turn
+         your phone upright". On its side the board is played zoomed on the
+         word in hand, which is readable at that size -- the whole-board fit
+         is the phone's question. A phone on its side is ~400px tall; a
+         tablet is 600 or more, and never gets the prompt. */
+      setRotatePrompt(FX_BASE * whole < 18 && vw > vh && vh < ROTATE_BELOW_H);
     }
 
     document.documentElement.style.setProperty("--cell", FX_BASE + "px");
