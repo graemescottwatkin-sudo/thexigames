@@ -223,8 +223,13 @@ export function clueBody(clue, step, steps) {
     of: Number(steps),
     text: clue.text,
     /* The tier, not the evidence. "ep" means an episode is on record for this
-       sentence; the episode itself is only sent once the round has ended. */
-    cited: clue.vs === "ep",
+       sentence; the episode itself is only sent once the round has ended.
+       "web" means it was checked against a published page (the deck's `web`
+       field) -- cited too, by the owner's ruling of 27 Sep 2026: "yes, show
+       web-checked clues as cited". Which kind is said, so the page can word
+       it; the page and its quote are not sent. */
+    cited: clue.vs === "ep" || clue.vs === "web",
+    citedBy: clue.vs === "ep" || clue.vs === "web" ? clue.vs : null,
   };
 }
 

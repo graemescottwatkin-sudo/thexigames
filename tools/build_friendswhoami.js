@@ -43,7 +43,7 @@ const SRC = "football/whoami";
 const OUT = "friends/whoami";
 
 /* THE TAG LIVES HERE, written into every generated file. Bump, regenerate. */
-const TAG = "v001k";
+const TAG = "v001l";
 
 const NAME = "Who Am I XI: Friends";
 /* THREE, NOT ELEVEN. This said eleven -- copied from football's shape before
@@ -508,7 +508,8 @@ function script() {
     li.innerHTML =
       '<span class="fc-n">Clue ' + n + ' of ' + of + ' &middot; ' + tier + '</span>' +
       '<q class="fc-text">' + esc(r.text) + '</q>' +
-      (r.cited ? '<span class="fc-src">On record in an episode</span>' : '');
+      (r.cited ? '<span class="fc-src">' + (r.citedBy === 'web'
+        ? 'Checked against a published source' : 'On record in an episode') + '</span>' : '');
     var before = null;
     [].forEach.call(stack.children, function (c) {
       if (!before && Number(c.getAttribute('data-step')) > n) before = c;

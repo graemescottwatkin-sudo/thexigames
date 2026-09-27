@@ -216,5 +216,24 @@ console.log("\nFootball, unchanged");
     !/fr_wa_/.test(named));
 }
 
+/* A CLUE CHECKED AGAINST A WEB PAGE IS CITED TOO (the owner, 27 Sep 2026: "yes,
+   show web-checked clues as cited"). clueBody is asked directly: every clue in
+   the sitting above is an episode clue, and this is about the other kind. The
+   page is told WHICH kind so it can word it, and nothing of the source itself
+   leaves the server mid-round. */
+{
+  const { clueBody } = await import("../../functions/_lib/frwa-data.js");
+  const web = clueBody({ text: "x", vs: "web", web: { url: "https://en.wikipedia.org/wiki/X", quote: "q" } }, 3, 11);
+  const ep = clueBody({ text: "x", vs: "ep", ep: "S2E14" }, 3, 11);
+  const none = clueBody({ text: "x", vs: null }, 3, 11);
+  t("a web-checked clue is cited, and says it is the web kind",
+    web.cited === true && web.citedBy === "web", JSON.stringify(web));
+  t("an episode clue is cited as before, as the episode kind",
+    ep.cited === true && ep.citedBy === "ep", JSON.stringify(ep));
+  t("an unsourced clue is not cited", none.cited === false && none.citedBy === null, JSON.stringify(none));
+  t("and neither the page, the quote nor the episode leaves with a rung",
+    !/wikipedia|S2E14|"q"/.test(JSON.stringify([web, ep])), JSON.stringify([web, ep]));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

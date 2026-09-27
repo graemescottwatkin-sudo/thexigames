@@ -20,7 +20,7 @@
  * and a roster is a candidate list for the door.
  */
 var DECK_WORD = { main: 'Everyday', expert: 'Deep cut' };
-var BUILD = "v001k";
+var BUILD = "v001l";
 
 (function bootstrap() {
   'use strict';
@@ -582,7 +582,8 @@ function renderClue(r) {
     li.innerHTML =
       '<span class="fc-n">Clue ' + n + ' of ' + of + ' &middot; ' + tier + '</span>' +
       '<q class="fc-text">' + esc(r.text) + '</q>' +
-      (r.cited ? '<span class="fc-src">On record in an episode</span>' : '');
+      (r.cited ? '<span class="fc-src">' + (r.citedBy === 'web'
+        ? 'Checked against a published source' : 'On record in an episode') + '</span>' : '');
     var before = null;
     [].forEach.call(stack.children, function (c) {
       if (!before && Number(c.getAttribute('data-step')) > n) before = c;
