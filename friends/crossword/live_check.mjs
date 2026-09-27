@@ -26,13 +26,13 @@
  *
  *   3. A BOARD THAT IS NOT OUT YET.
  *
- *   4. THE GAME BECOMING FINDABLE. It launched UNLISTED — live, playable, and
- *      advertised nowhere — so the two assertions this file first carried were
- *      backwards: it demanded the noindex be GONE and the sitemap advertise the
- *      boards, which are precisely the two things that must not be true. Both
- *      are now asserted in the direction the site is actually in, and both say
- *      what would have to change to flip them, so the day it is announced this
- *      file says what is left to do rather than going quietly green.
+ *   4. THE GAME BEING FINDABLE. It launched UNLISTED on 21 Sep 2026 and this
+ *      file held it to "advertised nowhere". It went PUBLIC on 27 Sep 2026 by
+ *      the owner's ruling ("yes go public with friends"), and the day it did
+ *      this file went red in exactly the places it said it would: the noindex,
+ *      the sitemap and the archive. They now assert the public state -- no
+ *      noindex, the right canonical, the front page and its boards in the
+ *      sitemap, and an archive a crawler may read.
  *
  * VALUES, NEVER THE SERIALISED PAYLOAD. Normalising JSON.stringify turns KEY
  * NAMES into searchable letters — "acROSS" contains ROSS, which is an answer in
@@ -54,12 +54,12 @@ const EXPECT = (() => {
    raising it by reflex. A floor equal to the count flaps on the first skip. */
 const MIN_ASSERTIONS = 23;
 /* REVIEWED, NOT RAISED BY REFLEX, on 21 September 2026 when the unlisted launch
-   added six assertions. 27 t() calls exist. Two of them sit inside
-   `if (links.length)` and CANNOT run while the game is unlisted, because that
-   block reads board links out of the sitemap and the sitemap must carry none —
-   so they are a legitimate skip today and become reachable on the day the game
-   is announced. One more is `if (EXPECT)`, skipped when the run is not given a
-   tag to check.
+   added six assertions, and again on 27 September 2026 when the game went
+   public: the two inside `if (links.length)` became reachable, and the
+   sitemap assertion now DEMANDS links, so that block running is no longer a
+   branch that can legitimately skip. `if (EXPECT)` still is, when the run is
+   not given a tag to check. The floor stays where it was: the public run
+   asserts more, and the floor is a net under a quiet block, not a count.
    MEASURED against production on 21 Sep 2026, not counted by eye: 26 run on a
    --expect run and 0 fail. The floor sits at 23: below the real
    count by the branches that can legitimately vary, and above anything a
@@ -104,17 +104,16 @@ const tag = (html.match(/js\/game\.js\?v=([^"]+)"/) || [])[1];
 t("the game script carries a build tag", !!tag, tag);
 if (EXPECT) t("the build is " + EXPECT, tag === EXPECT, "serving " + tag);
 
-/* NOINDEX, BECAUSE IT IS UNLISTED. This is the live half of what
-   friends/crossword/deploy_check.mjs asserts about the tree — and the tree is
-   not the deploy. Who Am I's gate passed 38 of 38 on a tree whose daily
-   endpoint answered 500 in production for hours.
-   WHEN THE GAME IS ANNOUNCED this assertion inverts: delete crossword_fr from
-   UNLISTED in functions/_lib/games.js and the meta must be GONE, because a
-   noindex nobody removes is a live game that never appears in a search
-   result. */
-t("the page is noindex, because the game is unlisted",
-  /<meta\s+name="robots"\s+content="noindex">/.test(html),
-  "live and playable, findable by nobody — the owner's call on 21 Sep 2026");
+/* INDEXABLE, BECAUSE IT IS PUBLIC (since 27 Sep 2026). This is the live half
+   of what friends/crossword/deploy_check.mjs asserts about the tree -- and the
+   tree is not the deploy. A noindex nobody removes is a live game that never
+   appears in a search result.
+   PAIRED WITH A POSITIVE: the absence of a noindex is also true of an empty
+   page or an error, so the page must answer AND carry its own canonical. */
+t("the page is indexable, because the game is public",
+  page.status === 200 && !/<meta[^>]+name="robots"[^>]+noindex/i.test(html)
+    && html.includes('<link rel="canonical" href="' + BASE + '/friends/crossword/">'),
+  "no noindex, and the canonical is this page");
 t("and it names itself the same way everywhere",
   (html.match(/Crossword XI: Friends/g) || []).length >= 3,
   "title, og:title and h1");
@@ -175,38 +174,39 @@ if (d) {
   const xml = map.status === 200 ? await map.text() : "";
   const links = [...xml.matchAll(/\/friends\/crossword\/daily\/(\d+)</g)].map((m) => Number(m[1]));
 
-  /* THE SITEMAP MUST NOT MENTION THIS GAME AT ALL, in any form, while it is
-     unlisted — not the front page, not the archive index, not one board. The
-     boards are the half that matters: they resolve for anyone holding one, and
-     this file is what would hand a crawler all of them.
+  /* THE SITEMAP ADVERTISES THIS GAME, since it went public on 27 Sep 2026:
+     the front page, the archive and every board that has run. It held the
+     opposite while the game was unlisted.
      CHECKED AGAINST THE SERVED XML, not against the generator. The generator is
      what deploy_check reads; a filter that is right in the tree and a sitemap
      that is stale in the CDN are the same page to a crawler. */
-  t("the sitemap does not advertise this game at all", !/\/friends\//.test(xml),
-    links.length ? `ADVERTISED: ${links.length} board link(s)`
-                 : "no /friends/ anywhere in the served sitemap");
-  t("PRECONDITION: the sitemap is a real one, so the check above is not passing on an empty file",
+  t("the sitemap advertises the front page, the archive and the boards",
+    xml.includes(BASE + "/friends/crossword/<") && xml.includes(BASE + "/friends/crossword/archive/<")
+      && links.length > 0,
+    `${links.length} board link(s)`);
+  t("PRECONDITION: the sitemap is a real one, not a page that happens to mention us",
     /\/football\/crossword\/daily\//.test(xml) && xml.length > 2000,
-    `${xml.length} bytes — a prohibition cannot notice an empty document`);
+    `${xml.length} bytes`);
 
-  /* THE ARCHIVE, WHICH IS THE FULLEST DISCLOSURE THE SITE COULD MAKE: a list of
-     every board this game has run, each at its own address. It is served — the
-     route exists — and it must tell a crawler to keep out, by BOTH routes,
-     because one half without the other publishes it to whichever crawler uses
-     the other. */
+  /* THE ARCHIVE: every board this game has run, each at its own address.
+     While the game was unlisted it told a crawler to keep out by both routes;
+     public, it must keep out by NEITHER -- one noindex left behind is the
+     archive missing from search while the page says otherwise -- and it must
+     list at least one board, so an empty page cannot pass. */
   const arch = await get("/friends/crossword/archive/");
   const archHtml = arch.status === 200 ? await arch.text() : "";
   t("the archive page is served", arch.status === 200, "HTTP " + arch.status);
-  t("and tells a crawler to keep out, by both routes",
-    /noindex/.test(archHtml) && /noindex/.test(arch.headers.get("x-robots-tag") || ""),
+  t("and a crawler may read it, by both routes, and it lists boards",
+    !/noindex/.test(archHtml) && !/noindex/.test(arch.headers.get("x-robots-tag") || "")
+      && archHtml.includes('href="/friends/crossword/daily/'),
     `meta ${/noindex/.test(archHtml)}, header ${arch.headers.get("x-robots-tag")}`);
 
   /* AND A PERMALINK RESOLVES, which is the thing PERMA_GAMES promises and which
      nothing served until 1006eb8: there was no functions/friends/ directory, so
      every board address 404'd while the data said the game had permanent ones.
-     Unlisted is not unreachable, and a link somebody has been given must work. */
+     A link somebody has been given must work. */
   const perma = await get(`/friends/crossword/daily/${d.today}`);
-  t("a board permalink resolves, because unlisted is not unreachable",
+  t("a board permalink resolves",
     perma.status === 200, `daily/${d.today} -> ${perma.status}`);
 
   if (links.length) {

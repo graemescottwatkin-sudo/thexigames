@@ -24,8 +24,10 @@
  *      need, and a second clue given away is the game played for you.
  *   3. an episode citation mid-round, which is a clue nobody paid for.
  *   4. a board from the future, which is the same leak with a date on it.
- *   5. the game being FOUND: it is UNLISTED, so a name on the team sheet, a
- *      sitemap entry or a missing noindex is a launch nobody decided on.
+ *   5. the game NOT being found. It launched UNLISTED and this file held it
+ *      to that; it went PUBLIC on 27 Sep 2026 by the owner's ruling ("yes go
+ *      public with friends"), so a noindex, a missing sitemap entry or a team
+ *      sheet without it is now the fault.
  *   6. the endpoint simply being down, which is what happened to football's.
  *
  * MIN_ASSERTIONS is the second net under the completion marker: the marker
@@ -87,36 +89,44 @@ const tags = [...page.text.matchAll(/(?:href|src)="(?:css|js)\/[^"?]+\?v=([^"]+)
 t("every one of this game's assets carries the same tag",
   tags.length > 0 && new Set(tags).size === 1, tags.join(" "));
 
-/* UNLISTED, PROVED FROM OUTSIDE. The gate can only say the tree does not
-   advertise it; this says the SERVED site does not.
-   ASKED ONLY OF A PAGE THAT ANSWERED. The first version asked it
-   unconditionally and PASSED on a 404 — the site's 404 page is noindexed too,
-   so the assertion was true about a page that was not this game's. A check
-   that is satisfied by the absence of the thing it is checking is the shape
-   this project has found six of; the 404 above is the failure, and this must
-   not quietly report a second success on top of it. */
+/* PUBLIC, PROVED FROM OUTSIDE (since 27 Sep 2026). The gate can only say the
+   tree advertises it; this says the SERVED site does.
+   ASKED ONLY OF A PAGE THAT ANSWERED, and paired with the canonical. The
+   unlisted version of this check once PASSED on a 404 because the 404 page is
+   noindexed too; the public version would pass on any page with no noindex,
+   so it also demands this page's own canonical. */
 if (page.status === 200) {
-  t("the served page is noindexed while the game is unlisted",
-    /<meta[^>]+name="robots"[^>]+noindex/i.test(page.text));
+  t("the served page is indexable, and is this game's page",
+    !/<meta[^>]+name="robots"[^>]+noindex/i.test(page.text)
+      && page.text.includes('<link rel="canonical" href="' + BASE + PATH + '">'));
 } else {
-  console.log("  --  noindex NOT checked: the page did not answer 200, so there " +
+  console.log("  --  indexing NOT checked: the page did not answer 200, so there " +
               "is no page of ours to check. This is not a pass.");
 }
 
 const sitemap = await get("/sitemap.xml");
 t("the sitemap answers", sitemap.status === 200, String(sitemap.status));
-t("and it advertises no address of this game",
-  sitemap.text.indexOf(PATH) === -1);
+t("and it advertises this game's front page and archive",
+  sitemap.text.includes(BASE + PATH + "<") && sitemap.text.includes(BASE + PATH + "archive/<"));
 
 /* THE SHIPPED CHROME, AS THE BROWSER RECEIVES IT. Not the file in the tree —
    this is the one place that can prove what is actually being downloaded by
    every page on the site, comments and all, and an href or a name in it is the
    site stating that this game exists. */
-const chrome = await get("/shared/xi-chrome.js");
-t("the shared chrome is served", chrome.status === 200, String(chrome.status));
-t("and it names neither this game nor its address",
-  chrome.text.indexOf(PATH) === -1 &&
-  chrome.text.indexOf("Who Am I XI: Friends") === -1);
+/* AT THE ADDRESS THE PAGE ASKS FOR, ?v= and all. Until 27 Sep 2026 this
+   fetched /shared/xi-chrome.js with no version, and the CDN had held that URL
+   for five days (Age 455707, immutable): the check was reading bytes no page
+   downloads, and it passed on a chrome that had since changed. A check of the
+   shipped file has to fetch the URL that ships. */
+const CHROME = "/shared/xi-chrome.js?v=";
+const at = page.text.indexOf(CHROME);
+const chromeSrc = at > -1 ? page.text.slice(at, page.text.indexOf('"', at)) : "";
+const chrome = chromeSrc ? await get(chromeSrc) : { status: 0, text: "" };
+t("the shared chrome is served, at the version the page loads",
+  chrome.status === 200 && chromeSrc.length > CHROME.length, chromeSrc || "the page loads no versioned chrome");
+t("and it names this game and links to it, on the Friends team sheet",
+  chrome.text.indexOf('href: "' + PATH + '"') > -1 &&
+  chrome.text.indexOf('name: "Who Am I XI: Friends"') > -1);
 
 /* ---- the board ---- */
 const daily = await get("/api/whoami/whoami_fr/daily");
