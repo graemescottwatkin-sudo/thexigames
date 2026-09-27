@@ -945,6 +945,77 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "s
     await context.close();
   }
 
+  /* A MOUSE POINTS, A FINGER SLIDES -- the owner, 27 Sep 2026. Real input,
+     not synthetic events: the track takes pointer capture, which only a real
+     pointer can give it. A finger through Chrome's own touch events (CDP), a
+     mouse through Playwright's. And the bars the owner asked to be thicker. */
+  console.log(`\n${id}: setting the guess, and the bars`);
+  {
+    const { page, context } = await openSlider(game, VIEWPORTS[1]);
+    const cdp = await context.newCDPSession(page);
+    const box = await page.evaluate(() => {
+      const r = document.getElementById("slider").getBoundingClientRect();
+      const tr = document.getElementById("track");
+      return { x: r.left, y: r.top + r.height / 2, w: r.width,
+        lo: Number(document.getElementById("slider").min), hi: Number(document.getElementById("slider").max),
+        strip: Math.round(tr.getBoundingClientRect().height),
+        bar: Math.round(parseFloat(getComputedStyle(tr, "::before").height)) };
+    });
+    const val = () => page.evaluate(() => Number(document.getElementById("slider").value));
+    const frac = (v) => (v - box.lo) / (box.hi - box.lo);
+    const touch = async (type, x) => cdp.send("Input.dispatchTouchEvent",
+      { type, touchPoints: type === "touchEnd" ? [] : [{ x: Math.round(x), y: Math.round(box.y) }] });
+    t("phone: the bar is thick (28px or more) and the strip a finger lands on taller still (64px or more)",
+      box.bar >= 28 && box.strip >= 64, JSON.stringify({ bar: box.bar, strip: box.strip }));
+    await touch("touchStart", box.x + box.w * 0.3);
+    await touch("touchEnd");
+    const first = await val();
+    t("phone: the first touch on a new question places the knob under the finger", Math.abs(frac(first) - 0.3) < 0.04, `${Math.round(frac(first) * 100)}% for a touch at 30%`);
+    await touch("touchStart", box.x + box.w * 0.9);
+    const held = await val();
+    for (const f of [0.85, 0.8, 0.75]) await touch("touchMove", box.x + box.w * f);
+    await touch("touchEnd");
+    const slid = await val();
+    t("phone: after that a touch does not jump the knob to the finger",
+      Math.abs(frac(held) - frac(first)) < 0.02, `${Math.round(frac(held) * 100)}% on touching at 90%`);
+    t("phone: and sliding the finger moves it by as much as the finger moved -- 15% left, 15% down",
+      Math.abs((frac(first) - frac(slid)) - 0.15) < 0.04, `${Math.round(frac(first) * 100)}% to ${Math.round(frac(slid) * 100)}%`);
+    await context.close();
+  }
+  {
+    const { page, context } = await openSlider(game, VIEWPORTS[3]);
+    const box = await page.evaluate(() => {
+      const r = document.getElementById("slider").getBoundingClientRect();
+      return { x: r.left, y: r.top + r.height / 2, w: r.width,
+        lo: Number(document.getElementById("slider").min), hi: Number(document.getElementById("slider").max) };
+    });
+    const val = () => page.evaluate(() => Number(document.getElementById("slider").value));
+    const frac = (v) => (v - box.lo) / (box.hi - box.lo);
+    await page.mouse.click(box.x + box.w * 0.25, box.y);
+    const a = await val();
+    await page.mouse.click(box.x + box.w * 0.8, box.y);
+    const b = await val();
+    t("desktop: a click puts the knob where it lands, every time",
+      Math.abs(frac(a) - 0.25) < 0.04 && Math.abs(frac(b) - 0.8) < 0.04, `${Math.round(frac(a) * 100)}%, then ${Math.round(frac(b) * 100)}%`);
+    await guessAndLock(page);
+    const rs = await page.evaluate(() => { const e = document.querySelector(".rs-track"); return e ? Math.round(e.getBoundingClientRect().height) : 0; });
+    t("desktop: the result bar is thick too (30px or more)", rs >= 30, rs + "px");
+    /* And what sits on it still sits on it: the guess's ring on the bar's
+       centre line, the answer's line across the whole bar. */
+    const on = await page.evaluate(() => {
+      const bar = document.querySelector(".rs-track").getBoundingClientRect();
+      const g = document.querySelector(".rs-guess i").getBoundingClientRect();
+      const a = document.querySelector(".rs-answer i").getBoundingClientRect();
+      const mid = bar.top + bar.height / 2;
+      return { guessOff: Math.round(g.top + g.height / 2 - mid), answerCrosses: a.top <= bar.top && a.bottom >= bar.bottom,
+        bar: [Math.round(bar.top), Math.round(bar.bottom)], ans: [Math.round(a.top), Math.round(a.bottom)] };
+    });
+    t("desktop: the guess sits on the bar's centre and the answer's line crosses the whole bar",
+      Math.abs(on.guessOff) <= 3 && on.answerCrosses, JSON.stringify(on));
+    if (process.env.LOCK_SHOTS) await page.screenshot({ path: path.join(process.env.LOCK_SHOTS, `${id}-desktop-result-bar.png`) });
+    await context.close();
+  }
+
   console.log(`\n${id}: the old-link banner`);
   for (const vp of [VIEWPORTS[0], VIEWPORTS[1]]) {
     const { page, context } = await openSlider(game, vp);

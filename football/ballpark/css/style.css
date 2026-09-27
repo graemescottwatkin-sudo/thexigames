@@ -626,3 +626,41 @@ body.locked #how:target{display:block!important;position:fixed;inset:0;z-index:6
 body.locked #how:target .how-back{display:inline-flex;align-items:center;min-height:var(--tap,44px);padding:0 16px;
   margin:0 0 10px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink);
   font-family:var(--disp);font-weight:700;letter-spacing:.08em;text-transform:uppercase;text-decoration:none}
+
+/* ---- THICKER BARS (the owner, 27 Sep 2026, from the iPad: "I'd like this bar
+   to be taller/thicker") --------------------------------------------------
+   Both of them: the trough the guess is set on, 16px -> 28px, and the result
+   bar the answer is shown on, 18px -> 30px. Written once, here, after every
+   rule that places something on either bar, so each number that moves with
+   the height moves in one place. The result bar's markers are placed from
+   its TOP, so each moves down to stay on its centre (lock_test measures it:
+   the ring within 3px of the bar's centre line), and the gold answer line
+   grows by the full 12px to still cross it. */
+.track::before{height:28px; border-radius:14px}
+.ghost,.band{height:28px; border-radius:14px}
+.mark{height:42px}
+.track input[type=range]::-webkit-slider-thumb{width:34px; height:34px}
+.track input[type=range]::-moz-range-thumb{width:34px; height:34px}
+.rs-track{height:30px; border-radius:6px}
+.rs-zones{border-radius:6px}
+.rs-answer{top:-52px}
+.rs-answer i{height:46px}
+.rs-guess{top:-36px}
+.rs-track.tight .rs-guess{top:-86px}
+body.locked .rs-answer{top:-24px}
+body.locked .rs-guess{top:-10px}
+body.locked .rs-track.tight .rs-guess{top:2px}
+
+/* A FINGER SLIDES (js/game.js), so on a touch screen the strip it can land on
+   is taller than the bar: 64px to catch, the 28px bar drawn in its middle.
+   The input fills the strip, whatever its height. */
+.track input[type=range]{height:100%}
+@media (pointer: coarse){
+  .track{height:64px}
+  body.locked .track{height:max(64px,7cqh)}
+}
+/* The track takes the pointer (js/game.js); the input under it takes none, so
+   the browser's own range control cannot jump a finger's slide to where it
+   landed. It is still the focusable control for the keyboard. */
+.track{touch-action:none}
+.track input[type=range]{pointer-events:none}

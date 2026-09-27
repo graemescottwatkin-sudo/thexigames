@@ -5,7 +5,7 @@
      it is yesterday's code. aligned_test asserts the two agree, and until
      this game launched it had no BUILD at all — three of its assets were on
      three different tags, which is the same fault with nobody checking. */
-  var BUILD = "v001y";
+  var BUILD = "v001z";
   if (window.XIPlays && document.documentElement) {
     document.documentElement.setAttribute("data-build", BUILD);
   }
@@ -633,16 +633,46 @@
     touched = true; paint();
     ev.preventDefault();
   }
-  slider.addEventListener("pointerdown", function (ev) {
+  /* A MOUSE POINTS, A FINGER SLIDES. The owner, 27 Sep 2026: "on a PC id like
+     to click a point but on a phone and tablet id like to slide my finger
+     left to right and vice versa". A mouse click still puts the knob where it
+     lands. A finger moves the knob by as far as the finger moves, from where
+     the knob already is -- so a touch never jumps it, and a small slide is a
+     small change. The first touch on an untouched question places it, because
+     there is nothing to slide yet. */
+  var slideFrom = null;               // { x, value } while a finger is sliding
+  function slide(ev) {
+    if (locked || over || !slideFrom) return;
+    var rect = slider.getBoundingClientRect();
+    var st = Number(slider.step) || 1;
+    var v = slideFrom.value + (ev.clientX - slideFrom.x) / rect.width * (hi - lo);
+    v = Math.min(hi, Math.max(lo, Math.round(v / st) * st));
+    slider.value = v;
+    touched = true; paint();
+    ev.preventDefault();
+  }
+  /* ON THE TRACK, NOT THE INPUT. The browser's own range control moves its
+     value to wherever a finger lands, underneath any handler on it -- so a
+     slide started at 90% jumped there first. The input takes no pointer (the
+     stylesheet says so) and stays the thing the keyboard and a screen reader
+     set; the track, which is the input's box, takes the pointer. */
+  track.addEventListener("pointerdown", function (ev) {
     if (locked || over) return;
-    try { slider.setPointerCapture(ev.pointerId); } catch (e) {}
-    slider.focus(); drive(ev);
+    try { track.setPointerCapture(ev.pointerId); } catch (e) {}
+    slider.focus();
+    if (ev.pointerType === "mouse") { slideFrom = null; drive(ev); return; }
+    if (!touched) drive(ev);
+    slideFrom = { x: ev.clientX, value: Number(slider.value) };
+    ev.preventDefault();
   });
-  slider.addEventListener("pointermove", function (ev) {
+  track.addEventListener("pointermove", function (ev) {
     if (ev.buttons === 0 && ev.pointerType === "mouse") return;
-    if (!slider.hasPointerCapture || !slider.hasPointerCapture(ev.pointerId)) return;
-    drive(ev);
+    if (!track.hasPointerCapture || !track.hasPointerCapture(ev.pointerId)) return;
+    if (ev.pointerType === "mouse") drive(ev); else slide(ev);
   });
+  function endSlide() { slideFrom = null; }
+  track.addEventListener("pointerup", endSlide);
+  track.addEventListener("pointercancel", endSlide);
 
   $("lock").addEventListener("click", function () { lock(false); });
   $("next").addEventListener("click", function () {
