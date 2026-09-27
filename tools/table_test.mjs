@@ -224,81 +224,51 @@ console.log("\nOne bank, two games, two ladders");
   }
   t("the two cypher games get different seasons on the same day",
     same.length <= 2, same.length ? same.join(" | ") : "14 days, all different");
-  /* AND BOTH PAGES SEED ON THE TOKEN. The arithmetic above only means anything
-     if that is what they actually pass. */
-  for (const dir of ["football/scrambled", "football/vowels"]) {
-    const js = fs.readFileSync(`${dir}/js/game.js`, "utf8")
-      .replace(/\/\*[\s\S]*?\*\//g, " ").replace(/\/\/.*$/gm, " ");
-    t(`${dir} seeds on the board's token, not its number`,
-      /mountTable\(String\(board\.token/.test(js),
-      "the number is the same in both games; the token is not");
-  }
+  /* BOTH PAGES SEEDED THEIR LIVE LADDER ON THE TOKEN, and that was checked
+     here until the ladder came off the play screen (27 Sep 2026). The
+     arithmetic above stays: it is the module's, and a table built later from
+     it must still give the two cypher games different seasons. */
 }
 
-console.log("\nWhich games have one, and which do not");
+console.log("\nNo game has a league table while it is being played");
 {
-  /* A ROW PER GAME, because the alternative is how Vowels XI launched with a
-     shirt that never lit: five hand-written blocks, and somebody adds four.
-     `table: true` means the game must mount one; false means it must not, and
-     saying so is the difference between a decision and an oversight.
-
-     All five football games have one now. HiLo was the last and needed a
-     live-score accessor written first — it had none, because its score was
-     computed inline wherever it was wanted and existed nowhere by name.
-     QuickFire is unreleased and has none, which is the row that keeps this
-     honest: it says a game without a table is a decision. */
+  /* THE OWNER, 27 Sep 2026: "Please can the table underneath the clues be
+     removed from the games / we track points out of 114, we display it on the
+     closing (hidden by default) and its not needed in the game".
+     Until then this block held five games to having all three parts of a live
+     table (the panel, the module, the mount) and QuickFire to having none. The
+     rule is now the QuickFire row for everybody: no panel on the play screen,
+     and in the games whose panel was the shared one (xi-table.js), no module
+     or mount left behind either -- a script loaded to draw into a box that is
+     not there is dead weight that looks like a working feature. The crossword
+     still builds a table, for Full Time, through its own engine; that is not
+     the play screen and is not counted here. */
   const GAMES = [
-    { dir: "football/crossword", table: true },
-    { dir: "football/wordsearch", table: true },
-    { dir: "football/scrambled", table: true },
-    { dir: "football/vowels", table: true },
-    { dir: "football/hilo", table: true },
-    { dir: "football/quickfire", table: false },
+    { dir: "football/crossword", fullTimeOnly: true },
+    { dir: "football/wordsearch" },
+    { dir: "football/scrambled" },
+    { dir: "football/vowels" },
+    { dir: "football/hilo" },
+    { dir: "football/quickfire" },
+    { dir: "friends/crossword", fullTimeOnly: true },
   ];
-  const missing = [], stray = [], half = [];
+  const panel = [], wiring = [];
   for (const g of GAMES) {
     const code = fs.readFileSync(`${g.dir}/index.html`, "utf8")
       .replace(/<!--[\s\S]*?-->/g, " ");
     const js = fs.readFileSync(`${g.dir}/js/game.js`, "utf8")
       .replace(/\/\*[\s\S]*?\*\//g, " ").replace(/\/\/.*$/gm, " ");
-    /* The PANEL, the MODULE and the MOUNT — all three or none. A page with the
-       box and no script draws an empty rectangle; a script with no box does
-       nothing at all, and both look like a working game until somebody
-       scrolls that far. */
-    const box = /id="tablePanel"/.test(code);
-    const mod = /<script src="\/shared\/xi-table\.js\?v=/.test(code);
-    const seasons = /<script src="\/shared\/xi-seasons\.js\?v=/.test(code);
-    /* THE STYLESHEET IS REQUIRED ONLY BY THE GAMES USING THE SHARED MARKUP.
-       xi-table.css is scoped entirely under .xit, so a page whose panel does
-       not carry that class gets nothing from it — the crossword's table is
-       bespoke markup woven into its board layout and styled by its own sheet.
-       Demanding the file everywhere failed the crossword for a stylesheet it
-       could not have used, which is a check asking for the wrong thing rather
-       than a game missing something. */
-    const usesSharedMarkup = /class="[^"]*\bxit\b[^"]*"[^>]*id="tablePanel"/.test(code);
-    const styled = !usesSharedMarkup ||
-      /<link rel="stylesheet" href="\/shared\/xi-table\.css\?v=/.test(code);
-    /* The crossword builds its table through its own engine rather than
-       XITable.mount, so either way of reaching the shared module counts. */
-    const mounts = /XITable\.mount\(/.test(js) || /FCW\.buildTable\(/.test(js);
-    if (g.table && !(box && mod && seasons && mounts && styled)) {
-      missing.push(`${g.dir} (box ${box}, module ${mod}, seasons ${seasons}, ` +
-        `mount ${mounts}, styled ${styled})`);
+    if (/id="tablePanel"|id="leagueBody"/.test(code)) panel.push(g.dir);
+    if (!g.fullTimeOnly && (/xi-table\.js/.test(code) || /XITable\.mount\(/.test(js) || /xi-seasons\.js/.test(code))) {
+      wiring.push(g.dir);
     }
-    if (!g.table && (box || mod || mounts)) stray.push(g.dir);
-    if (g.table && (box !== mod || mod !== mounts)) half.push(g.dir);
   }
-  /* The roll-call is DERIVED, not typed. It read "crossword, wordsearch,
-     scrambled, vowels" — a literal that was already wrong the moment HiLo got
-     one, and that would have gone on reporting four games forever. */
-  t("every game that should have a table has all three parts of one",
-    missing.length === 0,
-    missing.join(" | ") ||
-      GAMES.filter((g) => g.table).map((g) => g.dir.split("/").pop()).join(", "));
-  t("and no game has half of one",
-    half.length === 0, half.join(", ") || "a box with no script draws an empty rectangle");
-  t("a game with no table has none by decision, not by oversight",
-    stray.length === 0, stray.join(", ") || "QuickFire is unreleased");
+  /* A floor, so a walk that reads nothing cannot pass: every page was read. */
+  t("every game's page was read", GAMES.length === 7);
+  t("no game has a league table panel on its play screen",
+    panel.length === 0, panel.join(", ") || GAMES.map((g) => g.dir.split("/").pop()).join(", "));
+  t("and none keeps the shared table's script or mount for a panel that is gone",
+    wiring.length === 0, wiring.join(", ") || "nothing left behind");
 }
 
 

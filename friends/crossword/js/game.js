@@ -297,7 +297,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v002v";
+  var BUILD = "v002w";
   /* WHAT THIS GAME IS CALLED on its Full Time panel and in the tab, and whether it has a league to show.
      One line, so tools/build_friendscrossword.js rewrites it in one place:
      the Friends board has its own name, its own word for the end, and no
@@ -1462,7 +1462,7 @@
     pauseCount = 0; pausedMs = 0; pauseStartedAt = null;
     subbedCells = {}; subsUsed = 0;
     checksUsed = 0; checkAllsUsed = 0; elapsed = 0; complete = false;
-    helpActions = []; consecutiveChecks = 0; halfTimeShown = false; lastPos = null;
+    helpActions = []; consecutiveChecks = 0; halfTimeShown = false;
     /* The play reference belongs to a board, not to the tab.
 
        These were never cleared: playStart() only mints a new one when playId is
@@ -5136,28 +5136,7 @@
       tbody.appendChild(tr);
     });
   }
-  var lastPos = null;
-  function announceMove(pos) {
-    if (lastPos === null) { lastPos = pos; return; }
-    if (pos === lastPos) return;
-    var up = pos < lastPos;
-    // Crossing a zone boundary is the more interesting story than the number.
-    var msg;
-    if (up && pos <= 4 && lastPos > 4) msg = "\u25B2 Into the top four";
-    else if (!up && pos > 4 && lastPos <= 4) msg = "\u25BC Out of the top four";
-    else if (!up && pos >= 18 && lastPos < 18) msg = "\u25BC Into the relegation zone";
-    else if (up && pos < 18 && lastPos >= 18) msg = "\u25B2 Out of the relegation zone";
-    else if (up && pos === 1) msg = "\u25B2 Top of the league";
-    else msg = (up ? "\u25B2 Up to " : "\u25BC Down to ") + FCW.ordinal(pos);
-    toast(msg, "", up ? "" : "loss");
-    // brief row tint, cleared after the transition
-    var row = $("leagueBody") && $("leagueBody").querySelector("tr.you");
-    if (row) {
-      row.classList.add("moved", up ? "up" : "down");
-      setTimeout(function () { row.classList.remove("moved", "up", "down"); }, 600);
-    }
-    lastPos = pos;
-  }
+
   var lastShownScore = null;
   /* The number on its own, updated whether or not a club has been chosen.
 
@@ -5192,23 +5171,14 @@
        stays — with it, the chip would be saying the same thing twice, which is
        why it was removed in the first place. */
     document.body.classList.toggle("has-table", club !== null);
-    if (!puzzle || club === null) return;
-    var score = liveScore();
-    var table = FCW.buildTable(club, score, season);
-    if (!table.length) return;
-    var pos = FCW.playerPosition(table);
-    if (started && !complete && !paused) announceMove(pos);
-    // The position and running score are read off the league table itself —
-    // a chip repeating them in the toolbar was saying the same thing twice.
-    /* THE PANEL MAY NOT EXIST. tools/build_friendscrossword.js cuts the
-       league table out of the Friends board, and a club is always settled
-       (settleClubAndSeason picks one at random), so this ran on every Friends
-       board and threw on the missing element -- inside the load, which
-       reported "Could not load the puzzle" and never offered Kick off. Found
-       live on 26 Sep 2026: every Friends board, today's included. */
-    var ts = $("tableSeason"), body = $("leagueBody");
-    if (ts) ts.textContent = season ? season.season : "";
-    if (body) renderLeagueRows(body, table, true);
+    /* NO LEAGUE TABLE WHILE PLAYING, and no toasts about moving up or down
+       one. The owner, 27 Sep 2026: "Please can the table underneath the clues
+       be removed from the games / we track points out of 114, we display it
+       on the closing (hidden by default) and its not needed in the game". The
+       points are the stats card's WORTH; the table is Full Time's.
+       The season the board is set in still belongs to the board, so it is
+       stated on the page, where the table's label used to say it. */
+    document.body.setAttribute("data-season", season ? season.season : "");
   }
 
   /* ---------- Club selection (sidebar + kick-off card share state) ---------- */

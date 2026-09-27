@@ -38,11 +38,10 @@
 <link rel="stylesheet" href="/shared/xi-matchbar.css?v=v74">
 <link rel="stylesheet" href="/shared/xi-share.css?v=v74">
 <link rel="stylesheet" href="/shared/xi-fulltime.css?v=v74">
-<link rel="stylesheet" href="/shared/xi-table.css?v=v74">
 <!-- The theme, stamped before first paint: light unless the player chose
      dark, decided in one shared place for every page of the family. -->
 <script src="/shared/xi-theme.js?v=v74"></script>
-<link rel="stylesheet" href="css/style.css?v=v003b">
+<link rel="stylesheet" href="css/style.css?v=v003c">
 </head>
 <body>
 
@@ -319,14 +318,11 @@
         <div class="bonusState" id="bonusState">Undiscovered</div>
         <div class="bonusSub" id="bonusSub">Hidden in the grid · +10 points</div>
       </div>
-      <!-- THE LIVE TABLE. Your score IS your club's points in a real season,
-           and it moves you up and down a real ladder while you play. The
-           crossword has had this since the beginning and it is the best thing
-           in it; this game had nothing. Built by shared/xi-table.js, so there
-           is no markup here beyond the box it goes in.
-           NOT the season — that is one result a day across the family, and it
-           lives on the hub. -->
-      <div class="tb-table xit" id="tablePanel"></div>
+      <!-- NO LEAGUE TABLE WHILE PLAYING. The owner, 27 Sep 2026: "Please can the
+           table underneath the clues be removed from the games / we track
+           points out of 114, we display it on the closing (hidden by default)
+           and its not needed in the game". The points are the stats card's
+           WORTH; the table is Full Time's, behind "See the table". -->
     </aside>
   
   <!-- HOW TO PLAY, THIS GAME'S OWN. See the note in Grid XI's page: the button
@@ -372,8 +368,6 @@
 <script src="/shared/xi-clubs.js?v=v74"></script>
 <script src="/shared/xi-chrome.js?v=v74"></script>
 <script src="/shared/xi-matchbar.js?v=v74"></script>
-<script src="/shared/xi-seasons.js?v=v74"></script>
-<script src="/shared/xi-table.js?v=v74"></script>
 <script src="/shared/xi-season.js?v=v74"></script>
 <script src="/shared/xi-menu.js?v=v74"></script>
 <script src="/shared/xi-plays.js?v=v74"></script>
@@ -383,7 +377,7 @@
 <script src="/shared/xi-fulltime.js?v=v74"></script>
 <!-- What a score is, in one file, so the Worker and the page cannot disagree
      about it. Loaded before the game, which reads it. -->
-<script src="js/scoring.js?v=v003b"></script>
-<script src="js/game.js?v=v003b"></script>
+<script src="js/scoring.js?v=v003c"></script>
+<script src="js/game.js?v=v003c"></script>
 </body>
 </html>

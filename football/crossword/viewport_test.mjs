@@ -65,7 +65,10 @@ t("every block sits in the board column, not in a banner", (() => {
   const html = fs.readFileSync(path.join(DIR, "index.html"), "utf8");
   const panel = html.slice(html.indexOf('<div class="grid-panel"'), html.indexOf('<div class="osk"'));
   return html.indexOf('<div class="toolbar"') === -1 &&
-    ["tb-game", "tb-help", 'id="tablePanel"'].every((k) => panel.indexOf(k) > -1) &&
+    ["tb-game", "tb-help"].every((k) => panel.indexOf(k) > -1) &&
+    /* And no live table since 27 Sep 2026 (the owner: "its not needed in
+       the game"); the table is Full Time's. */
+    panel.indexOf('id="tablePanel"') === -1 &&
     panel.indexOf('id="seasonPanel"') === -1;
 })());
 t("nothing collapses the table to a single row now that it has the board's width",

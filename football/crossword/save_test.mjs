@@ -327,18 +327,13 @@ server.listen(0, "127.0.0.1", async () => {
     after ? `${Object.keys(after.letters || {}).length} letters` : "nothing saved");
   t("the clock is recorded with them", !!after && after.elapsed > 0, after ? after.elapsed + "s" : "-");
 
-  /* And changing club mid-game — where a puzzle does exist — must still save,
-     because the club is part of the record. */
-  const before = Object.keys(after.letters || {}).length;
-  const mid = $("clubSelect");
-  const resaved = changed(w);
-  mid.value = "Liverpool";
-  mid.dispatchEvent(new w.Event("change", { bubbles: true }));
-  await until(resaved);
-  const now = daily(w);
-  t("changing club mid-game keeps the letters and records the club",
-    !!now && Object.keys(now.letters || {}).length === before && now.club === "Liverpool",
-    now ? `${Object.keys(now.letters || {}).length} letters, club ${now.club}` : "record gone");
+  /* THE CLUB CANNOT CHANGE MID-GAME ANY MORE. The picker for it lived in the
+     live league table, which came off the play screen on 27 Sep 2026 (the
+     owner: "its not needed in the game"); the club is chosen on the Kick Off
+     card, and it is part of the record from there. */
+  t("the play screen has no club picker to change the club mid-game", !$("clubSelect"));
+  t("and the club the board was kicked off with is in its record",
+    !!after && typeof after.club === "string" && after.club.length > 0, after ? "club " + after.club : "no record");
 
   /* ---- 5. one listener, not a growing pile ----
      populateClubSelect() is called from syncClubSelect() and syncKickSelect(),

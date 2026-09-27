@@ -56,7 +56,7 @@ const OUT = "friends/crossword";
 
 /* THE TAG LIVES HERE, because it is written into three generated files and a
    number kept in three places disagrees with itself. Bump here, regenerate. */
-const TAG = "v002v";
+const TAG = "v002w";
 
 /* THE SHARED LAYER'S TAG, read from the source page rather than restated. It
    has its own plain vN lifecycle and moves without this game's tag moving, so a
@@ -138,7 +138,6 @@ const once = (s, from, to, what) => {
 };
 
 export const STRIP_BLOCKS = [
-  ["tablePanel", "the league table"],
   ["themeSheet", "clubs and themes, which are football's"],
   ["challengeOverlay", "challenges, which need a server this game does not have"],
   ["adminSheet", "the admin sheet"],

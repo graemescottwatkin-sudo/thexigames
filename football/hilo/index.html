@@ -32,11 +32,10 @@
 <link rel="stylesheet" href="/shared/xi-matchbar.css?v=v74">
 <link rel="stylesheet" href="/shared/xi-share.css?v=v74">
 <link rel="stylesheet" href="/shared/xi-fulltime.css?v=v74">
-<link rel="stylesheet" href="/shared/xi-table.css?v=v74">
 <!-- The theme, stamped before first paint: light unless the player chose
      dark, decided in one shared place for every page of the family. -->
 <script src="/shared/xi-theme.js?v=v74"></script>
-<link rel="stylesheet" href="css/style.css?v=v002q">
+<link rel="stylesheet" href="css/style.css?v=v002r">
 </head>
 <body>
 
@@ -286,13 +285,11 @@
 
         <div class="card note" id="srcLine"></div>
 
-        <!-- THE LIVE TABLE. HiLo is the one game that CLIMBS: every other
-             board starts on 114 and falls, this one banks up from nothing, so
-             the ladder rises under you instead of sinking. Built by
-             shared/xi-table.js; no markup here beyond the box.
-             NOT the season — that is one result a day across the family, on
-             the hub. See shared/xi-season.js. -->
-        <div class="tb-table xit" id="tablePanel"></div>
+        <!-- NO LEAGUE TABLE WHILE PLAYING. The owner, 27 Sep 2026: "Please can the
+             table underneath the clues be removed from the games / we track
+             points out of 114, we display it on the closing (hidden by default)
+             and its not needed in the game". The points are the stats card's
+             WORTH; the table is Full Time's, behind "See the table". -->
       </aside>
     </div>
   </section>
@@ -314,9 +311,7 @@
 <!-- THE SHARED FOOTER, AT TOP LEVEL. It carries the family disclaimer. -->
 <footer class="xic-foot"></footer>
 
-<script src="/shared/xi-seasons.js?v=v74"></script>
 <script src="/shared/xi-clubs.js?v=v74"></script>
-<script src="/shared/xi-table.js?v=v74"></script>
 <script src="/shared/xi-chrome.js?v=v74"></script>
 <script src="/shared/xi-matchbar.js?v=v74"></script>
 <script src="/shared/xi-season.js?v=v74"></script>
@@ -327,7 +322,7 @@
 <!-- xi-played.js first: xi-fulltime.js asks it what has been played today. -->
 <script src="/shared/xi-played.js?v=v74"></script>
 <script src="/shared/xi-fulltime.js?v=v74"></script>
-<script src="js/scoring.js?v=v002q"></script>
-<script src="js/game.js?v=v002q"></script>
+<script src="js/scoring.js?v=v002r"></script>
+<script src="js/game.js?v=v002r"></script>
 </body>
 </html>

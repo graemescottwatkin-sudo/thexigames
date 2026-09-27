@@ -360,10 +360,17 @@ server.listen(0, "127.0.0.1", async () => {
     w.FCW.computeScore(1800, 0, 0, 0).score === 36,
     w.FCW.computeScore(0, 0, 0, 0).score + "/" + w.FCW.computeScore(600, 0, 0, 0).score);
   t("the match clock is unchanged", w.FCW.matchClockLabel(1860) === "90+3'");
-  t("the league table renders three rows", (() => {
-    const rows = [...d.querySelectorAll("#tablePanel #leagueBody tr")];
-    return rows.length === 20 && rows.filter((r) => !r.classList.contains("faroff")).length === 3;
-  })(), [...d.querySelectorAll("#tablePanel #leagueBody tr")].filter((r) => !r.classList.contains("faroff")).length + " visible");
+  /* NO LEAGUE TABLE WHILE PLAYING. The owner, 27 Sep 2026: "Please can the
+     table underneath the clues be removed from the games / we track points
+     out of 114, we display it on the closing (hidden by default) and its not
+     needed in the game". These asserted the live table; they now assert its
+     absence, so it cannot quietly come back. */
+  t("there is no league table on the play screen",
+    !$("tablePanel") && !$("leagueBody") && !$("tableSeason") &&
+    !d.querySelector(".grid-panel .league"),
+    "the table is Full Time's, behind See the table");
+  t("and the board still states the season it is set in",
+    /^\d{4}\/\d{2}$/.test(d.body.getAttribute("data-season") || ""), d.body.getAttribute("data-season"));
   /* THE 38-GAME STRIP IS GONE and must not come back: it factorised one
      board's score into an invented W/D/L record, and there is a real season on
      the hub now counting days across all five games. This asserts its absence
@@ -394,7 +401,7 @@ server.listen(0, "127.0.0.1", async () => {
       !/\.stage\{[^}]*grid-template-columns:auto/.test(css) &&
       !d.querySelector(".side");
   })());
-  t("the vertical flow is active clue, board, clues, table", (() => {
+  t("the vertical flow is active clue, board, clues", (() => {
     const order = [...d.querySelectorAll("#toolbar, #nowClue, .grid-wrap, #clues, #tablePanel")]
       .map((n) => n.id || n.className.split(" ")[0]);
     /* Requested order: the clue you are answering, the board you answer it
@@ -404,7 +411,8 @@ server.listen(0, "127.0.0.1", async () => {
     /* It ended at #seasonPanel until the invented 38-game record came out.
        The LIVE TABLE is what sits at the foot of the column now — a real
        league season, entered through the player's club. */
-    return order.join(">") === "nowClue>grid-wrap>clues>tablePanel";
+    /* And nothing after the lists since 27 Sep 2026: the live table is gone. */
+    return order.join(">") === "nowClue>grid-wrap>clues";
   })(), [...d.querySelectorAll("#toolbar, #nowClue, .grid-wrap, #clues, #tablePanel")]
     .map((n) => n.id || n.className.split(" ")[0]).join(" > "));
   t("the active clue strip is still immediately above the board", (() => {
@@ -423,10 +431,11 @@ server.listen(0, "127.0.0.1", async () => {
     return n === daily.puzzle.entries.length;
   })(), d.querySelectorAll("#acrossList li").length + " across + " +
     d.querySelectorAll("#downList li").length + " down");
-  t("the club selector travels with the league table, wherever it sits", (() => {
-    const sel = $("clubSelect");
-    return sel && $("tablePanel").contains(sel) && sel.options.length > 1;
-  })(), $("clubSelect") && $("clubSelect").options.length + " clubs");
+  /* The club picker travelled with the live table and went with it; the club
+     is chosen on the Kick Off card. */
+  t("no club picker on the play screen; the club is chosen at kick-off",
+    !$("clubSelect") && !!$("kickClubSelect") && $("kickClubSelect").options.length > 1,
+    $("kickClubSelect") && $("kickClubSelect").options.length + " clubs on the Kick Off card");
   t("the board publishes its width so the columns align to it",
     /--board-w/.test(fs.readFileSync(path.join(DIR, "js/game.js"), "utf8")) &&
     /\.clues\{[^}]*max-width:var\(--board-w/.test(css));
@@ -1810,9 +1819,8 @@ server.listen(0, "127.0.0.1", async () => {
       ids.indexOf("grid-wrap") === 2 &&
       ids.indexOf("tb-game") > ids.indexOf("grid-wrap") &&
       ids.indexOf("tb-help") > ids.indexOf("tb-game") &&
-      /* The live table closes the column. It was #seasonPanel until the
-         invented 38-game record came out from under it. */
-      ids.indexOf("tablePanel") > ids.indexOf("tb-help");
+      /* The live table closed the column until 27 Sep 2026; it is gone. */
+      ids.indexOf("tablePanel") === -1;
   })(), [...d.querySelector(".grid-panel").children]
     .map((n) => n.id || n.className.split(" ").pop()).join(" > "));
 
@@ -1832,18 +1840,8 @@ server.listen(0, "127.0.0.1", async () => {
       d.querySelectorAll("#nowClue").length === 1;
   })());
 
-  console.log("\nThe league table lives under the board");
-  /* It used to be a banner panel that script relocated below the board on
-     phones, so its position was a runtime decision and two sets of CSS had to
-     describe it. It is now under the board in the markup at every width — no
-     move, nothing to get wrong on resize. */
-  t("the league table is inside the board column, after the board", (() => {
-    const panel = $("tablePanel");
-    const wrap = d.querySelector(".grid-wrap");
-    return d.querySelector(".grid-panel").contains(panel) &&
-      !$("toolbar") &&
-      (wrap.compareDocumentPosition(panel) & 4) !== 0;   // board precedes it
-  })());
+  console.log("\nNo league table in the board column, at any width");
+  t("the board column carries no league table", !d.querySelector(".grid-panel #tablePanel, .grid-panel .league"));
   /* Every block below the clue strip is capped to the same published width, so
      the column has one edge rather than each element finding its own. */
   /* One measure for the whole column, the clue strip included — it was the
@@ -1851,25 +1849,15 @@ server.listen(0, "127.0.0.1", async () => {
      the column on both sides. */
   t("every block in the column is capped to the board's width, clue strip included",
     /\.grid-panel > \.now-clue,[\s\S]{0,160}max-width:var\(--board-w,100%\)/.test(css));
-  t("narrowing leaves it exactly where it was", (() => {
+  t("narrowing does not bring one back", (() => {
     Object.defineProperty(w, "innerWidth", { value: 390, writable: true, configurable: true });
     w.dispatchEvent(new w.Event("resize"));
-    const panel = $("tablePanel");
-    return d.querySelector(".grid-panel").contains(panel) &&
-      panel.classList.contains("below-board");
+    return !$("tablePanel") && !d.querySelector(".grid-panel .league");
   })());
-  t("the table still renders three rows after the move", (() => {
-    const rows = [...d.querySelectorAll("#tablePanel #leagueBody tr")];
-    return rows.length === 20 && rows.filter((r) => !r.classList.contains("faroff")).length === 3;
-  })(), [...d.querySelectorAll("#tablePanel #leagueBody tr")].filter((r) => !r.classList.contains("faroff")).length + " visible");
-  /* The table no longer moves at any width: it sits in the board column with
-     everything else, so there is nothing to relocate and nothing to get wrong
-     on resize. */
-  t("and widening leaves it exactly where it is", (() => {
+  t("nor does widening", (() => {
     Object.defineProperty(w, "innerWidth", { value: 1400, writable: true, configurable: true });
     w.dispatchEvent(new w.Event("resize"));
-    const panel = $("tablePanel");
-    return d.querySelector(".grid-panel").contains(panel);
+    return !$("tablePanel") && !d.querySelector(".grid-panel .league");
   })());
 
   console.log("\nSelection still works from the lists below");

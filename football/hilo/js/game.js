@@ -10,7 +10,7 @@
  * more, 114 the ceiling. This file is the page: the landing the family
  * shares, the ladder of two rows, the clock, the answers list, the share.
  */
-var BUILD = "v002q";
+var BUILD = "v002r";
 
 (function () {
   "use strict";
@@ -54,15 +54,6 @@ var BUILD = "v002q";
     return S.score(g.results, g.worths);
   }
 
-  var leagueTable = null;
-  function mountTable(seed) {
-    if (!window.XITable) return;
-    var el = $("tablePanel");
-    if (!el) return;
-    /* THE SEED IS THE BOARD'S TOKEN, from the server: everybody on today's
-       board gets the same season, so comparing positions means something. */
-    leagueTable = window.XITable.mount(el, { seed: String(seed || "hl"), score: 0 });
-  }
 
   function freshRound(board, mode, meta) {
     return {
@@ -503,11 +494,6 @@ var BUILD = "v002q";
     }
     g = freshRound(board, mode, meta);
     g.meta = meta || {};
-    /* Mounted per ROUND, before the board is drawn: drawBoard reports the
-       banked score and the table has to exist to receive it. The token comes
-       from the server with the board, so a player opening yesterday's board
-       gets yesterday's ladder rather than today's. */
-    mountTable(g.token);
     drawBoard(g);
     show("screenGame");
     playsStart();
@@ -633,9 +619,6 @@ var BUILD = "v002q";
     $("rightCount").textContent = right;
     var banked = liveScore(round);
     $("banked").textContent = banked;
-    /* The ladder follows the number printed beside it, read from one place so
-       the two can never disagree. */
-    if (leagueTable) leagueTable.update(banked);
     Array.prototype.forEach.call($("subs").querySelectorAll("i"), function (dot, i) { dot.classList.toggle("spent", i < round.subsUsed); });
     var leftSubs = S.SUBS - round.subsUsed;
     if (window.XIBar) XIBar.set({ progress: Math.min(round.step + 1, S.CALLS) + "/" + S.CALLS, score: banked,

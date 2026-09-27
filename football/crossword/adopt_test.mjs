@@ -260,7 +260,9 @@ server.listen(0, "127.0.0.1", async () => {
   const seasonWith = async (clubPref) => {
     const d = await openDaily({ [DAILY_SLOT]: inProgress, "fcw.clubPref": clubPref },
       (n) => n.daily >= 1 && n.pull >= 1);
-    const v = d.window.document.getElementById("tableSeason").textContent.trim();
+    /* The board's season, as the page states it. It was read off the live
+       table's label until the table came off the play screen (27 Sep 2026). */
+    const v = (d.window.document.body.getAttribute("data-season") || "").trim();
     d.window.close();
     return v;
   };
