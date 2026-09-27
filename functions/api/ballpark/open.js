@@ -1,6 +1,9 @@
-/* POST /api/ballpark/open — { token, playId, idx }
+/* POST /api/ballpark/open — { token, playId, idx, touch? }
  *
- * "I am showing question four now, start its clock."
+ * "I am showing question four now, start its clock" -- and, with touch, "the
+ * player has just touched it". Since 27 Sep 2026 the clock starts on the first
+ * touch or START_CAP seconds after the question appears, whichever is first
+ * (football/ballpark/js/rules.js has the owner's ruling).
  *
  * WHY THE PAGE HAS TO SAY SO. A question is worth ten points for the first ten
  * seconds and then a point a second less, so the score turns on WHEN the
@@ -25,7 +28,7 @@ import { csrfOk } from "../../_lib/auth.js";
 import {
   loadBank, boardById, playable, questionAt, dayOf, RULES,
 } from "../../_lib/bp-board.js";
-import { startRound, openQuestion, roundRow, roundState } from "../../_lib/bp-round.js";
+import { startRound, openQuestion, touchQuestion, roundRow, roundState } from "../../_lib/bp-round.js";
 
 function boardForToken(bank, token) {
   const s = String(token || "");
@@ -67,6 +70,11 @@ export async function onRequestPost({ request, env }) {
   }
 
   await openQuestion(env, body.playId, idx, now);
+  /* `touch: true` IS THE PLAYER'S FIRST TOUCH of this question, which starts
+     its clock now rather than at the cap (rules.js START_CAP). It opens the
+     question too, so a touch that overtakes the page's own open on a slow
+     connection is not lost. */
+  if (body.touch === true) await touchQuestion(env, body.playId, idx, now);
   const row = await roundRow(env, body.playId);
   return json({
     idx,

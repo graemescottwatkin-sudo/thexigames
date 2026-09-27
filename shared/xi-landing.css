@@ -513,3 +513,25 @@ a.site-mast{text-decoration:none;color:var(--ink)}
 /* Opened: the boards take the page; the daily, the card and the streaks wait
    behind the back button. */
 body.other-open .site-grid,body.other-open .other-card{display:none}
+
+/* ==== HOW TO PLAY IS A PLACE YOU GO, NOT TEXT ON THE PAGE ====================
+   The owner, 27 Sep 2026: "remove the how to play text on the larger screen.
+   How to play should only be a section to click into". The rules sat under
+   the landing as a long block of prose on every screen wide enough to show
+   it. Now #how is shown only as the TARGET of a link -- the bar's How to play,
+   or the one by the game's name on a phone -- and opens over the page, the
+   height of the screen and scrolling in itself, with its Back link at the top.
+   Leaving the target (Back, or the browser's back) closes it.
+   This is what every game already did on a LOCKED play screen (each game's
+   own "body.locked #how:target" rule); it is the landing's rule now too, once,
+   here, for every game that has a #how section. The text stays in the page, so
+   a search engine and a screen reader still read it. */
+#how:not(:target){display:none}
+#how:target{display:block;position:fixed;inset:0;z-index:60;margin:0;max-width:none;
+  overflow:auto;overscroll-behavior:contain;background:var(--paper);
+  padding:14px 16px 40px;box-sizing:border-box}
+#how:target>*{max-width:760px;margin-left:auto;margin-right:auto}
+#how:target .how-back{display:flex;width:max-content;align-items:center;min-height:var(--tap,44px);
+  padding:0 16px;margin-bottom:10px;border:1px solid var(--line);border-radius:999px;background:var(--card);
+  color:var(--ink);font-family:var(--disp);font-weight:700;letter-spacing:.08em;text-transform:uppercase;
+  text-decoration:none}

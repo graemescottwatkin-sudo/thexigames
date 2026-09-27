@@ -21,7 +21,7 @@ import {
   loadBank, boardById, playable, questionAt, dayOf, narrowWindow, RULES,
 } from "../../_lib/bp-board.js";
 import {
-  startRound, roundRow, roundState, recordNarrow, narrowFor,
+  startRound, roundRow, roundState, recordNarrow, narrowFor, touchQuestion,
 } from "../../_lib/bp-round.js";
 
 function boardForToken(bank, token) {
@@ -61,6 +61,11 @@ export async function onRequestPost({ request, env }) {
   /* Narrowing a question that is not open would buy a window before its clock
      started — the range for free. The same rule the answer route keeps. */
   if (!row || Number(row.clock_idx) !== idx) return bad("That question is not open.");
+  /* NARROWING IS A TOUCH. The clock starts on the first touch of a question or
+     at the cap (rules.js START_CAP), and pressing Narrow is touching it -- a
+     player could otherwise buy the narrower window and study it before the
+     clock began. Earlier-only, so a narrow after a touch changes nothing. */
+  await touchQuestion(env, body.playId, idx, now);
 
   /* ALREADY BOUGHT: the stored window, and charged nothing a second time.
      `cost` is what THIS request charged, which is nothing — what it cost when

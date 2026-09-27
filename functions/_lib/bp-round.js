@@ -62,12 +62,35 @@ export async function startRound(env, playId, boardId, day, atMs) {
    connection. The WHERE clause is the whole guard: the clock moves only to a
    question LATER than the one it is on, so re-opening the current question is a
    no-op and there is no way to buy back seconds already spent. */
+/* THE CLOCK IS PLANTED START_CAP SECONDS AHEAD (rules.js, the owner's ruling
+   of 27 Sep 2026): a question's clock starts on the first touch or two seconds
+   after it appears, whichever is first. Opening plants the later of the two;
+   touchQuestion() below is the only thing that brings it earlier. */
 export async function openQuestion(env, playId, idx, atMs) {
   if (!usable(env, playId)) return null;
+  const at = (Number(atMs) || Date.now()) + RULES.START_CAP * 1000;
   try {
     await env.DB.prepare(
       "UPDATE bp_round SET clock_idx = ?, clock_ms = ? WHERE play_id = ? AND clock_idx < ?")
-      .bind(Number(idx), Number(atMs) || Date.now(), playId, Number(idx)).run();
+      .bind(Number(idx), at, playId, Number(idx)).run();
+    return true;
+  } catch (e) { return null; }
+}
+
+/* THE FIRST TOUCH STARTS THE CLOCK, and a touch can only move it EARLIER: the
+   WHERE carries `clock_ms > ?`, so a second touch, a retry, or a touch after
+   the cap has passed changes nothing. Earlier is never in the player's favour,
+   so there is nothing here to abuse; the most a page can gain by never sending
+   a touch is the cap itself. Only the question in play is touched
+   (`clock_idx = ?`), so a late touch for the previous question cannot move
+   this one's clock. */
+export async function touchQuestion(env, playId, idx, atMs) {
+  if (!usable(env, playId)) return null;
+  const at = Number(atMs) || Date.now();
+  try {
+    await env.DB.prepare(
+      "UPDATE bp_round SET clock_ms = ? WHERE play_id = ? AND clock_idx = ? AND clock_ms > ?")
+      .bind(at, playId, Number(idx), at).run();
     return true;
   } catch (e) { return null; }
 }

@@ -5,7 +5,7 @@
      it is yesterday's code. aligned_test asserts the two agree, and until
      this game launched it had no BUILD at all — three of its assets were on
      three different tags, which is the same fault with nobody checking. */
-  var BUILD = "v002";
+  var BUILD = "v002a";
   if (window.XIPlays && document.documentElement) {
     document.documentElement.setAttribute("data-build", BUILD);
   }
@@ -45,6 +45,17 @@
      between this device's clock and the server's, so a device set five minutes
      fast does not show five minutes of a twenty-second question gone. */
   var clockMs = 0, skew = 0, clockLen = R.CLOCK, narrowedSecs = 0;
+  /* THE FIRST TOUCH OF THIS QUESTION, on this page's clock (now()), or 0.
+     The clock starts on the first touch or R.START_CAP seconds after the
+     question appears, whichever is first -- the owner's ruling of 27 Sep 2026,
+     in rules.js. The server holds the same moment; this is so the countdown
+     starts when the player touches rather than when the server answers. */
+  var touchAt = 0;
+  /* THE PAUSE BETWEEN A LOCK AND THE NEXT QUESTION, which comes up by itself
+     (the owner's approved mockup of 27 Sep 2026). Long enough to read the
+     verdict; the result stays in Last answer after it, and the next clock
+     does not start until the player touches it or the cap runs out. */
+  var ADVANCE_MS = 1500, advanceTimer = null;
   var results = [], points = [], bangOns = 0, subsUsed = 0, lockedSecs = 0,
       lockedWorth = 0;
   /* WHEN THE ROUND OPENED, for the plays row and for nothing else.
@@ -220,6 +231,8 @@
     for (var k = 0; k < dots.length; k++) dots[k].classList.toggle("spent", k < subsUsed);
     $("subsSay").textContent = subsUsed >= R.SUBS ? "No substitutions left"
       : (R.SUBS - subsUsed) + (R.SUBS - subsUsed === 1 ? " substitution" : " substitutions");
+    var left = Math.max(0, R.SUBS - subsUsed);
+    $("subsLeft").textContent = left ? left + " left" : "none left";
     $("narrowCost").textContent = subsUsed >= R.SUBS
       ? "no subs left, " + R.NARROW_SECS + " seconds" : "1 sub, free";
   }
@@ -267,39 +280,45 @@
        question shows its full allowance until the server says when it opened.
        The player who reads the answer is the one this hurt, which inverts what
        the reveal is for. */
-    clockMs = 0;
+    clockMs = 0; touchAt = 0;
     locked = false; touched = false; narrowedSecs = 0; clockLen = R.CLOCK;
     $("q").innerHTML = escapeHtml(q.question) +
       (q.detail ? "<small>" + escapeHtml(q.detail) + "</small>" : "");
     setRange(Number(q.lo), Number(q.hi), Number(q.step) || 1);
     $("band").className = "band"; $("mark").className = "mark";
-    /* THE RESULT GOES AWAY WITH THEM. It holds the previous question's answer,
-       and a block left standing while the next question opens would be the one
-       thing this page must never do. */
-    $("result").hidden = true;
+    /* THE RESULT STAYS, since 27 Sep 2026: it is the Last answer section, and
+       it holds the PREVIOUS question's answer on purpose -- the owner's
+       approved mockup keeps how close the last one was on screen while the
+       next is played. It never holds the answer to the question on screen:
+       that is not in this page until this question is locked. */
     $("qNo").innerHTML = (step + 1) +
       '<small> of ' + board.questions.length + '</small>';
     if (window.XIBar) XIBar.set({ progress: (step + 1) + "/" + board.questions.length });
     var v = $("verdict"); v.textContent = ""; v.className = "verdict";
     $("lock").disabled = true;
-    $("next").hidden = true; $("next").disabled = true;
-    $("lock").hidden = false;
     $("narrow").disabled = false;
     slider.disabled = false;
     queueRoom();
 
-    /* THE CLOCK STARTS WHEN THE QUESTION IS SHOWN, and the server is told so
-       here — it will not grade a question it was never told was open. Asking
-       twice does nothing: the clock only moves forward. */
+    /* THE SERVER IS TOLD THE QUESTION IS SHOWN -- it will not grade a question
+       it was never told was open -- and answers with when its clock starts:
+       R.START_CAP seconds from now, unless the player touches it first.
+       Asking twice does nothing: the clock only moves forward.
+       A LATE ANSWER FOR AN EARLIER QUESTION IS IGNORED (`at`): with the next
+       question coming up by itself, a slow reply to the last open could
+       otherwise set this question's clock. */
+    var at = step;
     post("open", { token: token, playId: playId, idx: step + 1 }).then(function (r) {
+      if (at !== step || locked) return;
       if (r && r.clockMs) {
         /* The server's clock, and the difference between it and this device's,
            taken once per question. */
         skew = Number(r.now) - Date.now();
         clockMs = Number(r.clockMs);
       } else {
-        skew = 0; clockMs = Date.now();
+        skew = 0; clockMs = Date.now() + R.START_CAP * 1000;
       }
+      if (touchAt && touchAt < clockMs) clockMs = touchAt;
       if (r && typeof r.subsUsed === "number") subsUsed = r.subsUsed;
       if (!timer) timer = setInterval(tick, 100);
       paint(); tick();
@@ -308,12 +327,29 @@
          a guess would be refused. Fall back to this device's clock so the
          board is playable, and let the answer's own catch handle the refusal
          if it comes — better than a page that sits with no clock at all. */
-      skew = 0; clockMs = Date.now();
+      if (at !== step || locked) return;
+      skew = 0; clockMs = Date.now() + R.START_CAP * 1000;
+      if (touchAt && touchAt < clockMs) clockMs = touchAt;
       if (!timer) timer = setInterval(tick, 100);
       accountNote("open", e);
       paint(); tick();
     });
     paint();
+  }
+
+  /* THE FIRST TOUCH STARTS THE CLOCK (rules.js START_CAP has the ruling).
+     Here at once, so the countdown moves under the player's finger, and on the
+     server, which is what the score is measured by. A touch can only bring the
+     clock EARLIER, on both sides, so sending it twice or late does nothing. */
+  function touchClock() {
+    if (touchAt || locked || over) return;
+    touchAt = now();
+    if (clockMs && touchAt < clockMs) clockMs = touchAt;
+    var at = step;
+    post("open", { token: token, playId: playId, idx: step + 1, touch: true }).then(function (r) {
+      if (at !== step || locked || !r || !r.clockMs) return;
+      clockMs = Math.min(clockMs || Infinity, Number(r.clockMs));
+    }).catch(function (e) { accountNote("touch", e); });
   }
 
   function setRange(a, b, st) {
@@ -423,9 +459,15 @@
     /* THE DISTANCE IN THE PLAYER'S OWN UNITS, said in words under the verdict:
        "4 caps away" is the thing they want and "1 ballpark" is the thing the
        engine thinks in. */
-    $("rsDist").textContent = away === 0
-      ? "You had it exactly."
-      : "You were " + fmt(away, q) + (q.unit ? " " + q.unit : "") + " away.";
+    /* THE LAST ANSWER SAYS IT IN WORDS on one line -- what you said, what it
+       was, how far -- because the compact section draws no big figures. */
+    $("rsDist").textContent = "You said " + fmt(guess, q) + ", it was " + fmt(answer, q) +
+      (q.unit ? " " + q.unit : "") + " " + DOT + " " +
+      (away === 0 ? "exactly right" : fmt(away, q) + " away");
+    $("lastOf").textContent = "Q" + (step + 1);
+    /* The same, inside the verdict line, for a phone that has no room for the
+       section's heading (css/style.css). */
+    $("rsQ").textContent = "Q" + (step + 1) + " " + DOT;
 
     /* THE KEY CARRIES THE NAMES, so the bands are not colour alone. */
     var key = "";
@@ -463,6 +505,7 @@
           : "Your distance landed in a scoring band, but the clock had nothing "
             + "left to give.");
     $("result").hidden = false;
+    $("lastSec").hidden = false;
     queueRoom();
   }
 
@@ -547,7 +590,6 @@
       $("band").className = "band on";
       $("mark").style.left = pct(r.answer) + "%";
       $("mark").className = "mark on";
-      drawResult(q, r, guesses[step]);
     }
 
     $("secs").innerHTML = lockedSecs + "<small>s</small>";
@@ -568,25 +610,47 @@
       " " + DOT + " " + points[step] + (points[step] === 1 ? " point" : " points") +
       (r.spentSub ? " and a substitution" : "");
 
-    $("lock").hidden = true;
-    /* The button says which question it opens, so the primary action on the
-       result names its destination rather than saying "Next". */
-    if ($("nextOf")) {
-      $("nextOf").textContent = (step + 2) <= board.questions.length
-        ? (step + 2) + " of " + board.questions.length : "";
-    }
-    $("next").hidden = false; $("next").disabled = false;
-    $("next").focus();
     paint();
     queueRoom();
 
-    if (r.over) { fullTime(r); }
+    /* ON TO THE NEXT BY ITSELF, after long enough to read the verdict -- the
+       owner's approved mockup of 27 Sep 2026, which replaced the Next button.
+       The eleventh goes to Full Time the same way. */
+    if (advanceTimer) clearTimeout(advanceTimer);
+    /* THE RESULT MOVES DOWN INTO LAST ANSWER AS THE NEXT QUESTION COMES UP,
+       not at the lock: until then the verdict is in Your guess, and the same
+       result in two places at once is one of them too many. Drawn before the
+       step moves, while the range, the points and the step are still this
+       question's. */
+    var lockedStep = step;
+    advanceTimer = setTimeout(function () {
+      advanceTimer = null;
+      if (step !== lockedStep || !locked) return;
+      if (typeof r.answer === "number") drawResult(q, r, guesses[step]);
+      if (r.over) { fullTime(r); return; }
+      advance();
+    }, ADVANCE_MS);
+  }
+
+  function advance() {
+    if (over || !locked) return;
+    if (step < board.questions.length - 1) { step++; show(); return; }
+    /* THE ELEVENTH. With a database the answer route has already said `over`
+       and full time has been shown; without one it never will, and the board
+       would simply stop with the last verdict on screen and no way forward.
+       The result is worked out here in that case only — the same rule, from the
+       same file, over the verdicts this page was given. */
+    fullTime({
+      score: scoreNow,
+      result: subsUsed <= R.SUBS ? "W" : "D",
+    });
   }
 
   /* ---- narrowing ---------------------------------------------------------- */
 
   $("narrow").addEventListener("click", function () {
     if (over || locked) return;
+    touchClock();
     $("narrow").disabled = true;
     post("narrow", { token: token, playId: playId, idx: step + 1 }).catch(function (e) {
       /* A narrow that did not land has charged nothing — the server charges as
@@ -614,6 +678,7 @@
 
   slider.addEventListener("input", function () {
     if (locked || over) return;
+    touchClock();
     touched = true; paint();
   });
 
@@ -658,6 +723,7 @@
      set; the track, which is the input's box, takes the pointer. */
   track.addEventListener("pointerdown", function (ev) {
     if (locked || over) return;
+    touchClock();
     try { track.setPointerCapture(ev.pointerId); } catch (e) {}
     slider.focus();
     if (ev.pointerType === "mouse") { slideFrom = null; drive(ev); return; }
@@ -675,25 +741,9 @@
   track.addEventListener("pointercancel", endSlide);
 
   $("lock").addEventListener("click", function () { lock(false); });
-  $("next").addEventListener("click", function () {
-    if (over || !locked) return;
-    if (step < board.questions.length - 1) { step++; show(); return; }
-    /* THE ELEVENTH. With a database the answer route has already said `over`
-       and full time has been shown; without one it never will, and the board
-       would simply stop with the last verdict on screen and no way forward.
-       The result is worked out here in that case only — the same rule, from the
-       same file, over the verdicts this page was given. */
-    if (!over) {
-      fullTime({
-        score: scoreNow,
-        result: subsUsed <= R.SUBS ? "W" : "D",
-      });
-    }
-  });
   document.addEventListener("keydown", function (ev) {
     if (ev.key !== "Enter") return;
-    if (!locked) { if (touched) lock(false); }
-    else $("next").click();
+    if (!locked && touched) lock(false);
     ev.preventDefault();
   });
 
@@ -1002,6 +1052,8 @@
     var had = bankedToday();
     if (had) { showBanked(had); return; }
     step = 0; results = []; points = []; answersSeen = []; bangOns = 0;
+    if (advanceTimer) { clearTimeout(advanceTimer); advanceTimer = null; }
+    $("result").hidden = true; $("lastSec").hidden = true;
     guesses = []; grades = [];
     subsUsed = 0; scoreNow = 0; over = false;
     playStartedAt = Date.now();

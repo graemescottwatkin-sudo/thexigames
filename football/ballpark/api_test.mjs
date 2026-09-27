@@ -72,6 +72,11 @@ function makeDb(bank) {
                    nothing. */
                 const r = rounds.find((x) => x.play_id === a[2] && x.clock_idx < a[3]);
                 if (r) { r.clock_idx = a[0]; r.clock_ms = a[1]; }
+              } else if (/UPDATE bp_round SET clock_ms = \? WHERE play_id = \? AND clock_idx = \? AND clock_ms > \?/.test(sql)) {
+                /* THE TOUCH, earlier-only and this question only -- both
+                   conditions enforced, or the suite proves neither. */
+                const r = rounds.find((x) => x.play_id === a[1] && x.clock_idx === a[2] && x.clock_ms > a[3]);
+                if (r) r.clock_ms = a[0];
               } else if (/INSERT OR IGNORE INTO bp_answer/.test(sql)) {
                 if (!answers.some((x) => x.play_id === a[0] && x.idx === a[1])) {
                   answers.push({ play_id: a[0], idx: a[1], question_id: a[2],
@@ -293,6 +298,66 @@ async function run() {
        unanswered, or its clock would run while the earlier ones waited. */
     const skip = await open({ request: req("https://x/api/ballpark/open", { token, playId: play, idx: 4 }), env: env2 });
     t("a question out of turn cannot be opened", skip.status === 400, `status ${skip.status}`);
+  }
+
+  /* ---- 3b. the clock starts on the first touch, or at the cap ----------
+     The owner, 27 Sep 2026: "b but with a 2 second cap". Opening plants the
+     clock START_CAP seconds ahead; the first touch brings it to the moment of
+     the touch; nothing brings it later. */
+  {
+    const CAP = RULES.START_CAP * 1000;
+    t("the cap is two seconds, as ruled", RULES.START_CAP === 2, String(RULES.START_CAP));
+    const env3 = { DB: makeDb() };
+    const play = "p-touch";
+    const before = Date.now();
+    const o = await bodyOf(await open({ request: req("https://x/api/ballpark/open",
+      { token, playId: play, idx: 1 }), env: env3 }));
+    const after = Date.now();
+    const planted = env3.DB._rounds[0].clock_ms;
+    t("opening a question starts its clock START_CAP seconds later, not now",
+      planted >= before + CAP && planted <= after + CAP, `${planted - before}ms after the open`);
+    t("and the page is told that later moment, so its countdown waits too",
+      o.clockMs === planted, `${o.clockMs} vs ${planted}`);
+
+    const tb = Date.now();
+    await open({ request: req("https://x/api/ballpark/open", { token, playId: play, idx: 1, touch: true }), env: env3 });
+    const touched = env3.DB._rounds[0].clock_ms;
+    t("the first touch starts it at the touch",
+      touched >= tb && touched <= Date.now() && touched < planted, `${touched - tb}ms after the touch`);
+
+    await new Promise((r) => setTimeout(r, 5));
+    await open({ request: req("https://x/api/ballpark/open", { token, playId: play, idx: 1, touch: true }), env: env3 });
+    t("a second touch does not restart it", env3.DB._rounds[0].clock_ms === touched,
+      `${touched} -> ${env3.DB._rounds[0].clock_ms}`);
+
+    /* A touch naming another question moves nothing -- not this one's clock,
+       and not the next one's before it is open. */
+    await open({ request: req("https://x/api/ballpark/open", { token, playId: play, idx: 2, touch: true }), env: env3 });
+    t("a touch for a question not in play moves no clock",
+      env3.DB._rounds[0].clock_ms === touched && env3.DB._rounds[0].clock_idx === 1,
+      `idx ${env3.DB._rounds[0].clock_idx}`);
+
+    /* NEVER TOUCHED, answered inside the cap: the clock has not begun, so the
+       full ten are on offer -- the cap is the most withholding a touch buys. */
+    const env4 = { DB: makeDb() };
+    await open({ request: req("https://x/api/ballpark/open", { token, playId: "p-cap", idx: 1 }), env: env4 });
+    const q1 = board.questions[0];
+    const inCap = await bodyOf(await answer({ request: req("https://x/api/ballpark/answer",
+      { token, playId: "p-cap", idx: 1, guess: q1.answer }), env: env4 }));
+    t("an answer before the clock has started is worth the full ten",
+      inCap.points === RULES.PTS, String(inCap.points));
+    t("and it is recorded as no time taken, not as negative time",
+      env4.DB._answers[0].elapsed_ms === 0, String(env4.DB._answers[0].elapsed_ms));
+
+    /* NARROWING IS A TOUCH: the window cannot be bought and studied before
+       the clock begins. */
+    const env5 = { DB: makeDb() };
+    await open({ request: req("https://x/api/ballpark/open", { token, playId: "p-nar", idx: 1 }), env: env5 });
+    const nb = Date.now();
+    await narrow({ request: req("https://x/api/ballpark/narrow", { token, playId: "p-nar", idx: 1 }), env: env5 });
+    t("narrowing starts the clock too",
+      env5.DB._rounds[0].clock_ms >= nb && env5.DB._rounds[0].clock_ms <= Date.now(),
+      `${env5.DB._rounds[0].clock_ms - nb}ms after the narrow`);
   }
 
   /* ---- 4. what the clock is worth -------------------------------------- */

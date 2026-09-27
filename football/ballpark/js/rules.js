@@ -40,6 +40,16 @@
   var GRACE = 10;            // of which the first ten cost nothing
   var NARROW_SECS = 4;       // what narrowing costs once the subs are gone
   var BONUS_CAP = 4;         // at most four bang-on bonuses, 110 -> 114
+  /* WHEN A QUESTION'S CLOCK STARTS. The owner, 27 Sep 2026, choosing between
+     a clock that starts when the question appears and one that starts on the
+     first touch: "b but with a 2 second cap". So it starts on the player's
+     first touch of the question, or START_CAP seconds after it appears,
+     whichever comes first. The first touch alone would let a player read and
+     think for as long as they liked before touching anything; the cap is what
+     stops the clock timing only the slider. The server opens a question with
+     its clock START_CAP seconds ahead and a touch can only bring it EARLIER,
+     so withholding the touch is worth two seconds at most, which is the rule. */
+  var START_CAP = 2;
 
   /* THE LADDER, in ballparks — multiples of the question's own tolerance — so
      one ruler grades a crowd size and a transfer fee without either needing its
@@ -178,6 +188,7 @@
   var api = {
     MAX_SCORE: MAX_SCORE, QUESTIONS: QUESTIONS, PTS: PTS, SUBS: SUBS,
     CLOCK: CLOCK, GRACE: GRACE, NARROW_SECS: NARROW_SECS, BONUS_CAP: BONUS_CAP,
+    START_CAP: START_CAP,
     GRADES: GRADES, STRICT_GRADES: STRICT_GRADES,
     ladderFor: ladderFor, ballparksOut: ballparksOut, gradeFor: gradeFor,
     pointsAt: pointsAt, pointsFor: pointsFor, score: score,

@@ -542,7 +542,6 @@ body.locked .eleven{display:none}
 
 body.locked .stage{grid-area:stage; min-height:0; overflow:hidden; container-type:size;
   display:flex; flex-direction:column; padding:10px 14px}
-body.locked .stage>:not(.q){flex:none}
 body.locked .eyebrow{display:none}
 body.locked .q{flex:1 1 auto; min-height:0; overflow:hidden; display:flex; flex-direction:column;
   justify-content:center; margin:0; font-size:clamp(17px,min(6.2cqw,4.6cqh),40px); line-height:1.25}
@@ -567,10 +566,6 @@ body.locked .acts{flex-wrap:nowrap}
 body.locked .acts .kick,body.locked .acts .ghostBtn{min-height:max(44px,6.5cqh); width:auto; flex:1 1 0;
   justify-content:center; margin-left:0}
 body.locked .grades{margin-top:.8cqh; padding-top:.8cqh}
-/* After the lock the result says the guess, the answer and the distance on a
-   track of its own, so the value, the live track and the running tension
-   would be the same facts twice. */
-body.locked .stage:has(#result:not([hidden])) :is(.tension,.big,.track,.ends,.verdict,.grades){display:none}
 /* The guide stays before the lock -- a strict question shows its harsher terms
    there, which is the point of it -- as one line: its heading and the way in. */
 body.locked .grades .gr-say{display:none}
@@ -671,3 +666,119 @@ body.locked .rs-track.tight .rs-guess{top:2px}
    so a wider track is finer control rather than a longer reach. The end
    labels stay tied to the track's ends. */
 .track,.ends{max-width:none}
+
+/* ================= IN SECTIONS =================
+   The owner's approved mockup of 27 Sep 2026: four cards down the stage --
+   the question, your guess, the substitutions, the last answer -- instead of
+   one card holding everything. Written last so each rule here states the
+   section layout once rather than threading it through the rules above.
+   The stage becomes the column the cards sit in; the cards carry the card
+   styling the stage used to. */
+.stage{background:none; border:0; border-radius:0; padding:0;
+  display:flex; flex-direction:column; gap:8px}
+.sec{background:var(--card); border:1px solid var(--line); border-radius:12px; padding:12px 16px}
+.sec-h{margin:0 0 6px; font-family:var(--disp); font-weight:700; font-size:11px;
+  letter-spacing:.16em; text-transform:uppercase; color:var(--ink-faint);
+  display:flex; justify-content:space-between; gap:10px}
+.sec-h em{font-style:normal; letter-spacing:.06em; color:var(--pitch); text-transform:none;
+  font-family:var(--body); font-weight:600; font-size:12px}
+.sec-q .grades{margin-top:8px; padding-top:4px}
+.sec-guess .big{margin:4px 0 6px}
+.sec-guess .ends{margin-bottom:6px}
+.sec-guess .verdict{margin:0 0 6px; text-align:center; min-height:0}
+.sec-guess .verdict:empty{display:none}
+.sec-guess .acts .kick{min-width:min(100%,260px)}
+/* THE SUBSTITUTIONS ARE ONE ROW: how many are left, in words, and the one
+   thing they buy. The dots are in the top bar a thumb's width above, so they
+   are not drawn twice (the owner, 26 Sep 2026: "Remove the duplicates"). */
+.sec-subs{display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 12px 8px 16px}
+.subs-say{margin:0; font-size:14px; color:var(--ink-soft)}
+.subs-say b{font-family:var(--disp); font-weight:700; font-size:12px; letter-spacing:.14em;
+  text-transform:uppercase; color:var(--ink-faint); margin-right:6px}
+.subs-say span{font-weight:600; color:var(--ink)}
+.sec-subs .ghostBtn{flex:none}
+
+/* THE LAST ANSWER, COMPACT: the verdict on one line and the bar with the
+   answer and the guess on it. The two big figures, the band key and the
+   sentence about the clock are the full result's, and the line above says
+   the guess, the answer and the distance in words -- so they are not drawn
+   here. The markers lose their labels; a legend under the bar says which is
+   which, by shape as well as colour. */
+.sec-last{padding:10px 16px 8px}
+.sec-last .result{margin:0}
+.sec-last .rs-facts,.sec-last .rs-key,.sec-last .rs-why{display:none}
+.sec-last .rs-banner{margin:0 0 8px; padding:0; gap:10px; background:none; border:0; align-items:center}
+.sec-last .rs-icon{width:26px; height:26px}
+.sec-last .rs-icon::before{font-size:14px}
+.sec-last .rs-said{flex-direction:row; flex-wrap:wrap; align-items:baseline; column-gap:10px; row-gap:0; flex:1 1 auto}
+.sec-last .rs-said b{font-size:16px}
+.sec-last .rs-dist{font-size:13px}
+.sec-last .rs-pts{order:3; margin-left:auto; font-size:15px}
+.sec-last .rs-track{margin:0; height:22px; border-radius:5px}
+.sec-last .rs-zones{border-radius:5px}
+.sec-last .rs-answer b,.sec-last .rs-answer span,.sec-last .rs-guess b,.sec-last .rs-guess span{display:none}
+.sec-last .rs-answer{top:-6px}
+.sec-last .rs-answer i{height:34px; margin-top:0}
+.sec-last .rs-guess,.sec-last .rs-track.tight .rs-guess{top:2px}
+.sec-last .rs-guess i,.sec-last .rs-track.tight .rs-guess i{width:12px; height:12px; margin-top:0;
+  border-radius:50%; border:3px solid var(--ink); background:var(--card)}
+.sec-last .rs-track.tight .rs-guess::after{display:none}
+.sec-last .rs-ends{margin:6px 0 0; align-items:center; font-size:11px}
+.rs-legend{display:inline-flex; align-items:center; gap:5px; color:var(--ink-faint);
+  font-family:var(--body); font-size:11px}
+.rs-legend i{display:inline-block}
+.rs-legend .la{width:3px; height:12px; background:var(--gold); margin-left:6px}
+.rs-legend .lg{width:9px; height:9px; border-radius:50%; border:2px solid var(--ink); margin-left:6px}
+body.locked .sec-last .rs-answer{top:-6px}
+body.locked .sec-last .rs-guess,body.locked .sec-last .rs-track.tight .rs-guess{top:2px}
+body.locked .sec-last .rs-ends{margin-top:6px}
+
+/* THE SECTIONS ON A LOCKED SCREEN. The question's card takes the height the
+   others leave and the question shrinks inside it (game.js fitQuestion); the
+   other three are their own size. Nothing is hidden after a lock any more:
+   the verdict shows in Your guess and the result in Last answer. */
+body.locked .stage{padding:0; gap:6px; overflow:hidden}
+body.locked .sec{padding:8px 12px}
+body.locked .sec-q{flex:1 1 auto; min-height:0; display:flex; flex-direction:column; overflow:hidden}
+body.locked .sec-q>:not(.q){flex:none}
+body.locked .sec-h{margin-bottom:3px}
+body.locked .sec-guess .big{margin:.4cqh 0 .2cqh}
+body.locked .sec-guess .big span{font-size:clamp(30px,7cqh,64px)}
+body.locked .sec-guess .track{margin-top:0}
+body.locked .sec-guess .ends{margin-bottom:.6cqh}
+body.locked .sec-guess .verdict{margin-bottom:.6cqh; font-size:14px}
+body.locked .sec-guess .acts .kick{flex:0 1 auto; min-width:min(100%,260px)}
+body.locked .sec-subs{padding:6px 8px 6px 12px}
+body.locked .sec-subs .ghostBtn{min-height:40px; flex:none; width:auto}
+body.locked .sec-last{padding:6px 12px}
+body.locked .sec-last .rs-banner{margin-bottom:6px; padding:0}
+body.locked .sec-last .rs-said b{font-size:clamp(14px,2.4cqh,17px)}
+@media (max-width:420px){
+  .sec-last .rs-dist{font-size:12px}
+  .subs-say b{display:block; margin:0 0 1px}
+}
+/* The prompt before a guess is a sentence, not a figure: kept at reading size
+   when the value above is scaled up. */
+body.locked .sec-guess .big.empty span{font-size:clamp(14px,2.4cqh,19px)}
+.rs-q{display:none}
+/* A PHONE HAS NO ROOM FOR THE SECTION HEADINGS, which is how the approved
+   mockup drew it: the question, the value and the buttons say what they are,
+   the substitutions row says so in words, and the last answer names its
+   question inside its own verdict line. What that buys is height for the
+   question, which game.js otherwise has to shrink -- a 290-character question
+   has to stay whole on a 360x640 screen (tools/lock_test.mjs). */
+@media (max-width:620px){
+  body.locked .sec-q>.sec-h,body.locked .sec-guess>.sec-h,body.locked .sec-last>.sec-h{display:none}
+  body.locked .sec-last .rs-q{display:inline; font-family:var(--disp); font-weight:700; font-size:14px; color:var(--ink-faint)}
+  body.locked .sec-last .rs-icon{display:none}
+  body.locked .sec-q .grades{margin-top:2px; padding-top:0}
+  body.locked .sec-q .grades summary{padding:3px 0}
+  body.locked .sec-q .grades .gr-more{font-size:12.5px}
+  body.locked .sec-subs{padding:3px 6px 3px 12px}
+  body.locked .sec-subs .ghostBtn{min-height:36px; padding:6px 10px}
+  body.locked .sec-guess .acts .kick{min-height:40px}
+  body.locked .sec-last{padding:5px 12px}
+  body.locked .sec-last .rs-banner{margin-bottom:4px}
+  body.locked .sec-last .rs-ends{margin-top:4px}
+  body.locked .stage{gap:5px}
+}

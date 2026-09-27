@@ -849,7 +849,7 @@ function measureSlider() {
   const vis = (e) => !!e && !e.hidden && getComputedStyle(e).display !== "none";
   const stage = document.querySelector("#screenGame .stage");
   const q = document.getElementById("q");
-  const offscreen = [...document.querySelectorAll("#lock, #next, #narrow, #track, .board, #result")]
+  const offscreen = [...document.querySelectorAll("#lock, #narrow, #track, .board, #result")]
     .filter(vis).filter((e) => { const r = rect(e); return r.top < -1 || r.bottom > innerHeight + 1 || r.right > innerWidth + 1; }).length;
   /* THE STAGE IS FILLED: what is below its last visible child is dead space. */
   const kids = [...stage.children].filter(vis);
@@ -882,6 +882,8 @@ function measureSlider() {
     offscreen,
     deadSpace: Math.round(rect(stage).bottom - pad - last),
     result: vis(document.getElementById("result")),
+    verdict: (document.getElementById("verdict").textContent || "").length > 0,
+    q1: document.getElementById("lastOf") ? document.getElementById("lastOf").textContent : "",
     ft: vis(document.getElementById("ft")) && ftCard ? [Math.round(rect(ftCard).top), Math.round(rect(ftCard).bottom)] : null,
     vh: innerHeight,
   };
@@ -891,9 +893,9 @@ const sliderOk = (m) => m.locked && m.scrollY <= 1 && m.scrollX <= 1 && !m.qCut 
 const sliderSay = (m) => `locked ${m.locked}, scroll ${m.scrollY}/${m.scrollX}, question ${m.qLen} chars at ${m.qSize}${m.qCut ? " CUT" : ""}${m.stageCut ? ", stage overflows" : ""}, off screen ${m.offscreen}, empty below ${m.deadSpace}px, track ${m.trackW === null ? "hidden" : m.trackW + "px of " + m.stageW}${m.markOverFacts ? ", markers ON the figures" : ""}${m.legendFilled ? ", legend rows filled" : ""}`;
 
 /* THE LONGEST QUESTION, made longer. The bank's longest question plus detail
-   is 274 characters (measured 24 Sep 2026); the samples stop at 215. The
-   first question of the board is padded to 290, in the response the page
-   reads, so the lock is proved on something harder than a player is served. */
+   is 274 characters (measured 24 Sep 2026); the samples stop at 215. Every
+   question of the board is padded to 290, in the response the page reads, so
+   the lock is proved on something harder than a player is served. */
 const PAD = " And a clause more, to make the question longer than any in the bank so far.";
 async function openSlider(game, [name, viewport, touch]) {
   const context = await browser.newContext({ viewport, hasTouch: touch, isMobile: touch, deviceScaleFactor: 1 });
@@ -901,8 +903,10 @@ async function openSlider(game, [name, viewport, touch]) {
   await page.route("**/api/ballpark/daily*", async (route) => {
     const res = await fetchHere(route);
     const body = res.json;
-    const q = body && body.board && body.board.questions && body.board.questions[0];
-    if (q) {
+    /* EVERY QUESTION, since 27 Sep 2026: the heaviest screen is now a
+       question with the LAST ANSWER under it, which is question two onwards,
+       so padding only the first proved the lock on the lightest one. */
+    for (const q of (body && body.board && body.board.questions) || []) {
       while ((q.question + (q.detail || "")).length < 290) q.question += PAD;
       q.question = q.question.slice(0, 290 - (q.detail || "").length);
     }
@@ -917,8 +921,13 @@ async function openSlider(game, [name, viewport, touch]) {
   return { page, context };
 }
 /* A guess and the lock, as a player makes them: the slider moved, then Lock
-   it in, then the result. */
-async function guessAndLock(page) {
+   it in, then the verdict in Your guess. Since 27 Sep 2026 the next question
+   comes up by itself (the owner's approved sections mockup) and the result
+   moves down into Last answer as it does -- so `settled` waits for that too. */
+async function guessAndLock(page, settled) {
+  /* A question that is up: the last verdict has moved on, or there is none. */
+  await page.waitForFunction(() => !(document.getElementById("verdict").textContent || "").length
+    || !document.getElementById("ft").hidden, null, { timeout: 10000 });
   await page.evaluate(() => {
     const s = document.getElementById("slider");
     s.value = String(Math.round((Number(s.min) + Number(s.max)) / 2));
@@ -926,9 +935,13 @@ async function guessAndLock(page) {
   });
   await page.waitForFunction(() => !document.getElementById("lock").disabled, null, { timeout: 5000 });
   await page.click("#lock");
-  await page.waitForFunction(() => !document.getElementById("result").hidden || !document.getElementById("ft").hidden, null, { timeout: 10000 });
+  await page.waitForFunction(() => (document.getElementById("verdict").textContent || "").length > 0 || !document.getElementById("ft").hidden, null, { timeout: 10000 });
   /* Stays fixed: the result's room check keeps the page locked when it works. */
-  await wait(400);
+  await wait(300);
+  if (!settled) return;
+  await page.waitForFunction(() => (!document.getElementById("result").hidden && !(document.getElementById("verdict").textContent || "").length)
+    || !document.getElementById("ft").hidden, null, { timeout: 10000 });
+  await wait(300);
 }
 
 for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "slider" && (!ONLY || k === ONLY))) {
@@ -939,9 +952,19 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "s
     t(`${vp[0]}: a question past the bank's longest -- locked, no scroll, question whole, the track and the buttons on screen`,
       sliderOk(before) && before.qLen >= 285, sliderSay(before));
     await guessAndLock(page);
+    const flash = await page.evaluate(measureSlider);
+    /* AND ONLY THERE: the result moves down into Last answer as the next
+       question comes up, not at the lock, so on the first lock Last answer is
+       still empty rather than repeating the verdict above it. */
+    t(`${vp[0]}: at the lock, the verdict shows in Your guess (and not yet in Last answer) and the screen still fits`,
+      sliderOk(flash) && flash.verdict && !flash.result, sliderSay(flash) + (flash.result ? " | Last answer already drawn" : ""));
+    await guessAndLock(page, true);
     const after = await page.evaluate(measureSlider);
-    t(`${vp[0]}: after the lock, the result fits the same screen with the question still whole`,
-      sliderOk(after) && after.result, sliderSay(after));
+    /* THE HEAVIEST SCREEN: the next question, with the last answer under it.
+       The first lock above has already moved on to question two by now, so
+       this is question three with question two's result. */
+    t(`${vp[0]}: the next question comes up by itself with the last answer under it, and it all fits`,
+      sliderOk(after) && after.result && !after.verdict && after.q1 === "Q2", sliderSay(after) + ` | last answer ${after.q1}`);
     await context.close();
   }
 
@@ -997,9 +1020,12 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "s
     const b = await val();
     t("desktop: a click puts the knob where it lands, every time",
       Math.abs(frac(a) - 0.25) < 0.04 && Math.abs(frac(b) - 0.8) < 0.04, `${Math.round(frac(a) * 100)}%, then ${Math.round(frac(b) * 100)}%`);
-    await guessAndLock(page);
+    await guessAndLock(page, true);
     const rs = await page.evaluate(() => { const e = document.querySelector(".rs-track"); return e ? Math.round(e.getBoundingClientRect().height) : 0; });
-    t("desktop: the result bar is thick too (30px or more)", rs >= 30, rs + "px");
+    /* 22px SINCE 27 SEP 2026: the result is the compact Last answer now, a
+       reminder under the next question, and the thick bar is the one being set
+       (28px, checked above). */
+    t("desktop: the last answer's bar is a bar, not a line (20px or more)", rs >= 20, rs + "px");
     /* And what sits on it still sits on it: the guess's ring on the bar's
        centre line, the answer's line across the whole bar. */
     const on = await page.evaluate(() => {
@@ -1014,6 +1040,35 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "s
       Math.abs(on.guessOff) <= 3 && on.answerCrosses, JSON.stringify(on));
     if (process.env.LOCK_SHOTS) await page.screenshot({ path: path.join(process.env.LOCK_SHOTS, `${id}-desktop-result-bar.png`) });
     await context.close();
+  }
+
+  /* THE CLOCK STARTS ON THE FIRST TOUCH, OR TWO SECONDS IN -- the owner,
+     27 Sep 2026: "b but with a 2 second cap". Read off the clock the page
+     draws (#secs, whole seconds rounded up, so 20 until a full second has
+     gone). Untouched it holds at 20 past the first second and has moved by
+     four; touched at once it has moved within about a second and a half. */
+  console.log(`\n${id}: the clock starts on the first touch, or two seconds in`);
+  {
+    const secs = (page) => page.evaluate(() => parseInt(document.getElementById("secs").textContent, 10));
+    {
+      const { page, context } = await openSlider(game, VIEWPORTS[3]);
+      await wait(1000);
+      const idle = await secs(page);
+      await wait(3000);
+      const capped = await secs(page);
+      t("untouched, the clock has not started a second after the question appears", idle === 20, `${idle}s`);
+      t("but it does not wait for ever: by four seconds the two-second cap has started it", capped >= 16 && capped <= 19, `${capped}s`);
+      await context.close();
+    }
+    {
+      const { page, context } = await openSlider(game, VIEWPORTS[3]);
+      const box = await page.evaluate(() => { const r = document.getElementById("track").getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; });
+      await page.mouse.click(box.x, box.y);
+      await wait(1500);
+      const touched = await secs(page);
+      t("a touch starts it at once", touched <= 19 && touched >= 17, `${touched}s a second and a half after the touch`);
+      await context.close();
+    }
   }
 
   console.log(`\n${id}: the old-link banner`);
@@ -1071,13 +1126,7 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "s
     const { page, context } = await openSlider(game, vp);
     for (let i = 0; i < 11; i++) {
       if (await page.$eval("#ft", (e) => !e.hidden)) break;
-      await guessAndLock(page);
-      if (await page.$eval("#ft", (e) => !e.hidden)) break;
-      await page.click("#next");
-      await page.waitForFunction(() => document.getElementById("result").hidden || !document.getElementById("ft").hidden, null, { timeout: 10000 });
-      /* Stays fixed: the page tells the server the question is open and
-         shows nothing when the answer comes back. */
-      await wait(300);
+      await guessAndLock(page, true);
     }
     /* Stays fixed: Full Time's room check keeps the page locked when it works. */
     await wait(500);
