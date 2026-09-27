@@ -535,3 +535,53 @@ body.other-open .site-grid,body.other-open .other-card{display:none}
   padding:0 16px;margin-bottom:10px;border:1px solid var(--line);border-radius:999px;background:var(--card);
   color:var(--ink);font-family:var(--disp);font-weight:700;letter-spacing:.08em;text-transform:uppercase;
   text-decoration:none}
+
+/* ==== ONE COLUMN, THEN MORE GAMES ============================================
+   The owner, 27 Sep 2026, from the iPad: "I think we can make this a singular
+   column, not 2 -- Daily, Other boards, Streaks. Then a little break and
+   maybe show all the other games as a quick select". The two columns left the
+   streaks floating beside the daily with the page's whole lower half empty.
+   Scoped to the landing that has the Other boards card (:has(#homeOther)),
+   which is the family's new landing; a game not yet moved to it keeps its own
+   layout until it is. The column is held to a readable width and the page's
+   ident sits over it. */
+.site-wrap:has(#homeOther){max-width:760px}
+.site-grid:has(#homeOther){grid-template-columns:1fr;gap:10px}
+/* The streaks are one block, not a card beside the daily. */
+.site-grid:has(#homeOther) .site-side{gap:10px}
+/* THE BREAK, AND THE QUICK SELECT: every other listed game in this theme,
+   drawn by shared/xi-menu.js from the team sheet. Chips, two or three across,
+   each the game's shirt number and its name. */
+.more-games{margin:26px 0 8px;padding-top:18px;border-top:1px solid var(--line)}
+.mg-head{margin:0 0 10px;font-family:var(--disp);font-weight:700;font-size:12px;
+  letter-spacing:.16em;text-transform:uppercase;color:var(--ink-faint)}
+.mg-list{list-style:none;margin:0;padding:0;display:grid;gap:8px;
+  grid-template-columns:repeat(auto-fill,minmax(200px,1fr))}
+.mg-chip{display:flex;align-items:center;gap:10px;min-height:var(--tap,44px);padding:8px 12px;
+  border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);
+  text-decoration:none;font-weight:600;font-size:14.5px;box-sizing:border-box}
+.mg-chip:hover{border-color:var(--pitch)}
+.mg-chip:focus-visible{outline:none;box-shadow:var(--ring)}
+.mg-n{flex:none;width:26px;height:26px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+  background:var(--pitch);color:var(--on-pitch,#fff);font-family:var(--disp);font-weight:700;font-size:13px}
+.mg-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Other boards opens in place of the daily and the streaks; the quick select
+   goes with them, since Back is the way out of that screen. */
+body.other-open .more-games{display:none}
+@media (max-width:430px){
+  .mg-list{grid-template-columns:1fr 1fr}
+  .mg-chip{font-size:13.5px;padding:8px 10px;gap:8px}
+}
+/* The game's name sits over the column it names, not at the old width. */
+body:has(#homeOther) .site-ident{max-width:760px}
+/* THE GAME'S PICTURE, SCALED, at the left of its chip: the hub card's art,
+   cropped to its middle, where each picture's motif sits. */
+.mg-chip.has-art{padding:6px 12px 6px 6px}
+.mg-art{flex:none;width:72px;height:44px;border-radius:7px;overflow:hidden;background:var(--pitch)}
+.mg-art img{display:block;width:100%;height:100%;object-fit:cover;transform:scale(1.9)}
+.mg-chip.has-art .mg-n{width:22px;height:22px;font-size:12px}
+@media (max-width:430px){
+  .mg-chip.has-art{flex-wrap:wrap;padding:6px;gap:6px 8px}
+  .mg-art{width:100%;height:auto;aspect-ratio:5/2}
+  .mg-art img{transform:scale(1.5)}
+}

@@ -149,4 +149,73 @@
     other.addEventListener("click", function () { showOther(true); });
     if (back) back.addEventListener("click", function () { showOther(false); });
   }
+
+  /* MORE GAMES, A QUICK SELECT under the streaks. The owner, 27 Sep 2026:
+     "make this a singular column ... Daily, Other boards, Streaks. Then a
+     little break and maybe show all the other games as a quick select".
+     READ OFF THE TEAM SHEET (XIChrome.squad, this theme's), never a list of
+     its own: a slot with a name and an href is a launched, listed game, and
+     an unlisted or unbuilt one has neither, so it cannot appear here. The game
+     this page is for is left out. Only on the landing that has the Other
+     boards card, which is the landing this layout belongs to. */
+  function drawMoreGames() {
+    var grid = document.querySelector(".site-grid");
+    var squad = window.XIChrome && window.XIChrome.squad;
+    if (!other || !grid || !squad || document.getElementById("moreGames")) return;
+    var here = location.pathname;
+    var games = squad.filter(function (g) {
+      return g && g.name && g.href && here.indexOf(g.href) !== 0;
+    });
+    if (!games.length) return;
+    var sec = document.createElement("section");
+    sec.className = "more-games";
+    sec.id = "moreGames";
+    sec.setAttribute("aria-labelledby", "moreGamesHead");
+    var h = document.createElement("h2");
+    h.className = "mg-head";
+    h.id = "moreGamesHead";
+    h.textContent = "More games";
+    sec.appendChild(h);
+    var ul = document.createElement("ul");
+    ul.className = "mg-list";
+    games.forEach(function (g) {
+      var li = document.createElement("li");
+      var a = document.createElement("a");
+      a.className = "mg-chip";
+      a.href = g.href;
+      /* A SCALED VISUAL OF THE GAME (the owner, 27 Sep 2026: "I'd like them to
+         also include a scaled visual of the game on some part"): the hub's own
+         card art, /assets/games/<game>.jpg, the same file at the same ?v= the
+         hub's cards load, so the two cannot show different pictures. Football
+         only: those files are football's, and a Friends game has no art and
+         must not borrow show imagery. A picture that fails to load is
+         removed, leaving the chip as the number and the name. */
+      var seg = g.href.split("/").filter(Boolean);
+      if (seg[0] === "football" && seg[1]) {
+        var art = document.createElement("span");
+        art.className = "mg-art";
+        art.setAttribute("aria-hidden", "true");
+        var img = document.createElement("img");
+        img.alt = ""; img.loading = "lazy"; img.decoding = "async";
+        img.width = 1200; img.height = 720;
+        img.src = "/assets/games/" + seg[1] + ".jpg?v=a1";
+        img.onerror = function () { if (art.parentNode) art.parentNode.removeChild(art); };
+        art.appendChild(img);
+        a.appendChild(art);
+        a.classList.add("has-art");
+      }
+      var n = document.createElement("span");
+      n.className = "mg-n";
+      n.setAttribute("aria-hidden", "true");
+      n.textContent = String(g.n);
+      var name = document.createElement("span");
+      name.className = "mg-name";
+      name.textContent = g.name;
+      a.appendChild(n); a.appendChild(name);
+      li.appendChild(a); ul.appendChild(li);
+    });
+    sec.appendChild(ul);
+    grid.parentNode.insertBefore(sec, grid.nextSibling);
+  }
+  drawMoreGames();
 })();

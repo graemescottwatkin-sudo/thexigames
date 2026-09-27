@@ -2100,12 +2100,41 @@ if (!ONLY || ONLY === "landing") {
       t(`${g}: the daily, then Other boards, then the streaks with the form as one row ("Any game streak")`,
         m.order && m.form && m.anyGame, JSON.stringify(m));
     }
+    /* MORE GAMES, the quick select under the streaks (the owner, 27 Sep
+       2026: "a little break and maybe show all the other games as a quick
+       select", "also include a scaled visual of the game"). Every listed game
+       of THIS theme's team sheet but this one, each linking to its own page,
+       each with its picture on a football page and none on a Friends one --
+       and below everything else on the page. The expected list is read off
+       the sheet the page itself downloaded, not written here. */
+    const mg = await page.evaluate(() => {
+      const box = document.getElementById("moreGames");
+      const squad = (window.XIChrome && window.XIChrome.squad) || [];
+      const want = squad.filter((x) => x.name && x.href && location.pathname.indexOf(x.href) !== 0).map((x) => x.href);
+      const chips = box ? [...box.querySelectorAll("a.mg-chip")] : [];
+      const got = chips.map((a) => a.getAttribute("href"));
+      const arts = chips.map((a) => a.querySelector(".mg-art img"));
+      const last = Math.max(...["homeDaily", "homeOther", "homeStreaks"].map((id) => {
+        const e = document.getElementById(id); return e && !e.hidden ? e.getBoundingClientRect().bottom : 0; }));
+      return {
+        present: !!box, want: want.length, got: got.length,
+        same: want.length > 0 && want.join() === got.join(),
+        self: got.some((h) => location.pathname.indexOf(h) === 0),
+        pictures: arts.filter((i) => i && i.complete && i.naturalWidth > 0).length,
+        below: !!box && box.getBoundingClientRect().top >= last - 1,
+      };
+    });
+    const football = g.startsWith("football/");
+    t(`${g}: More games lists every other listed game of this theme, not this one, under the rest of the page${football ? ", each with its picture" : ", with no borrowed pictures"}`,
+      mg.present && mg.same && !mg.self && mg.below && (football ? mg.pictures === mg.got : mg.pictures === 0),
+      JSON.stringify(mg));
     await page.click("#homeOther");
     await wait(200);
     const open = await page.evaluate(() => ({
       boards: !document.getElementById("otherBoards").hidden,
       daily: getComputedStyle(document.getElementById("homeDaily")).display !== "none" &&
         document.getElementById("homeDaily").getBoundingClientRect().height > 0,
+      more: !!document.getElementById("moreGames") && getComputedStyle(document.getElementById("moreGames")).display !== "none",
       previous: !!document.querySelector("#otherBoards #homePrevious") &&
         /PREVIOUS DAILIES/.test(document.querySelector("#otherBoards #homePrevious").textContent.toUpperCase()),
     }));
@@ -2114,8 +2143,29 @@ if (!ONLY || ONLY === "landing") {
     const back = await page.evaluate(() => document.getElementById("otherBoards").hidden &&
       document.getElementById("homeDaily").getBoundingClientRect().height > 0);
     t(`${g}: Other boards opens its boards (Previous dailies among them) in place of the daily, and Back returns`,
-      m.closed && open.boards && !open.daily && open.previous && back && errors.length === 0,
+      m.closed && open.boards && !open.daily && open.previous && !open.more && back && errors.length === 0,
       JSON.stringify(Object.assign({ back, errors }, open)));
+    await context.close();
+  }
+
+  /* ONE COLUMN ON A TABLET, where it used to be two: the owner's iPad, 27 Sep
+     2026, "make this a singular column, not 2". At the width the streaks sat
+     beside the daily, they now sit under Other boards, the three share one
+     left edge, and More games comes after them. */
+  {
+    const context = await browser.newContext({ viewport: { width: 1024, height: 1366 }, hasTouch: true, isMobile: true, deviceScaleFactor: 1 });
+    const page = await context.newPage();
+    await page.goto(ORIGIN + "/football/crossword/", { waitUntil: "networkidle" });
+    await wait(600);
+    const c = await page.evaluate(() => {
+      const r = (id) => document.getElementById(id).getBoundingClientRect();
+      const d = r("homeDaily"), o = r("homeOther"), st = r("homeStreaks"), mg = r("moreGames");
+      return { stacked: d.bottom <= o.top + 1 && o.bottom <= st.top + 1 && st.bottom <= mg.top + 1,
+        oneEdge: Math.abs(d.left - st.left) < 2 && Math.abs(d.left - mg.left) < 2,
+        widths: [Math.round(d.width), Math.round(st.width)] };
+    });
+    t("tablet: one column -- the daily, Other boards, the streaks, then More games, on one left edge",
+      c.stacked && c.oneEdge, JSON.stringify(c));
     await context.close();
   }
 }
