@@ -19,7 +19,7 @@
  * one especially, because deciding it here would need the club's whole roster
  * and a roster is a candidate list for the door.
  */
-var BUILD = "v001v";
+var BUILD = "v001w";
 
 (function bootstrap() {
   'use strict';
@@ -210,7 +210,7 @@ function start() {
 
   var el = {};
   ['waHome', 'waGame', 'waToday', 'waTodayKicker', 'waTodayState',
-   'navToday', 'waPastCount',
+   'waPastCount',
    'boardNo', 'boardDate', 'screenDoors', 'screenPlay', 'screenDone',
    'doors', 'mechanism', 'lede', 'playClub', 'playLeft', 'playNums',
    'commit', 'commitPick', 'playChoice', 'clues', 'ladder',
@@ -991,9 +991,8 @@ function start() {
     el.waPastCount.textContent = 'All ' + BOARD.no + ' boards so far';
   }
 
-  /* The tab is the section this page is on, and the section is today's board.
-     It opens the same thing the card does rather than being furniture. */
-  el.navToday.addEventListener('click', function () { el.waToday.click(); });
+  /* The tab row came off the game page on 27 Sep 2026 (the owner: the same
+     page for every game); today's board is the card. */
 
   el.waToday.addEventListener('click', function () {
     el.waHome.hidden = true;

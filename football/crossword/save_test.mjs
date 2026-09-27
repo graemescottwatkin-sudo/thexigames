@@ -254,12 +254,15 @@ server.listen(0, "127.0.0.1", async () => {
   t("a seeded game in progress is there to begin with", played(daily(w)),
     `${Object.keys(daily(w).letters).length} letters, ${daily(w).elapsed}s`);
 
-  const sel = $("homeClubSelect");
-  t("the landing screen has a club control", !!sel);
+  /* The club picker left the game page on 27 Sep 2026 (the owner: "Play as"
+     off the game page); the Kick Off card's picker, filled when the landing
+     renders, is the one there is. */
+  const sel = $("kickClubSelect");
+  t("the Kick Off card has a club control", !!sel);
   sel.value = "Everton";
   sel.dispatchEvent(new w.Event("change", { bubbles: true }));
   await wait(1200);
-  t("changing club on the landing screen does not touch the saved game",
+  t("changing club before kick-off does not touch the saved game",
     played(daily(w)),
     daily(w) ? `${Object.keys(daily(w).letters || {}).length} letters, ${daily(w).elapsed}s` : "record gone");
   t("the club choice was still applied", w.localStorage.getItem("fcw.clubPref") === "Everton",
@@ -292,7 +295,7 @@ server.listen(0, "127.0.0.1", async () => {
   console.log("\nThe practice slot");
   dom = await open({ "fcw.v04.practice": JSON.stringify(pr) });
   w = dom.window; $ = (id) => w.document.getElementById(id);
-  const sel2 = w.document.getElementById("homeClubSelect");
+  const sel2 = w.document.getElementById("kickClubSelect");
   sel2.value = "Arsenal";
   sel2.dispatchEvent(new w.Event("change", { bubbles: true }));
   await wait(1200);
@@ -360,7 +363,9 @@ server.listen(0, "127.0.0.1", async () => {
   const builds = dailyServed - servedAtOpen;
   t("the daily was built twice in this window, the open and the reopen",
     reopened && builds >= 2, `${builds} board(s) served, reopen finished ${reopened}`);
-  t("the club controls are bound", Object.keys(binds).length >= 2,
+  /* ONE CONTROL NOW, the Kick Off card's: the landing's and the in-play
+     table's pickers left with "Play as" and the live table (27 Sep 2026). */
+  t("the club control is bound", !!binds.kickClubSelect,
     Object.keys(binds).join(", "));
   t("each club control has exactly one change listener", most === 1,
     "highest count " + most);

@@ -90,7 +90,10 @@ const origin = "http://127.0.0.1:" + server.address().port;
 /* The squares are drawn in the same synchronous pass that writes the strap and
    the kick-off card, so a board with squares has its labels too. */
 const drawn = (dom) => dom.window.document.querySelectorAll("#grid .cell").length > 0;
-const landed = (dom) => dom.window.document.getElementById("homeClubSelect").options.length > 0;
+/* The club picker left the game page on 27 Sep 2026 (the owner: "Play as"
+     off the game page); the Kick Off card's picker, filled when the landing
+     renders, is the one there is. */
+const landed = (dom) => dom.window.document.getElementById("kickClubSelect").options.length > 0;
 /* The account's row has reached this device's history: the pull has landed and
    been merged, which is what My Season reads. */
 const merged = (no) => (dom) => {

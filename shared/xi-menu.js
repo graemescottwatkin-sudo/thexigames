@@ -130,4 +130,23 @@
      the account's answer has changed: ask again rather than show a streak the
      account no longer agrees with. */
   document.addEventListener("xi:season", askSeason);
+
+  /* OTHER BOARDS, ONE CARD. The owner, 27 Sep 2026: the game page is Daily,
+     Other boards, Streaks. The card opens the boards behind it (#otherBoards)
+     in place of the daily and the streaks, and Back returns; the boards keep
+     every handler their game gave them, because they are the same buttons,
+     moved. Said once here for every game that has the card. */
+  var other = el("homeOther"), boards = el("otherBoards"), back = el("otherBack");
+  function showOther(open) {
+    if (!other || !boards) return;
+    boards.hidden = !open;
+    document.body.classList.toggle("other-open", !!open);
+    other.setAttribute("aria-expanded", open ? "true" : "false");
+    var focus = open ? back : other;
+    if (focus && focus.focus) focus.focus();
+  }
+  if (other && boards) {
+    other.addEventListener("click", function () { showOther(true); });
+    if (back) back.addEventListener("click", function () { showOther(false); });
+  }
 })();

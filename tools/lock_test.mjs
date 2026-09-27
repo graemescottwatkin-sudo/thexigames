@@ -2004,6 +2004,73 @@ if (!ONLY || ONLY === "perma") {
   }
 }
 
+/* ---- the game page: Daily, Other boards, Streaks -------------------------
+   The owner, 27 Sep 2026, approving the mockup: "keep the form row, go
+   ahead". On every game that has the family's landing: no tab row; the daily,
+   then one Other boards card, then the streaks with the form as one row under
+   them ("Any game streak", not "Daily streak"); no Play as; and the boards
+   behind the card, which opens and closes. Opened for real in a browser. */
+if (!ONLY || ONLY === "landing") {
+  console.log(`\nthe game page, every game that has one`);
+  const PAGES = ["football/crossword", "friends/crossword", "football/wordsearch", "football/scrambled",
+    "football/vowels", "football/hilo", "football/ballpark"];
+  t("the walk has every landing (a walk that finds nothing passes everything)", PAGES.length === 7);
+  for (const g of PAGES) {
+    const context = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true, deviceScaleFactor: 1 });
+    const page = await context.newPage();
+    const errors = [];
+    page.on("pageerror", (e) => errors.push(e.message));
+    await page.goto(ORIGIN + "/" + g + "/", { waitUntil: "networkidle" });
+    await wait(600);
+    const m = await page.evaluate(() => {
+      const $ = (id) => document.getElementById(id);
+      const at = (e) => (e ? e.getBoundingClientRect().top : -1);
+      const labels = [...document.querySelectorAll("#homeStreaks .st-l")].map((e) => e.textContent.trim());
+      return {
+        tabs: !!document.querySelector(".site-nav, header.site-head"),
+        playAs: !!$("homeClubSelect") || /PLAY AS/.test(document.body.innerText),
+        order: at($("homeDaily")) < at($("homeOther")) && at($("homeOther")) < at($("homeStreaks")),
+        form: !!document.querySelector("#homeStreaks .home-form #homeRun"),
+        anyGame: labels.indexOf("Any game streak") > -1 && labels.indexOf("Daily streak") === -1,
+        closed: !!$("otherBoards") && $("otherBoards").hidden,
+      };
+    });
+    t(`${g}: no tab row, no Play as`, !m.tabs && !m.playAs, JSON.stringify({ tabs: m.tabs, playAs: m.playAs }));
+    /* THE FRIENDS CROSSWORD HAS NO SEASON, by the owner's ruling, so the page
+       never loads the file the streaks are counted from and the block stays
+       hidden: there the daily and Other boards are the page. Said, not
+       skipped -- its order is still checked, and the streaks must be hidden. */
+    if (g.startsWith("friends/")) {
+      const f = await page.evaluate(() => ({
+        order: document.getElementById("homeDaily").getBoundingClientRect().top <
+          document.getElementById("homeOther").getBoundingClientRect().top,
+        streaksHidden: document.getElementById("homeStreaks").hidden }));
+      t(`${g}: the daily, then Other boards; no streaks, since this game has no season`,
+        f.order && f.streaksHidden && m.form && m.anyGame, JSON.stringify(f));
+    } else {
+      t(`${g}: the daily, then Other boards, then the streaks with the form as one row ("Any game streak")`,
+        m.order && m.form && m.anyGame, JSON.stringify(m));
+    }
+    await page.click("#homeOther");
+    await wait(200);
+    const open = await page.evaluate(() => ({
+      boards: !document.getElementById("otherBoards").hidden,
+      daily: getComputedStyle(document.getElementById("homeDaily")).display !== "none" &&
+        document.getElementById("homeDaily").getBoundingClientRect().height > 0,
+      previous: !!document.querySelector("#otherBoards #homePrevious") &&
+        /PREVIOUS DAILIES/.test(document.querySelector("#otherBoards #homePrevious").textContent.toUpperCase()),
+    }));
+    await page.click("#otherBack");
+    await wait(200);
+    const back = await page.evaluate(() => document.getElementById("otherBoards").hidden &&
+      document.getElementById("homeDaily").getBoundingClientRect().height > 0);
+    t(`${g}: Other boards opens its boards (Previous dailies among them) in place of the daily, and Back returns`,
+      m.closed && open.boards && !open.daily && open.previous && back && errors.length === 0,
+      JSON.stringify(Object.assign({ back, errors }, open)));
+    await context.close();
+  }
+}
+
 /* ---- the crossword's clues, by size --------------------------------------
    The crossword was locked before this suite existed and render_test measures
    its board; what is proved here is the owner's clue rule of 26 Sep 2026: "I

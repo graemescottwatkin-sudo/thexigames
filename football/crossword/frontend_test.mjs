@@ -123,7 +123,10 @@ server.listen(0, "127.0.0.1", async () => {
   };
   const drawn = () => d.querySelectorAll("#grid .cell").length > 0;
   const kickedOff = () => !d.querySelector(".stage").classList.contains("prestart");
-  const booted = await until(() => d.readyState === "complete" && !!$("homeClubSelect") && $("homeClubSelect").options.length > 0, 30000);
+  /* The club picker left the game page on 27 Sep 2026 (the owner: "Play as"
+     off the game page); the Kick Off card's picker, filled when the landing
+     renders, is the one there is. */
+  const booted = await until(() => d.readyState === "complete" && !!$("kickClubSelect") && $("kickClubSelect").options.length > 0, 30000);
   /* A PAGE THAT NEVER BOOTED IS ONE FAILURE, SAID ONCE, WITH ITS EVIDENCE.
      This wait's answer used to be dropped. On 26 Sep 2026 a sweep ran past it
      after thirty seconds with no clubs in the picker, failed two checks that
@@ -137,7 +140,7 @@ server.listen(0, "127.0.0.1", async () => {
   const neverAsked = pageScripts.filter((p) => !served.has(p));
   t("the page boots: its scripts run and the landing screen is built", booted,
     booted ? "" : `readyState=${d.readyState}; club options=` +
-      ($("homeClubSelect") ? $("homeClubSelect").options.length : "no picker") +
+      ($("kickClubSelect") ? $("kickClubSelect").options.length : "no picker") +
       `; scripts never requested: ${neverAsked.join(", ") || "none"}` +
       `; answered 404: ${[...refused].join(", ") || "none"}` +
       `; api calls=${apiCalls}; errors: ${errors.join(" ; ") || "none"}`);
@@ -185,28 +188,28 @@ server.listen(0, "127.0.0.1", async () => {
   t("the club is chosen on the landing screen", (() => {
     /* It applies to both modes and does not change between them, so asking
        again on each kick-off card was asking twice for one answer. */
-    const sel = $("homeClubSelect");
+    const sel = $("kickClubSelect");
     return !!sel && sel.options.length > 20;
-  })(), $("homeClubSelect") ? $("homeClubSelect").options.length + " options" : "missing");
+  })(), $("kickClubSelect") ? $("kickClubSelect").options.length + " options" : "missing");
   t("Football League clubs can be played as too", (() => {
     /* No new season data needed: the engine already displaces the bottom club
        when yours did not play that season, which is the right story anyway —
        you take last place and climb from there. */
-    const opts = [...$("homeClubSelect").querySelectorAll("option")].map((o) => o.value);
+    const opts = [...$("kickClubSelect").querySelectorAll("option")].map((o) => o.value);
     return opts.includes("Bolton Wanderers") && opts.includes("Wrexham") &&
       opts.includes("Notts County");
-  })(), $("homeClubSelect").options.length + " clubs in total");
+  })(), $("kickClubSelect").options.length + " clubs in total");
   t("and they are below the current twenty, not mixed in with them", (() => {
     /* They used to be their own group labelled "Football League clubs". That is
        a mark too, and the only distinction a player cares about is whether a
        club is in the current top flight — so they sit under "Other clubs" with
        everyone else who is not. What must hold is that they come after the
        twenty, not that they have a group of their own. */
-    const groups = [...$("homeClubSelect").querySelectorAll("optgroup")];
+    const groups = [...$("kickClubSelect").querySelectorAll("optgroup")];
     const first = [...groups[0].children].map((o) => o.value);
     const later = groups.slice(1).flatMap((g) => [...g.children].map((o) => o.value));
     return !first.includes("Wrexham") && later.includes("Wrexham");
-  })(), [...$("homeClubSelect").querySelectorAll("optgroup")].map((g) => g.label).join(" | "));
+  })(), [...$("kickClubSelect").querySelectorAll("optgroup")].map((g) => g.label).join(" | "));
   t("the newest season's clubs come first, not all 49 alphabetically", (() => {
     /* Forty-nine in one run means scrolling past Barnsley and Bradford to reach
        the side you support. Grouped from the data, so adding a season moves the
@@ -215,10 +218,10 @@ server.listen(0, "127.0.0.1", async () => {
        drawn from the puzzle seed whichever club you pick, so naming one in a
        club list implied a link that does not exist. What matters is that the
        current twenty lead and that there are twenty of them. */
-    const groups = [...$("homeClubSelect").querySelectorAll("optgroup")];
+    const groups = [...$("kickClubSelect").querySelectorAll("optgroup")];
     return groups.length >= 2 && /top flight/i.test(groups[0].label) &&
       groups[0].children.length === 20;
-  })(), [...$("homeClubSelect").querySelectorAll("optgroup")].map((g) => g.label).join(" | "));
+  })(), [...$("kickClubSelect").querySelectorAll("optgroup")].map((g) => g.label).join(" | "));
   t("today and the archive are each their own target", (() => {
     /* Practice is gone: it was a separate pool of 300 puzzles nobody else ever
        played, and past dailies are better content with nothing to maintain.

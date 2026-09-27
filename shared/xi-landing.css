@@ -485,3 +485,31 @@ a.site-mast{text-decoration:none;color:var(--ink)}
 @media (max-width:640px){
   .site-wrap{padding-top:14px}
 }
+
+/* ==== THE GAME PAGE IN THREE BLOCKS: Daily, Other boards, Streaks ============
+   The owner, 27 Sep 2026, approving the mockup: "keep the form row, go ahead".
+   The tab row went (How to play is a link by the name), the form is one row
+   under the streaks rather than a card, "Play as" left the page, and the boards
+   that were "More to play" sit behind one Other boards card. */
+.ident-how{margin-left:auto;align-self:center;font-size:14px;font-weight:600;
+  color:var(--pitch-ink,var(--pitch));text-decoration:underline;text-underline-offset:3px}
+/* Only where the bar has dropped its own How to play (xi-chrome.css, under
+   430px): above that the bar says it, and saying it twice is clutter. */
+@media (min-width: 431px) { .ident-how{display:none} }
+/* The form row spans both streaks, under them. */
+.home-form{grid-column:1 / -1;display:flex;align-items:center;gap:10px;
+  padding:9px 14px 11px;border-top:1px solid var(--line)}
+.home-form .hf-l{font-size:12px;color:var(--ink-soft);flex:0 0 auto}
+.home-form .home-run{margin:0;min-height:0;flex:1 1 auto;justify-content:flex-start}
+/* One card that opens the boards behind it. */
+.home-choice.other-card{display:flex;flex-direction:column;align-items:flex-start;
+  width:100%;text-align:left;position:relative;padding-right:44px;margin-top:12px}
+.other-card .oc-chev{position:absolute;right:16px;top:50%;transform:translateY(-50%);
+  font-size:26px;line-height:1;color:var(--ink-faint)}
+.other-boards{margin-top:12px}
+.other-boards[hidden]{display:none}
+.ob-back{background:none;border:0;padding:6px 0;margin:0 0 8px;font:inherit;font-size:14px;
+  font-weight:600;color:var(--pitch-ink,var(--pitch));cursor:pointer;min-height:var(--tap,44px)}
+/* Opened: the boards take the page; the daily, the card and the streaks wait
+   behind the back button. */
+body.other-open .site-grid,body.other-open .other-card{display:none}

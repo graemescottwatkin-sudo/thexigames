@@ -297,7 +297,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v002w";
+  var BUILD = "v002x";
   /* WHAT THIS GAME IS CALLED on its Full Time panel and in the tab, and whether it has a league to show.
      One line, so tools/build_friendscrossword.js rewrites it in one place:
      the Friends board has its own name, its own word for the end, and no
@@ -6317,16 +6317,10 @@
        exception; these are ordinary boards now. */
     $("homePracticeState").textContent = inProgress(p) ? "One in progress" : "";
 
-    /* How many are out, so the card says something before it is opened. Fails
-       quietly: a themed count is not worth a broken landing screen. */
-    var th = $("homeThemedState");
-    if (th) {
-      loadThemes().then(function (d) {
-        var n = (d.themes || []).reduce(function (a, t) { return a + t.boards.length; }, 0);
-        th.textContent = n ? n + (n === 1 ? " board available" : " boards available") : "";
-        showFeatured(d.featured);
-      }).catch(function () { th.textContent = ""; });
-    }
+    /* The board of the week, from the themes. The card no longer carries a
+       count of boards (the owner, 27 Sep 2026: drop it). Fails quietly: a
+       featured board is not worth a broken landing screen. */
+    loadThemes().then(function (d) { showFeatured(d.featured); }).catch(function () {});
   }
 
   /* Where today's field put you, on the board of the day.
@@ -6864,15 +6858,9 @@
   function openClubsIndex() { /* GENERATED: this game has no clubs page. */ }
 
   on("homeThemed", "click", function () { openClubsIndex(); });
-  /* The header nav drives the controls that already do these jobs rather than
-     reimplementing them. Today is where you already are. */
-  on("navClubs", "click", function () {
-    /* Drives homeThemed, the control directly above. An earlier version called
-       click("homeThemes"), a helper that does not exist in this scope — the
-       nav button threw instead of opening anything. */
-    openClubsIndex();
-  });
-  on("navSeason", "click", function () { renderStats(); $("statsSheet").classList.add("show"); });
+  /* The tab row (Today / Clubs & themes / My season) came off the game page on
+     27 Sep 2026 (the owner: Daily, Other boards, Streaks). Clubs and themes is
+     in Other boards; My season is the footer's. */
 
   on("homeThemes", "click", function () { openClubsIndex(); });
   /* Scores on one board, for the owner. Reached from the themed list: every
@@ -7197,7 +7185,7 @@
      the language the rest of the game speaks, and a red L is something you
      want to fix tomorrow in a way "run of 0" is not. */
   function renderRunLine() {
-    var el = $("homeRun"), title = $("homeRunTitle");
+    var el = $("homeRun"), title = $("homeRunTitle") || {};   // the form is one row now, with no title (the owner, 27 Sep 2026)
     if (!el) return;
     try {
       var recent = phaseResults().slice(-FCW.SCORING.FORM_LENGTH);

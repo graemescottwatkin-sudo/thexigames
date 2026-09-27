@@ -10,7 +10,7 @@
  * more, 114 the ceiling. This file is the page: the landing the family
  * shares, the ladder of two rows, the clock, the answers list, the share.
  */
-var BUILD = "v002r";
+var BUILD = "v002s";
 
 (function () {
   "use strict";
@@ -179,7 +179,7 @@ var BUILD = "v002r";
       });
   }
   function renderForm() {
-    var el = $("homeRun"), title = $("homeRunTitle");
+    var el = $("homeRun"), title = $("homeRunTitle") || {};   // the form is one row now, with no title (the owner, 27 Sep 2026)
     if (!el || !window.XIChrome) return;
     var done = readResults().filter(function (r) { return r && r.day; })
       .sort(function (x, y) { return x.day < y.day ? -1 : 1; });
@@ -265,8 +265,7 @@ var BUILD = "v002r";
     featured = all.length ? all[weekIndex() % all.length] : null;
     $("homeFeaturedName").textContent = featured ? featured.club : "—";
     $("homeFeaturedState").textContent = featured ? "Managers, earlier or later" : "";
-    var n = all.length;
-    $("homeThemedState").textContent = n ? n + " club boards" : "";
+    /* No count of club boards on the card (the owner, 27 Sep 2026). */
   }
   function renderLanding() {
     renderHero(); renderFeatured(); renderForm(); fillClubs();
@@ -1062,7 +1061,6 @@ var BUILD = "v002r";
       else if (ev.key === "Enter" && g && g.awaitingNext) { nextCall(); ev.preventDefault(); }
     });
     $("resultMenuBtn").onclick = goToMenu;
-    $("navToday").onclick = function () { if ($("screenStart").hidden) goToMenu(); };
 
     api("daily").then(function (r) {
       serverDay = r.day; todayNo = r.todayNo; todayBoard = r.board;

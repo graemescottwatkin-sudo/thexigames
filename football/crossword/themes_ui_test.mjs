@@ -179,7 +179,10 @@ server.listen(0, "127.0.0.1", async () => {
      only when /api/themes answers; the section says "Loading…" until it has
      been drawn from the answer; a board has squares; a link to a board that is
      not out says so in a toast, and nothing else writes that. */
-  const counted = (w) => w.document.getElementById("homeThemedState").textContent !== "";
+  /* The landing tile carried a count, written when /api/themes answered; the
+     count came off on 27 Sep 2026 (the owner), so the landing is waited for by
+     its Other boards card, which holds the tile. */
+  const counted = (w) => !!w.document.querySelector("#otherBoards #homeThemed");
   const drawnSection = (w) => {
     const box = w.document.getElementById("themeAvailable");
     return box.textContent.trim() !== "" && !/Loading/.test(box.textContent);
@@ -193,8 +196,8 @@ server.listen(0, "127.0.0.1", async () => {
   let w = dom.window, $ = (id) => w.document.getElementById(id);
 
   t("the landing screen offers themed boards", !!$("homeThemed"));
-  t("and says how many are out", /3 boards available/.test($("homeThemedState").textContent),
-    $("homeThemedState").textContent);
+  t("and carries no count of boards (the owner, 27 Sep 2026)",
+    !$("homeThemedState") && !/boards? available/.test($("homeThemed").textContent));
 
   /* CLUBS AND THEMES IS A PAGE NOW. The tile used to open the sheet in place;
      it navigates to /football/crossword/clubs/ instead, so a club can be linked to and

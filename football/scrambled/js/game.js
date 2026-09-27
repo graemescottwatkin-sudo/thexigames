@@ -15,7 +15,7 @@
  *   - no practice. There is now an archive picker and a finals catalogue; what
  *     is still missing is a practice mode, which this game may never want.
  */
-var BUILD = "v003f";
+var BUILD = "v003g";
 
 (function () {
   "use strict";
@@ -83,7 +83,7 @@ var BUILD = "v003f";
      at today's or yesterday's: finishing an old board today does not revive a
      streak, which is the rule the other two already keep. */
   function renderForm() {
-    var el = $("homeRun"), title = $("homeRunTitle");
+    var el = $("homeRun"), title = $("homeRunTitle") || {};   // the form is one row now, with no title (the owner, 27 Sep 2026)
     if (!el || !window.XIChrome) return;
     var done = readResults().filter(function (r) { return r && typeof r.no === "number"; })
       .sort(function (a, b) { return a.no - b.no; });
@@ -2044,11 +2044,8 @@ var BUILD = "v003f";
      way the crossword's does. Both of these were in the markup and wired to
      nothing: "Matches" has been a button that does not react since the landing
      was built, because there was nothing yet for it to open. */
-  on("navClubs", "click", openFinals);
-  on("navToday", "click", function () {
-    if (state.board && state.board.no === state.todayNo) { show("screenStart"); return; }
-    openBoard({ kind: "daily" });
-  });
+  /* The tab row came off the game page on 27 Sep 2026 (the owner: Daily,
+     Other boards, Streaks); the finals are in Other boards. */
   on("finalsClose", "click", closeFinals);
   on("finalsInput", "input", function (ev) {
     finalsFilter = ev.target.value || "";

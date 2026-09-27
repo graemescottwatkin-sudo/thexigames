@@ -26,17 +26,17 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/shared/xi-tokens.css?v=v74">
-<link rel="stylesheet" href="/shared/xi-landing.css?v=v74">
-<link rel="stylesheet" href="/shared/xi-chrome.css?v=v74">
-<link rel="stylesheet" href="/shared/xi-matchbar.css?v=v74">
-<link rel="stylesheet" href="/shared/xi-keys.css?v=v74">
-<link rel="stylesheet" href="/shared/xi-share.css?v=v74">
-<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v74">
+<link rel="stylesheet" href="/shared/xi-tokens.css?v=v75">
+<link rel="stylesheet" href="/shared/xi-landing.css?v=v75">
+<link rel="stylesheet" href="/shared/xi-chrome.css?v=v75">
+<link rel="stylesheet" href="/shared/xi-matchbar.css?v=v75">
+<link rel="stylesheet" href="/shared/xi-keys.css?v=v75">
+<link rel="stylesheet" href="/shared/xi-share.css?v=v75">
+<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v75">
 <!-- The theme, stamped before first paint: light unless the player chose
      dark, decided in one shared place for every page of the family. -->
-<script src="/shared/xi-theme.js?v=v74"></script>
-<link rel="stylesheet" href="css/style.css?v=v003f">
+<script src="/shared/xi-theme.js?v=v75"></script>
+<link rel="stylesheet" href="css/style.css?v=v003g">
 </head>
 <body>
 
@@ -85,17 +85,9 @@
       <p class="site-mast">Scrambled <span class="site-xi">XI</span></p>
       <p class="ident-sub">Untangle eleven player names.</p>
     </div>
+    <a class="ident-how" href="#how">How to play</a>
   </div>
 
-  <header class="site-head">
-    <div class="site-bar">
-            <nav class="site-nav">
-        <button class="on" id="navToday">Today</button>
-        <button id="navClubs">Matches</button>
-        <a class="site-navlink" href="#how">How to play</a>
-      </nav>
-    </div>
-  </header>
 
   <section class="screen prematch" id="screenStart" hidden>
     <!-- THE LANDING, THE FAMILY'S. Layout, type and spacing are
@@ -111,6 +103,14 @@
             <span class="hc-note" id="startPool"></span>
             <span class="hc-state" id="startClock"></span>
             <span class="hc-cta">Kick off</span>
+          </button>
+          <!-- OTHER BOARDS, ONE CARD (the owner, 27 Sep 2026: Daily, Other boards, Streaks).
+          The boards it lists open behind it, in #otherBoards; shared/xi-menu.js
+          opens and closes it. -->
+          <button class="home-choice other-card" id="homeOther" type="button" aria-controls="otherBoards" aria-expanded="false">
+          <span class="hc-title">Other boards</span>
+          <span class="hc-note">Board of the week, iconic matches, previous dailies</span>
+          <span class="oc-chev" aria-hidden="true">&rsaquo;</span>
           </button>
         </div>
 
@@ -136,29 +136,21 @@
               <path d="M3 9.5h18M8 2.5v4M16 2.5v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
             </svg>
             <span class="st-say">
-              <span class="st-l">Daily streak</span>
+              <span class="st-l">Any game streak</span>
               <span class="st-n" id="streakDailyN">&mdash;</span>
             </span>
           </div>
+          <!-- YOUR FORM, AS ONE ROW under the streaks (the owner, 27 Sep 2026: one row, not a card). -->
+          <div class="home-form"><span class="hf-l">Form</span><div class="home-run" id="homeRun"></div></div>
         </div>
 
-          <div class="side-card">
-            <div class="sc-kicker">YOUR FORM</div>
-            <div class="sc-title" id="homeRunTitle">No run yet</div>
-            <div class="home-run" id="homeRun"></div>
-          </div>
 
-          <div class="side-card">
-            <div class="sc-kicker">PLAY AS</div>
-            <div class="home-club">
-              <select id="homeClubSelect" title="Choose your club (optional)"></select>
-            </div>
-          </div>
         </aside>
       </div>
 
 
-      <div class="site-sec">More to play</div>
+      <div class="other-boards" id="otherBoards" hidden>
+        <button class="ob-back" id="otherBack" type="button">&lsaquo; Back</button>
       <div class="site-row">
         <button class="home-choice col" id="homeFeatured">
           <span class="hc-kicker">BOARD OF THE WEEK</span>
@@ -178,7 +170,6 @@
           <span class="hc-title">Famous XIs</span>
           <span class="hc-note">Every final in the bank, both sides of each,
             as they lined up. They do not count towards a run.</span>
-          <span class="hc-state" id="homeThemedState"></span>
           <svg class="hc-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none"
                stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
             <rect x="3" y="3" width="18" height="18" rx="2"/><path d="M3 9h18M3 15h18M9 3v18M15 3v18"/>
@@ -187,15 +178,14 @@
         </button>
 
         <button class="home-choice col" id="homePrevious">
-          <span class="hc-kicker">PREVIOUS BOARDS</span>
+          <span class="hc-kicker">PREVIOUS DAILIES</span>
           <span class="hc-title" id="homePreviousCount">Every day so far</span>
-          <span class="hc-note">Pick a day from the calendar. Replay any of
-            them &mdash; only today&rsquo;s keeps a run going.</span>
           <svg class="hc-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none"
                stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
             <path d="M3 5v4h4"/><path d="M3.5 9A9 9 0 1 1 4 15"/><path d="M12 8v4l3 2"/>
           </svg>
         </button>
+      </div>
       </div>
     </div>
   </section>
@@ -310,6 +300,7 @@
        what you had no way into.</p>
     <p><b>114 is the ceiling</b>, and what you keep of it is the clock and the
        bench taken off.</p>
+    <p><b>Previous dailies.</b> Any day you missed is in Other boards, to play when you like. Only today&rsquo;s daily keeps a streak going.</p>
   </section>
 
   <!-- The family's keyboard, built by shared/xi-keys.js. Outside the screens
@@ -324,7 +315,7 @@
      a plural label, and nothing said which days had been played. -->
 <div class="xic-panel" id="archiveSheet">
   <div class="xic-panel-card">
-    <h3>Previous boards</h3>
+    <h3>Previous dailies</h3>
     <div class="xic-panel-sub" id="archiveSub">Every board so far</div>
 
     <div class="xic-cal-head">
@@ -371,20 +362,20 @@
 <!-- THE SHARED FOOTER, AT TOP LEVEL. It carries the family disclaimer. -->
 <footer class="xic-foot"></footer>
 
-<script src="/shared/xi-clubs.js?v=v74"></script>
-<script src="/shared/xi-chrome.js?v=v74"></script>
-<script src="/shared/xi-matchbar.js?v=v74"></script>
-<script src="/shared/xi-season.js?v=v74"></script>
-<script src="/shared/xi-menu.js?v=v74"></script>
-<script src="/shared/xi-plays.js?v=v74"></script>
-<script src="/shared/xi-challenge.js?v=v74"></script>
-<script src="/shared/xi-keys.js?v=v74"></script>
-<script src="/shared/xi-share.js?v=v74"></script>
+<script src="/shared/xi-clubs.js?v=v75"></script>
+<script src="/shared/xi-chrome.js?v=v75"></script>
+<script src="/shared/xi-matchbar.js?v=v75"></script>
+<script src="/shared/xi-season.js?v=v75"></script>
+<script src="/shared/xi-menu.js?v=v75"></script>
+<script src="/shared/xi-plays.js?v=v75"></script>
+<script src="/shared/xi-challenge.js?v=v75"></script>
+<script src="/shared/xi-keys.js?v=v75"></script>
+<script src="/shared/xi-share.js?v=v75"></script>
 <!-- xi-played.js first: xi-fulltime.js asks it what has been played today. -->
-<script src="/shared/xi-played.js?v=v74"></script>
-<script src="/shared/xi-fulltime.js?v=v74"></script>
-<script src="js/config.js?v=v003f"></script>
-<script src="js/scoring.js?v=v003f"></script>
-<script src="js/game.js?v=v003f"></script>
+<script src="/shared/xi-played.js?v=v75"></script>
+<script src="/shared/xi-fulltime.js?v=v75"></script>
+<script src="js/config.js?v=v003g"></script>
+<script src="js/scoring.js?v=v003g"></script>
+<script src="js/game.js?v=v003g"></script>
 </body>
 </html>

@@ -323,7 +323,6 @@ console.log("=== The landing wears the family's shape ===");
     [".site-ident .site-crumb", "the theme it lives under, said out loud"],
     [".site-ident .site-mast", "the game's name at masthead size"],
     [".site-ident .ident-sub", "one line saying what it is"],
-    ["header.site-head .site-bar nav.site-nav", "the section bar"],
     [".site-wrap .site-grid .site-main", "the fixture column"],
     [".site-wrap .site-grid .site-side", "and what sits beside it"],
     ["button.home-choice.hero .hc-kicker", "which board this is"],
@@ -338,6 +337,11 @@ console.log("=== The landing wears the family's shape ===");
     if (!doc.querySelector(sel)) missingHere.push(say);
     if (!house.querySelector(sel)) notFamily.push(sel);
   }
+  /* NO TAB ROW, here or in the family: the game page is Daily, Other boards,
+     Streaks (the owner, 27 Sep 2026), and the section bar went from every
+     game that day. Asserted absent in both, so it cannot come back in one. */
+  t("neither this game nor the family has a tab row any more",
+    !doc.querySelector(".site-nav, header.site-head") && !house.querySelector(".site-nav, header.site-head"));
   t("it opens on the same shape the rest of the family opens on",
     missingHere.length === 0, missingHere.join("; ") || String(SHAPE.length) + " parts");
   t("and every part of that shape is the family's, not this game's invention",
@@ -357,8 +361,8 @@ console.log("=== The landing wears the family's shape ===");
   t("past boards are selectable from the landing",
     !!past && past.getAttribute("href") === ARCHIVE,
     past ? past.getAttribute("href") : "no card");
-  t("and the tab bar offers them too, before a board has loaded",
-    !!doc.querySelector('.site-nav a[href="' + ARCHIVE + '"]'));
+  /* The tab bar offered them too until it left every game page (27 Sep 2026);
+     the card above is the way to them now. */
 
   /* The kicker said TODAY, which is true of every day there has ever been. */
   t("the hero says WHICH board it is",

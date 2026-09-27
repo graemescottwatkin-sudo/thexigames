@@ -56,7 +56,7 @@ const OUT = "friends/crossword";
 
 /* THE TAG LIVES HERE, because it is written into three generated files and a
    number kept in three places disagrees with itself. Bump here, regenerate. */
-const TAG = "v002w";
+const TAG = "v002x";
 
 /* THE SHARED LAYER'S TAG, read from the source page rather than restated. It
    has its own plain vN lifecycle and moves without this game's tag moving, so a
@@ -267,11 +267,23 @@ function page() {
   s = once(s,
     '        <button role="menuitem" data-act="themes">Clubs &amp; themes</button>\n', "",
     "the menu item");
-  s = once(s, '        <button id="navClubs">Clubs &amp; themes</button>\n', "",
-    "the header nav button");
   s = once(s,
     '    <button class="site-hidden" id="homeThemes">Clubs and themes</button>\n', "",
     "the hidden home button");
+  /* AND THE CARD, which opened nothing here: it is football's clubs and themes,
+     and this game has neither. It sat among the other boards until 27 Sep
+     2026, when those moved behind one "Other boards" card (the owner's game
+     page: Daily, Other boards, Streaks); that card now lists what this game
+     actually has. The header's "Clubs & themes" tab went for every game the
+     same day, so there is no rewrite for it here any more. */
+  s = cutBlockById(s, "homeThemed", "the clubs and themes card");
+  /* How to play by the name links football's rules page; this game has none. */
+  s = once(s, '<a class="ident-how" href="how-to-play.html">How to play</a>', "",
+    "the How to play link");
+  s = once(s,
+    '<span class="hc-note">Board of the week, clubs and themes, previous dailies</span>',
+    '<span class="hc-note">Previous dailies</span>',
+    "what Other boards lists");
 
   /* AFTER the path rewrite, NOT BEFORE. Written above it first, which turned
      /football/crossword/privacy.html straight back into this game's own
