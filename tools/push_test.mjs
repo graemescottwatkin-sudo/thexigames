@@ -507,6 +507,13 @@ const good = (s, extra = {}) => ({ token: TOK(s), platform: "android", tz: "Euro
       /403/.test(line) && /PERMISSION_DENIED/.test(line) && /SENDER_ID_MISMATCH/.test(line), line || "nothing logged");
     t("and the log holds neither the phone's token nor the access token",
       line && !line.includes(TOK("key")) && !line.includes("ya29.test"), line);
+    /* And WHICH account was refused (the owner's go, 27 Sep 2026): its email
+       and the project, which are identifiers -- and nothing of the key. */
+    const saj = JSON.parse(sa);         // the secret is a JSON string, as Cloudflare holds it
+    t("and it names the service account and the project that were refused",
+      line.includes(saj.client_email) && line.includes(saj.project_id), line);
+    t("but none of the private key",
+      !line.includes("PRIVATE KEY") && !line.includes(saj.private_key.slice(40, 80)), "no key material");
 
     /* A REAL token's shape: an FCM registration token is ~150 characters,
        an id, a colon and a long base64url run. TOK() is 32 and would slip

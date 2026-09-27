@@ -150,7 +150,15 @@ export function fcmSender(serviceAccount, fetchFn = fetch, clock = Date.now) {
       });
     const body = await res.json().catch(() => null);
     const out = outcomeOf(res.status, body);
-    if (out === FAILED) console.warn("[push] FCM refused a send: " + describeRefusal(res.status, body));
+    /* WHO WAS REFUSED, beside why. 403 PERMISSION_DENIED on 27 Sep 2026 named
+       the project and not the account, and the secret cannot be read back to
+       see which service account its key is -- the owner's go, the same day:
+       "go for the logging change". The account's email and the project are
+       identifiers, public in the IAM list; the private key is never logged. */
+    if (out === FAILED) {
+      console.warn("[push] FCM refused a send: " + describeRefusal(res.status, body) +
+        " (as " + String(sa.client_email || "?") + " in " + String(sa.project_id || "?") + ")");
+    }
     return out;
   };
 }
