@@ -237,14 +237,53 @@
     card.appendChild(head);
     card.appendChild(el("h2", "xft-name", esc(d.name) + (d.no != null ? " · No. " + esc(d.no) : "")));
     var max = Number(d.max) || 0, score = Number(d.score) || 0;
-    card.appendChild(el("p", "xft-score", "<b>" + score + "</b><span>/ " + max + "</span>"));
-    var bar = el("div", "xft-bar");
-    bar.setAttribute("role", "img");
-    bar.setAttribute("aria-label", score + " of " + max);
-    var fill = el("i");
-    fill.style.width = (max ? Math.max(1, Math.min(100, Math.round(100 * score / max))) : 0) + "%";
-    bar.appendChild(fill);
-    card.appendChild(bar);
+    /* THE SCORE IN A RING, the owner, 28 Sep 2026: "Left side: circle with
+       points and inside x/114. Underneath red or green 11 boxes for right or
+       wrong. Right side: help used i.e. x reveals, x checks" -- and "x right
+       and wrong is only needed in some games like quickfire. Crossword can't
+       finish with an incorrect". So beside the ring is the HELP a game says
+       was used (d.help, one line each, or "No help used"), and the right and
+       wrong count only where a game asks for it (d.tally). A game that passes
+       neither keeps its own line there (d.stats). The ring is one image to a
+       screen reader: "75 of 114". */
+    var pct = max ? Math.max(0, Math.min(100, Math.round(100 * score / max))) : 0;
+    var top = el("div", "xft-top");
+    var ring = el("div", "xft-ring");
+    ring.setAttribute("role", "img");
+    ring.setAttribute("aria-label", score + " of " + max);
+    ring.innerHTML = '<svg viewBox="0 0 120 120" aria-hidden="true" focusable="false">' +
+      '<circle class="xft-ring-bg" cx="60" cy="60" r="52"/>' +
+      '<circle class="xft-ring-fill" cx="60" cy="60" r="52" pathLength="100" stroke-dasharray="' +
+      pct + ' 100" transform="rotate(-90 60 60)"/></svg>';
+    var inner = el("p", "xft-score", "<b>" + score + "</b><span>/ " + max + "</span>");
+    inner.setAttribute("aria-hidden", "true");
+    ring.appendChild(inner);
+    top.appendChild(ring);
+    var side = el("div", "xft-side");
+    if (d.tally && !d.door && d.boxes && d.boxes.length) {
+      /* A TIMEOUT IS UNANSWERED, NOT WRONG (QuickFire's rule of 26 Sep
+         2026): its box is red with the rest of the misses, but the count
+         says which it was. */
+      var right = 0, wrong = 0, none = 0;
+      d.boxes.forEach(function (b) {
+        if (b.s === "g" || b.s === "a") right++; else if (b.s === "x") none++; else wrong++;
+      });
+      side.appendChild(el("p", "xft-tally", "<b>" + right + "</b> right <i>·</i> <b>" + wrong + "</b> wrong" +
+        (none ? " <i>·</i> <b>" + none + "</b> unanswered" : "")));
+    }
+    var hasHelp = Array.isArray(d.help);
+    if (hasHelp) {
+      side.appendChild(el("p", "xft-help-l", "Help used"));
+      var hl = el("ul", "xft-help");
+      (d.help.length ? d.help : ["None"]).forEach(function (h) { hl.appendChild(el("li", "", esc(h))); });
+      side.appendChild(hl);
+    }
+    /* A game that says neither keeps its own line beside the ring; one that
+       does has it under the boxes instead. */
+    var statsBeside = !hasHelp && !d.tally;
+    if (!d.gaveUp && d.stats && statsBeside) side.appendChild(el("p", "xft-stats", esc(d.stats)));
+    top.appendChild(side);
+    card.appendChild(top);
 
     if (d.door) {
       var door = el("div", "xft-door");
@@ -275,7 +314,7 @@
       card.appendChild(ol);
     }
     if (d.gaveUp) card.appendChild(el("p", "xft-gaveup", esc(d.gaveUp)));
-    else if (d.stats) card.appendChild(el("p", "xft-stats", esc(d.stats)));
+    else if (d.stats && !statsBeside) card.appendChild(el("p", "xft-stats", esc(d.stats)));
     /* ONE LINK OUT, where a game has something to read after the whistle
        (Who Am I's "Read about him"). */
     if (d.link && d.link.href) {

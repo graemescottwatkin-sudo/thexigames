@@ -147,15 +147,29 @@ t("a malformed token is rejected", threw);
    and every refusal its own case -- another key, another app, another issuer,
    expired, no subject, a nonce that does not match, and no nonce at all. */
 console.log("\nSign in with Apple");
-const { verifyAppleIdToken, APPLE_AUDIENCE } = await import("../../functions/_lib/auth.js");
+const { verifyAppleIdToken, APPLE_AUDIENCE, APPLE_AUDIENCES } = await import("../../functions/_lib/auth.js");
 const RAW_NONCE = "a-raw-nonce-from-the-app";
 const NONCE = crypto.createHash("sha256").update(RAW_NONCE).digest("hex");
 const appleValid = () => ({ iss: "https://appleid.apple.com", aud: APPLE_AUDIENCE, sub: "001234.apple-user.0001",
   email: "x7abc@privaterelay.appleid.com", exp: now() + 600, iat: now(), nonce: NONCE });
 t("the audience is the app's bundle id", APPLE_AUDIENCE === "com.thexigames.app", APPLE_AUDIENCE);
 t("a properly signed Apple token is accepted", await (async () => {
-  const c = await verifyAppleIdToken(makeToken(appleValid()), APPLE_AUDIENCE, RAW_NONCE, jwks);
+  const c = await verifyAppleIdToken(makeToken(appleValid()), APPLE_AUDIENCES, RAW_NONCE, jwks);
   return c.sub === "001234.apple-user.0001";
+})());
+/* AN APP PER THEME, since 28 Sep 2026: the Friends app's tokens carry its own
+   bundle id and must be accepted too -- and only because it is on the list. */
+t("the audiences are exactly our two apps' bundle ids",
+  JSON.stringify(APPLE_AUDIENCES) === JSON.stringify(["com.thexigames.app", "com.thexigames.friends"]), JSON.stringify(APPLE_AUDIENCES));
+t("a token issued for the Friends app is accepted", await (async () => {
+  try {
+    const c = await verifyAppleIdToken(makeToken({ ...appleValid(), aud: "com.thexigames.friends" }), APPLE_AUDIENCES, RAW_NONCE, jwks);
+    return c.sub === "001234.apple-user.0001";
+  } catch (e) { return false; }
+})());
+t("but not against a list that does not name it", await (async () => {
+  try { await verifyAppleIdToken(makeToken({ ...appleValid(), aud: "com.thexigames.friends" }), [APPLE_AUDIENCE], RAW_NONCE, jwks); return false; }
+  catch (e) { return true; }
 })());
 for (const [name, claims, key, raw] of [
   ["an Apple token signed with another key is rejected", appleValid(), evil.privateKey, RAW_NONCE],
@@ -168,7 +182,7 @@ for (const [name, claims, key, raw] of [
   ["an Apple token carrying no nonce is rejected", { ...appleValid(), nonce: undefined }, good.privateKey, RAW_NONCE],
 ]) {
   let threwA = false;
-  try { await verifyAppleIdToken(makeToken(claims, key), APPLE_AUDIENCE, raw, jwks); } catch (e) { threwA = true; }
+  try { await verifyAppleIdToken(makeToken(claims, key), APPLE_AUDIENCES, raw, jwks); } catch (e) { threwA = true; }
   t(name, threwA);
 }
 {

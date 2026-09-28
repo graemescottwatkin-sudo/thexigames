@@ -82,17 +82,34 @@
    uppercases every h2) must not restyle the panel's. */
 .xft-name { margin: 0; font-family: var(--disp); font-weight: 700; font-size: 22px; line-height: 1; color: var(--ink);
   text-transform: none; letter-spacing: normal; }
-.xft-score { margin: 0; display: flex; align-items: baseline; gap: 6px; }
-.xft-score b { font-family: var(--disp); font-weight: 700; font-size: 64px; line-height: .9; color: var(--ink); }
-.xft-score span { font-family: var(--disp); font-weight: 600; font-size: 24px; color: var(--ink-soft); }
-.xft-bar { height: 8px; border-radius: var(--r-pill); background: var(--tint-strong); overflow: hidden; }
-.xft-bar i { display: block; height: 100%; border-radius: var(--r-pill); background: var(--pitch); }
+/* THE RING: the score over its maximum, filled round a circle, with the
+   figure inside it; beside it, right and wrong, then the game's own line. */
+.xft-top { display: flex; align-items: center; gap: 16px; }
+.xft-ring { position: relative; flex: none; width: 120px; height: 120px; }
+.xft-ring svg { display: block; width: 100%; height: 100%; }
+.xft-ring-bg { fill: none; stroke: var(--tint-strong); stroke-width: 10; }
+.xft-ring-fill { fill: none; stroke: var(--pitch); stroke-width: 10; stroke-linecap: round; }
+.xft-score { position: absolute; inset: 0; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; }
+.xft-score b { font-family: var(--disp); font-weight: 700; font-size: 40px; line-height: .95; color: var(--ink); }
+.xft-score span { font-family: var(--disp); font-weight: 600; font-size: 16px; line-height: 1; color: var(--ink-soft); }
+.xft-side { min-width: 0; display: flex; flex-direction: column; gap: 6px; }
+.xft-tally { margin: 0; font-size: 16px; color: var(--ink-soft); }
+.xft-tally b { font-family: var(--disp); font-weight: 700; font-size: 22px; color: var(--ink); }
+.xft-tally i { font-style: normal; margin: 0 2px; }
+.xft-side .xft-stats { margin: 0; }
+.xft-help-l { margin: 0; font-family: var(--disp); font-weight: 700; font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-faint); }
+.xft-help { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 2px; font-size: 15px; color: var(--ink); }
+.xft-help li::before { content: ""; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--pitch); margin: 0 8px 2px 0; }
+@media (max-width: 360px) { .xft-ring { width: 100px; height: 100px; } .xft-score b { font-size: 32px; } }
 .xft-boxes { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); gap: 4px; }
 .xft-b { height: 30px; border-radius: var(--r-xs); display: flex; align-items: center; justify-content: center; font-family: var(--disp); font-weight: 600; font-size: 13px; }
 .xft-b.g { background: var(--pitch); color: var(--on-pitch); }
-.xft-b.a { background: var(--gold); color: var(--gold-ink); }
+/* TWO COLOURS, RIGHT OR WRONG (the owner, 28 Sep 2026): a box right with
+   help is still right, so it is green like the rest; the help is said beside
+   the ring, not in the box's colour. */
+.xft-b.a { background: var(--pitch); color: var(--on-pitch); }
 .xft-b.r { background: var(--danger); color: var(--card); font-family: var(--body); font-weight: 700; font-size: 14px; }
-.xft-b.x { background: var(--tint); border: 1px dashed var(--line); box-sizing: border-box; color: var(--ink-faint); }
+.xft-b.x { background: var(--danger); color: var(--card); }
 .xft-door { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: var(--r-md); background: var(--paper); border: 1px solid var(--line); }
 .xft-door p { margin: 0; }
 .xft-door-l { font-size: 12px; letter-spacing: var(--track-caps); text-transform: uppercase; color: var(--ink-soft); }

@@ -81,9 +81,14 @@ export async function verifyGoogleIdToken(idToken, clientId, keysFn = googleKeys
    request; the token is verified here exactly as Google's is -- Apple's
    published keys, the signature first, then the claims.
 
-   THE AUDIENCE IS THE APP'S BUNDLE ID, one fact: a token Apple issued for any
-   other app is refused. APPLE_AUDIENCE in the environment may override it. */
-export const APPLE_AUDIENCE = "com.thexigames.app";
+   THE AUDIENCE IS ONE OF OUR APPS' BUNDLE IDS, and a token Apple issued for
+   any other app is refused. Since 28 Sep 2026 there is an app per theme (the
+   owner: "prepare an iOS app for friends on the same basis as football"), and
+   the Friends app's tokens carry its own bundle id, so the list is the list
+   of apps, not one value. APPLE_AUDIENCE in the environment may override it
+   (comma-separated). */
+export const APPLE_AUDIENCES = ["com.thexigames.app", "com.thexigames.friends"];
+export const APPLE_AUDIENCE = APPLE_AUDIENCES[0];
 const APPLE_ISSUER = "https://appleid.apple.com";
 let appleJwks = { keys: null, at: 0 };
 
@@ -128,7 +133,8 @@ export async function verifyAppleIdToken(idToken, audience, rawNonce, keysFn = a
   /* Claims after the signature, never before. */
   const now = Math.floor(Date.now() / 1000);
   if (claims.iss !== APPLE_ISSUER) throw new Error("Wrong issuer");
-  if (claims.aud !== audience) throw new Error("Token was not issued for this app");
+  const allowed = Array.isArray(audience) ? audience : [audience];
+  if (!allowed.includes(claims.aud)) throw new Error("Token was not issued for this app");
   if (typeof claims.exp !== "number" || claims.exp < now) throw new Error("Token expired");
   if (claims.iat && claims.iat > now + 300) throw new Error("Token issued in the future");
   if (!claims.sub) throw new Error("Token has no subject");

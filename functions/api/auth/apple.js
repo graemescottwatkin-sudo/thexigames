@@ -17,7 +17,7 @@
 import { json, bad } from "../../_lib/puzzle.js";
 import { hasDB } from "../../_lib/db.js";
 import {
-  verifyAppleIdToken, APPLE_AUDIENCE, findOrCreateUser, createSession,
+  verifyAppleIdToken, APPLE_AUDIENCES, findOrCreateUser, createSession,
   sessionCookie, publicUser, csrfOk,
 } from "../../_lib/auth.js";
 import { limited } from "../../_lib/limit.js";
@@ -47,7 +47,8 @@ export async function onRequestPost({ request, env }) {
 
   let claims;
   try {
-    claims = await verifyAppleIdToken(body.identityToken, env.APPLE_AUDIENCE || APPLE_AUDIENCE,
+    claims = await verifyAppleIdToken(body.identityToken,
+      env.APPLE_AUDIENCE ? String(env.APPLE_AUDIENCE).split(",").map((s) => s.trim()).filter(Boolean) : APPLE_AUDIENCES,
       String(body.rawNonce));
   } catch (e) {
     // Never echo the reason back: it tells an attacker which check they failed.

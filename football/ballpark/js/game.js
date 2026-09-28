@@ -5,7 +5,7 @@
      it is yesterday's code. aligned_test asserts the two agree, and until
      this game launched it had no BUILD at all — three of its assets were on
      three different tags, which is the same fault with nobody checking. */
-  var BUILD = "v002a";
+  var BUILD = "v002b";
   if (window.XIPlays && document.documentElement) {
     document.documentElement.setAttribute("data-build", BUILD);
   }
@@ -863,7 +863,7 @@
     scoreNow = typeof r.score === "number" ? r.score : scoreNow;
     resultLetter = r.result || "L";
     var green = results.filter(function (x) { return x === true; }).length;
-    drawFullTime({ score: scoreNow, result: resultLetter, grades: grades.slice(0, R.QUESTIONS),
+    drawFullTime({ score: scoreNow, result: resultLetter, grades: grades.slice(0, R.QUESTIONS), subs: subsUsed,
                    inBallpark: green, bangOns: bangOns });
     $("ft").hidden = false;
     queueRoom();
@@ -895,6 +895,11 @@
     XIFullTime.panel($("ftPanel"), {
       game: "ballpark", name: "Ballpark XI", no: no || null, date: day ? XIFullTime.dayLabel(day) : "",
       score: o.score, max: R.MAX_SCORE, boxes: boxes.length ? boxes : null,
+      /* The owner, 28 Sep 2026: "Left side: circle with points and inside x/114.
+     Underneath red or green 11 boxes for right or wrong. Right side: help used
+     i.e. x reveals, x checks". The
+         help is the substitutions, a narrow among them. */
+      help: o.subs ? [o.subs + (o.subs === 1 ? " substitution" : " substitutions")] : [],
       stats: (o.bangOns || 0) + " bang on · " + (o.inBallpark || 0) + " of " + R.QUESTIONS + " in the ballpark · " +
         (words[o.result] || ""),
       share: function () {
@@ -1100,7 +1105,7 @@
   }
 
   function showBanked(rec) {
-    drawFullTime({ score: rec.score, result: rec.result,
+    drawFullTime({ score: rec.score, result: rec.result, subs: rec.subs,
                    grades: (rec.asked || []).map(function (a) { return a ? a.grade : null; }),
                    inBallpark: rec.inBallpark, bangOns: rec.bangOns });
     /* THE CARD LIVES INSIDE THE GAME SCREEN, so that screen has to be up or the

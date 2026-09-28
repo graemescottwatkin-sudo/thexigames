@@ -31,7 +31,7 @@
  * link so a friend could replay the exact eleven, and that is now a board
  * number in the fragment, which is shorter and does not describe the board.
  */
-var BUILD = "v001s";
+var BUILD = "v001t";
 
 (function bootstrap() {
   'use strict';
@@ -807,15 +807,20 @@ function start() {
        unanswered, never wrong (the app's live re-shoot, 26 Sep 2026). */
     var ranOut = boxes.filter(function (b) { return b.s === 'x'; }).length;
     var wrong = boxes.filter(function (b) { return b.s === 'r'; }).length;
-    var stats = s.correct + ' right · ' + wrong + ' wrong' + (ranOut ? ' · ' + ranOut + ' unanswered' : '') +
-      (s.average === null ? '' : " · Average " + s.average + "'") +
-      (s.bonus ? ' · All eleven +' + s.bonus : '') +
-      (s.subs ? ' · Subs ' + s.subs + ' of ' + CONFIG.SUBS_PER_DAILY : '');
+    /* The owner, 28 Sep 2026: "Left side: circle with points and inside x/114.
+     Underneath red or green 11 boxes for right or wrong. Right side: help used
+     i.e. x reveals, x checks", and "x
+       right and wrong is only needed in some games like quickfire": so this
+       one asks for the count (tally), its substitutions are the help, and the
+       rest of the line goes under the boxes. */
+    var stats = [s.average === null ? '' : "Average " + s.average + "'",
+      s.bonus ? 'All eleven +' + s.bonus : ''].filter(Boolean).join(' · ') || null;
+    var help = s.subs ? [s.subs + ' of ' + CONFIG.SUBS_PER_DAILY + (s.subs === 1 ? ' substitution' : ' substitutions')] : [];
     if (window.XIFullTime && XIFullTime.panel) {
       XIFullTime.panel(el.ftPanel, {
         game: 'quickfire', name: 'QuickFire XI', no: board.no,
         date: XIFullTime.dayLabel(board.day),
-        score: s.score, max: s.maxScore, boxes: boxes, stats: stats,
+        score: s.score, max: s.maxScore, boxes: boxes, stats: stats, tally: true, help: help,
         /* THE PICK, AND THE ANSWER WHERE THERE WAS ONE TO LEARN: sent by the
            server only for a question this round has settled and got wrong. */
         answers: s.played.map(function (x) {

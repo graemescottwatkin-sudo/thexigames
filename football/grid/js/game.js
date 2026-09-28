@@ -32,7 +32,7 @@
 
   var R = window.XIGR_RULES;
   var $ = function (id) { return document.getElementById(id); };
-  var BUILD = "v002r";
+  var BUILD = "v002s";
 
   var S = {
     board: null,          // the PUBLIC board: shape, lengths, crossings. No letters.
@@ -558,8 +558,12 @@
     XIFullTime.panel($("ftPanel"), {
       game: "grid", name: "Grid XI", no: o.no, date: o.day ? XIFullTime.dayLabel(o.day) : "",
       score: o.score, max: R.MAX_SCORE, boxes: o.boxes,
+      /* The owner, 28 Sep 2026: "Left side: circle with points and inside x/114.
+     Underneath red or green 11 boxes for right or wrong. Right side: help used
+     i.e. x reveals, x checks". The
+         hints are the help; the rest of the line goes under the boxes. */
+      help: o.hints ? [o.hints + (o.hints === 1 ? " hint" : " hints")] : [],
       stats: o.solved + " of " + R.ENTRIES + " solved · " + o.misses + (o.misses === 1 ? " miss" : " misses") +
-        (o.hints ? " · " + o.hints + (o.hints === 1 ? " hint" : " hints") : "") +
         (o.banked ? " · A replay is not recorded" : ""),
       /* The answers, which the server sends at the whistle: solved or not,
          the board is over and they are this player's to read. */

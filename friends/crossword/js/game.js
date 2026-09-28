@@ -297,7 +297,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v002x";
+  var BUILD = "v002y";
   /* WHAT THIS GAME IS CALLED on its Full Time panel and in the tab, and whether it has a league to show.
      One line, so tools/build_friendscrossword.js rewrites it in one place:
      the Friends board has its own name, its own word for the end, and no
@@ -5348,7 +5348,11 @@
     if (!puzzle) return [];
     return puzzle.entries.map(function (e, i) {
       var m = entryMinute[i] != null ? entryMinute[i] : null;
-      if (revealedEntries[i]) return { s: "a" };
+      /* AN ANSWER SHOWN WAS NOT GOT: red, the owner's two colours (28 Sep
+         2026, right or wrong). An answer finished with a letter or a check
+         is still the player's, and green; the help is listed beside the
+         ring instead. */
+      if (revealedEntries[i]) return { s: "r" };
       var helped = e.cells.some(function (c) {
         var k = K(c.x, c.y);
         return !!(revealedCells[k] || revealAnswerCells[k]);
@@ -5356,13 +5360,18 @@
       return { s: helped ? "a" : "g", m: m };
     });
   }
-  function helpLine() {
+  /* THE HELP, AS A LIST: beside the Full Time ring, one line each. */
+  function helpList() {
     var bits = [];
     function n(count, one, many) { if (count) bits.push(count + " " + (count === 1 ? one : many)); }
     n(checksUsed, "check", "checks");
     n(checkAllsUsed, "grid check", "grid checks");
     n(revealedLetterCount(), "letter shown", "letters shown");
     n(revealedAnswerCount(), "answer shown", "answers shown");
+    return bits;
+  }
+  function helpLine() {
+    var bits = helpList();
     return bits.length ? bits.join(" \u00B7 ") : "no help";
   }
   function openLeague() {
@@ -5381,14 +5390,19 @@
     var ord = FCW.ordinal(pos);
     var name = board.kind === "daily" ? FT.name
       : board.kind === "theme" && themeLabel ? themeLabel : FT.name + " \u00B7 practice";
-    var stats = "Solved at " + FCW.matchClockLabel(elapsed) + " \u00B7 " + helpLine();
+    /* The owner, 28 Sep 2026: "Left side: circle with points and inside x/114.
+     Underneath red or green 11 boxes for right or wrong. Right side: help used
+     i.e. x reveals, x checks". So the
+       help goes beside the ring as a list, and the outcome line -- where a
+       theme has no league to put it in -- goes under the boxes. */
     window.XIFullTime.panel($("ftPanel"), {
       game: "crossword_fr", name: name, no: board.kind === "daily" ? board.no : null,
       kicker: FT.kicker,
       date: board.kind === "daily" ? window.XIFullTime.dayLabel(FCW.localDateKey(FCW.dailyDate(board.no))) : null,
       score: score, max: FCW.SCORING.MAX_SCORE,
       boxes: crosswordBoxes(),
-      stats: FT.league ? stats : msg + " " + stats,
+      help: helpList(),
+      stats: FT.league ? null : msg,
       league: FT.league
         ? { text: msg.indexOf(ord) > -1 ? msg : ord + " \u00B7 " + msg, open: openLeague }
         : null,

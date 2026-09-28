@@ -15,7 +15,7 @@
      the family more time than any layout question: the footer line, the
      console, and the named window variable. If this is not the build just
      deployed, the deploy has not landed — do not start debugging the game. */
-  var BUILD = "v003d";
+  var BUILD = "v003e";
   window.WORDSEARCHXI_BUILD = BUILD;
   try { console.log("Wordsearch XI build " + BUILD); } catch (e) {}
 
@@ -1063,8 +1063,13 @@
     ftShown = o;
     if (!window.XIFullTime || !XIFullTime.panel) return;
     var n = o.boxes.filter(function (b) { return b.s !== "x"; }).length;
+    /* The owner, 28 Sep 2026: "Left side: circle with points and inside x/114.
+     Underneath red or green 11 boxes for right or wrong. Right side: help used
+     i.e. x reveals, x checks". The help
+       here is the four cards, which only free play offers. */
+    var help = helpUsed.size ? [helpUsed.size + (helpUsed.size === 1 ? " help card" : " help cards")] : [];
     var stats = n + " of 11 found · Full time " + o.minute + "'" +
-      (o.bonus ? " · Bonus +10" : " · Bonus missed") + (assisted ? " · Assisted" : "") +
+      (o.bonus ? " · Bonus +10" : " · Bonus missed") +
       (o.stored ? " · The Daily is one attempt" : "") + (o.verified ? " · Verified by the server" : "");
     var answers = puzzle.answers.map(function (a, i) {
       var b = o.boxes[i];
@@ -1075,7 +1080,7 @@
       game: "wordsearch", name: "Wordsearch XI",
       no: openNo,
       date: mode === "daily" && serverDay ? XIFullTime.dayLabel(serverDay) : (puzzle.theme || ""),
-      score: o.score, max: 114, boxes: o.boxes, stats: stats,
+      score: o.score, max: 114, boxes: o.boxes, stats: stats, help: help,
       answers: o.stored ? null : answers,
       share: function () {
         return "Wordsearch XI · " + (mode === "daily" ? "Team of the day" : puzzle.theme) + " · " + o.score + "/114\n" +

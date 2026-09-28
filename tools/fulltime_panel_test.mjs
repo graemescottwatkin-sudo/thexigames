@@ -31,7 +31,7 @@ const DATA = {
   game: "quickfire", name: "QuickFire XI", no: 9, date: "Sat 26 Sep", score: 62, max: 114,
   boxes: [{ s: "g", m: 11 }, { s: "g", m: 19 }, { s: "r" }, { s: "g", m: 27 }, { s: "g", m: 35 }, { s: "r" },
           { s: "g", m: 48 }, { s: "g", m: 56 }, { s: "g", m: 63 }, { s: "x" }, { s: "g", m: 80 }],
-  stats: "8 right · 2 wrong",
+  stats: "8 right · 2 wrong", tally: true,
   answers: [{ s: "g", m: 11, text: "Right1", points: 10 }, { s: "r", m: 20, text: "Wrong", was: "Right3", points: 0 }],
   share: () => "QuickFire XI · No. 9 · 62/114",
   url: () => "https://www.thexigames.com/football/quickfire/#b=9",
@@ -48,12 +48,43 @@ console.log("=== The four blocks ===");
   const card = doc.querySelector(".xft-card");
   t("the name and board", card.querySelector(".xft-name").textContent === "QuickFire XI · No. 9");
   t("the score out of its maximum", /^62\s*\/ 114$/.test(card.querySelector(".xft-score").textContent.trim()), card.querySelector(".xft-score").textContent);
-  t("the bar is filled to score over maximum", card.querySelector(".xft-bar i").style.width === "54%", card.querySelector(".xft-bar i").style.width);
+  /* THE RING, filled to score over maximum (the owner's option D), and
+     read as one image: "62 of 114". */
+  const fill = card.querySelector(".xft-ring .xft-ring-fill");
+  t("the ring is filled to score over maximum, and says so as one image",
+    !!fill && fill.getAttribute("stroke-dasharray") === "54 100" && card.querySelector(".xft-ring").getAttribute("aria-label") === "62 of 114",
+    fill ? fill.getAttribute("stroke-dasharray") : "no ring");
+  /* RIGHT AND WRONG ONLY WHERE A GAME ASKS (the owner, 28 Sep 2026: "x
+     right and wrong is only needed in some games like quickfire"), counted
+     from the boxes: eight right, two wrong, one unanswered -- a timeout is
+     not called wrong. */
+  t("a game that asks for it gets the right and wrong count beside the ring, from the boxes",
+    ((card.querySelector(".xft-side .xft-tally") || {}).textContent || "").trim() === "8 right · 2 wrong · 1 unanswered",
+    (card.querySelector(".xft-tally") || {}).textContent);
+  {
+    const ph = page();
+    ph.w.XIFullTime.panel(ph.doc.getElementById("p"), { ...DATA, tally: false, help: ["2 checks", "1 answer shown"], stats: "Top of the table." });
+    const c = ph.doc.querySelector(".xft-card");
+    const items = [...c.querySelectorAll(".xft-side .xft-help li")].map((li) => li.textContent);
+    t("a game that says what help was used lists it beside the ring, one line each, and no count",
+      items.join("|") === "2 checks|1 answer shown" && !c.querySelector(".xft-tally"), items.join("|"));
+    t("and its own line moves under the boxes rather than beside the ring",
+      !c.querySelector(".xft-side .xft-stats") && ((c.querySelector(":scope > .xft-stats") || {}).textContent === "Top of the table."),
+      (c.querySelector(".xft-stats") || {}).textContent);
+    const pn = page();
+    pn.w.XIFullTime.panel(pn.doc.getElementById("p"), { ...DATA, tally: false, help: [] });
+    t("no help at all is said, not left blank",
+      [...pn.doc.querySelectorAll(".xft-help li")].map((li) => li.textContent).join("|") === "None");
+    const po = page();
+    po.w.XIFullTime.panel(po.doc.getElementById("p"), { ...DATA, tally: false });
+    t("a game that passes neither keeps its own line beside the ring",
+      ((po.doc.querySelector(".xft-side .xft-stats") || {}).textContent) === DATA.stats && !po.doc.querySelector(".xft-tally"));
+  }
   const boxes = [...card.querySelectorAll(".xft-b")];
   t("eleven boxes", boxes.length === 11);
   t("green boxes carry the minute", boxes[0].classList.contains("g") && boxes[0].textContent === "11'");
   t("red boxes carry a cross, so right and wrong differ by more than colour", boxes[2].classList.contains("r") && boxes[2].textContent === "×");
-  t("grey is not answered", boxes[9].classList.contains("x") && boxes[9].textContent === "–");
+  t("not answered is marked with a dash (and counted as not right)", boxes[9].classList.contains("x") && boxes[9].textContent === "–");
   const p2 = page();
   p2.w.XIFullTime.panel(p2.doc.getElementById("p"), { ...DATA, boxes: [{ s: "a" }, { s: "a", m: 30 }, { s: "g" }] });
   const b2 = [...p2.doc.querySelectorAll(".xft-b")].map((b) => b.textContent);

@@ -10,7 +10,7 @@
  * more, 114 the ceiling. This file is the page: the landing the family
  * shares, the ladder of two rows, the clock, the answers list, the share.
  */
-var BUILD = "v002s";
+var BUILD = "v002t";
 
 (function () {
   "use strict";
@@ -805,12 +805,17 @@ var BUILD = "v002s";
     if (!window.XIFullTime || !XIFullTime.panel) return;
     var words = { W: "Win", D: "Draw", L: "Loss" };
     var boxes = o.calls.map(function (c) { return { s: c === true ? "g" : c === false ? "r" : "x" }; });
-    var stats = o.right + " right · " + o.wrong + " wrong" + (o.bonus ? " · Runs +" + o.bonus : "") +
-      " · " + (words[o.res] || "") + (o.daily ? "" : " · Free play, not counted in your run") +
-      (o.verified ? " · Verified by the server" : "");
+    /* The owner, 28 Sep 2026: "Left side: circle with points and inside x/114.
+     Underneath red or green 11 boxes for right or wrong. Right side: help used
+     i.e. x reveals, x checks". HiLo is a
+       right-or-wrong game with no help, so beside the ring is the count
+       (tally) and the rest of the line goes under the boxes. */
+    var stats = [o.bonus ? "Runs +" + o.bonus : "", words[o.res] || "",
+      o.daily ? "" : "Free play, not counted in your run",
+      o.verified ? "Verified by the server" : ""].filter(Boolean).join(" · ");
     XIFullTime.panel($("ftPanel"), {
       game: "hilo", name: "HiLo XI", no: o.no, date: o.day ? XIFullTime.dayLabel(o.day) : "",
-      score: o.score, max: 114, boxes: boxes, stats: stats,
+      score: o.score, max: 114, boxes: boxes, stats: stats, tally: true,
       share: function () {
         return "HiLo XI" + (o.no != null ? " · No. " + o.no : "") + " · " + o.score + "/114\n" + XIFullTime.squares(boxes);
       },

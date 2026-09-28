@@ -15,7 +15,7 @@
  *   - no practice. There is now an archive picker and a finals catalogue; what
  *     is still missing is a practice mode, which this game may never want.
  */
-var BUILD = "v003g";
+var BUILD = "v003h";
 
 (function () {
   "use strict";
@@ -1566,6 +1566,11 @@ var BUILD = "v003g";
       game: "scrambled", name: "Scrambled XI", no: o.no, date: o.day ? XIFullTime.dayLabel(o.day) : "",
       score: o.score, max: SCORING.MAX_SCORE, boxes: o.boxes, stats: o.stats +
         (o.verified ? " · Verified by the server" : ""),
+      /* The owner, 28 Sep 2026: "Left side: circle with points and inside x/114.
+     Underneath red or green 11 boxes for right or wrong. Right side: help used
+     i.e. x reveals, x checks". The
+         help is who came off the bench. */
+      help: o.bench ? [o.bench + " off the bench"] : [],
       share: function () {
         return "Scrambled XI" + (o.no != null ? " · No. " + o.no : "") + " · " + o.score + "/" + SCORING.MAX_SCORE +
           (o.boxes ? "\n" + XIFullTime.squares(o.boxes) : "");
@@ -1639,8 +1644,8 @@ var BUILD = "v003g";
     var boxes = typeof rec.boxes === "string" && rec.boxes
       ? rec.boxes.split(" ").map(function (t) { return { s: t.charAt(0), m: t.length > 1 ? Number(t.slice(1)) : null }; })
       : null;
-    drawFullTime({ no: rec.no, day: null, score: rec.score, boxes: boxes,
-                   stats: helpLine(mins, secs, rec.help) + " · The daily is one attempt" });
+    drawFullTime({ no: rec.no, day: null, score: rec.score, boxes: boxes, bench: rec.help || 0,
+                   stats: helpLine(mins, secs, 0) + " · The daily is one attempt" });
     show("screenResults");
   }
 
@@ -1650,8 +1655,8 @@ var BUILD = "v003g";
     var boxes = boxesOf();
     var solved = boxes.filter(function (b) { return b.s === "g" && b.m != null; }).length;
     drawFullTime({ no: state.board.no, day: state.board.day || null, score: res.score, boxes: boxes,
-                   iconic: !!state.board.iconic,
-                   stats: solved + " of " + boxes.length + " unravelled · " + helpLine(mins, secs, state.help) });
+                   iconic: !!state.board.iconic, bench: state.help || 0,
+                   stats: solved + " of " + boxes.length + " unravelled · " + helpLine(mins, secs, 0) });
     /* The server's own number, asked for AFTER the panel is drawn; and the
        challenge's table, joined on the same answer by somebody who came from
        one. */

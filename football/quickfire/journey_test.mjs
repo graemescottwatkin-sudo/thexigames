@@ -303,10 +303,13 @@ console.log("\n=== A round, played end to end ===");
     const kids = panel ? [...panel.children].map((e) => e.className.split(" ")[0]) : [];
     return kids.join(",") === "xft-card,xft-keep,xft-act,xft-next";
   })(), panel ? [...panel.children].map((e) => e.className).join(" | ") : "no #ftPanel");
-  const stats = panel && panel.querySelector(".xft-stats");
+  /* THE COUNT IS BESIDE THE RING since 28 Sep 2026 (the owner: "x right and
+     wrong is only needed in some games like quickfire"), counted from the
+     boxes the server's verdicts drew. */
+  const stats = panel && panel.querySelector(".xft-tally");
   t("and it reports the server's count of correct answers",
-    !!stats && new RegExp(`^${expectedCorrect} right`).test(stats.textContent),
-    stats ? stats.textContent : "no stats line");
+    !!stats && new RegExp(`^\\s*${expectedCorrect} right`).test(stats.textContent),
+    stats ? stats.textContent : "no count beside the ring");
   t("eleven boxes, a green one for every right answer", (() => {
     const b = panel ? [...panel.querySelectorAll(".xft-boxes .xft-b")] : [];
     return b.length === PER_DAILY && b.filter((x) => x.classList.contains("g")).length === expectedCorrect;
