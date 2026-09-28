@@ -130,8 +130,13 @@ const env = {
   ASSETS: {
     fetch: async (req) => {
       const parts = new URL(req.url || req).pathname.split("/").filter(Boolean);
-      const game = parts[1] || parts[0];
-      return new Response(fs.readFileSync(`${gameDir(game)}/index.html`, "utf8"),
+      /* BY THE PATH ASKED FOR, NOT BY A GAME NAMED FROM IT. This took the last
+         segment as the game and asked gameDir(), so /friends/whoami/ read
+         FOOTBALL's page -- "whoami" is football's id -- and passed on the wrong
+         shell for every Friends game with a football twin. Lightning Round
+         has none, and read football/lightning/ (28 Sep 2026). */
+      const dir = parts.length >= 2 ? parts.slice(0, 2).join("/") : gameDir(parts[0]);
+      return new Response(fs.readFileSync(`${dir}/index.html`, "utf8"),
         { headers: { "Content-Type": "text/html" } });
     },
   },

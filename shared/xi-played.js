@@ -94,6 +94,12 @@
     { id: "whoami_fr", key: "xifw.results.v1", theme: "friends", dir: "whoami", api: "/api/whoami_fr/daily",
       today: function (d) { return d.day; },
       done: function (r, t) { return r.day === t; } },
+    /* Lightning Round: Friends. Keyed on the DAY: one daily run a day, and
+       only the day's first finished run is banked, with the moment it
+       finished (`at`), so a run finished after midnight does not mend a day. */
+    { id: "lightning_fr", key: "xifl.results.v1", theme: "friends", dir: "lightning", api: "/api/lightning_fr/daily",
+      today: function (d) { return d.day; },
+      done: function (r, t) { return r.day === t; } },
   ];
 
   var byId = {};

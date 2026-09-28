@@ -77,8 +77,13 @@ const env = {
   ASSETS: {
     fetch: async (req) => {
       const parts = new URL(req.url || req).pathname.split("/").filter(Boolean);
-      const game = parts[1] || parts[0];
-      return new Response(fs.readFileSync(`${gameDir(game)}/index.html`, "utf8"),
+      /* BY THE PATH ASKED FOR, NOT BY A GAME NAMED FROM IT. This took the last
+         segment as the game and asked gameDir(), so /friends/whoami/ read
+         FOOTBALL's page -- "whoami" is football's id -- and passed on the wrong
+         shell for every Friends game with a football twin. Lightning Round
+         has none, and read football/lightning/ (28 Sep 2026). */
+      const dir = parts.length >= 2 ? parts.slice(0, 2).join("/") : gameDir(parts[0]);
+      return new Response(fs.readFileSync(`${dir}/index.html`, "utf8"),
         { headers: { "Content-Type": "text/html" } });
     },
   },
@@ -156,9 +161,13 @@ console.log("\nTrue: nothing in it answers 404");
   const boards = locs.filter((u) => u.includes("/daily/"));
   const bad = [];
   for (const u of boards) {
-    /* /football/<game>/daily/<key> — the theme leads, so the game is the
-       second segment and the key the fourth. */
-    const [, , game, , key] = new URL(u).pathname.split("/");
+    /* /<theme>/<slug>/daily/<key> — the theme leads and the SLUG is not the
+       id: /friends/whoami/ is whoami_fr. Resolved from the address through
+       gamePath(), because naming the game from the slug checked every Friends
+       Who Am I board against FOOTBALL's schedule, and found no game at all for
+       Lightning Round, which has no football twin (28 Sep 2026). */
+    const [, theme, slug, , key] = new URL(u).pathname.split("/");
+    const game = Object.keys(PERMA_GAMES).find((g) => gamePath(g) === `/${theme}/${slug}/`) || slug;
     const r = await permalinkRoute({
       request: new Request(u), env, params: { path: [key] },
     }, game);

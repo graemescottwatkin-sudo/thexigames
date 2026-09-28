@@ -76,6 +76,9 @@ const LOCKED = {
   grid: { kind: "grid", path: "/football/grid/" },
   whoami: { kind: "profile", path: "/football/whoami/" },
   whoami_fr: { kind: "profile", path: "/friends/whoami/" },
+  /* In build, not launched: proved here anyway, because the lock is a rule for
+     every play screen and not a launch checklist item. */
+  lightning_fr: { kind: "lightning", path: "/friends/lightning/" },
   wordsearch: { kind: "wordsearch", path: "/football/wordsearch/" },
 };
 /* Not locked yet, by name, so the list of what is left is a fact in the tree
@@ -108,7 +111,7 @@ console.log("The roster");
 
 /* ---- the server ----------------------------------------------------------- */
 const { dailyNumber } = await import(pathToFileURL(path.join(ROOT, "functions", "_lib", "daily.js")).href);
-const { quickfireEnv, codewordRawBoard, whoamiStub } = await import(pathToFileURL(path.join(ROOT, "tools", "lock_fixtures.mjs")).href);
+const { quickfireEnv, codewordRawBoard, whoamiStub, lightningEnv, LR_RIGHT } = await import(pathToFileURL(path.join(ROOT, "tools", "lock_fixtures.mjs")).href);
 const { publicBoard: cwPublic } = await import(pathToFileURL(path.join(ROOT, "functions", "_lib", "cw-board.js")).href);
 /* Codeword refuses to run without a database, and its round endpoints write
    to one, so the board is the fixture through the real publicBoard() and the
@@ -127,6 +130,10 @@ const { utcDay } = await import(pathToFileURL(path.join(ROOT, "functions", "_lib
 /* One reading of the day, handed to the fixture and (through the real
    functions) to the page, so the two cannot disagree across midnight. */
 const QF_ENV = await quickfireEnv(utcDay());
+/* LIGHTNING ROUND through its REAL routes over the real migration, seeded with
+   a fixture pool (tools/lock_fixtures.mjs): the deal, the clock and the marking
+   are the server's, so a stub would be testing a game that does not exist. */
+const LR_ENV = await lightningEnv();
 /* THE FRIENDS CROSSWORD'S BOARD, through its REAL route over a stubbed D1 --
    the same stub shape friends/crossword/daily_test.mjs uses, and the board
    built by the real layout engine (fixture.mjs), never by hand. Without it the
@@ -139,7 +146,8 @@ const FR_ENV = { DB: { prepare: (sql) => ({ bind: () => ({
   all: async () => ({ results: [] }), run: async () => ({}),
 }) }) } };
 const envFor = (p) => (p.startsWith("/api/quickfire/") ? QF_ENV
-  : p.startsWith("/api/crossword/crossword_fr/") ? FR_ENV : {});
+  : p.startsWith("/api/crossword/crossword_fr/") ? FR_ENV
+  : p.startsWith("/api/lightning_fr/") ? LR_ENV : {});
 const TYPES = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript",
   ".json": "application/json", ".png": "image/png", ".svg": "image/svg+xml", ".webp": "image/webp",
   ".ico": "image/x-icon", ".woff2": "font/woff2" };
@@ -839,6 +847,140 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "q
     t(`${vp[0]}: and the result is a panel inside the screen, scrolling in itself`,
       !!m.results && m.results[0] >= 0 && m.results[1] <= m.vh + 1, JSON.stringify(m.results));
     await panelCheck(page, vp[0], id);
+    await context.close();
+  }
+}
+
+/* ---- a sixty-second run --------------------------------------------------
+   Lightning Round XI: Friends is a quiz screen -- a clue and four options --
+   so it is measured with measureQuiz and held to quizOk. What differs is how
+   it opens (a mode, not a kick-off), how a question ends (the next arrives
+   with the verdict) and how the run ends (the clock, which a wrong pick runs
+   down three seconds at a time -- so the test gets to the end by missing). */
+async function openLightning(game, [name, viewport, touch]) {
+  const context = await browser.newContext({ viewport, hasTouch: touch, isMobile: touch, deviceScaleFactor: 1 });
+  const page = await context.newPage();
+  await page.goto(ORIGIN + game.path, { waitUntil: "networkidle" });
+  await page.click("#playDaily");
+  await page.waitForSelector("#options .option", { timeout: 10000 });
+  await until(page, isLocked);
+  return { page, context };
+}
+/* Pick one on purpose and wait for the next question (or the result). */
+async function lightningPick(page, right) {
+  const before = await page.$eval("#clue", (e) => e.textContent);
+  await page.evaluate(({ want, right }) => {
+    const bs = [...document.querySelectorAll("#options .option:not([disabled])")];
+    const b = bs.find((x) => (x.textContent === right) === want);
+    if (b) b.click();
+  }, { want: right, right: LR_RIGHT });
+  await page.waitForFunction((b) => !document.getElementById("screenResults").hidden ||
+    (document.getElementById("clue").textContent !== b && document.querySelector("#options .option:not([disabled])")),
+    before, { timeout: 15000 });
+  await wait(300);
+}
+
+for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "lightning" && (!ONLY || k === ONLY))) {
+  console.log(`\n${id}: in play`);
+  for (const vp of VIEWPORTS) {
+    const { page, context } = await openLightning(game, vp);
+    const long = await page.evaluate(measureQuiz);
+    t(`${vp[0]}: the longest clue -- locked, no scroll, clue whole, four options on screen`,
+      quizOk(long) && long.clueLen >= 180, quizSay(long));
+    await lightningPick(page, true);
+    const next = await page.evaluate(measureQuiz);
+    t(`${vp[0]}: the next, shorter clue -- the same, and no smaller than the long one`,
+      quizOk(next) && next.clueLen < long.clueLen && parseFloat(next.clueSize) >= parseFloat(long.clueSize), quizSay(next));
+    await context.close();
+  }
+
+  {
+    const { page, context } = await openLightning(game, VIEWPORTS[1]);
+    await howCheck(page, VIEWPORTS[1][0]);
+    await context.close();
+  }
+
+  console.log(`\n${id}: the way out, and back`);
+  {
+    const { page, context } = await openLightning(game, VIEWPORTS[1]);
+    await page.evaluate(() => {
+      const st = document.createElement("style");
+      st.id = "lock-test-big";
+      st.textContent = ".option{font-size:44px!important;padding:40px!important}.clue{min-height:500px!important}";
+      document.head.appendChild(st);
+      dispatchEvent(new Event("resize"));
+    });
+    await until(page, isUnlocked);
+    t("a question too large to fit unlocks the page rather than cutting it off", await page.evaluate(isUnlocked));
+    await page.evaluate(() => { document.getElementById("lock-test-big").remove(); dispatchEvent(new Event("resize")); });
+    await until(page, isLocked);
+    t("and relocks when it goes", await page.evaluate(isLocked));
+    await watchStyle(page, "clue");
+    await page.evaluate(() => {
+      const st = document.createElement("style");
+      st.id = "lock-test-huge-clue";
+      st.textContent = "body.locked .clue{font-size:72px}";
+      document.head.appendChild(st);
+      dispatchEvent(new Event("resize"));
+    });
+    await until(page, styleWritten);
+    const fitted = await page.evaluate(() => {
+      const c = document.getElementById("clue");
+      return { locked: document.body.classList.contains("locked"), cut: c.scrollHeight > c.clientHeight + 1,
+        size: parseFloat(getComputedStyle(c).fontSize) };
+    });
+    t("a clue too big for its box is brought down until it is whole, and the page stays locked",
+      fitted.locked && !fitted.cut && fitted.size < 72, JSON.stringify(fitted));
+    await context.close();
+  }
+
+  console.log(`\n${id}: the end of the run`);
+  for (const vp of [VIEWPORTS[1], VIEWPORTS[3]]) {
+    const { page, context } = await openLightning(game, vp);
+    await lightningPick(page, true);
+    /* A MISS SAYS NOTHING ABOUT THE ANSWER until the run is over (the owner,
+       28 Sep 2026): no option lit as right, and the right text nowhere in the
+       feedback line. Read in the moment after the verdict, before the next. */
+    const miss = await page.evaluate(async (right) => {
+      const b = [...document.querySelectorAll("#options .option:not([disabled])")].find((x) => x.textContent !== right);
+      b.click();
+      const start = Date.now();
+      while (!b.classList.contains("wrong") && Date.now() - start < 5000) await new Promise((r) => setTimeout(r, 20));
+      return { marked: b.classList.contains("wrong"), lit: document.querySelectorAll("#options .option.right").length,
+        said: document.getElementById("feedback").textContent };
+    }, LR_RIGHT);
+    t(`${vp[0]}: a miss is marked, and the right answer is not shown mid-run`,
+      miss.marked && miss.lit === 0 && !miss.said.includes(LR_RIGHT), JSON.stringify(miss));
+    /* Misses until the clock runs out: twenty at three seconds is the whole
+       minute, fewer once the real seconds between picks are counted too, and
+       never more than twenty-one (one right, then the minute in misses). */
+    await wait(800);
+    for (let i = 0; i < 25; i++) {
+      if (!(await page.$eval("#screenResults", (e) => e.hidden))) break;
+      await lightningPick(page, false);
+    }
+    await page.waitForFunction(() => !document.getElementById("screenResults").hidden, null, { timeout: 15000 });
+    await wait(300);
+    const end = await page.evaluate(() => ({
+      locked: document.body.classList.contains("locked"),
+      scrollX: document.documentElement.scrollWidth - innerWidth,
+      /* The family's Full Time panel: the ring says "score of tried", the
+         boxes are the run, and the folded answers name what was missed. */
+      score: (() => {
+        const ring = document.querySelector("#ftPanel .xft-ring");
+        return ring ? ring.getAttribute("aria-label").split(" of ")[0] : null;
+      })(),
+      marks: document.querySelectorAll("#ftPanel .xft-b").length,
+      missed: document.querySelectorAll("#ftPanel .xft-a-was").length,
+      named: [...document.querySelectorAll("#ftPanel .xft-a.r")].every((li) => {
+        const w = li.querySelector(".xft-a-was");
+        return !!w && w.textContent.replace(/^s*—s*/, "").length > 0;
+      }),
+    }));
+    t(`${vp[0]}: the run ends on the clock, and the result is a page that reads rather than a locked screen`,
+      !end.locked && end.scrollX <= 1 && end.score === "1" && end.marks >= 10 && end.marks <= 21, JSON.stringify(end));
+    t(`${vp[0]}: and now, after the whistle, every miss is listed with its answer`,
+      end.missed === end.marks - 1 && end.named, JSON.stringify(end));
     await context.close();
   }
 }
@@ -1986,6 +2128,9 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "w
    fixture server has that board, which element names it. The day asked for is
    YESTERDAY, derived: a board every fixture has, and never today's. */
 const PERMA_N = dailyNumber() - 1;
+/* Each game's first board, for the one row that can be younger than PERMA_N. */
+const { launchNumber } = await import(pathToFileURL(path.join(ROOT, "functions", "_lib", "games.js")).href);
+const LAUNCHED_NO = { lightning_fr: launchNumber("lightning_fr") };
 const PERMA = {
   "football/ballpark":  { start: "#homeDaily", asks: `/api/ballpark/daily?no=${PERMA_N}`, label: "#startKicker" },
   "football/codeword":  { asks: `/api/codeword/daily?no=${PERMA_N}`, label: "#cwTodayKicker" },
@@ -1999,6 +2144,13 @@ const PERMA = {
   "football/wordsearch": { asks: "/api/wordsearch/archive" },
   "friends/crossword":  { asks: `/api/crossword/crossword_fr/daily?no=${PERMA_N}` },
   "friends/whoami":     { asks: `/api/whoami/whoami_fr/daily?no=${PERMA_N}`, label: "#waTodayKicker", title: "#waToday .hc-title" },
+  /* Lightning asks which day its board is before anything starts, and names it
+     on the card: "Run #N · date", never today's. A board is only a number the
+     server accepts from the launch on, so on LAUNCH DAY yesterday's is no board:
+     the page must still ask, keep its address and not say it failed to load,
+     and the label is asked of it from the day after, when #N exists. */
+  "friends/lightning":  { asks: `/api/lightning_fr/daily?no=${PERMA_N}`,
+    ...(PERMA_N >= LAUNCHED_NO.lightning_fr ? { label: "#startKicker" } : {}) },
 };
 if (!ONLY || ONLY === "perma") {
   console.log(`\na board's own address, every game (board ${PERMA_N})`);
@@ -2483,6 +2635,7 @@ if (!ONLY || ONLY === "bar") {
   const openers = {
     pitch: (g, vp) => open(g, 1, vp), quiz: openQuiz, slider: openSlider, duel: openDuel,
     codeword: openCodeword, grid: openGrid, profile: openProfile, wordsearch: openWS,
+    lightning: openLightning,
   };
   for (const vp of [VIEWPORTS[1], VIEWPORTS[3]]) {
     const seen = [];
@@ -2558,6 +2711,7 @@ if (!ONLY || ONLY === "keys") {
   const openers = {
     pitch: (g, vp) => open(g, 1, vp), quiz: openQuiz, slider: openSlider, duel: openDuel,
     codeword: openCodeword, grid: openGrid, profile: openProfile, wordsearch: openWS,
+    lightning: openLightning,
   };
   const vp = VIEWPORTS[1];
   const games = [...Object.entries(LOCKED).map(([id, g]) => [id, g.path.replace(/^\/|\/$/g, ""), () => openers[g.kind](g, vp)]),

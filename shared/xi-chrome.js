@@ -183,6 +183,9 @@
          The name AND the href both go in when functions/_lib/games.js stops
          calling this game UNLISTED, and the gates refuse the three disagreeing. */
       { n: 2,  name: "Who Am I XI: Friends", href: "/friends/whoami/" },
+      /* LIGHTNING ROUND, launched 28 September 2026 on the owner's "launch
+         Lightning Round": the next free number, which is what launching does. */
+      { n: 3,  name: "Lightning Round XI: Friends", href: "/friends/lightning/" },
     ],
   };
 
@@ -1430,7 +1433,7 @@
                             is why aligned_test walks GAMES and fails when one of
                             them is missing here, rather than trusting anyone to
                             remember. */
-                         "xifc.", "xifw.", "xi."];
+                         "xifc.", "xifw.", "xifl.", "xi."];
   var RECORD_KEEP = [
     /* Identity. Wiping this would cut the player off from results already
        synced to their account, which clearing local history has no business

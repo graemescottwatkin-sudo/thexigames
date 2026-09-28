@@ -319,10 +319,19 @@ export async function onRequest({ request, env, params }) {
        have done, not who you are — and `users` is the identity the account's
        own results are keyed to. Those are the only other tables carrying a
        user_id, so this list is now complete rather than merely longer. */
+    /* LIGHTNING ROUND (28 Sep 2026) keeps two tables by player -- the runs a
+       signed-in player sat and the questions practice avoids for them -- and a
+       third by RUN, the picks. The runs are read first, so their picks go in
+       the same batch and none is left pointing at a run that is gone. */
+    const lrRuns = ((await env.DB.prepare("SELECT run_id FROM fr_lr_run WHERE user_id = ?")
+      .bind(me.id).all()).results || []).map((r) => r.run_id);
     await env.DB.batch([
       env.DB.prepare("DELETE FROM results WHERE user_id = ?").bind(me.id),
       env.DB.prepare("DELETE FROM season_play WHERE user_id = ?").bind(me.id),
       env.DB.prepare("DELETE FROM board_state WHERE user_id = ?").bind(me.id),
+      env.DB.prepare("DELETE FROM fr_lr_run WHERE user_id = ?").bind(me.id),
+      env.DB.prepare("DELETE FROM fr_lr_seen WHERE user_id = ?").bind(me.id),
+      ...lrRuns.map((id) => env.DB.prepare("DELETE FROM fr_lr_answer WHERE run_id = ?").bind(id)),
     ]);
     return json({ ok: true, cleared: true });
   }

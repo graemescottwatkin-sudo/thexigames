@@ -80,6 +80,11 @@ export const PERMA_GAMES = {
      tools/build_friendswhoami_calendar.js prints how many days that makes
      -- and the day after the last one has no board and says so. */
   whoami_fr: { name: "Who Am I XI: Friends", schedule: "day" },
+  /* Lightning Round XI: Friends, launched 28 September 2026. A RING: a day's
+     run is dealt from its date by the same seed for everyone, so every number
+     from launch to today resolves -- there is no calendar to ask. The first
+     time a day is asked for, its run is stored (fr_lr_daily) and kept. */
+  lightning_fr: { name: "Lightning Round XI: Friends", schedule: "ring" },
   wordsearch: { name: "Wordsearch XI", schedule: "day" },
   scrambled: { name: "Scrambled XI", schedule: "ring" },
   hilo: { name: "HiLo XI", schedule: "day" },
@@ -370,6 +375,8 @@ export const THEME_OF = {
      builds a path, it does not make a game. Nothing reads it until the id is in
      GAMES. */
   whoami_fr: "friends",
+  /* THE THIRD, launched 28 September 2026. */
+  lightning_fr: "friends",
 };
 export const themeOf = (game) => THEME_OF[game] || "football";
 
@@ -426,6 +433,9 @@ export const SLUG_OF = {
      tells the two apart. The same collision crossword_fr had, answered the same
      way. */
   whoami_fr: "whoami",
+  /* /friends/lightning/: the id carries _fr for the same uniqueness reason,
+     and the address does not need it. */
+  lightning_fr: "lightning",
 };
 export const slugOf = (game) => SLUG_OF[game] || game;
 

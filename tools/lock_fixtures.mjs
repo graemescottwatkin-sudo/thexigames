@@ -163,3 +163,26 @@ export function whoamiStub(pathname, body, asked) {
   if (what === "finish") return { day, slot: 1, solved: false, finished: true, pointsSpent: 7, subsUsed: 2, guesses: 1, nearMisses: 0, score: 0, minute: 0, answer: "Fixture Character", section: "Loves & Exes", deck: "main" };
   return {};
 }
+
+/* ---- Lightning Round XI: Friends ---------------------------------------------
+ * A made-up pool through the real migration (047), played through the real
+ * routes. Sized past the pool's measured extremes (28 Sep 2026: the longest
+ * clue is 180 characters, the longest option 31). The ONE Easy question is the
+ * longest clue: every run opens on an Easy one, so the first screen a test sees
+ * is always the hardest to fit. The right option is LR_RIGHT, so a test can
+ * pick a wrong one on purpose and run the clock down three seconds at a time. */
+export const LR_RIGHT = "Fixture right answer, marked right";
+const LR_WRONG = ["Fixture wrong answer number one", "A second fixture wrong answer here", "And a third wrong one to choose"];
+export async function lightningEnv() {
+  const { db, d1 } = await sqliteD1();
+  const ins = db.prepare(`INSERT INTO fr_lr_question (id, diff, clue, answer, option_1, option_2, option_3, option_4, pgk)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`);
+  const LR_LENGTHS = [190, 40, 110, 28, 75, 150, 55, 90, 35, 130, 62, 48, 100, 33, 84, 70, 120, 44, 58, 96,
+    38, 66, 105, 52, 80, 46, 72, 88, 30, 115];
+  LR_LENGTHS.forEach((n, i) => {
+    const id = "FXL" + String(i + 1).padStart(4, "0");
+    const diff = i === 0 ? "Easy" : i % 3 === 0 ? "Hard" : "Medium";
+    ins.run(id, diff, clueOf(i + 1, n), LR_RIGHT, LR_RIGHT, ...LR_WRONG, "Fixture subject " + i);
+  });
+  return { DB: d1 };
+}

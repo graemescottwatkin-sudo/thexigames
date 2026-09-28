@@ -25,7 +25,7 @@ import { dailyKey, dailyDayKey, dailyNoForDay } from "./daily.js";
    because football holds that one and an id maps to exactly one theme; the
    SLUG is `whoami`, so the address still reads /friends/whoami/. Both are
    UNLISTED: live, banked, streaked, and advertised nowhere. */
-export const GAMES = ["crossword", "wordsearch", "scrambled", "hilo", "vowels", "grid", "quickfire", "codeword", "whoami", "ballpark", "crossword_fr", "whoami_fr"];
+export const GAMES = ["crossword", "wordsearch", "scrambled", "hilo", "vowels", "grid", "quickfire", "codeword", "whoami", "ballpark", "crossword_fr", "whoami_fr", "lightning_fr"];
 
 export const DEFAULT_GAME = "crossword";
 
@@ -117,6 +117,11 @@ export const LAUNCHED = {
      before the game existed. */
   codeword: "2026-09-18",
   grid: "2026-09-18",       // the sixth shirt; board #13
+  /* Lightning Round XI: Friends, 28 September 2026, the owner's "launch
+     Lightning Round". The third Friends shirt. It has no calendar to deal:
+     each day's run is dealt from the date the first time anyone asks, and
+     kept (fr_lr_daily), so the launch day is simply the first day it deals. */
+  lightning_fr: "2026-09-28",
 };
 
 /* ---- WHICH LAUNCHED GAMES ARE NOT ADVERTISED ------------------------------
@@ -171,6 +176,9 @@ export const NO_SEASON = {
      record -- which is the fault aligned_test's rule exists to catch, and why
      an exception to it has to be STATED here rather than merely true. */
   whoami_fr: true,
+  /* And the third, for the same reason: friends/lightning/index.html loads
+     no xi-season.js. The Friends streak is xi-played's, not the season's. */
+  lightning_fr: true,
 };
 
 export const inSeason = (game) => !NO_SEASON[game];
@@ -376,6 +384,7 @@ export const LABELS = {
      shares its title with football's and the two would otherwise be two links a
      reader cannot tell apart. */
   whoami_fr: "Who Am I XI: Friends",
+  lightning_fr: "Lightning Round XI: Friends",
   wordsearch: "Wordsearch XI",
   scrambled: "Scrambled XI",
   vowels: "Vowels XI",
@@ -524,6 +533,14 @@ export function entryKey(game, row) {
        avoid, and this pair would hit it on day one rather than eventually. */
     const d = String((row && (row.day || row.date || row.play_date)) || "");
     return /^\d{4}-\d{2}-\d{2}$/.test(d) ? "frwa:" + d : null;
+  }
+  if (game === "lightning_fr") {
+    /* THE DAY'S RUN, keyed on its day with a prefix of its own. One result a
+       day: the first finished run of the daily is the day's, and practice runs
+       are never banked. The day is the SERVER's, returned by /start and
+       /finish, never the device's. */
+    const d = String((row && (row.day || row.date || row.play_date)) || "");
+    return /^\d{4}-\d{2}-\d{2}$/.test(d) ? "frlr:" + d : null;
   }
   if (game === "ballpark") {
     /* A Ballpark daily is addressed by its DAY. bp_schedule hands one board to
@@ -709,6 +726,17 @@ export function detailOf(game, row) {
         clues: c && c.clues != null ? n(c.clues) : null,
         wrongs: c && c.wrongs != null ? n(c.wrongs) : null,
       })),
+    });
+  }
+  if (game === "lightning_fr") {
+    /* The score has its column; what it cannot say is how many were tried and
+       how many missed, which is the shape of a sixty-second run. The marks are
+       the run in order, clipped: a run is at most eighty questions. */
+    const marks = Array.isArray(row.marks) ? row.marks.slice(0, 80).map((m) => (m ? 1 : 0)) : null;
+    return JSON.stringify({
+      answered: n(row.answered),
+      wrong: n(row.wrong),
+      marks,
     });
   }
   if (game === "quickfire") {

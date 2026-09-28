@@ -20,7 +20,7 @@
 /* THE SHARED LAYER'S TAG, as every page carries it in its ?v=. One more
    place the tag is written; tools/aligned_test.mjs asserts it agrees with the
    pages, so it cannot fall behind them quietly. */
-export const SHARED_TAG = "v82";
+export const SHARED_TAG = "v83";
 
 /* What each game's masthead says and where its tabs go. The current tab is
    marked by path; a page with no game (a hub-level page) gets no masthead. */
@@ -121,6 +121,13 @@ const MAST = {
     name: "Who Am I", home: "/friends/whoami/",
     nav: [["Today", "/friends/whoami/"], ["Archive", "/friends/whoami/archive/"],
           ["How to play", "/friends/whoami/#how"]],
+  },
+  /* THE THIRD FRIENDS GAME, the same shape: no Answers tab, because its
+     answers are shown at the end of each run and there is no answers page. */
+  lightning_fr: {
+    name: "Lightning Round", home: "/friends/lightning/",
+    nav: [["Today", "/friends/lightning/"], ["Archive", "/friends/lightning/archive/"],
+          ["How to play", "/friends/lightning/#how"]],
   },
   crossword_fr: {
     name: "Crossword", home: "/friends/crossword/",

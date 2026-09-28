@@ -49,11 +49,12 @@ console.log("=== A game's id, by its address and theme ===");
   t("the Friends crossword is crossword_fr, not football's crossword",
     P.idOf("/friends/crossword/") === "crossword_fr", P.idOf("/friends/crossword/"));
   t("and Friends Who Am I is whoami_fr", P.idOf("/friends/whoami/") === "whoami_fr", P.idOf("/friends/whoami/"));
+  t("and Lightning Round is lightning_fr", P.idOf("/friends/lightning/") === "lightning_fr", P.idOf("/friends/lightning/"));
   t("football's keep their own ids", P.idOf("/football/crossword/") === "crossword" && P.idOf("/football/whoami/") === "whoami");
   const ids = P.list("friends").map((g) => g.id).join(",");
   t("the Friends squad joins to the Friends probes, and their own results",
-    ids === "crossword_fr,whoami_fr" &&
-      P.list("friends").map((g) => g.key).join(",") === "xifc.results,xifw.results.v1", ids);
+    ids === "crossword_fr,whoami_fr,lightning_fr" &&
+      P.list("friends").map((g) => g.key).join(",") === "xifc.results,xifw.results.v1,xifl.results.v1", ids);
 }
 
 console.log("\n=== Which days count ===");

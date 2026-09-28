@@ -109,6 +109,8 @@ const GAMES = [
      through, because a game that wrote football's prefix would read football's
      saves as its own. */
   { id: "whoami_fr", dir: "friends/whoami", name: "Who Am I XI: Friends", prefix: "xifw" },
+  /* The third Friends game, launched 28 September 2026. */
+  { id: "lightning_fr", dir: "friends/lightning", name: "Lightning Round XI: Friends", prefix: "xifl" },
 ];
 
 const workflow = read(".github/workflows/checks.yml");
@@ -699,6 +701,10 @@ t("the server's game list and this table agree", (() => {
        a door and a score. The DAY is what dates it and what keys it, so this
        row is the one that would catch a prefix or a date field going missing. */
     whoami_fr: { game: "whoami_fr", day: "2026-09-22", no: 20, slot: 2, solved: true, score: 6 },
+    /* Lightning Round's row as the page banks it: the server's day, the
+       board number, the score and the moment the run finished. */
+    lightning_fr: { game: "lightning_fr", day: "2026-09-28", no: 11, score: 14, answered: 20, wrong: 6,
+      marks: [1, 0, 1], at: 1790640000000 },
   };
   {
     const { playedOn } = await import("../functions/_lib/games.js");
@@ -1048,8 +1054,10 @@ t("and no game writes the link itself", (() => {
   return guilty.length === 0;
 })(), "the href lives once, in shared/xi-chrome.js");
 
-const SHARED_TAG = "v82";
-/* The bytes that ship AS v82, AND THE TAG HAD TO MOVE FOR THEM.
+const SHARED_TAG = "v83";
+/* The bytes that ship AS v83, AND THE TAG HAD TO MOVE FOR THEM.
+   v82 WAS LIVE when Lightning Round XI: Friends took the third Friends shirt (the squad, the reset's prefix and the streak probe), so v82 -> v83 across every page and site-page.js's constant.
+   The note below is the move before this one.
    v81 WAS LIVE when More games columns shrink on phones, so v81 -> v82 across every page and site-page.js's constant.
    The note below is the move before this one.
    v80 WAS LIVE when Friends streaks; theme-aware game ids, so v80 -> v81 across every page and site-page.js's constant.
@@ -1119,7 +1127,7 @@ const SHARED_TAG = "v82";
    v53, which is this project's oldest fault in miniature: a measurement left
    standing after it stopped being true, in the comment that tells the next
    reader whether they may leave the tag alone. */
-const SHARED_HASH = "82519f04098d7dfe";
+const SHARED_HASH = "ade01c34a39122b4";
 /* MOVED AGAIN WITHOUT THE TAG MOVING, which is the other half of the rule
    above and is worth showing rather than only stating. xi-chrome.js changed a
    second time in the same unpushed run -- the Friends squad slot going from

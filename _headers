@@ -85,6 +85,19 @@
 /friends/whoami/js/*
   Cache-Control: public, max-age=31536000, immutable
 
+# LIGHTNING ROUND XI: FRIENDS — the third game of the second theme, same three rules.
+/friends/lightning/
+  Cache-Control: no-store
+
+/friends/lightning/index.html
+  Cache-Control: no-store
+
+/friends/lightning/css/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/friends/lightning/js/*
+  Cache-Control: public, max-age=31536000, immutable
+
 # XI Word Search — same three rules as the crossword, one pair per game.
 /football/wordsearch/
   Cache-Control: no-store

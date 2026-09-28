@@ -455,6 +455,18 @@ jobs:
           # Named here and never run in CI, for the same reason as every other
           # live_check: it reads the DEPLOYED site.
           #   ->  node friends/whoami/live_check.mjs --expect v001a
+          # LIGHTNING ROUND XI: FRIENDS, IN BUILD. Sixty seconds of four-option
+          # questions, and the deal, the clock and the marking are the server's.
+          # Runs every statement against the real migration (047) in
+          # node:sqlite: the 20/50/30 mix after an Easy opener, no leak pair or
+          # duplicate in one run, practice avoiding what was seen, the late
+          # grace and nothing later, and NO ANSWER in any response until the run
+          # is over (the owner, 28 Sep 2026). The real pool lives outside the
+          # repo, so here it checks the fixture and says the real one was not.
+          node friends/lightning/round_test.mjs
+          # Named here and never run in CI, like every live_check: it reads the
+          # DEPLOYED site, and it plays one practice run against production.
+          #   ->  node friends/lightning/live_check.mjs --expect v001a
           # And what leaves the server when a door is opened. Who Am I is the
           # hardest secrecy problem in this family so far, and the reason is
           # arithmetic: only ONE door is played per person per day and the other
@@ -724,6 +736,12 @@ jobs:
           # including an address written into a COMMENT in shared/xi-chrome.js,
           # which ships unminified to every page on the site.
           node friends/whoami/deploy_check.mjs
+          # LIGHTNING ROUND XI: FRIENDS'S GATE, in both places like every gate.
+          # While it is in build it refuses the game being FOUND: its name, its
+          # address or its id in any other served file (comments included), a
+          # missing noindex, or a canonical. And it refuses the page reading an
+          # answer off a verdict mid-run -- answers are held to the end.
+          node friends/lightning/deploy_check.mjs
 
   render:
     name: Sixteen viewports, real browser
