@@ -398,7 +398,15 @@ export const themeHubPath = (theme) => "/" + theme + "/";
    still shows Football only, only /Friends shows frineds games". Read by the
    root (functions/index.js), the sitemap and the crossword's gate, so the
    three cannot disagree about which hub is the front door. */
-export const ROOT_THEME = "football";
+/* NONE, SINCE 29 SEP 2026: THE ROOT IS THE THEME PICKER. The owner, 29 Sep 2026: "make the theme selector now / Only Friends and
+   Football so far / make it look good" -- after the ruling of 28 Sep that the
+   all-in-one app "links to Thexigames.com which will be the theme selector".
+   It replaces the ruling of 27 Sep ("TheXIGames.com still shows Football
+   only").
+   Null is read by the root (functions/index.js serves the picker), the sitemap
+   (every theme's hub is listed) and the crossword gate (the football hub is
+   canonical at its own address). */
+export const ROOT_THEME = null;
 export const themeHubFile = (theme) => theme + "/index.html";
 
 /* EVERY THEME THAT HAS A GAME, derived from THEME_OF rather than listed again.

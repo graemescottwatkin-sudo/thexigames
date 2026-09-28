@@ -203,7 +203,12 @@
      https://www.thexigames.com/Football/ / Friends should go to:
      https://www.thexigames.com/friends/". The root is football's by ruling,
      so a Friends page linking to "/" sent its player into football. */
-  function homeHref() { return appName() === "quizzes" ? "/" : "/" + themeHere() + "/"; }
+  /* The picker's own wordmark stays on the picker: its first segment is
+     empty, and themeHere() would read that as football. */
+  function homeHref() {
+    if (appName() === "quizzes" || (location.pathname || "/") === "/") return "/";
+    return "/" + themeHere() + "/";
+  }
 
   /* WHICH OF THE APPS THIS PAGE IS IN, from the user agent's `XIApp/<name>`
      (MobileApp, 28 Sep 2026: "XIGamesApp/<version> XIApp/football" and

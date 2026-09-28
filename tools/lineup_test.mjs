@@ -277,9 +277,38 @@ console.log("\n/friends/archive/, run");
     theirs.length >= 10 && theirs.every((g) => !page.includes(gamePath(g))));
   const { onRequestGet: sitemap } = await import("../functions/sitemap.xml.js");
   const xml = await (await sitemap({ env: {}, request: new Request("https://www.thexigames.com/sitemap.xml") })).text();
-  t("the sitemap offers /friends/ and both its games, and not /football/",
-    ["/friends/", "/friends/crossword/", "/friends/whoami/"].every((u) => xml.includes("https://www.thexigames.com" + u + "<"))
-      && !xml.includes("https://www.thexigames.com/football/<"));
+  /* /football/ IS LISTED SINCE 29 SEP 2026: the root is the theme picker, and
+     the football hub is a page in its own right, canonical at its address. */
+  t("the sitemap offers the picker, both theme hubs and the Friends games",
+    ["/", "/football/", "/friends/", "/friends/crossword/", "/friends/whoami/"].every((u) => xml.includes("https://www.thexigames.com" + u + "<")));
+}
+
+/* THE ROOT IS THE THEME PICKER (the owner, 29 Sep 2026: "make the theme
+   selector now / Only Friends and Football so far / make it look good").
+   Run, not read: the real route, and what it answers. */
+console.log("\n/, run");
+{
+  const { onRequest, listedThemes } = await import("../functions/index.js");
+  const { GAMES, isListed } = await import("../functions/_lib/games.js");
+  const { themeOf } = await import("../functions/_lib/permalink.js");
+  let asked = null;
+  const r = await onRequest({ env: { ASSETS: { fetch: (u) => { asked = String(u); return new Response("the football hub"); } } },
+    request: new Request("https://www.thexigames.com/") });
+  const page = await r.text();
+  t("the root answers the picker itself, not a theme's hub", r.status === 200 && asked === null && page.includes('class="pk-themes"'),
+    asked ? "served " + asked : String(r.status));
+  const themes = listedThemes();
+  t("PRECONDITION: two themes are listed, football and friends", themes.join() === "football,friends", themes.join());
+  const hrefs = [...page.matchAll(/class="pk-card pk-([a-z]+)" href="([^"]+)"/g)].map((m) => m[1] + " " + m[2]);
+  t("a card for each theme, pointing at its hub", hrefs.join(" | ") === "football /football/ | friends /friends/", hrefs.join(" | "));
+  const counts = themes.map((th) => GAMES.filter((g) => themeOf(g) === th && isListed(g)).length);
+  t("each card counts its theme's listed games, from the games list",
+    themes.every((th, i) => page.includes(counts[i] + " daily game")), counts.join(", "));
+  t("and names them without repeating the theme", page.includes("<span>Lightning Round XI</span>") &&
+    !page.includes("Crossword XI: Friends</span>"));
+  t("it is canonical at the root, and indexable", page.includes('<link rel="canonical" href="https://www.thexigames.com/">') &&
+    !page.includes("noindex"));
+  t("and it shows no show imagery: no image at all", !/<img|url[(]/.test(page));
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

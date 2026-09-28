@@ -14,6 +14,9 @@
   --paper:#F4F5F2; --card:#FFFFFF;
   --ink:#182219; --ink-soft:#5A675D; --ink-faint:#8A968D;
   --pitch:#1E6B45; --pitch-deep:#123B27;
+  /* The Friends theme's own colour, first worn by its card on the theme
+     picker (29 Sep 2026): a plum, with the family's gold as its accent. */
+  --friends:#5B3A72; --friends-deep:#3B2350;
   --gold:#F2C94C; --gold-ink:#3A2D00; --xi-ink:#8A5A00;
   --line:#D9DDD6; --danger:#8E2F45; --ok:#1E6B45;
   --tint:rgba(24,34,25,.06); --tint-strong:rgba(24,34,25,.12);
@@ -76,6 +79,7 @@
   --accent:var(--pitch); --accent-ink:#8FD9AE; --accent-on:#0C1A11;
   --ink:#EAF0E8; --ink-soft:#A9B5A9; --ink-faint:#76816F;
   --pitch:#2C8A5C; --pitch-deep:#0D2B1C;
+  --friends:#6E4A8A; --friends-deep:#2A1838;
   --gold:#F2C94C; --gold-ink:#3A2D00; --xi-ink:#F2C94C;
   --line:#2C352A; --danger:#D9758C; --ok:#61DDA1;
   --tint:rgba(234,240,232,.07); --tint-strong:rgba(234,240,232,.14);

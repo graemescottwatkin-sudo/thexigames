@@ -63,14 +63,22 @@ assumed it. The id must not change when the theme does.
 Old paths 301 to the new ones and always will: `/crossword/daily/5` is somebody's
 link.
 
-**THE ROOT IS FOOTBALL BY RULING, NOT BY COUNT.** This section used to say that
-the day a second theme was listed, `/` would become a theme picker. The owner
-ruled otherwise on 27 Sep 2026 (quoted above): `/` serves the football hub and
-names no Friends game, and `/friends/` is the Friends front door, with
-`/friends/archive/` behind it. `ROOT_THEME` in `functions/_lib/permalink.js` is
-the fact. The root route, the sitemap (which lists every OTHER listed theme's
-hub) and the crossword gate all read it. The picker code in
-`functions/index.js` is kept and unreachable.
+**THE ROOT IS THE THEME PICKER, since 29 Sep 2026.** The owner: "make the
+theme selector now / Only Friends and Football so far / make it look good".
+That ended the 27 Sep ruling ("TheXIGames.com still shows Football only"),
+under which `/` served the football hub for two days. `ROOT_THEME` in
+`functions/_lib/permalink.js` is the fact, and it is `null`: the root route
+renders the picker, the sitemap lists every listed theme's hub (`/football/`
+included), and the crossword gate wants the football hub canonical at
+`/football/`. Set `ROOT_THEME` to a theme and all three go back to that theme's
+hub, together.
+The picker (`picker()` in `functions/index.js`) is COUNTED, not written. It has
+a card per listed theme, each card lists that theme's listed games in launch
+order, and the counts come from `GAMES`. So a launch or a new theme reaches the
+front door with no edit there, and an unlisted game never appears. Each card
+carries its theme's colour (`--pitch`; `--friends` in `shared/xi-tokens.css`)
+and a motif drawn in CSS. There is no image, and never show imagery. The
+all-in-one Quizzes app opens `/`; the football app opens `/football/`.
 
 ## The tag law (non-negotiable)
 

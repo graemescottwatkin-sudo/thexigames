@@ -86,8 +86,12 @@ t("and no stale hub is left at the root to be served beside it",
      a theme's hub, that hub is canonical at the root, as it always was. */
   const rootSrc = fs.readFileSync(path.join(ROOT, "functions", "_lib", "permalink.js"), "utf8")
     .replace(/\/\*[\s\S]*?\*\//g, " ");
-  const rootTheme = (rootSrc.match(/export const ROOT_THEME = "([a-z]+)"/) || [])[1] || null;
-  t("PRECONDITION: the root states which theme it serves", !!rootTheme, String(rootTheme));
+  /* A theme's name, or null: null is the picker (since 29 Sep 2026). A file
+     that states neither is the precondition failing. */
+  const rootDecl = rootSrc.match(/export const ROOT_THEME = (null|"([a-z]+)");/);
+  const rootTheme = rootDecl ? (rootDecl[2] || null) : undefined;
+  t("PRECONDITION: the root states which theme it serves, or that it is the picker",
+    rootTheme !== undefined, String(rootTheme));
   const wantRoot = rootTheme === "football";
   const want = wantRoot ? "https://www.thexigames.com/"
                         : "https://www.thexigames.com" + themeHubPath("football");

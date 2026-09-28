@@ -31,7 +31,7 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>The XI Games — daily football puzzles</title>
 <meta name="description" content="Eleven daily football puzzles from The XI Games: a crossword, a word search, anagrams, higher or lower, a quiz and more. A new board every day, free.">
-<link rel="canonical" href="https://www.thexigames.com/">
+<link rel="canonical" href="https://www.thexigames.com/football/">
 
 <!-- VERIFIED BY DNS, so there is no verification tag on this page and there
      should not be one. thexigames.com is a Search Console DOMAIN property,
@@ -78,7 +78,7 @@
 </script>
 <meta property="og:title" content="The XI Games — daily football puzzles">
 <meta property="og:description" content="Eleven daily football puzzles. A new board every day.">
-<meta property="og:url" content="https://www.thexigames.com/">
+<meta property="og:url" content="https://www.thexigames.com/football/">
 <meta property="og:type" content="website">
 <meta property="og:image" content="https://www.thexigames.com/football/og-image.png">
 <meta name="twitter:card" content="summary_large_image">
@@ -91,9 +91,9 @@
      own — the team sheet and the kit colours. -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/shared/xi-tokens.css?v=v84">
-<link rel="stylesheet" href="/shared/xi-chrome.css?v=v84">
-<script src="/shared/xi-theme.js?v=v84"></script>
+<link rel="stylesheet" href="/shared/xi-tokens.css?v=v85">
+<link rel="stylesheet" href="/shared/xi-chrome.css?v=v85">
+<script src="/shared/xi-theme.js?v=v85"></script>
 <style>
 :root{
 
@@ -559,12 +559,12 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
 
 <!-- The shared footer, built by shared/xi-chrome.js. -->
 <footer class="xic-foot"></footer>
-<script src="/shared/xi-season.js?v=v84"></script>
-<script src="/shared/xi-chrome.js?v=v84"></script>
+<script src="/shared/xi-season.js?v=v85"></script>
+<script src="/shared/xi-chrome.js?v=v85"></script>
 <!-- AFTER xi-chrome.js, because xi-played.js joins its probe to the squad and
      the squad is declared there. Before the inline script below, which calls
      XIPlayed.list() while it builds the shirts. -->
-<script src="/shared/xi-played.js?v=v84"></script>
+<script src="/shared/xi-played.js?v=v85"></script>
 
 <script>
 /* Progressive enhancement only: everything above is complete without this.
@@ -837,7 +837,7 @@ a.soon-card:hover .nm,a.soon-card:focus-visible .nm{color:var(--ink)}
         var left = 2, ok = true;
         /* ROOT-ABSOLUTE, like every asset on this page: it is served at / and
            at /football/, and a relative path resolves differently at each. */
-        ["/shared/xi-seasons.js?v=v84", "/shared/xi-table.js?v=v84"].forEach(function (src) {
+        ["/shared/xi-seasons.js?v=v85", "/shared/xi-table.js?v=v85"].forEach(function (src) {
           var el = document.createElement("script");
           el.src = src;
           el.onload = function () { if (!--left) done(ok); };

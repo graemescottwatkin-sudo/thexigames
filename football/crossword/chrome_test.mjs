@@ -52,7 +52,9 @@ const ws = render("football/wordsearch/index.html", "https://www.thexigames.com/
    masthead and footer and the two static pages their own, so the front door
    and a policy page read as different sites from the games they belong to. */
 const sc = render("football/scrambled/index.html", "https://www.thexigames.com/football/scrambled/");
-const hub = render(themeHubFile("football"), "https://www.thexigames.com/");
+/* The football hub at its own address: since 29 Sep 2026 the site root is the
+   theme picker, and the hub is /football/. */
+const hub = render(themeHubFile("football"), "https://www.thexigames.com/football/");
 const priv = render("football/crossword/privacy.html", "https://www.thexigames.com/football/crossword/privacy.html");
 const htp = render("football/crossword/how-to-play.html", "https://www.thexigames.com/football/crossword/how-to-play.html");
 const frc = render("friends/crossword/index.html", "https://www.thexigames.com/friends/crossword/");
@@ -77,6 +79,15 @@ for (const [name, doc, home] of [["crossword", cw, "/football/"], ["wordsearch",
    header used to have no navigation whatsoever. Both must carry a bar. */
 t("the crossword carries a bar in BOTH its views, so a board is never a dead end",
   fs.readFileSync("football/crossword/index.html", "utf8").split('class="xic-bar"').length - 1 === 2);
+
+/* THE PICKER'S OWN WORDMARK STAYS ON THE PICKER: the root's first segment is
+   empty, which themeHere() reads as football, so without its own rule the
+   wordmark on the theme picker sent a reader into football. */
+{
+  const at = render(themeHubFile("football"), "https://www.thexigames.com/");
+  const hs = [...at.querySelectorAll(".xic-bar .xic-home, .xic-drawer .xic-home")].map((a) => a.getAttribute("href"));
+  t("on the site root, the theme picker, the wordmark goes to the root", hs.length >= 2 && hs.every((h) => h === "/"), hs.join(" "));
+}
 
 /* THE TWO APPS (the owner, 28 Sep 2026: "football app links to
    thexigames.com/football / universal links to Thexigames.com"). In the
