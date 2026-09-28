@@ -47,6 +47,22 @@ import { fold, today } from "./wadata.js";
    generator deals the same number; the gate asserts the two agree. */
 export const DOORS = 5;
 
+/* THE KEY A FRIENDS ANSWER IS STORED AND JUDGED UNDER. The owner, 28 Sep 2026,
+   asked whether a typed answer should ignore a leading "the" or "a": "yes
+   ignore the and a". So those words are dropped from the FRONT before the
+   family's fold -- "The Apartment", "a pizza" and "apartment" are one key --
+   and nowhere else, so a name with "the" inside it is untouched. A lone word
+   stays: an answer that IS "A" is still "A".
+   ONE FUNCTION FOR BOTH SIDES: tools/import_friendswhoami.js stores every
+   answer under it and wa-play.js judges every guess under it, so the two
+   cannot disagree about what a player typed. Football's answers keep fold(). */
+const ARTICLES = ["the", "a"];
+export function answerKey(text) {
+  const words = String(text == null ? "" : text).trim().split(" ").filter(Boolean);
+  while (words.length > 1 && ARTICLES.includes(words[0].toLowerCase())) words.shift();
+  return fold(words.join(" "));
+}
+
 /* WHAT THE PLAYER MAY SEE OF A DOOR. A slot and a section. There is no third
    field, and adding one is how a door starts naming its card. */
 export function publicDoor(row) {

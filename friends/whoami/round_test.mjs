@@ -231,6 +231,29 @@ console.log("\nThe ring");
   t("one wrong guess, then right on the first clue: seventeen", got.solved && got.score === 17, String(got.score));
 }
 
+/* A LEADING "THE" OR "A" IS IGNORED (the owner, 28 Sep 2026: "yes ignore the
+   and a"), on the Friends deck only. */
+console.log("\nThe and a");
+{
+  const { answerKey } = await import("../../functions/_lib/frwa-data.js");
+  t("a leading the or a is dropped before the fold",
+    answerKey("The Apartment") === "APARTMENT" && answerKey("a pizza") === "PIZZA" &&
+      answerKey("  THE   Rachel Green ") === "RACHELGREEN", answerKey("The Apartment"));
+  t("but only from the front, and a lone word stays",
+    answerKey("Rachel the Waitress") === "RACHELTHEWAITRESS" && answerKey("A") === "A" && answerKey("the") === "THE");
+  for (const typed of ["The Rachel Green", "a rachel green"]) {
+    const { env } = makeEnv(true);
+    const open = await openRound(env, "2026-09-22", 2, "whoami_fr");
+    await buyClue(env, await getRound(env, open.playId, "whoami_fr"), 1, "whoami_fr");
+    const got = await judgeGuess(env, await getRound(env, open.playId, "whoami_fr"), typed, "whoami_fr");
+    t(`"${typed}" is Rachel Green`, got.solved === true, got.verdict);
+  }
+  const { env: fenv } = makeEnv(false);
+  const fopen = await openRound(fenv, "2026-09-22", 3, undefined);
+  const fg = await judgeGuess(fenv, await getRound(fenv, fopen.playId, undefined), "The Petr Cech", undefined);
+  t("football's judge is unchanged: no article is dropped there", fg.solved !== true, fg.verdict);
+}
+
 console.log("\nGiving up, which is not a substitution");
 {
   const { env } = makeEnv(true);

@@ -138,6 +138,10 @@ function placeOf(n, rounds) {
  * there cannot diverge, including the day somebody teaches the fold about a new
  * accent. */
 import { fold } from "../functions/_lib/wadata.js";
+/* ANSWERS ARE STORED UNDER THE KEY THEY ARE JUDGED UNDER: answerKey drops a
+   leading "the" or "a" (the owner, 28 Sep 2026), and wa-play.js asks the same
+   function of every guess. */
+import { answerKey } from "../functions/_lib/frwa-data.js";
 
 /* AND A SECOND NORMALISER, FOR PROSE, WHICH IS A DIFFERENT JOB. The
    self-naming check needs WORDS, so it needs the spaces that fold() removes --
@@ -192,7 +196,9 @@ for (const c of cards) {
     }
   });
 
-  const accepts = (c.accept || []).map(fold).filter(Boolean);
+  /* ONCE PER CARD: "Monkey" and "The Monkey" are one key now, and a card
+     listing both is one card accepting it, not two. */
+  const accepts = [...new Set((c.accept || []).map(answerKey).filter(Boolean))];
   if (!accepts.length) {
     faults.push(`${c.id} "${c.name}": no accepted answer, so the card cannot be won`);
   }
@@ -341,7 +347,7 @@ for (const c of cards) {
   const seen = new Set();
   for (const [list, kind] of [[c.accept || [], "accept"], [c.find || [], "suggest"]]) {
     for (const raw of list) {
-      const a = fold(raw);
+      const a = answerKey(raw);
       /* ACCEPT WINS OVER SUGGEST for the same string on the same card: the
          lists overlap by design (Rachel's name is in both), and the primary key
          is (answer, card_id), so inserting both would be a constraint error on

@@ -290,7 +290,10 @@ export async function judgeGuess(env, round, guess, game) {
   /* FOLDED ONCE, HERE, and handed to the game folded. Both decks stored their
      keys with this same fold; folding again inside each judge would be two
      copies of the rule that agree until one of them is tuned. */
-  const key = fold(guess);
+  /* A DECK MAY HAVE ITS OWN KEY: the Friends deck drops a leading "the" or
+     "a" (frwa-data.js answerKey, the owner's ruling of 28 Sep 2026), and stores
+     its answers under the same function. Football's is the family fold. */
+  const key = w.data.answerKey ? w.data.answerKey(guess) : fold(guess);
   if (!key) return { error: "no guess" };
 
   const door = await doorOf(env, game, round.play_date, round.slot);
