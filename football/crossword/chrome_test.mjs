@@ -30,9 +30,11 @@ const tokens = fs.readFileSync("shared/xi-tokens.css", "utf8");
 
 /* Render a page the way a browser does: the shared script, then look at what
    it built. Reading the HTML alone would only prove a placeholder exists. */
-function render(path, url) {
+function render(path, url, userAgent) {
   const dom = new JSDOM(fs.readFileSync(path, "utf8"),
     { runScripts: "outside-only", url });
+  /* WHICH APP, when a check is about one: the user agent the app sends. */
+  if (userAgent) Object.defineProperty(dom.window.navigator, "userAgent", { value: userAgent, configurable: true });
   dom.window.eval(themeJs);
   dom.window.eval(chromeJs);
   dom.window.XIChrome.init();
@@ -75,6 +77,33 @@ for (const [name, doc, home] of [["crossword", cw, "/football/"], ["wordsearch",
    header used to have no navigation whatsoever. Both must carry a bar. */
 t("the crossword carries a bar in BOTH its views, so a board is never a dead end",
   fs.readFileSync("football/crossword/index.html", "utf8").split('class="xic-bar"').length - 1 === 2);
+
+/* THE TWO APPS (the owner, 28 Sep 2026: "football app links to
+   thexigames.com/football / universal links to Thexigames.com"). In the
+   all-in-one Quizzes app the wordmark goes to the site root; in the football
+   app to the football hub; and the Football app's "Get XI Quizzes" is not drawn
+   until its store addresses exist. */
+console.log("\nThe apps");
+{
+  const homes = (d) => [...d.querySelectorAll(".xic-bar .xic-home, .xic-drawer .xic-home")].map((a) => a.getAttribute("href"));
+  const qz = render("friends/crossword/index.html", "https://www.thexigames.com/friends/crossword/",
+    "Mozilla/5.0 (iPhone) XIGamesApp/0.2.0 XIApp/quizzes");
+  t("in the Quizzes app the wordmark goes to the site root, even on a Friends page",
+    homes(qz).length >= 2 && homes(qz).every((h) => h === "/"), homes(qz).join(" "));
+  const fb = render("football/crossword/index.html", "https://www.thexigames.com/football/crossword/",
+    "Mozilla/5.0 (iPhone) XIGamesApp/0.2.0 XIApp/football");
+  t("in the Football app it goes to the football hub", homes(fb).length >= 2 && homes(fb).every((h) => h === "/football/"), homes(fb).join(" "));
+  t("and the Get XI Quizzes button is not drawn while its store pages do not exist",
+    !fb.querySelector(".xic-quizzes"));
+  const old = render("football/crossword/index.html", "https://www.thexigames.com/football/crossword/",
+    "Mozilla/5.0 (iPhone) XIGamesApp/0.1.9");
+  t("an app build from before the XIApp token is the football app",
+    old.chrome.app() === "football" && fb.chrome.app() === "football" && qz.chrome.app() === "quizzes", old.chrome.app());
+  t("and the football app is offered no store page until one exists", fb.chrome.quizzesOffer() === null);
+  const web = render("football/crossword/index.html", "https://www.thexigames.com/football/crossword/");
+  t("and on the web: no app, no button, and the theme's hub", web.chrome.app() === null && !web.querySelector(".xic-quizzes") &&
+    homes(web).every((h) => h === "/football/"));
+}
 
 console.log("\nThe squad is declared once");
 t("neither game's HTML lists the games itself", (() => {

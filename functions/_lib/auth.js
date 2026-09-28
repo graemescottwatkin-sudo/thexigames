@@ -87,7 +87,9 @@ export async function verifyGoogleIdToken(idToken, clientId, keysFn = googleKeys
    the Friends app's tokens carry its own bundle id, so the list is the list
    of apps, not one value. APPLE_AUDIENCE in the environment may override it
    (comma-separated). */
-export const APPLE_AUDIENCES = ["com.thexigames.app", "com.thexigames.friends"];
+/* THE FRIENDS TEST APP IS RETIRED (it was TestFlight only); the all-in-one
+   "The XI Games: Quizzes" app took its place (the owner, 28 Sep 2026). */
+export const APPLE_AUDIENCES = ["com.thexigames.app", "com.thexigames.quizzes"];
 export const APPLE_AUDIENCE = APPLE_AUDIENCES[0];
 const APPLE_ISSUER = "https://appleid.apple.com";
 let appleJwks = { keys: null, at: 0 };

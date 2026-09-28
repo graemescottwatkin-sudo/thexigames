@@ -160,15 +160,19 @@ t("a properly signed Apple token is accepted", await (async () => {
 /* AN APP PER THEME, since 28 Sep 2026: the Friends app's tokens carry its own
    bundle id and must be accepted too -- and only because it is on the list. */
 t("the audiences are exactly our two apps' bundle ids",
-  JSON.stringify(APPLE_AUDIENCES) === JSON.stringify(["com.thexigames.app", "com.thexigames.friends"]), JSON.stringify(APPLE_AUDIENCES));
-t("a token issued for the Friends app is accepted", await (async () => {
+  JSON.stringify(APPLE_AUDIENCES) === JSON.stringify(["com.thexigames.app", "com.thexigames.quizzes"]), JSON.stringify(APPLE_AUDIENCES));
+t("a token issued for the Quizzes app is accepted", await (async () => {
   try {
-    const c = await verifyAppleIdToken(makeToken({ ...appleValid(), aud: "com.thexigames.friends" }), APPLE_AUDIENCES, RAW_NONCE, jwks);
+    const c = await verifyAppleIdToken(makeToken({ ...appleValid(), aud: "com.thexigames.quizzes" }), APPLE_AUDIENCES, RAW_NONCE, jwks);
     return c.sub === "001234.apple-user.0001";
   } catch (e) { return false; }
 })());
 t("but not against a list that does not name it", await (async () => {
-  try { await verifyAppleIdToken(makeToken({ ...appleValid(), aud: "com.thexigames.friends" }), [APPLE_AUDIENCE], RAW_NONCE, jwks); return false; }
+  try { await verifyAppleIdToken(makeToken({ ...appleValid(), aud: "com.thexigames.quizzes" }), [APPLE_AUDIENCE], RAW_NONCE, jwks); return false; }
+  catch (e) { return true; }
+})());
+t("and the retired Friends test app is no longer accepted", await (async () => {
+  try { await verifyAppleIdToken(makeToken({ ...appleValid(), aud: "com.thexigames.friends" }), APPLE_AUDIENCES, RAW_NONCE, jwks); return false; }
   catch (e) { return true; }
 })());
 for (const [name, claims, key, raw] of [

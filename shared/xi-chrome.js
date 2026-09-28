@@ -203,7 +203,36 @@
      https://www.thexigames.com/Football/ / Friends should go to:
      https://www.thexigames.com/friends/". The root is football's by ruling,
      so a Friends page linking to "/" sent its player into football. */
-  function homeHref() { return "/" + themeHere() + "/"; }
+  function homeHref() { return appName() === "quizzes" ? "/" : "/" + themeHere() + "/"; }
+
+  /* WHICH OF THE APPS THIS PAGE IS IN, from the user agent's `XIApp/<name>`
+     (MobileApp, 28 Sep 2026: "XIGamesApp/<version> XIApp/football" and
+     "... XIApp/quizzes"). The owner's rulings that day: two apps, a football
+     one and an all-in-one "The XI Games: Quizzes" -- "football app links to
+     thexigames.com/football / universal links to Thexigames.com which will be
+     the theme selector eventually". An app build from before the token is the
+     football app, the only one there was, so XIGamesApp alone reads as that.
+     Not in an app: null. */
+  function appName() {
+    var ua = (typeof navigator !== "undefined" && navigator.userAgent) || "";
+    var m = ua.match(/XIApp[/]([a-z]+)/);
+    if (m) return m[1];
+    return ua.indexOf("XIGamesApp/") > -1 ? "football" : null;
+  }
+
+  /* THE ALL-IN-ONE APP, OFFERED FROM THE FOOTBALL APP ONLY (the owner, 28 Sep
+     2026: "we can have a button inside the football one saying to download the
+     all in one app including football"). The store pages do not exist yet, so
+     both addresses are null and the button is not drawn; MobileApp sends them
+     when the listings are live, and setting them here is the whole change. */
+  var QUIZZES_STORE = { ios: null, android: null };
+  function quizzesOffer() {
+    if (appName() !== "football") return null;
+    var ua = (typeof navigator !== "undefined" && navigator.userAgent) || "";
+    var ios = /iPhone|iPad|iPod|Macintosh/.test(ua);
+    var href = ios ? QUIZZES_STORE.ios : (ua.indexOf("Android") > -1 ? QUIZZES_STORE.android : null);
+    return href || null;
+  }
 
   var SQUAD = SQUADS[themeHere()];
 
@@ -1011,6 +1040,16 @@
     drawer.appendChild(el("div", "xic-dlabel", "The squad"));
     drawer.appendChild(squadList());
 
+    /* "Get XI Quizzes": football plus more quizzes, and no other theme named. */
+    var offer = quizzesOffer();
+    if (offer) {
+      var get = el("a", "xic-dlink xic-quizzes", "Get XI Quizzes: football plus more quizzes");
+      get.href = offer;
+      get.target = "_blank";
+      get.rel = "noopener";
+      drawer.appendChild(get);
+    }
+
     var foot = el("div", "xic-dfoot");
     /* Settings first, because on a narrow phone the bar drops its Settings
        button and this is where it lives instead. */
@@ -1629,7 +1668,7 @@
      cannot see it: it proves a file parses, not that it runs. That is the third
      time today a name has been removed from one place and left referenced in
      another, and the second time it would have taken the whole site down. */
-  window.XIChrome = { init: init, squad: SQUAD, squads: SQUADS,
+  window.XIChrome = { init: init, squad: SQUAD, squads: SQUADS, app: appName, quizzesOffer: quizzesOffer,
                       theme: themeHere, pages: pagesHere, close: close,
     formChips: formChips, formBand: band, FORM_LENGTH: FORM_LENGTH,
     playedToday: playedToday, playedTodaySync: playedTodaySync,
