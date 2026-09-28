@@ -467,6 +467,20 @@ jobs:
           # Named here and never run in CI, like every live_check: it reads the
           # DEPLOYED site, and it plays one practice run against production.
           #   ->  node friends/lightning/live_check.mjs --expect v001a
+          # WORDSEARCH XI: FRIENDS, IN BUILD. Football's word search with a
+          # list of CLUES, so the answers are what is hunted and the served
+          # daily must carry none of them. Every route runs its real SQL against
+          # migration 048 in node:sqlite: the release rule, the server's
+          # judging, fouls, a round whose board stops being today's (answered
+          # `stale`, not judged against the old board), and no answer revealed
+          # until the round is over. The real boards live outside the repo, so
+          # here it checks the fixture and says the real ones were not.
+          node friends/wordsearch/round_test.mjs
+          # And the page, played through in jsdom with its fetch routed into
+          # those same handlers: clues without answers, a drag judged by the
+          # server, a reload resuming the round, full time, the answers named
+          # when time runs out, and the board changing under an open page.
+          node friends/wordsearch/journey_test.mjs
           # And what leaves the server when a door is opened. Who Am I is the
           # hardest secrecy problem in this family so far, and the reason is
           # arithmetic: only ONE door is played per person per day and the other
@@ -742,6 +756,12 @@ jobs:
           # missing noindex, or a canonical. And it refuses the page reading an
           # answer off a verdict mid-run -- answers are held to the end.
           node friends/lightning/deploy_check.mjs
+          # WORDSEARCH XI: FRIENDS'S GATE, in build. It refuses the game being
+          # FOUND (its name, address, id or API in any other served file), a
+          # missing noindex, any board or load file in the repository, a table
+          # outside fr_ws_*, and a copy of football's rules where the import
+          # belongs: the drag geometry and the score are football's own files.
+          node friends/wordsearch/deploy_check.mjs
 
   render:
     name: Sixteen viewports, real browser

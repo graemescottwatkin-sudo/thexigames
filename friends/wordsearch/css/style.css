@@ -1,0 +1,327 @@
+/* Wordsearch XI: Friends — style.css. Forked from football/wordsearch/css/style.css;
+ * the Friends additions (a list of clues, not names) are at the end.
+ * Palette, type and the mark come from ../shared/xi-tokens.css and are not
+ * restated here; anything with a board, grid or cell in its name is this
+ * game's own, because the crossword's --cell is a crossword square and this
+ * game has no squares to fill, only letters to find.
+ *
+ * THE LAYOUT RULE (from the brief, and it drives everything below):
+ * the board is the bottom of the used space. .main takes its height from the
+ * grid; the panel on the right is clamped to that height and scrolls inside
+ * itself. There is no strip under the board — no active clue, no keyboard —
+ * because this game needs neither.
+ */
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--paper);color:var(--ink);font:15px/1.45 var(--body)}
+button,select{font:inherit}
+button{touch-action:manipulation;cursor:pointer}
+.hidden{display:none!important}
+h1,h2,h3{font-family:var(--disp);letter-spacing:.01em;margin:0}
+:focus-visible{outline:2px solid var(--pitch);outline-offset:2px}
+
+/* ---- masthead --------------------------------------------------------
+   Gone. The bar is shared/xi-chrome.css now — one bar for every game rather
+   than each game growing its own. These rules were the second chrome in the
+   family and the reason the two games looked nothing alike. */
+
+/* ---- pre-match ------------------------------------------------------- */
+.prematch{display:grid;place-items:center;padding:36px 16px}
+.pmCard{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:28px 26px;max-width:460px;width:100%;text-align:center}
+.eyebrow{font-family:var(--disp);font-weight:600;text-transform:uppercase;letter-spacing:.14em;font-size:12px;color:var(--pitch)}
+.pmCard h1{font-size:44px;line-height:1;margin:6px 0 10px;text-transform:uppercase}
+.pmLede{color:var(--ink-soft);margin:0 0 18px}
+.modes{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.mode{background:var(--tint);border:1px solid var(--line);border-radius:10px;padding:12px 10px;text-align:left;color:var(--ink);min-height:var(--tap)}
+.mode strong{display:block;font-family:var(--disp);text-transform:uppercase;letter-spacing:.04em}
+.mode span{display:block;font-size:12px;color:var(--ink-soft);margin-top:2px}
+.mode.active{border-color:var(--pitch);background:var(--card);box-shadow:inset 0 0 0 1px var(--pitch)}
+/* A card that is a link looks like the cards that are buttons. */
+/* KICK OFF ON THE BOARD. A chosen board opens in the game with its letters
+   and its eleven covered, and this card over the grid waits. The letters are
+   drawn but transparent, so the board is the right size before it starts and
+   nothing can be read through the cover. */
+.boardWrap .gridShell{position:relative}
+.kickCover{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;padding:16px;background:color-mix(in srgb,var(--paper) 78%,transparent);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);z-index:3}
+.kickCard{width:min(100%,360px);background:var(--card);border:1px solid var(--line);border-left:4px solid var(--pitch);border-radius:8px;padding:14px 16px;box-shadow:var(--shadow-2);text-align:left}
+.kickTitle{font-family:var(--disp);font-weight:700;font-size:19px;letter-spacing:.02em;color:var(--ink);margin-top:2px}
+.kickNote{font-size:13px;color:var(--ink-soft);margin-top:4px;line-height:1.4}
+.kickCard .kick{margin-top:12px}
+.app.covered .grid .cell{color:transparent;text-shadow:none}
+.app.covered .words,.app.covered .bonusBox{visibility:hidden}
+/* Previous puzzles, by day, newest first. */
+.archive{margin:0 0 12px;text-align:left}
+.arch-head{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.arch-head .site-sec{margin:0}
+.arch-sub{font-size:12px;color:var(--ink-soft)}
+.arch-list{list-style:none;margin:8px 0 0;padding:0;max-height:min(52vh,420px);overflow:auto;border:1px solid var(--line);border-radius:8px;background:var(--card)}
+.arch-row{display:grid;grid-template-columns:78px 1fr auto;gap:10px;align-items:center;width:100%;min-height:var(--tap);padding:9px 12px;border:0;border-bottom:1px solid var(--line);background:none;color:var(--ink);text-align:left;font:inherit;cursor:pointer}
+.arch-list li:last-child .arch-row{border-bottom:0}
+.arch-row:hover{background:var(--sel-word)}
+.arch-row:focus-visible{outline:none;box-shadow:var(--ring)}
+.arch-day{font-family:var(--disp);font-weight:700;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-soft)}
+.arch-theme{font-size:14px}
+.arch-state{font-family:var(--disp);font-weight:600;font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--pitch)}
+.arch-row.done .arch-state{color:var(--ink-soft)}
+.arch-empty{padding:12px;font-size:13px;color:var(--ink-soft)}
+.kick{width:100%;min-height:var(--tap);border:0;border-radius:10px;background:var(--pitch);color:#fff;font-family:var(--disp);font-weight:700;font-size:19px;text-transform:uppercase;letter-spacing:.06em;padding:11px}
+.kick:hover{background:var(--pitch-deep)}
+.tiny{font-size:12px;color:var(--ink-faint);margin:10px 0 0}
+.legal{font-size:11px;color:var(--ink-faint);margin:16px 0 0;line-height:1.5}
+
+/* ---- toolbar and menus ----------------------------------------------- */
+.app{max-width:1080px;margin:0 auto;padding:10px 16px 18px}
+.toolbar{display:flex;gap:6px;align-items:center;margin-bottom:10px}
+.menuWrap{position:relative}
+.menuWrap.right{margin-left:auto}
+.btn{min-height:38px;padding:6px 12px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);font-weight:600;font-size:13px}
+.btn:hover{border-color:var(--ink-faint)}
+.menuPanel{position:absolute;top:calc(100% + 6px);left:0;z-index:60;background:var(--card);border:1px solid var(--line);border-radius:10px;min-width:230px;padding:5px;box-shadow:0 10px 28px rgba(0,0,0,.14)}
+.menuPanel.right{left:auto;right:0}
+.menuRow{display:flex;justify-content:space-between;align-items:center;gap:12px;width:100%;min-height:40px;padding:7px 10px;border:0;border-radius:7px;background:none;color:var(--ink);text-align:left}
+.menuRow:hover{background:var(--tint)}
+.menuRow:disabled{color:var(--ink-faint);cursor:default;background:none}
+.menuMeta{font-size:11px;color:var(--ink-faint)}
+.menuNote{font-size:11px;color:var(--ink-faint);padding:7px 10px;border-top:1px solid var(--line);margin-top:4px}
+.menuVer{font-size:10px;color:var(--ink-faint);padding:6px 10px}
+
+/* ---- match head ------------------------------------------------------ */
+.matchHead{display:flex;align-items:end;justify-content:space-between;gap:14px;margin-bottom:8px}
+.matchTitle h2{font-size:26px;line-height:1.05;text-transform:uppercase}
+.scoreCluster{display:flex;align-items:center;gap:12px;flex:none}
+.clock{font-family:var(--disp);font-weight:700;font-size:30px;color:var(--xi-ink);min-width:56px;text-align:right}
+.scoreBox{background:var(--pitch-deep);color:#fff;border-radius:10px;padding:6px 12px;display:flex;align-items:baseline;gap:5px}
+.scoreVal{font-family:var(--disp);font-weight:700;font-size:24px}
+.scoreStar{color:var(--gold);font-size:15px}
+.scoreStar.found{text-shadow:0 0 6px rgba(242,201,76,.8)}
+.scoreOf{font-size:12px;opacity:.75}
+.varBanner{display:flex;gap:10px;align-items:center;background:var(--gold);color:var(--gold-ink);border-radius:9px;padding:7px 12px;margin-bottom:8px;font-size:13px}
+.varBanner b{font-family:var(--disp);text-transform:uppercase}
+
+/* ---- the main layout rule -------------------------------------------- */
+/* The grid sizes the row (align-items:start + the board's intrinsic height);
+   game.js measures the board and sets --board-h, which clamps the panel.
+   Belt and braces: even before the first measurement the panel cannot
+   overflow the viewport. */
+.main{display:grid;grid-template-columns:minmax(0,1fr) minmax(250px,300px);gap:12px;align-items:start}
+.boardWrap{min-width:0}
+/* NO INNER SCROLLER. This capped the board at the window's height and let it
+   scroll inside its own card, which is why a board that filled the width had
+   to be dragged around a box instead of read. The card is as tall as the
+   board, and a board taller than the window is scrolled to like any other
+   long page. overflow-x stays: a board can still be wider than the card if
+   the player zooms in past the fit. */
+.gridShell{overflow-x:auto;overflow-y:visible;border:1px solid var(--line);border-radius:var(--radius);background:var(--card)}
+.grid{
+  --cell:34px; /* the board zoom variable — the ONLY thing zoom touches */
+  position:relative;display:grid;grid-template-columns:repeat(12,var(--cell));
+  grid-auto-rows:var(--cell);width:max-content;margin:0;padding:8px;
+  touch-action:none; user-select:none;-webkit-user-select:none;
+}
+/* The letters sit ON something. The rebuild dropped the tile and left bare
+   letters on the card, which reads as text rather than a board and gives the
+   eye nothing to track a drag across. Inset ring rather than a border so the
+   tile does not change size and the grid geometry render_test measures stays
+   exactly as it was. */
+.cell{display:grid;place-items:center;font-family:var(--disp);font-weight:600;font-size:calc(var(--cell)*.52);color:var(--ink);border-radius:6px;
+  background:var(--tint);box-shadow:0 0 0 1px var(--line) inset}
+/* THE FINGER IS HERE. This was --tint-strong on a --tint tile: 12% ink over
+   6% ink, a difference you had to look for, and on an iPad in daylight the
+   dragged letters read as unselected. A selection is not a shade, it is the
+   opposite of the board — the tile takes the ink and the letter takes the
+   paper, which inverts correctly in either theme. Deliberately NOT the green
+   or the red: those mean found and wrong, and this is neither yet. */
+.cell.preview{background:var(--ink);color:var(--paper);box-shadow:0 0 0 1px var(--ink) inset}
+.cell.bad{background:color-mix(in srgb,var(--danger) 22%,transparent)}
+.cell.first-hint{animation:hintFlash 2.2s ease}
+.cell.live-hint{animation:hintFlash 6.2s ease}
+/* Lands back on the tile, not on nothing. With the cell background restored,
+   ending at 'none' would leave a hinted cell permanently paler than its
+   neighbours once the animation finished. */
+@keyframes hintFlash{0%,80%{background:var(--gold);color:var(--gold-ink)}100%{background:var(--tint)}}
+.highlightLayer{position:absolute;inset:0;pointer-events:none}
+.hl{position:absolute;border-radius:999px;opacity:.4}
+.hl.bonus{opacity:.55;box-shadow:0 0 0 2px var(--gold) inset}
+
+/* ---- the side panel, clamped to the board ---------------------------- */
+.side{
+  background:var(--card);border:1px solid var(--line);border-radius:var(--radius);
+  padding:12px;display:flex;flex-direction:column;min-height:0;
+  /* The shorter of the board and the window. It was the board's height
+     alone, and once the board could outgrow the window that put the bottom
+     of the word list somewhere you had to scroll the page to reach. */
+  max-height:min(var(--board-h,100dvh),calc(100dvh - 120px));
+  position:sticky;top:12px;
+}
+.sideHead{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:6px}
+.sideHead h3{font-size:17px;text-transform:uppercase}
+.foundCount{font-size:12px;color:var(--ink-soft)}
+.foundCount strong{font-family:var(--disp);font-size:16px;color:var(--ink)}
+.progress{height:5px;border-radius:99px;background:var(--tint);overflow:hidden;margin-bottom:8px;flex:none}
+.progress div{height:100%;width:0;background:var(--pitch);border-radius:99px;transition:width .25s}
+/* NOT SHOWN: "0 of 11" and the bar under it are the family top bar's
+   Progress, a second copy. The owner, 26 Sep 2026: "Remove the duplicates".
+   Hidden rather than unbuilt -- game.js still keeps #count, and its suites
+   read the count from it. */
+#side .foundCount,#side .progress{display:none}
+/* The scroll rule from the brief: too many names, the LIST scrolls — never
+   the panel past the board, never the page. */
+.words{flex:1 1 auto;min-height:0;overflow-y:auto;display:grid;gap:5px;align-content:start;padding-right:2px}
+.word{border:1px solid var(--line);border-left:4px solid var(--c,var(--line));border-radius:8px;padding:7px 9px;font-size:13px;font-weight:600;background:var(--card)}
+.word.done{color:var(--ink-faint);text-decoration:line-through;background:var(--tint);border-left-color:var(--c)}
+.bonusBox{flex:none;margin-top:8px;border:1px dashed var(--gold);border-radius:9px;padding:8px 10px;background:color-mix(in srgb,var(--gold) 9%,transparent)}
+.bonusTitle{font-family:var(--disp);font-weight:700;text-transform:uppercase;font-size:12px;letter-spacing:.06em;color:var(--xi-ink)}
+.bonusState{font-weight:700;font-size:14px}
+.bonusSub{font-size:11px;color:var(--ink-soft)}
+
+/* ---- finish prompt, result, toast ------------------------------------ */
+.finishPrompt{display:none;align-items:center;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:10px;background:var(--card);border:1px solid var(--gold);border-radius:10px;padding:10px 14px}
+.finishPrompt.show{display:flex}
+.finishBtns{display:flex;gap:8px}
+.action{min-height:38px;padding:7px 14px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);font-weight:600}
+.action.gold{background:var(--gold);border-color:var(--gold);color:var(--gold-ink)}
+.action.quiet{border-color:transparent;color:var(--ink-soft)}
+.overlay{position:fixed;inset:0;background:color-mix(in srgb,var(--paper) 80%,transparent);backdrop-filter:blur(8px);z-index:100;display:grid;place-items:center;padding:18px;opacity:0;pointer-events:none;transition:opacity .18s}
+.overlay.show{opacity:1;pointer-events:auto}
+/* FULL TIME is the family's panel (shared/xi-fulltime.css); the overlay only
+   holds it, as a column that scrolls in itself when the screen is short. */
+.modal{max-width:560px;width:100%;max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:6px;align-items:stretch}
+.modal>.action.quiet{align-self:center}
+.penaltyPop{position:fixed;left:50%;top:26%;transform:translateX(-50%);background:var(--danger);color:#fff;font-family:var(--disp);font-weight:700;border-radius:999px;padding:7px 16px;opacity:0;pointer-events:none;z-index:90}
+.penaltyPop.show{animation:pop .9s ease}
+@keyframes pop{10%{opacity:1}80%{opacity:1}100%{opacity:0}}
+.toast{position:fixed;left:50%;bottom:26px;transform:translateX(-50%);background:var(--ink);color:var(--paper);border-radius:999px;padding:9px 16px;font-size:13px;opacity:0;pointer-events:none;transition:opacity .2s;z-index:110;max-width:92vw;text-align:center}
+.toast.show{opacity:1}
+
+/* ---- narrow screens --------------------------------------------------- */
+/* One column. The board keeps the bottom of the used space: names become a
+   horizontally scrolling rail ABOVE the grid, the grid sits last and fills
+   what remains. No keyboard exists to reserve room for. */
+@media (max-width:760px){
+  .main{grid-template-columns:1fr;gap:8px}
+  .side{order:-1;max-height:none;flex-direction:column;padding:9px}
+  /* WRAPPED, NOT SCROLLED. The names were a single row that ran off the
+     right of the screen, so the last of the eleven were reachable only by
+     dragging a rail nobody could see the end of — and they were set small to
+     get as many into that row as possible. They wrap now, at the size the
+     rest of the game is set in. Two rows of names cost less than a name you
+     cannot read. */
+  .words{display:flex;flex-wrap:wrap;overflow:visible;gap:6px;padding-bottom:2px}
+  .word{flex:none;border-left-width:4px;white-space:nowrap;font-size:15px;padding:8px 11px}
+  .bonusBox{margin-top:6px}
+  .gridShell{max-height:none}
+  .matchHead{flex-wrap:wrap}
+  .matchTitle h2{font-size:20px}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation-duration:.01ms!important;transition-duration:.01ms!important}
+}
+
+/* A DAY BEHIND THE FREE WINDOW. Shown rather than hidden: what is behind the
+   lock is the reason to register, and a row that vanished would say nothing. */
+.arch-row.locked{opacity:.62}
+.arch-row.locked .arch-state::after{content:" 🔒"}
+
+/* Whether the score is the server's. A footnote to the number, not part of it,
+   and it takes no room when there is nothing to say. */
+
+/* ---- THE LOCKED SCREEN ----------------------------------------------------
+   The owner's ruling, 24 Sep 2026: while playing, the page is the screen and
+   nothing scrolls, at every size, with the elements scaling up. body.locked is
+   set by game.js while a round is up, and taken off when the squares would be
+   under ZOOM_MIN or the round's parts cannot fit.
+
+   On a phone: the toolbar, the heading, the names as compact wrapped chips
+   with the bonus under them, then the board -- fitted whole to the width AND
+   the height it is left (game.js fitCell). Wider, the names are a column
+   beside the board that scrolls in itself if it must. The board can still be
+   zoomed past the fit; then it scrolls inside its own card. */
+/* The family's top bar stands in for the mode label, the clock and the score
+   (shared/xi-matchbar.css); the theme stays under it. */
+#modeLabel,.matchHead>.scoreCluster{display:none}
+body.locked{height:100vh;height:100dvh;overflow:hidden;display:flex;flex-direction:column}
+body.locked>*{flex:none}
+body.locked>footer{display:none}
+body.locked .site-ident,body.locked .site-head,body.locked .how{display:none}
+body.locked>#gameApp{flex:1 1 auto;min-height:0;width:100%;max-width:1280px;box-sizing:border-box;
+  margin:0 auto;display:flex;flex-direction:column;padding:6px 10px 8px}
+body.locked #gameApp>*{flex:none}
+body.locked .toolbar{margin-bottom:6px}
+body.locked .matchHead{margin-bottom:6px}
+body.locked #gameApp>main.main{flex:1 1 auto;min-height:0}
+body.locked .boardWrap{min-height:0;display:flex;flex-direction:column}
+body.locked .gridShell{flex:1 1 auto;min-height:0;overflow:auto;display:flex;align-items:flex-start;justify-content:center}
+body.locked .side{position:static;max-height:none;min-height:0}
+@media (max-width:760px){
+  body.locked #gameApp>main.main{display:flex;flex-direction:column;gap:6px}
+  body.locked .side{flex:none;padding:6px 8px}
+  body.locked .sideHead{margin-bottom:2px}
+  body.locked .words{gap:4px}
+  body.locked .word{font-size:13px;padding:5px 8px}
+  body.locked .bonusBox{margin-top:4px;padding:4px 8px}
+  body.locked .bonusSub{display:none}
+  body.locked .side .tb-table{display:none}
+  /* The card spans the column and the board sits in its middle. The board is
+     sized by its height here (fourteen rows), so it is narrower than the
+     screen, and a card hugging it left 90px of nothing to one side (found in
+     the app at 412, 25 Sep 2026). */
+  body.locked .boardWrap{flex:1 1 auto;align-self:stretch;width:100%;max-width:none;box-sizing:border-box}
+}
+@media (min-width:761px){
+  body.locked #gameApp>main.main{grid-template-rows:minmax(0,1fr);align-items:stretch}
+  body.locked .boardWrap{height:100%}
+  body.locked .side{overflow:auto}
+}
+/* Full Time's card is capped at the screen and scrolls in itself. */
+.modal{max-height:100%;overflow:auto}
+
+/* HOW TO PLAY OVER A LOCKED BOARD, as in every locked game. */
+.how-back{display:none}
+body.locked #how:target{display:block!important;position:fixed;inset:0;z-index:60;margin:0;max-width:none;
+  overflow:auto;overscroll-behavior:contain;background:var(--paper);padding:14px 16px 40px;box-sizing:border-box}
+body.locked #how:target .how-back{display:inline-flex;align-items:center;min-height:var(--tap,44px);padding:0 16px;
+  margin:0 0 10px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink);
+  font-family:var(--disp);font-weight:700;letter-spacing:.08em;text-transform:uppercase;text-decoration:none}
+
+/* ======================================================================
+   FRIENDS: THE LIST IS CLUES.
+   Football lists eleven names a few letters long; this lists eleven clues,
+   so the panel is wider on a desk, and on a phone the list folds to eleven
+   numbered chips with the chosen clue written out under them — eleven
+   sentences above the grid would push the board off the screen.
+   ====================================================================== */
+.main{grid-template-columns:minmax(0,1fr) minmax(280px,380px)}
+.word{display:grid;grid-template-columns:auto 1fr;gap:2px 8px;align-items:baseline;font-weight:500;
+  line-height:1.35;cursor:pointer;text-align:left;color:var(--ink);font-size:13px}
+.word .wn{font-family:var(--disp);font-weight:700;color:var(--ink-soft);min-width:1.2em}
+.word .wa{grid-column:2;font-family:var(--disp);font-weight:700;letter-spacing:.04em;text-transform:uppercase;
+  color:var(--ink);text-decoration:none}
+.word.done{text-decoration:none}
+.word.done .wc{text-decoration:line-through;color:var(--ink-faint)}
+.word.sel{box-shadow:var(--ring,0 0 0 2px var(--pitch))}
+.clueNow{display:none}
+@media (max-width:760px){
+  .words{gap:5px}
+  .word{display:inline-flex;min-width:36px;justify-content:center;padding:6px 8px}
+  .word .wc,.word .wa{display:none}
+  .word .wn{color:var(--ink)}
+  .word.done{background:var(--c);border-color:var(--c)}
+  .word.done .wn{color:var(--gold-ink)}
+  .clueNow{display:block;margin-top:6px;font-size:14px;line-height:1.35;min-height:2.7em}
+  .clueNow b{font-family:var(--disp);margin-right:4px}
+  body.locked .word{font-size:13px;padding:4px 7px}
+  body.locked .clueNow{font-size:13px;margin-top:4px}
+}
+/* The boards list: the catalogue, by category, on the landing. */
+.cat-group{margin:10px 0 0}
+.cat-group h3{font-family:var(--disp);font-size:13px;letter-spacing:.08em;text-transform:uppercase;
+  color:var(--ink-soft);margin:0 0 4px}
+.arch-row.cat{grid-template-columns:1fr auto}
+/* THE LANDING IS NEVER WIDER THAN THE SCREEN. .prematch is a grid with one
+   auto column, which sizes to its widest content — and the family's More
+   games strip names "Crossword XI: Friends" and "Who Am I XI: Friends" side by
+   side, which is wider than a 375px phone. The column is held to the screen. */
+.prematch{grid-template-columns:minmax(0,1fr)}
+.prematch>.site-wrap{width:100%}
+/* Every board: the page scrolls, not fifteen little boxes inside it. */
+#catalogList .arch-list{max-height:none;overflow:visible}
