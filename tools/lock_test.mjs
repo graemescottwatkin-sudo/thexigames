@@ -2143,6 +2143,26 @@ if (!ONLY || ONLY === "landing") {
     t(`${g}: More games lists every other listed game of this theme, not this one, under the rest of the page${football ? ", each with its picture" : ", with no borrowed pictures"}`,
       mg.present && mg.same && !mg.self && mg.below && (football ? mg.pictures === mg.got : mg.pictures === 0),
       JSON.stringify(mg));
+    /* LONG NAMES STILL FIT THE PHONE. A 1fr column will not shrink below its
+       text, so two long names side by side pushed the landing to 446px on a
+       375px screen and cut every card off (found by the Friends Word Search
+       session, 28 Sep 2026). The longest a name could reasonably be is put
+       into every chip, and the page must stay the width of the screen. */
+    const fits = await page.evaluate(() => {
+      document.querySelectorAll("#moreGames .mg-name").forEach((n) => {
+        n.textContent = "A Very Long Game Name Indeed XI: Friends Edition";
+      });
+      /* THE CHIPS, not only the page: a page whose parent clips its overflow
+         stays the width of the screen while the chips run off the edge and are
+         cut -- which is what the first version of this check could not see
+         (proven: it passed with the old 1fr rule in place). */
+      const box = document.getElementById("moreGames").getBoundingClientRect();
+      const right = Math.max(...[...document.querySelectorAll("#moreGames .mg-chip")].map((c) => c.getBoundingClientRect().right));
+      return { doc: document.documentElement.scrollWidth, vw: innerWidth,
+               chipsRight: Math.round(right), boxRight: Math.round(box.right) };
+    });
+    t(`${g}: More games with long names stays inside the phone -- the page and every chip`,
+      fits.doc <= fits.vw + 1 && fits.chipsRight <= fits.boxRight + 1, JSON.stringify(fits));
     await page.click("#homeOther");
     await wait(200);
     const open = await page.evaluate(() => ({

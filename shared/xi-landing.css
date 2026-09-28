@@ -569,8 +569,13 @@ body.other-open .site-grid,body.other-open .other-card{display:none}
    goes with them, since Back is the way out of that screen. */
 body.other-open .more-games{display:none}
 @media (max-width:430px){
-  .mg-list{grid-template-columns:1fr 1fr}
-  .mg-chip{font-size:13.5px;padding:8px 10px;gap:8px}
+  /* minmax(0,1fr), NOT 1fr: a 1fr track will not shrink below its content,
+     and a name is nowrap, so two long ones ("Crossword XI: Friends", "Who Am
+     I XI: Friends") pushed the page to 446px on a 375px phone and cut every
+     card off (found by the Friends Word Search session, 28 Sep 2026). With the
+     track allowed to shrink, the name ellipsises instead. */
+  .mg-list{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .mg-chip{font-size:13.5px;padding:8px 10px;gap:8px;min-width:0}
 }
 /* The game's name sits over the column it names, not at the old width. */
 body:has(#homeOther) .site-ident{max-width:760px}
