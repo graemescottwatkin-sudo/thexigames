@@ -53,16 +53,21 @@ const sc = render("football/scrambled/index.html", "https://www.thexigames.com/f
 const hub = render(themeHubFile("football"), "https://www.thexigames.com/");
 const priv = render("football/crossword/privacy.html", "https://www.thexigames.com/football/crossword/privacy.html");
 const htp = render("football/crossword/how-to-play.html", "https://www.thexigames.com/football/crossword/how-to-play.html");
+const frc = render("friends/crossword/index.html", "https://www.thexigames.com/friends/crossword/");
+const frh = render("friends/index.html", "https://www.thexigames.com/friends/");
 
 console.log("Every page wears the same bar");
-for (const [name, doc] of [["crossword", cw], ["wordsearch", ws], ["scrambled", sc],
-                           ["the hub", hub], ["privacy", priv], ["how to play", htp]]) {
+for (const [name, doc, home] of [["crossword", cw, "/football/"], ["wordsearch", ws, "/football/"], ["scrambled", sc, "/football/"],
+                           ["the hub", hub, "/football/"], ["privacy", priv, "/football/"], ["how to play", htp, "/football/"],
+                           ["the Friends crossword", frc, "/friends/"], ["the Friends hub", frh, "/friends/"]]) {
   t(`${name}: the bar has a burger`, !!doc.querySelector(".xic-bar .xic-burger"));
   /* The wordmark goes home from EVERY view, including mid-board. This is the
-     actual fix for being stranded on a puzzle. */
-  t(`${name}: the wordmark goes home`,
-    doc.querySelector(".xic-bar .xic-home") &&
-    doc.querySelector(".xic-bar .xic-home").getAttribute("href") === "/");
+     actual fix for being stranded on a puzzle. HOME IS THIS THEME'S HUB (the
+     owner, 28 Sep 2026: "Football should go to .../Football/ / Friends
+     should go to .../friends/"), in the bar and in the drawer alike. */
+  const homes = [...doc.querySelectorAll(".xic-bar .xic-home, .xic-drawer .xic-home")].map((a) => a.getAttribute("href"));
+  t(`${name}: the wordmark goes to ${home}, in the bar and the drawer`,
+    homes.length >= 2 && homes.every((h) => h === home), homes.join(" "));
   t(`${name}: the drawer is built`, !!doc.querySelector(".xic-drawer"));
   t(`${name}: the footer is built`, !!doc.querySelector(".xic-foot .xic-foot-in"));
 }

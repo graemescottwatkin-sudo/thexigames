@@ -57,7 +57,7 @@ const OUT = "friends/crossword";
 
 /* THE TAG LIVES HERE, because it is written into three generated files and a
    number kept in three places disagrees with itself. Bump here, regenerate. */
-const TAG = "v002y";
+const TAG = "v002z";
 
 /* THE SHARED LAYER'S TAG, read from the source page rather than restated. It
    has its own plain vN lifecycle and moves without this game's tag moving, so a
@@ -282,6 +282,13 @@ function page() {
      actually has. The header's "Clubs & themes" tab went for every game the
      same day, so there is no rewrite for it here any more. */
   s = cutBlockById(s, "homeThemed", "the clubs and themes card");
+  /* AND BOARD OF THE WEEK, which is football's too: it is filled from
+     /api/themes, and it put "Arsenal strikers" on a Friends page (the owner,
+     from the Friends app, 28 Sep 2026: "if i click on other boards ... i see
+     Board of the week = Arsenal strikers"). This game has no board of the
+     week, so the card goes -- and so does the call that fills it, in the
+     script below -- rather than showing another theme's board. */
+  s = cutBlockById(s, "homeFeatured", "the board of the week card");
   /* How to play by the name links football's rules page; this game has none. */
   s = once(s, '<a class="ident-how" href="how-to-play.html">How to play</a>', "",
     "the How to play link");
@@ -360,6 +367,11 @@ function script() {
   let s = read(`${SRC}/js/game.js`);
   /* The family's top bar names the game in its first line. */
   s = once(s, 'XIBar.set({ name: "Crossword XI",', `XIBar.set({ name: "${NAME}",`, "the top bar's name");
+  /* NO BOARD OF THE WEEK: /api/themes is football's, and it ANSWERS -- so
+     this is not a call that fails loudly, it is one that quietly fills a
+     Friends page with a football board. Removed, with its card above. */
+  s = once(s, "    loadThemes().then(function (d) { showFeatured(d.featured); }).catch(function () {});\n", "",
+    "the board of the week fetch");
   /* THE FAMILY'S FULL TIME names the game too, says the end in this deck's
      word (a television show has no whistle -- Friends Who Am I says the
      same), and has no league to show: there is no table to finish in. */

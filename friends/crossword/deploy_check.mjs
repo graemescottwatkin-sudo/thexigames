@@ -541,6 +541,17 @@ t("the server owns the calendar, and the client adopts its answer", (() => {
   return reconciles && adopts;
 })(), "a device clock may name a board; only the server decides which one it gets");
 
+/* NO FOOTBALL BOARD ON A FRIENDS PAGE. The owner, from the Friends app, 28 Sep
+   2026: "if i click on other boards ... i see Board of the week = Arsenal
+   strikers". The card is football's and /api/themes, which fills it, is
+   football's and ANSWERS -- so a card left in place does not fail, it shows
+   another theme's board. Both the card and the call must be gone. Paired with
+   a positive: Other boards still offers this game's previous dailies. */
+t("Other boards has no football board of the week, and nothing fetches one",
+  !markup.includes('id="homeFeatured"') && !/showFeatured\(\s*d\.featured\s*\)/.test(js) &&
+    markup.includes('id="homePrevious"'),
+  markup.includes('id="homeFeatured"') ? "the Board of the week card is on the page" : "");
+
 /* ---- the bank ----------------------------------------------------------- */
 
 console.log("\nThe bank");

@@ -194,6 +194,13 @@
     var seg = (location.pathname.split("/")[1] || "").toLowerCase();
     return SQUADS[seg] ? seg : "football";
   }
+  /* HOME IS THIS THEME'S HUB, not the site root. The owner, 28 Sep 2026, from
+     the Friends app: "if i click TheXIGames in the top left it takes me to
+     TheXIGames.com which is the football page / Football should go to:
+     https://www.thexigames.com/Football/ / Friends should go to:
+     https://www.thexigames.com/friends/". The root is football's by ruling,
+     so a Friends page linking to "/" sent its player into football. */
+  function homeHref() { return "/" + themeHere() + "/"; }
 
   var SQUAD = SQUADS[themeHere()];
 
@@ -733,6 +740,10 @@
     sc.async = true; sc.defer = true;
     sc.onload = draw;
     sc.onerror = function () {
+      /* GOOGLE NOT LOADING IS NOT SIGN-IN BEING UNAVAILABLE where Apple is
+         there too: switching accounts off hid Apple's button with Google's,
+         since both live in this one mount (the Friends app, 28 Sep 2026). */
+      if (mount.querySelector(".xic-abtn")) return;
       acct.accounts = false;
       var u = sheet.querySelector(".xic-unavail");
       u.textContent = "Could not reach the sign-in service.";
@@ -986,7 +997,7 @@
 
     var head = el("div", "xic-dhead");
     var home = el("a", "xic-home", WORDMARK);
-    home.href = "/";
+    home.href = homeHref();
     head.appendChild(home);
     var x = el("button", "xic-close", "&times;");
     x.setAttribute("aria-label", "Close");
@@ -1051,7 +1062,7 @@
        fix for being stranded on a puzzle with no route out. */
     if (!bar.querySelector(".xic-home")) {
       var home = el("a", "xic-home", WORDMARK);
-      home.href = "/";
+      home.href = homeHref();
       bar.insertBefore(home, burger.nextSibling);
     }
 

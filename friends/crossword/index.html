@@ -109,18 +109,18 @@
      width:var(--tap) was invalid, not because it was styled small. Order
      matters — style.css comes after and still wins wherever the crossword
      genuinely differs. -->
-<link rel="stylesheet" href="/shared/xi-tokens.css?v=v79">
-<link rel="stylesheet" href="/shared/xi-landing.css?v=v79">
-<link rel="stylesheet" href="/shared/xi-chrome.css?v=v79">
-<link rel="stylesheet" href="/shared/xi-keys.css?v=v79">
-<link rel="stylesheet" href="/shared/xi-board.css?v=v79">
-<link rel="stylesheet" href="/shared/xi-matchbar.css?v=v79">
-<link rel="stylesheet" href="/shared/xi-share.css?v=v79">
-<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v79">
+<link rel="stylesheet" href="/shared/xi-tokens.css?v=v80">
+<link rel="stylesheet" href="/shared/xi-landing.css?v=v80">
+<link rel="stylesheet" href="/shared/xi-chrome.css?v=v80">
+<link rel="stylesheet" href="/shared/xi-keys.css?v=v80">
+<link rel="stylesheet" href="/shared/xi-board.css?v=v80">
+<link rel="stylesheet" href="/shared/xi-matchbar.css?v=v80">
+<link rel="stylesheet" href="/shared/xi-share.css?v=v80">
+<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v80">
 <!-- The theme, stamped before first paint: light unless the player chose
      dark, decided in one shared place for every page of the family. -->
-<script src="/shared/xi-theme.js?v=v79"></script>
-<link rel="stylesheet" href="css/style.css?v=v002y">
+<script src="/shared/xi-theme.js?v=v80"></script>
+<link rel="stylesheet" href="css/style.css?v=v002z">
 </head>
 <body>
 <!-- The page's only H1, first thing in the body.
@@ -714,12 +714,7 @@
     <div class="other-boards" id="otherBoards" hidden>
       <button class="ob-back" id="otherBack" type="button">&lsaquo; Back</button>
     <div class="site-row">
-      <button class="home-choice col" id="homeFeatured" hidden>
-        <span class="hc-kicker">BOARD OF THE WEEK</span>
-        <span class="hc-title" id="homeFeaturedName"></span>
-        <span class="hc-state" id="homeFeaturedState"></span>
-          <svg class="hc-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"><path d="M7 4h10v4a5 5 0 0 1-10 0V4Z"/><path d="M17 5h3v2a3 3 0 0 1-3 3"/><path d="M7 5H4v2a3 3 0 0 0 3 3"/><path d="M12 13v4"/><path d="M9 20h6"/><path d="M10 17h4l1 3H9l1-3Z"/></svg>
-      </button>
+      <!-- the board of the week card: removed by tools/build_friendscrossword.js -->
 
       <!-- the clubs and themes card: removed by tools/build_friendscrossword.js -->
 
@@ -884,7 +879,7 @@
 
 <footer>
   <button id="statsBtn">My Season</button> &middot; <span id="streakLine"></span><br>
-  Crossword <span class="xi">XI</span> by The <span class="xi">XI</span> Games &middot; unofficial word puzzle &middot; <span id="buildTag">v002y</span> &middot;
+  Crossword <span class="xi">XI</span> by The <span class="xi">XI</span> Games &middot; unofficial word puzzle &middot; <span id="buildTag">v002z</span> &middot;
   <a href="/football/crossword/privacy.html">privacy</a> &middot;
   <button id="skipToggle">skip filled: off</button> &middot;
   <button id="bankToggle">letter bank: on</button> &middot;
@@ -903,21 +898,21 @@
      aligned_test only grepped for the class, which is true of an element
      sealed inside a hidden container. -->
 <footer class="xic-foot"></footer>
-<script src="/shared/xi-clubs.js?v=v79"></script>
-<script src="/shared/xi-chrome.js?v=v79"></script>
-<script src="/shared/xi-board.js?v=v79"></script>
-<script src="/shared/xi-matchbar.js?v=v79"></script>
-<script src="/shared/xi-menu.js?v=v79"></script>
-<script src="/shared/xi-plays.js?v=v79"></script>
-<script src="/shared/xi-share.js?v=v79"></script>
+<script src="/shared/xi-clubs.js?v=v80"></script>
+<script src="/shared/xi-chrome.js?v=v80"></script>
+<script src="/shared/xi-board.js?v=v80"></script>
+<script src="/shared/xi-matchbar.js?v=v80"></script>
+<script src="/shared/xi-menu.js?v=v80"></script>
+<script src="/shared/xi-plays.js?v=v80"></script>
+<script src="/shared/xi-share.js?v=v80"></script>
 <!-- xi-played.js first: xi-fulltime.js asks it what has been played today. -->
-<script src="/shared/xi-played.js?v=v79"></script>
-<script src="/shared/xi-fulltime.js?v=v79"></script>
-<script src="/shared/xi-keys.js?v=v79"></script>
-<script src="/shared/xi-seasons.js?v=v79"></script>
-<script src="/shared/xi-clubs.js?v=v79"></script>
-<script src="/shared/xi-table.js?v=v79"></script>
-<script src="js/engine.js?v=v002y"></script>
-<script src="js/game.js?v=v002y"></script>
+<script src="/shared/xi-played.js?v=v80"></script>
+<script src="/shared/xi-fulltime.js?v=v80"></script>
+<script src="/shared/xi-keys.js?v=v80"></script>
+<script src="/shared/xi-seasons.js?v=v80"></script>
+<script src="/shared/xi-clubs.js?v=v80"></script>
+<script src="/shared/xi-table.js?v=v80"></script>
+<script src="js/engine.js?v=v002z"></script>
+<script src="js/game.js?v=v002z"></script>
 </body>
 </html>

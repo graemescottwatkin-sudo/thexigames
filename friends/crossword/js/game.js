@@ -297,7 +297,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v002y";
+  var BUILD = "v002z";
   /* WHAT THIS GAME IS CALLED on its Full Time panel and in the tab, and whether it has a league to show.
      One line, so tools/build_friendscrossword.js rewrites it in one place:
      the Friends board has its own name, its own word for the end, and no
@@ -6334,7 +6334,6 @@
     /* The board of the week, from the themes. The card no longer carries a
        count of boards (the owner, 27 Sep 2026: drop it). Fails quietly: a
        featured board is not worth a broken landing screen. */
-    loadThemes().then(function (d) { showFeatured(d.featured); }).catch(function () {});
   }
 
   /* Where today's field put you, on the board of the day.
