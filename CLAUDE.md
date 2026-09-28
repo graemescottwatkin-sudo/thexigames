@@ -218,7 +218,7 @@ and diagnose before anything ships. Never push past a red gate.
 - `results`/`plays` sanity via wrangler if relevant:
   `npx wrangler d1 execute crosswordxi --remote --command="..."`.
   **Never run a migration that is already applied** — `ALTER TABLE` is not
-  idempotent. Migration state: **001–046 all applied** (as of 24 Sep 2026 —
+  idempotent. Migration state: **001–047 all applied** (as of 28 Sep 2026 —
   check production) — 035 (QuickFire text
   ids), 036 and 038 (Codeword and its rounds), 037 and 039 (QuickFire rounds
   and the wrong-pick penalty), 040 and 041 (Who Am I and its score) all landed
@@ -266,6 +266,13 @@ and diagnose before anything ships. Never push past a red gate.
   `thexigames-push`, cron every 15 minutes, no public address) was deployed
   straight after it; it sends nothing until its FCM_SERVICE_ACCOUNT secret is
   set, and it writes a `push_run` row per run only once it has one.
+  047 (Lightning Round XI: Friends: `fr_lr_question`, `fr_lr_pair`,
+  `fr_lr_daily`, `fr_lr_run`, `fr_lr_answer`, `fr_lr_seen` and the indexes
+  `fr_lr_run_user`, `fr_lr_seen_recent`) was applied 28 Sep 2026 by the
+  Lightning session at launch. A second session verified all eight objects from
+  production the same day, with 2,829 questions in `fr_lr_question`. It is only
+  `CREATE ... IF NOT EXISTS`, so it is safe to re-run. 048 (Friends word
+  search) is written and was NOT applied as of that day.
   A STALE MIGRATION NUMBER IS THE MOST DANGEROUS FIGURE IN THIS FILE, because
   the sentence immediately before it tells you never to re-run an applied one
   and `ALTER TABLE` is not idempotent — so a reader trusting "034" could
