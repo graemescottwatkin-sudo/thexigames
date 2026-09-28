@@ -1,4 +1,5 @@
-/* hilo/live_check.mjs — what production is actually serving.
+
+import { themeHubPath } from "../../functions/_lib/permalink.js";/* hilo/live_check.mjs — what production is actually serving.
  *
  *   node hilo/live_check.mjs --expect v001
  *
@@ -204,7 +205,8 @@ t("a theme that does not exist is refused, not indexed",
 console.log("\nIt is part of the family");
 t("the shared chrome is loaded, not a copy of it", html.indexOf("/shared/xi-chrome.js") > -1);
 t("the page names the game once, as itself", /HiLo XI/.test(html));
-const hub = await get("/");
+/* THE FOOTBALL HUB AT ITS OWN ADDRESS: since 29 Sep 2026 the site root is the theme picker (the owner: "make the theme selector now"). */
+const hub = await get(themeHubPath("football"));
 t("the hub links to it", (await hub.text()).indexOf('href="/football/hilo/"') > -1);
 const map = await get("/sitemap.xml");
 t("the sitemap lists it", (await map.text()).indexOf("/football/hilo/</loc>") > -1);

@@ -14,7 +14,7 @@
  * flaps on a legitimate skip, and a floor left alone for five releases stops
  * being able to refuse anything.
  */
-import { gamePath } from "../../functions/_lib/permalink.js";
+import { gamePath, themeHubPath } from "../../functions/_lib/permalink.js";
 const BASE = "https://www.thexigames.com";
 const expectArg = process.argv.indexOf("--expect");
 const EXPECT = expectArg > -1 ? process.argv[expectArg + 1] : null;
@@ -156,7 +156,8 @@ console.log("\nIt is part of the family");
 t("the shared chrome is loaded, not a copy of it",
   html.indexOf("/shared/xi-chrome.js") > -1);
 t("the page names the game once, as itself", /Vowels XI/.test(html));
-const hub = await get("/");
+/* THE FOOTBALL HUB AT ITS OWN ADDRESS: since 29 Sep 2026 the site root is the theme picker (the owner: "make the theme selector now"). */
+const hub = await get(themeHubPath("football"));
 const hubHtml = await hub.text();
 t("the hub links to it", hubHtml.indexOf('href="/football/vowels/"') > -1);
 const map = await get("/sitemap.xml");

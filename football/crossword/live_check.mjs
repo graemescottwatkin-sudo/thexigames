@@ -18,7 +18,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { gamePath, themeOf } from "../../functions/_lib/permalink.js";
+import { gamePath, themeOf, themeHubPath } from "../../functions/_lib/permalink.js";
 import { LAUNCHED, GAMES, isListed } from "../../functions/_lib/games.js";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
@@ -147,7 +147,8 @@ console.log(`\n${SITE}\n`);
 
 /* ---- the hub ---- */
 {
-  const hub = await fetch(HUB + "/");
+  /* THE FOOTBALL HUB AT ITS OWN ADDRESS: since 29 Sep 2026 the site root is the theme picker (the owner: "make the theme selector now"). */
+  const hub = await fetch(HUB + themeHubPath("football"));
   const html = await hub.text();
   t("the hub is served", hub.ok, `HTTP ${hub.status}`);
   /* ONE SHIRT PER LISTED FOOTBALL GAME, and none for a game that is not out.

@@ -16,6 +16,7 @@
  * count flaps on an honest skip, and one left alone stops being able to refuse.
  */
 import { launchNumber } from "../../functions/_lib/games.js";
+import { themeHubPath } from "../../functions/_lib/permalink.js";
 
 const BASE = "https://www.thexigames.com";
 const expectArg = process.argv.indexOf("--expect");
@@ -150,7 +151,8 @@ t("nor cached, because the board it returns changes with the day",
   daily.headers.get("cache-control") || "none");
 
 console.log("\nIt is part of the family");
-t("the hub links to it", (await (await get("/")).text()).indexOf('href="/football/codeword/"') > -1);
+/* THE FOOTBALL HUB AT ITS OWN ADDRESS: since 29 Sep 2026 the site root is the theme picker (the owner: "make the theme selector now"). */
+t("the hub links to it", (await (await get(themeHubPath("football"))).text()).indexOf('href="/football/codeword/"') > -1);
 const map = await get("/sitemap.xml");
 t("the sitemap lists it", (await map.text()).indexOf("/football/codeword/") > -1);
 
