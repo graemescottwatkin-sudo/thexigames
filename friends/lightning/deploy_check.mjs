@@ -41,7 +41,7 @@ const PREFIX = "xifl.";
 
 /* WHAT IS LIVE. Bump both after a deploy with tools/post_deploy.mjs. */
 const LAST_SHIPPED = "v001a";
-const LAST_SHIPPED_ASSETS = null; // nothing has shipped yet
+const LAST_SHIPPED_ASSETS = "1e53b30289216dc5";
 
 let pass = 0, fail = 0;
 function t(name, ok, note) {
@@ -210,8 +210,12 @@ t("no deck, pool or bank file anywhere in this game's directory", (() => {
   return bad.length === 0;
 })());
 
+/* THE POOL FILES BY NAME, not by "lightning": the pattern was *lightning*.sql
+   and it matched the game's own MIGRATION, 047-friends-lightning.sql, the
+   moment that was committed -- a false refusal found only after launch, because
+   a sweep of an archived tree runs git in a folder that tracks nothing. */
 t("the pool's load file is not in the repository at all", (() => {
-  const r = spawnSync("git", ["ls-files", "--", "*lightning*.sql", "*lightning-pool*"], { cwd: ROOT, encoding: "utf8" });
+  const r = spawnSync("git", ["ls-files", "--", "*fr-lightning-production*", "*lightning-pool*"], { cwd: ROOT, encoding: "utf8" });
   if (r.error || r.status !== 0) return false;             // cannot check is not a pass
   return r.stdout.trim() === "";
 })(), "fr-lightning-production.sql lives in LightningRoundXI_Friends/export/");
