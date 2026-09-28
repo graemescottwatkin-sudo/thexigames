@@ -43,7 +43,7 @@ const SRC = "football/whoami";
 const OUT = "friends/whoami";
 
 /* THE TAG LIVES HERE, written into every generated file. Bump, regenerate. */
-const TAG = "v001m";
+const TAG = "v001n";
 
 const NAME = "Who Am I XI: Friends";
 /* THREE, NOT ELEVEN. This said eleven -- copied from football's shape before
@@ -281,6 +281,41 @@ function page() {
     s = once(s, '<link rel="canonical"',
       '<meta name="robots" content="noindex">\n<link rel="canonical"', "the noindex");
   }
+
+  /* THE STREAKS, the owner's ruling of 28 Sep 2026: "Friends should be about
+     streaks only / lets still have any game + specific game streaks / any game
+     can be just 1 play". The block beside the today card, and the shared script
+     that counts it (xi-menu.js, from what the games bank -- see XIPlayed
+     .themeStreaks). No season and no W/L form. */
+  s = once(s, '    <aside class="site-side">', `    <aside class="site-side">
+      <!-- THE STREAKS (the owner, 28 Sep 2026): this game's, and any Friends
+           game's, where one game played on a day is enough. Counted by
+           shared/xi-menu.js from what the games bank; no season, no form. -->
+      <div class="home-streaks" id="homeStreaks" hidden>
+        <div class="streak" id="streakGame">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 2.5s5.5 4.4 5.5 9.4a5.5 5.5 0 1 1-11 0c0-1.9.8-3.6 1.8-5 .2 1.5 1 2.6 2 2.6 1.6 0 1.2-3.6 1.7-7Z"
+                  stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+          </svg>
+          <span class="st-say">
+            <span class="st-l">Who Am I streak</span>
+            <span class="st-n" id="streakGameN">&mdash;</span>
+          </span>
+        </div>
+        <div class="streak" id="streakDaily">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="3" y="4.5" width="18" height="16" rx="2.5" stroke="currentColor" stroke-width="1.6"/>
+            <path d="M3 9.5h18M8 2.5v4M16 2.5v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+          <span class="st-say">
+            <span class="st-l">Any game streak</span>
+            <span class="st-n" id="streakDailyN">&mdash;</span>
+          </span>
+        </div>
+      </div>`, "the streaks block");
+  s = once(s, `<script src="/shared/xi-played.js?v=${SHARED}"></script>`,
+    `<script src="/shared/xi-played.js?v=${SHARED}"></script>
+<script src="/shared/xi-menu.js?v=${SHARED}"></script>`, "the script that paints the streaks");
 
   /* THE SEASON IS NOT THIS THEME'S — the owner's ruling for Friends is a
      genuine streak and no season. See NO_SEASON in functions/_lib/games.js. */
@@ -1103,6 +1138,9 @@ var BUILD = `, "the deck words");
       cardsSolved: got,
       bonus: all ? BONUS : 0,
       score: dayScore(),
+      /* WHEN IT WAS FINISHED: a day played on its own day keeps a streak
+         going; one caught up later does not (XIPlayed.playedDays). */
+      at: Date.now(),
       cards: cards.map(function (c) {
         return { slot: c.slot, solved: !!c.solved, score: c.score, clues: c.clues, wrongs: c.wrongs };
       })

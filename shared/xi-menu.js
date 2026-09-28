@@ -33,10 +33,25 @@
     return n === 1 ? "1 day" : n + " days";
   }
 
+  /* A THEME WITH NO SEASON (Friends) counts its streaks from what its games
+     bank (XIPlayed.themeStreaks), and has no W/L form: the owner, 28 Sep 2026,
+     "W and L is for football, Friends should be about streaks only". */
+  var theme = window.XIChrome && window.XIChrome.theme ? window.XIChrome.theme() : "football";
+  var seasonless = theme !== "football";
   function paintStreaks(dayGames, today) {
     var box = el("homeStreaks");
-    if (!box || !window.XISeason || !today) return;
-    var st = window.XISeason.streaks(dayGames, game, today);
+    if (!box || !today) return;
+    var st;
+    if (seasonless) {
+      if (!window.XIPlayed || !window.XIPlayed.themeStreaks) return;
+      var me = window.XIPlayed.idOf(location.pathname);
+      st = window.XIPlayed.themeStreaks(theme, me, today);
+      var form = box.querySelector(".home-form");
+      if (form) form.hidden = true;
+    } else {
+      if (!window.XISeason) return;
+      st = window.XISeason.streaks(dayGames, game, today);
+    }
 
     var pairs = [
       ["streakGame", "streakGameN", st.game],
@@ -117,6 +132,7 @@
              to get one: the device's calendar is exactly what must not decide
              this. Nothing is drawn, which is correct. */
           if (!d || !d.today) return;
+          if (seasonless) { paintStreaks(null, d.today); return; }
           var dayGames = (d.account && d.dayGames) ? d.dayGames
             : (window.XISeason ? window.XISeason.finishedDays() : []);
           paintStreaks(dayGames, d.today);

@@ -20,7 +20,7 @@
  * and a roster is a candidate list for the door.
  */
 var DECK_WORD = { main: 'Everyday', expert: 'Deep cut' };
-var BUILD = "v001m";
+var BUILD = "v001n";
 
 (function bootstrap() {
   'use strict';
@@ -897,6 +897,9 @@ function bankResult() {
       cardsSolved: got,
       bonus: all ? BONUS : 0,
       score: dayScore(),
+      /* WHEN IT WAS FINISHED: a day played on its own day keeps a streak
+         going; one caught up later does not (XIPlayed.playedDays). */
+      at: Date.now(),
       cards: cards.map(function (c) {
         return { slot: c.slot, solved: !!c.solved, score: c.score, clues: c.clues, wrongs: c.wrongs };
       })

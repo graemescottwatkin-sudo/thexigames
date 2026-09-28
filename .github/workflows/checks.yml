@@ -94,6 +94,10 @@ jobs:
           # the board that holds its number now: "already played, 36" on a #9
           # the owner had never seen (26 Sep 2026). Six sabotages, all red.
           node football/crossword/renumbered_test.mjs
+          # THE FRIENDS STREAKS (the owner, 28 Sep 2026: "Friends should be about
+          # streaks only"), counted by shared/xi-played.js from what the games
+          # bank -- and the id lookup that read /friends/crossword/ as football's.
+          node tools/streaks_test.mjs
           # FOUR THINGS THE CROSSWORD SAID THAT WERE NOT TRUE (Play build, 24 Sep
           # 2026): "undefinedth" for a result with no position, "saved on this
           # device only" to a signed-in player, a result dated by the device's

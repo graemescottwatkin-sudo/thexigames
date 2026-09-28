@@ -83,7 +83,7 @@
        family's daily number — the same quantity football's crossword uses, and
        the reason functions/_lib/games.js keys it "fr:<no>". Its own prefix, so a
        player who has done one crossword has not done the other. */
-    { id: "crossword_fr", key: "xifc.results", api: "/api/crossword_fr/daily",
+    { id: "crossword_fr", key: "xifc.results", theme: "friends", dir: "crossword", api: "/api/crossword_fr/daily",
       today: function (d) { return d.no; },
       done: function (r, t) { return r.no === t; } },
     /* Who Am I: Friends. Keyed on the DAY, like football's and for the same
@@ -91,13 +91,21 @@
        day is what makes a result unique. Its own prefix, so a player who has
        done one Who Am I has not done the other -- the two run on the same days,
        which is exactly when a shared prefix would file both under one key. */
-    { id: "whoami_fr", key: "xifw.results.v1", api: "/api/whoami_fr/daily",
+    { id: "whoami_fr", key: "xifw.results.v1", theme: "friends", dir: "whoami", api: "/api/whoami_fr/daily",
       today: function (d) { return d.day; },
       done: function (r, t) { return r.day === t; } },
   ];
 
   var byId = {};
   PROBE.forEach(function (p) { byId[p.id] = p; });
+  /* BY ADDRESS, THEME AND ALL. A game's id is not its directory: the Friends
+     crossword lives at /friends/crossword/ and is crossword_fr. Read by the
+     last path segment alone, the Friends squad's slots resolved to FOOTBALL's
+     probes -- so a Friends page asked football's results whether a Friends game
+     had been played (found 28 Sep 2026, building the Friends streaks). A row
+     says its theme and directory where they are not football's and its id. */
+  var byPath = {};
+  PROBE.forEach(function (p) { byPath[(p.theme || "football") + "/" + (p.dir || p.id)] = p; });
 
   /* A game's stored results, or an empty list. A store that cannot be read
      decides nothing — it must not read as "played", which would hide a game
@@ -163,7 +171,61 @@
      /football/crossword/ -> crossword. */
   function idOf(href) {
     var parts = String(href || "").split("/").filter(Boolean);
+    if (parts.length >= 2 && byPath[parts[0] + "/" + parts[1]]) return byPath[parts[0] + "/" + parts[1]].id;
     return parts.length ? parts[parts.length - 1] : "";
+  }
+
+  /* ---- STREAKS FOR A THEME WITH NO SEASON -----------------------------------
+     The owner, 28 Sep 2026: "W and L is for football, Friends should be about
+     streaks only / lets still have any game + specific game streaks / any game
+     can be just 1 play unlike football needing 2 games". The Friends games keep
+     no season (NO_SEASON in functions/_lib/games.js), so their streaks are read
+     from what each game already banks on this device -- which, for a signed-in
+     player, includes what the game pulled from the account.
+     A DAY COUNTS WHEN ITS BOARD WAS PLAYED ON ITS OWN DAY. A row carries its
+     board's day (`day`, or the crossword's `date`) and, where it has one, the
+     moment it was finished (`at`): a board finished on a later day is catch-up
+     play, and does not mend a run. A row with no `at` cannot say, and counts. */
+  var DAY = /^\d{4}-\d{2}-\d{2}$/;
+  function playedDays(id) {
+    var p = byId[id];
+    if (!p) return [];
+    var seen = {};
+    listOf(p.key).forEach(function (r) {
+      if (!r) return;
+      var d = String(r.day || r.date || "").slice(0, 10);
+      if (!DAY.test(d)) return;
+      if (r.at != null && isFinite(Number(r.at))) {
+        var on = new Date(Number(r.at)).toISOString().slice(0, 10);
+        if (on !== d) return;
+      }
+      seen[d] = true;
+    });
+    return Object.keys(seen).sort();
+  }
+  /* THE RUN: consecutive days ending today, or ending yesterday while today is
+     still open -- the family's rule, as XISeason.streaks applies it. `today`
+     is the SERVER's day; this never reads the device clock for it. */
+  function runOf(days, today) {
+    if (!DAY.test(String(today || ""))) return 0;
+    var set = {};
+    (days || []).forEach(function (d) { set[d] = true; });
+    var step = function (d, n) {
+      var t = new Date(d + "T00:00:00Z");
+      t.setUTCDate(t.getUTCDate() + n);
+      return t.toISOString().slice(0, 10);
+    };
+    var at = set[today] ? today : step(today, -1);
+    var run = 0;
+    while (set[at]) { run++; at = step(at, -1); }
+    return run;
+  }
+  /* A THEME'S TWO STREAKS: this game's, and any game of the theme's, where one
+     game played on a day is enough. */
+  function themeStreaks(theme, gameId, today) {
+    var any = {};
+    list(theme).forEach(function (g) { playedDays(g.id).forEach(function (d) { any[d] = true; }); });
+    return { game: gameId ? runOf(playedDays(gameId), today) : 0, daily: runOf(Object.keys(any), today) };
   }
 
   /* THE PROBE JOINED TO THE SQUAD, which is the shape every caller actually
@@ -193,5 +255,6 @@
   window.XIPlayed = {
     PROBE: PROBE, list: list, listOf: listOf, doneToday: doneToday,
     suggestNext: suggestNext, idOf: idOf, beforeItsBoard: beforeItsBoard,
+    playedDays: playedDays, runOf: runOf, themeStreaks: themeStreaks,
   };
 })();

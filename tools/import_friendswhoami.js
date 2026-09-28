@@ -41,6 +41,7 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { DOORS as FR_DOORS } from "../functions/_lib/frwa-data.js";
 import { fileURLToPath } from "node:url";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -373,7 +374,7 @@ console.log(`  clues with an episode located: ${cited}`);
 const flagged = cards.reduce((a, c) => a + c.clues.filter((x) => x.verified === true).length, 0);
 console.log(`  clues flagged verified: ${flagged}`);
 console.log(`  daily rounds (verified only): ${dailyRounds} from ${dailyCards} character card(s), ` +
-  `${dailyRows} rows — ${Math.floor(dailyRounds / 3)} days at three doors`);
+  `${dailyRows} rows — about ${Math.floor(dailyRounds / FR_DOORS)} days at ${FR_DOORS} a day (the calendar's count, with rest, is the real one)`);
 if (noDaily.length) {
   console.log(`  no daily rounds, endless play only (${noDaily.length}): ${noDaily.join(", ")}`);
 }
@@ -383,6 +384,8 @@ if (CHECK) {
 } else {
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, sql);
-  console.log(`  wrote data/fr-whoami-production.sql (${(sql.length / 1024).toFixed(0)} KB)`);
+  /* THE PATH IT WROTE, not the default's name: with --out it said
+     data/fr-whoami-production.sql while writing elsewhere (28 Sep 2026). */
+  console.log(`  wrote ${path.relative(ROOT, OUT) || OUT} (${(sql.length / 1024).toFixed(0)} KB)`);
   console.log("  apply with: npx wrangler d1 execute crosswordxi --remote --file=data/fr-whoami-production.sql");
 }

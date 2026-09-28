@@ -29,14 +29,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/shared/xi-tokens.css?v=v80">
-<link rel="stylesheet" href="/shared/xi-landing.css?v=v80">
-<link rel="stylesheet" href="/shared/xi-chrome.css?v=v80">
-<link rel="stylesheet" href="/shared/xi-matchbar.css?v=v80">
-<link rel="stylesheet" href="/shared/xi-share.css?v=v80">
-<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v80">
-<script src="/shared/xi-theme.js?v=v80"></script>
-<link rel="stylesheet" href="css/style.css?v=v001m">
+<link rel="stylesheet" href="/shared/xi-tokens.css?v=v81">
+<link rel="stylesheet" href="/shared/xi-landing.css?v=v81">
+<link rel="stylesheet" href="/shared/xi-chrome.css?v=v81">
+<link rel="stylesheet" href="/shared/xi-matchbar.css?v=v81">
+<link rel="stylesheet" href="/shared/xi-share.css?v=v81">
+<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v81">
+<script src="/shared/xi-theme.js?v=v81"></script>
+<link rel="stylesheet" href="css/style.css?v=v001n">
 </head>
 <body>
 
@@ -112,6 +112,31 @@
     </div>
 
     <aside class="site-side">
+      <!-- THE STREAKS (the owner, 28 Sep 2026): this game's, and any Friends
+           game's, where one game played on a day is enough. Counted by
+           shared/xi-menu.js from what the games bank; no season, no form. -->
+      <div class="home-streaks" id="homeStreaks" hidden>
+        <div class="streak" id="streakGame">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M12 2.5s5.5 4.4 5.5 9.4a5.5 5.5 0 1 1-11 0c0-1.9.8-3.6 1.8-5 .2 1.5 1 2.6 2 2.6 1.6 0 1.2-3.6 1.7-7Z"
+                  stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+          </svg>
+          <span class="st-say">
+            <span class="st-l">Who Am I streak</span>
+            <span class="st-n" id="streakGameN">&mdash;</span>
+          </span>
+        </div>
+        <div class="streak" id="streakDaily">
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <rect x="3" y="4.5" width="18" height="16" rx="2.5" stroke="currentColor" stroke-width="1.6"/>
+            <path d="M3 9.5h18M8 2.5v4M16 2.5v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+          </svg>
+          <span class="st-say">
+            <span class="st-l">Any game streak</span>
+            <span class="st-n" id="streakDailyN">&mdash;</span>
+          </span>
+        </div>
+      </div>
       <!-- HOW TO PLAY, ON THE PAGE RATHER THAN BEHIND A TAB. This game is days
            old and none of its rules are the ones a player already knows from a
            crossword; the one place they are certain to be read is beside the
@@ -290,14 +315,15 @@
 
 <footer class="xic-foot"></footer>
 
-<script src="/shared/xi-chrome.js?v=v80"></script>
-<script src="/shared/xi-matchbar.js?v=v80"></script>
-<script src="/shared/xi-share.js?v=v80"></script>
+<script src="/shared/xi-chrome.js?v=v81"></script>
+<script src="/shared/xi-matchbar.js?v=v81"></script>
+<script src="/shared/xi-share.js?v=v81"></script>
 <!-- xi-played.js first: xi-fulltime.js asks it what has been played today. -->
-<script src="/shared/xi-played.js?v=v80"></script>
-<script src="/shared/xi-fulltime.js?v=v80"></script>
-<script src="js/config.js?v=v001m"></script>
-<script src="/shared/xi-plays.js?v=v80"></script>
-<script src="js/game.js?v=v001m"></script>
+<script src="/shared/xi-played.js?v=v81"></script>
+<script src="/shared/xi-menu.js?v=v81"></script>
+<script src="/shared/xi-fulltime.js?v=v81"></script>
+<script src="js/config.js?v=v001n"></script>
+<script src="/shared/xi-plays.js?v=v81"></script>
+<script src="js/game.js?v=v001n"></script>
 </body>
 </html>

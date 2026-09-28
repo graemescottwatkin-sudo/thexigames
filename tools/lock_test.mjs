@@ -2095,17 +2095,22 @@ if (!ONLY || ONLY === "landing") {
       };
     });
     t(`${g}: no tab row, no Play as`, !m.tabs && !m.playAs, JSON.stringify({ tabs: m.tabs, playAs: m.playAs }));
-    /* THE FRIENDS CROSSWORD HAS NO SEASON, by the owner's ruling, so the page
-       never loads the file the streaks are counted from and the block stays
-       hidden: there the daily and Other boards are the page. Said, not
-       skipped -- its order is still checked, and the streaks must be hidden. */
+    /* FRIENDS HAS STREAKS AND NO FORM (the owner, 28 Sep 2026: "W and L is
+       for football, Friends should be about streaks only"). No season, so the
+       streaks are counted from what the games bank (XIPlayed.themeStreaks):
+       the daily, Other boards, then the streaks -- and the W/L row hidden. */
     if (g.startsWith("friends/")) {
       const f = await page.evaluate(() => ({
         order: document.getElementById("homeDaily").getBoundingClientRect().top <
-          document.getElementById("homeOther").getBoundingClientRect().top,
-        streaksHidden: document.getElementById("homeStreaks").hidden }));
-      t(`${g}: the daily, then Other boards; no streaks, since this game has no season`,
-        f.order && f.streaksHidden && m.form && m.anyGame, JSON.stringify(f));
+          document.getElementById("homeOther").getBoundingClientRect().top &&
+          document.getElementById("homeOther").getBoundingClientRect().top <
+          document.getElementById("homeStreaks").getBoundingClientRect().top,
+        streaks: !document.getElementById("homeStreaks").hidden,
+        formHidden: !!document.querySelector("#homeStreaks .home-form") &&
+          (document.querySelector("#homeStreaks .home-form").hidden ||
+           getComputedStyle(document.querySelector("#homeStreaks .home-form")).display === "none") }));
+      t(`${g}: the daily, then Other boards, then the streaks -- and no W/L form`,
+        f.order && f.streaks && f.formHidden && m.anyGame, JSON.stringify(f));
     } else {
       t(`${g}: the daily, then Other boards, then the streaks with the form as one row ("Any game streak")`,
         m.order && m.form && m.anyGame, JSON.stringify(m));
