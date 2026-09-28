@@ -159,7 +159,13 @@ function scoringOf(w) {
              matchMinutes: MATCH_MINUTES, rateSeconds: RATE_SECONDS,
              ladder, giveUp: { label: w.giveUp.label } };
   }
-  return { max: w.doorMax, doors: w.data.DOORS || DOORS,
+  /* A DAY OF CARDS (the Friends deck, since 28 Sep 2026): the day's maximum is
+     the cards and the all-got bonus, and the page is told what a card is worth,
+     the bonus, and the ring, rather than keeping copies of its own. */
+  const doors = w.data.DOORS || DOORS;
+  const bonus = w.dayBonus || 0;
+  return { max: doors * w.doorMax + bonus, cardMax: w.doorMax, bonus, doors,
+           wrongCost: w.wrongCost || 0, ring: w.ring || 0,
            ladder, giveUp: { label: w.giveUp.label } };
 }
 

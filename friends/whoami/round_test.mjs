@@ -78,6 +78,9 @@ function makeEnv(fr) {
             ? [{ card_id: "main-07", kind: "accept", name: "Rachel Green" }]
             : a[0] === "MONICAGELLER"
             ? [{ card_id: "main-01", kind: "accept", name: "Monica Geller" }]
+            : a[0] === "APARTMENT"
+            ? [{ card_id: "main-07", kind: "suggest", name: "Rachel Green" },
+               { card_id: "main-01", kind: "suggest", name: "Monica Geller" }]
             : [] };
         }
         if (/FROM \w*wa_guess WHERE play_id/.test(q))
@@ -124,12 +127,14 @@ console.log("The Friends deck");
 {
   const s = await sitting("whoami_fr", 2, "Monica Geller", "Rachel Green");
 
-  t("a door opens and is worth ten before anything is spent",
-    s.open.playId && s.open.worthNow === 10, String(s.open.worthNow));
+  /* THE OWNER'S RULES, 28 Sep 2026: a card is worth 18 untouched, the second
+     and third clues cost 5 each, and a wrong guess costs 1. */
+  t("a card opens and is worth eighteen before anything is spent",
+    s.open.playId && s.open.worthNow === 18, String(s.open.worthNow));
   t("the first clue is free", s.rung1.pointsSpent === 0 && s.rung1.text === "clue 1",
     s.rung1.text);
-  t("the second costs four, leaving the door worth six",
-    s.rung2.pointsSpent === 4 && s.rung2.worthNow === 6,
+  t("the second costs five, leaving the card worth thirteen",
+    s.rung2.pointsSpent === 5 && s.rung2.worthNow === 13,
     `spent ${s.rung2.pointsSpent}, worth ${s.rung2.worthNow}`);
   t("and a rung says only THAT it has a source, never the episode",
     s.rung2.cited === true && JSON.stringify(s.rung2).indexOf("S2E14") === -1);
@@ -142,10 +147,12 @@ console.log("The Friends deck");
     s.missed.verdict);
   t("and a wrong guess carries no answer",
     !("answer" in s.missed) && JSON.stringify(s.missed).indexOf("Rachel") === -1);
-  t("a wrong guess costs nothing", s.missed.pointsSpent === 4 && s.missed.worthNow === 6);
+  t("a wrong guess costs a point: thirteen becomes twelve",
+    s.missed.pointsSpent === 5 && s.missed.worthNow === 12 && s.missed.wrongs === 1 && s.missed.ring === 1,
+    `worth ${s.missed.worthNow}, wrongs ${s.missed.wrongs}, ring ${s.missed.ring}`);
 
   t("the right name closes the door and scores what it was worth",
-    s.got.verdict === "right" && s.got.solved === true && s.got.score === 6,
+    s.got.verdict === "right" && s.got.solved === true && s.got.score === 12,
     `score ${s.got.score}`);
   t("and the reveal names the card and the door it was behind",
     s.got.answer === "Rachel Green" && s.got.section === "Loves & Exes");
@@ -153,7 +160,7 @@ console.log("The Friends deck");
     !("text" in s.got) && !("depth" in s.got) && !("rounds" in s.got));
 
   t("finish reads the STORED score rather than recomputing it",
-    s.done.score === 6 && s.done.solved === true, String(s.done.score));
+    s.done.score === 12 && s.done.solved === true, String(s.done.score));
   t("and counts the near miss under this deck's own word for it",
     s.done.guesses === 2 && s.done.nearMisses === 1,
     `${s.done.guesses} guess(es), ${s.done.nearMisses} near miss`);
@@ -167,6 +174,61 @@ console.log("The Friends deck");
   t("and not one of them named football's",
     !/\bwa_round\b/.test(named) && !/\bwa_guess\b/.test(named) &&
     !/\bwa_door\b/.test(named) && !/\bwa_player\b/.test(named));
+}
+
+/* ---- the ring: three wrong guesses reveal the next clue ------------------
+   The owner, 28 Sep 2026: "let them guess 2 or 3 times then reveal the next
+   clue automatically ... a piece fills in for each wrong guess then the 3rd
+   fills it and reveals the clue / if you get a guess right or click reveal
+   yourself it resets", and on the last clue a full ring loses the card. */
+console.log("\nThe ring");
+{
+  const G = "whoami_fr";
+  const { env } = makeEnv(true);
+  const open = await openRound(env, "2026-09-22", 2, G);
+  const at = () => getRound(env, open.playId, G);
+  await buyClue(env, await at(), 1, G);
+  const w1 = await judgeGuess(env, await at(), "Nobody At All", G);
+  const w2 = await judgeGuess(env, await at(), "Nobody Else", G);
+  t("two wrong guesses fill two pieces and cost two points",
+    w1.ring === 1 && w2.ring === 2 && w2.worthNow === 16 && !w2.autoClue, JSON.stringify({ ring: w2.ring, worth: w2.worthNow }));
+  const amb = await judgeGuess(env, await at(), "apartment", G);
+  t("a word that names several cards is a choice offered, not a wrong guess",
+    amb.verdict === "ambiguous" && amb.ring === 2 && amb.worthNow === 16, JSON.stringify({ v: amb.verdict, ring: amb.ring }));
+  const w3 = await judgeGuess(env, await at(), "Still Nobody", G);
+  t("the third fills the ring and reveals the second clue by itself, at its price",
+    w3.autoClue === true && w3.clue && w3.clue.stage === 2 && w3.clue.text === "clue 2" &&
+      w3.worthNow === 18 - 5 - 3 && w3.ring === 0 && !w3.finished,
+    JSON.stringify({ auto: w3.autoClue, stage: w3.clue && w3.clue.stage, worth: w3.worthNow, ring: w3.ring }));
+  const w4 = await judgeGuess(env, await at(), "Nobody Again", G);
+  t("and the ring starts again from empty", w4.ring === 1 && !w4.autoClue, String(w4.ring));
+  const bought = await buyClue(env, await at(), 3, G);
+  t("revealing a clue yourself empties it too",
+    bought.stage === 3 && bought.ring === 0 && bought.worthNow === 18 - 10 - 4, JSON.stringify({ ring: bought.ring, worth: bought.worthNow }));
+  const again = await buyClue(env, await at(), 3, G);
+  t("asking again for a clue already shown charges nothing and does not empty the ring twice",
+    again.replayed === true && again.pointsSpent === 10, JSON.stringify(again.pointsSpent));
+  await judgeGuess(env, await at(), "One", G);
+  await judgeGuess(env, await at(), "Two", G);
+  const lost = await judgeGuess(env, await at(), "Three", G);
+  t("on the last clue a full ring loses the card: nought, closed, and the answer shown",
+    lost.lost === true && lost.finished === true && lost.solved === false && lost.score === 0 && lost.answer === "Rachel Green",
+    JSON.stringify({ lost: lost.lost, score: lost.score, answer: lost.answer }));
+  const closed = await judgeGuess(env, await at(), "Rachel Green", G);
+  t("and a lost card cannot then be solved", !!closed.error, JSON.stringify(closed));
+  const done = await finishRound(env, await at(), G);
+  t("finish counts the guesses without the clue markers, and says how many were wrong",
+    done.guesses === 8 && done.wrongs === 7 && done.score === 0, `${done.guesses} guesses, ${done.wrongs} wrong`);
+}
+{
+  const G = "whoami_fr";
+  const { env } = makeEnv(true);
+  const open = await openRound(env, "2026-09-22", 2, G);
+  const at = () => getRound(env, open.playId, G);
+  await buyClue(env, await at(), 1, G);
+  await judgeGuess(env, await at(), "Nobody", G);
+  const got = await judgeGuess(env, await at(), "Rachel Green", G);
+  t("one wrong guess, then right on the first clue: seventeen", got.solved && got.score === 17, String(got.score));
 }
 
 console.log("\nGiving up, which is not a substitution");
@@ -190,7 +252,7 @@ console.log("\nThe doors this deck deals");
   const nil = await openRound(env, "2026-09-22", 1, "nope");
   t("and an unknown game is refused rather than defaulted to football's",
     nil.error === "no such game", JSON.stringify(nil));
-  t("the registry agrees there are three", whoamiOf("whoami_fr").data.DOORS === 3);
+  t("the registry agrees there are five", whoamiOf("whoami_fr").data.DOORS === 5);
 }
 
 console.log("\nFootball, unchanged");

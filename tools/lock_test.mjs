@@ -1821,7 +1821,17 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
   for (const vp of [VIEWPORTS[0], VIEWPORTS[1], VIEWPORTS[3]]) {
     const { page, context } = await openProfile(game, vp);
     page.on("dialog", (d) => d.accept());
-    await page.click("#giveUp");
+    /* ONE DOOR ENDS FOOTBALL'S DAY; FRIENDS PLAYS FIVE CARDS (the owner's
+       ruling of 28 Sep 2026), each "Tell me" moving to the next -- so give up
+       until Full Time comes, and each card must offer the button again. */
+    for (let i = 0; i < 11; i++) {
+      if (await page.$eval("#screenDone", (e) => !e.hidden)) break;
+      const before = await page.$eval("#playLeft", (e) => e.textContent);
+      await page.click("#giveUp");
+      await page.waitForFunction((was) => !document.getElementById("screenDone").hidden ||
+        (document.getElementById("playLeft").textContent !== was && !document.getElementById("giveUp").disabled),
+        before, { timeout: 10000 });
+    }
     await page.waitForFunction(() => !document.getElementById("screenDone").hidden, null, { timeout: 10000 });
     /* Stays fixed: Full Time's room check keeps the page locked when it works. */
     await wait(600);

@@ -110,6 +110,46 @@ export function costToReach(stage, game) {
 export const GIVE_UP = CONFIG.GIVE_UP;
 export const SUBS = CONFIG.SUBS_PER_BOARD;
 
+/* ---- the wrong guesses, and the ring (the Friends deck) -----------------
+   THE OWNER'S RULES, 28 Sep 2026, for Friends Who Am I: five cards a day in a
+   fixed order; a card is worth 20 less, now 18 so five and the all-five bonus
+   make 100 ("Cards worth 18 each (90) + 10 bonus = 100"); "remove one point
+   per wrong guess"; "-5 for seeing 2nd clue", and another 5 for the third;
+   three wrong guesses fill a ring and reveal the next clue by themselves, and
+   on the last clue a full ring loses the card (0, the answer shown).
+   COUNTED FROM THE GUESS ROWS, not stored beside them. subs_used cannot carry
+   them: it is the clues' cost, and the stage a round has reached is READ from
+   it (costToReach), so adding a wrong guess to it would move the round up a
+   clue. A clue's reveal writes a marker row (MARK) into the guess table, so
+   "since the last clue" is a question the rows can answer in order. */
+const MARK = "clue";
+async function tallyOf(env, game, playId) {
+  const w = of_(game);
+  const out = { wrongs: 0, ring: 0 };
+  if (!w || !w.wrongCost) return out;
+  const { results } = await env.DB
+    .prepare(`SELECT n, verdict FROM ${T(game, "guess")} WHERE play_id = ? ORDER BY n`)
+    .bind(playId).all();
+  for (const r of results || []) {
+    if (r.verdict === MARK) out.ring = 0;
+    else if ((w.wrongVerdicts || []).includes(r.verdict)) { out.wrongs++; out.ring++; }
+  }
+  return out;
+}
+/* What the wrong guesses have cost, in the same points the clues are in. */
+const penaltyOf = (game, t) => {
+  const w = of_(game);
+  return w && w.wrongCost ? w.wrongCost * (t ? t.wrongs : 0) : 0;
+};
+/* The stage a round has reached, read off what its clues cost. */
+function stageOf(spent, game) {
+  const w = of_(game);
+  if (!w) return 1;
+  let at = 1;
+  for (const s of w.ladder) if (costToReach(s.stage, game) <= Number(spent || 0)) at = Math.max(at, s.stage);
+  return at;
+}
+
 export async function getRound(env, playId, game) {
   const t = T(game, "round");
   if (!env || !env.DB || !playId || !t) return null;
@@ -172,21 +212,27 @@ export async function buyClue(env, round, stage, game) {
   /* ALREADY PAID FOR: serve it, charge nothing. A reload must not be a second
      purchase, which is the shape of fault Codeword found in its own demo where
      a clock could be rewound for free. */
+  const tally = await tallyOf(env, game, round.play_id);
+  const penalty = penaltyOf(game, tally);
   if (need <= spent) {
     return {
       stage: want.stage, label: want.label, pointsSpent: spent,
-      minute, worthNow: scoreFor(minute, spent, game), replayed: true,
+      minute, worthNow: scoreFor(minute, spent + penalty, game), replayed: true,
+      wrongs: tally.wrongs, ring: tally.ring,
       ...body,
     };
   }
-
   await env.DB.prepare(`UPDATE ${T(game, "round")} SET subs_used = ? WHERE play_id = ?`)
     .bind(need, round.play_id).run();
-
+  /* A CLUE EMPTIES THE RING, whether the player asked for it or three wrong
+     guesses did: the marker is what "since the last clue" counts from. */
+  if (w.ring) {
+    await record(env, game, round.play_id, await nextGuessNumber(env, game, round.play_id), "", MARK, at);
+  }
   return {
     stage: want.stage, label: want.label, pointsSpent: need, minute,
-    worthNow: scoreFor(minute, need, game), finished: false, solved: false,
-    replayed: false,
+    worthNow: scoreFor(minute, need + penalty, game), finished: false, solved: false,
+    replayed: false, wrongs: tally.wrongs, ring: 0,
     ...body,
   };
 }
@@ -263,18 +309,43 @@ export async function judgeGuess(env, round, guess, game) {
   const call = await w.data.judge(env, door, key);
   await record(env, game, round.play_id, n, key, call.verdict, at);
 
+  const tally = await tallyOf(env, game, round.play_id);
+  const penalty = penaltyOf(game, tally);
+
   if (call.solved) {
     /* THE SCORE IS STRUCK HERE AND STORED, not recomputed at finish. A
        re-derivation would use TODAY's curve, so the day anybody tunes one every
        past board would silently become a different board. QuickFire's session
        made the same call about its bands for the same reason. */
-    const score = scoreFor(minute, spent, game);
+    const score = scoreFor(minute, spent + penalty, game);
     await env.DB.prepare(
       `UPDATE ${T(game, "round")} SET finished = 1, solved = 1, score = ?, minute = ? WHERE play_id = ?`
     ).bind(score, minute, round.play_id).run();
     return { verdict: call.verdict, ...w.data.solveBody(door),
-             pointsSpent: spent, minute, score,
+             pointsSpent: spent, minute, score, wrongs: tally.wrongs,
              finished: true, solved: true };
+  }
+
+  /* THE RING IS FULL: the next clue comes by itself, at its price -- or, on
+     the last clue, the card is lost: nought, and the answer shown, since a
+     game that tells a player "no" three times owes them who it was. */
+  if (w.ring && tally.ring >= w.ring) {
+    const stage = stageOf(spent, game);
+    if (stageAt(stage + 1, game)) {
+      const auto = await buyClue(env, round, stage + 1, game);
+      if (auto && !auto.error) {
+        return { verdict: call.verdict, autoClue: true, pointsSpent: auto.pointsSpent, minute,
+                 worthNow: auto.worthNow, wrongs: tally.wrongs, ring: 0,
+                 finished: false, solved: false, clue: auto };
+      }
+    } else {
+      await env.DB.prepare(
+        `UPDATE ${T(game, "round")} SET finished = 1, solved = 0, score = 0, minute = ? WHERE play_id = ?`
+      ).bind(minute, round.play_id).run();
+      return { verdict: call.verdict, lost: true, pointsSpent: spent, minute, score: 0, worthNow: 0,
+               wrongs: tally.wrongs, ring: tally.ring, finished: true, solved: false,
+               ...(await w.data.reveal(env, door, w.giveUp)) };
+    }
   }
 
   /* NO ANSWER IN THIS RESPONSE, on any branch. A near miss says it was a near
@@ -288,8 +359,8 @@ export async function judgeGuess(env, round, guess, game) {
      does not pick for them. */
   return { verdict: call.verdict,
            ...(call.options ? { options: call.options } : {}),
-           pointsSpent: spent, minute,
-           worthNow: scoreFor(minute, spent, game), finished: false, solved: false };
+           pointsSpent: spent, minute, wrongs: tally.wrongs, ring: tally.ring,
+           worthNow: scoreFor(minute, spent + penalty, game), finished: false, solved: false };
 }
 
 /* THE GAME IS AN ARGUMENT HERE, and it was not: both of these read `game` off
@@ -318,7 +389,9 @@ export async function finishRound(env, round, game) {
   const { results } = await env.DB
     .prepare(`SELECT n, guess, verdict FROM ${T(game, "guess")} WHERE play_id = ? ORDER BY n`)
     .bind(round.play_id).all();
-  const guesses = results || [];
+  /* The clue markers are not guesses (see tallyOf). */
+  const guesses = (results || []).filter((g) => g.verdict !== MARK);
+  const tally = await tallyOf(env, game, round.play_id);
   const closed = !!Number(round.finished);
   const spent = Number(round.subs_used) || 0;
 
@@ -337,6 +410,7 @@ export async function finishRound(env, round, game) {
        than written here: these rows were stored weeks ago and the counting must
        use the vocabulary they were stored in. */
     nearMisses: guesses.filter((g) => g.verdict === w.nearVerdict).length,
+    wrongs: tally.wrongs,
   };
 
   if (closed) {
@@ -352,7 +426,8 @@ export async function finishRound(env, round, game) {
        read one. */
     const minute = minuteOf(round, now());
     out.minute = minute;
-    out.worthNow = scoreFor(minute, spent, game);
+    out.worthNow = scoreFor(minute, spent + penaltyOf(game, tally), game);
+    out.ring = tally.ring;
   }
   return out;
 }

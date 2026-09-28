@@ -32,11 +32,28 @@ import { scoreAt } from "./xi-score.js";
    is worth 10, 6 or 3. costToReach sums the points below a stage, which is why
    these are increments and not totals -- the same shape football's ladder uses,
    so wa-play.js's arithmetic is untouched. */
+/* THE OWNER'S RULES, 28 Sep 2026, for Friends Who Am I: five cards a day in a
+   fixed order; a card is worth 20 less, now 18 so five and the all-five bonus
+   make 100 ("Cards worth 18 each (90) + 10 bonus = 100"); "remove one point
+   per wrong guess"; "-5 for seeing 2nd clue", and another 5 for the third;
+   three wrong guesses fill a ring and reveal the next clue by themselves, and
+   on the last clue a full ring loses the card (0, the answer shown).
+   So the ladder charges 5 and 5, and a card is worth 18 / 13 / 8 before the
+   wrong guesses come off it. */
 export const FR_LADDER = [
   { stage: 1, points: 0, sub: 0, label: "First clue",  reveals: ["clue"] },
-  { stage: 2, points: 4, sub: 1, label: "Second clue", reveals: ["clue"] },
-  { stage: 3, points: 3, sub: 2, label: "Third clue",  reveals: ["clue"] },
+  { stage: 2, points: 5, sub: 1, label: "Second clue", reveals: ["clue"] },
+  { stage: 3, points: 5, sub: 2, label: "Third clue",  reveals: ["clue"] },
 ];
+/* WHAT A FRIENDS CARD IS WORTH UNTOUCHED, and what a wrong guess costs. */
+export const FR_CARD_MAX = 18;
+export const FR_WRONG_COST = 1;
+/* THE RING: this many wrong guesses since the last clue reveal the next one,
+   or, on the last clue, lose the card. */
+export const FR_RING = 3;
+/* ALL FIVE GOT: a bonus 10, whatever clues it took ("Bonus of 10 for a 5
+   corrects even if clues are used"). Five cards at 18 and this make 100. */
+export const FR_DAY_BONUS = 10;
 
 /* THE EXIT, WHICH IS NOT A RUNG -- the same distinction football's config draws
    and for the same reason. It is not priced: a card you were told the answer to
@@ -98,6 +115,9 @@ export const WHOAMIS = {
        rows written weeks ago, so the word is a fact about this game's data and
        not a branch in the counting. */
     nearVerdict: "right-club",
+    /* A WRONG NAME COSTS NOTHING HERE BUT THE CLOCK, and there is no ring:
+       football's rules, unchanged by the Friends deck's. */
+    wrongCost: 0, ring: 0,
     doorMax: null,                       // the curve decides, not a constant
     scoreFor: (minute, spent) =>
       Math.max(0, Math.round(scoreAt(minute) - (Number(spent) || 0))),
@@ -118,11 +138,16 @@ export const WHOAMIS = {
     ladder: FR_LADDER,
     giveUp: FR_GIVE_UP,
     nearVerdict: "other",
-    doorMax: 10,
+    /* WHICH VERDICTS ARE WRONG GUESSES: a name that is nobody, and a name that
+       is somebody else's card. "ambiguous" is not one -- it offers a choice. */
+    wrongVerdicts: ["wrong", "other"],
+    wrongCost: FR_WRONG_COST, ring: FR_RING, dayBonus: FR_DAY_BONUS,
+    doorMax: FR_CARD_MAX,
     /* NO MINUTE TERM. The argument is accepted and ignored so the two share one
-       signature; ignoring it here is the rule, not an oversight. */
+       signature; ignoring it here is the rule, not an oversight. `spent` is
+       the clues' cost AND the wrong guesses', which wa-play.js adds. */
     scoreFor: (_minute, spent) =>
-      Math.max(0, 10 - (Number(spent) || 0)),
+      Math.max(0, FR_CARD_MAX - (Number(spent) || 0)),
   },
 };
 

@@ -343,7 +343,9 @@ t("and says only THAT a source exists, never which episode",
 
 console.log("\nThe ladder, and the door count");
 
-t("three doors a day, not football's eleven", frwa.DOORS === 3, String(frwa.DOORS));
+/* FIVE, by the owner's ruling of 28 Sep 2026: five cards a day, played in a
+   fixed order, all of them counting. */
+t("five cards a day, not football's eleven", frwa.DOORS === 5, String(frwa.DOORS));
 
 /* A DAILY DOOR READS THE DAILY ROUNDS. Dailies deal verified clues only, by
    the owner's ruling of 23 September 2026, and the rounds of the verified
@@ -367,22 +369,29 @@ t("and the migration that creates that table is safe to re-run", (() => {
 })(), "045: CREATE ... IF NOT EXISTS only");
 t("and the calendar generator deals the same number", (() => {
   const gen = read("tools/build_friendswhoami_calendar.js");
-  return /export const DOORS = 3;/.test(gen);
+  return new RegExp("export const DOORS = " + frwa.DOORS + ";").test(gen);
 })(), "two copies of a door count is two answers about what a board is");
 
 t("the ladder is this deck's three rungs, hard to easy",
   whoamiOf(GAME).ladder === FR_LADDER && FR_LADDER.length === 3);
-t("the first rung is free and the next two are priced 4 and 3",
-  FR_LADDER[0].points === 0 && FR_LADDER[1].points === 4 && FR_LADDER[2].points === 3,
-  "10 / 6 / 3 for a door worth ten, which is the deck's own 3:2:1");
+/* THE OWNER'S PRICES, 28 Sep 2026: "-5 for seeing 2nd clue", another 5 for
+   the third, one point per wrong guess, a card worth 18 so five and the
+   all-five bonus of 10 make 100. */
+t("the first rung is free and the next two cost 5 each",
+  FR_LADDER[0].points === 0 && FR_LADDER[1].points === 5 && FR_LADDER[2].points === 5,
+  "18 / 13 / 8 before wrong guesses");
 t("and the page's own config says the same, so the prices drawn are the prices charged",
-  /points:\s*4/.test(cfgCode) && /points:\s*3/.test(cfgCode) &&
-  !/points:\s*20/.test(cfgCode),
-  "football's rungs cost 20 and 10");
+  (cfgCode.match(/points:\s*5/g) || []).length === 2 &&
+  !/points:\s*20/.test(cfgCode) && !/points:\s*4\b/.test(cfgCode),
+  "football's rungs cost 20 and 10; this deck's used to cost 4 and 3");
 
-t("a door is worth ten and the curve is football's alone",
-  whoamiOf(GAME).doorMax === 10 && whoamiOf(GAME).scoreFor(90, 0) === 10,
+t("a card is worth eighteen and the curve is football's alone",
+  whoamiOf(GAME).doorMax === 18 && whoamiOf(GAME).scoreFor(90, 0) === 18,
   "no clock: the deck is a party game read aloud, and the minute is ignored");
+t("a wrong guess costs one, and three of them fill the ring",
+  whoamiOf(GAME).wrongCost === 1 && whoamiOf(GAME).ring === 3 &&
+    whoamiOf("whoami").wrongCost === 0 && whoamiOf("whoami").ring === 0,
+  "football's wrong names still cost nothing but the clock");
 
 /* ---- generated, and nothing of the bank committed ----------------------- */
 
@@ -474,7 +483,8 @@ t("PRECONDITION: there is copy here to scan at all", readable.length > 400,
 const hay = " " + readable.toLowerCase().replace(/[^a-z]+/g, " ").trim() + " ";
 
 t("PRECONDITION: the scan can see the copy it is scanning",
-  hay.indexOf(" door ") > -1 && hay.indexOf(" clue ") > -1,
+  /* "card", not "door", since 28 Sep 2026: five cards a day, played in order. */
+  hay.indexOf(" card ") > -1 && hay.indexOf(" clue ") > -1,
   "if these two are missing the scan below is looking at nothing");
 
 t("no football vocabulary survives in what a player can read", (() => {

@@ -56,8 +56,15 @@ if (!FROM || !/^\d{4}-\d{2}-\d{2}$/.test(FROM)) {
   process.exit(1);
 }
 
-export const DOORS = 3;
-const REST_DAYS = 21;                    // the deck's own three-week rule
+/* FIVE A DAY AND A TWELVE-DAY REST, by the owner's rulings of 28 Sep 2026:
+   five cards a day, played in order ("maybe 5 per day not 3"), and, told it
+   would run the verified rounds out around mid-November, "5 a day, grow the
+   deck". The deck's three-week rule cannot hold at five: 73 daily cards over
+   21 days is fewer than five rested cards a day. Measured the same day: rest
+   21 or 14 stops at day 15; rest 12 deals 59 days. The runway is the deck's to
+   extend, and a rebuilt calendar picks up every round it adds. */
+export const DOORS = 5;
+const REST_DAYS = 12;
 
 /* THE LOCATIONS ARE NOT DEALT HERE, AND THAT IS WHAT MAKES ENDLESS PLAY SAFE.
  *
@@ -141,7 +148,8 @@ const cards = [];
 const re = /INSERT INTO fr_wa_card \(id, name, deck, section, card_no, depth, rounds, status\) VALUES \('([^']*)', '((?:[^']|'')*)', '([^']*)', '((?:[^']|'')*)', ([^,]+), (\d+), (\d+), '[^']*'\);/g;
 let m;
 while ((m = re.exec(sql))) {
-  cards.push({ id: m[1], name: m[2].replace(/''/g, "'"), deck: m[3], rounds: Number(m[7]) });
+  cards.push({ id: m[1], name: m[2].replace(/''/g, "'"), deck: m[3],
+               section: m[4].replace(/''/g, "'"), rounds: Number(m[7]) });
 }
 if (!cards.length) {
   console.log("REFUSED: no cards parsed out of the import. The INSERT shape has changed.");
@@ -265,7 +273,20 @@ for (let d = 0; d < DAYS; d++) {
 
   if (eligible.length < DOORS) { short = d; break; }
 
-  const picked = eligible.slice(0, DOORS);
+  /* A MIX OF SECTIONS, one of each first (the owner left the dealing to this
+     file, 28 Sep 2026: "you do what you think is best"): the longest-rested
+     card of each section, then the longest-rested of the rest. So a day is not
+     five exes in a row, and the order stays reproducible. */
+  const picked = [];
+  const seen = new Set();
+  for (const s of eligible) {
+    if (picked.length >= DOORS) break;
+    if (!seen.has(s.card.section)) { picked.push(s); seen.add(s.card.section); }
+  }
+  for (const s of eligible) {
+    if (picked.length >= DOORS) break;
+    if (!picked.includes(s)) picked.push(s);
+  }
   days.push(picked.map((s, i) => ({
     slot: i + 1,
     cardId: s.card.id,

@@ -691,6 +691,26 @@ export function detailOf(game, row) {
       })),
     });
   }
+  if (game === "whoami_fr") {
+    /* A DAY OF FIVE CARDS since 28 Sep 2026 (the owner's ruling: five in order,
+       all counting). The score has its column; what it cannot say -- which
+       cards were got, on which clue, with how many wrong names -- goes here,
+       bounded, for the same reason Ballpark's eleven do: a score is not
+       recoverable into a day. */
+    const cards = Array.isArray(row.cards) ? row.cards.slice(0, 5) : null;
+    return JSON.stringify({
+      boardNo: row.no == null ? null : n(row.no),
+      cardsSolved: n(row.cardsSolved),
+      bonus: n(row.bonus),
+      cards: cards && cards.map((c) => ({
+        slot: c && c.slot != null ? n(c.slot) : null,
+        solved: !!(c && c.solved),
+        score: c && c.score != null ? n(c.score) : null,
+        clues: c && c.clues != null ? n(c.clues) : null,
+        wrongs: c && c.wrongs != null ? n(c.wrongs) : null,
+      })),
+    });
+  }
   if (game === "quickfire") {
     /* The same, and it arrived the same way: the page has always sent right,
        wrong and the board id, and all three were discarded here.

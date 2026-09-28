@@ -20,7 +20,7 @@
  * and a roster is a candidate list for the door.
  */
 var DECK_WORD = { main: 'Everyday', expert: 'Deep cut' };
-var BUILD = "v001l";
+var BUILD = "v001m";
 
 (function bootstrap() {
   'use strict';
@@ -133,8 +133,16 @@ function start() {
     pointsSpent: 0,
     guesses: [],
     finished: false,
-    solved: false
+    solved: false,
+    worth: null,
+    wrongs: 0,
+    ring: 0,
+    answer: null,
+    cards: []
   };
+  var CARD_MAX = RULE.cardMax || 18;
+  var BONUS = RULE.bonus != null ? RULE.bonus : 10;
+  var RING = RULE.ring || 3;
 
   /* THE CLOCK IS A DISPLAY OF THE SERVER'S, not a second clock. Every call
      comes back with the minute the server is at; the page anchors to that and
@@ -177,15 +185,20 @@ function start() {
 function renderClock() {
     var total = LADDER.length || 3;
     var seen = Math.min(Math.max(1, state.stage || 1), total);
-    var worth = Math.max(0, (MAX_SCORE || 10) - (state.pointsSpent || 0));
-    var key = seen + ':' + worth;
+    /* WORTH NOW IS THE SERVER'S: it takes the wrong names off as well as the
+       clues, and the page does not count those itself. */
+    var worth = state.worth != null ? state.worth : Math.max(0, CARD_MAX - (state.pointsSpent || 0));
+    var done = (state.cards || []).length;
+    var key = seen + ':' + worth + ':' + done;
     if (key === clock.shown) return;
     clock.shown = key;
+    if (window.XIBar) XIBar.set({ progress: Math.min(done + 1, BOARD.doors.length) + '/' + BOARD.doors.length,
+                                  score: dayScore(), worth: worth });
     el.clockValue.textContent = seen;
     el.stripFill.style.width = Math.min(100, (seen / total) * 100) + '%';
     el.stripFill.classList.toggle('late', seen >= total);
     el.worthNow.textContent = worth;
-    el.worthNow.classList.toggle('low', worth <= 3);
+    el.worthNow.classList.toggle('low', worth <= 5);
   }
 
   function tick() {
@@ -338,104 +351,65 @@ function renderClock() {
     next.click();
   }
 
-  function renderDoors() {
-    /* ONE DOOR A DAY, AND THIS IS WHERE IT IS ENFORCED.
-     *
-     * It was not enforced anywhere. Every door got an unconditional click
-     * handler, so after finishing a board you could open the next one and the
-     * next — fresh clock, fresh 114, full ladder — and work the whole eleven.
-     * The comment on the "back to the board" button said "it does not offer
-     * another go", which is a sentence asserting a guard that did not exist:
-     * the worst kind, because it reads as the rule being handled.
-     *
-     * WHAT CAN AND CANNOT BE ENFORCED. The RESULT is already one a day and
-     * always was — recordResult dedupes on the day and the family's rule is
-     * first-banked-wins, so a second door can never bank a second row. What was
-     * open was the PLAYING, and for an anonymous visitor there is no server-side
-     * identity to refuse it with: the door is closed here, on the device, which
-     * is where the state lives. Somebody with developer tools can still open
-     * another, and that is honest rather than solved — they would be spoiling
-     * their own board and could not record it.
-     */
-    var done = !!state.finished;
+function renderDoors() {
+    /* THE DAY'S CARDS, IN THE ORDER THEY ARE PLAYED: none is chosen, so this
+       is a list, not a set of buttons -- what is done, what is next, what is to
+       come. The Start button opens the next one. */
+    var cards = state.cards || [];
+    var n = BOARD.doors.length;
+    var next = cards.length + 1;
     el.doors.innerHTML = '';
+    el.doors.setAttribute('role', 'list');
     picked = null;
     BOARD.doors.forEach(function (d, i) {
-      var b = document.createElement('button');
-      var mine = done && Number(state.slot) === Number(d.slot);
-      b.className = 'door' + (done ? ' spent' : '') + (mine ? ' mine' : '');
-      b.type = 'button';
-      b.disabled = done;
-      /* ONE CONTROL, ELEVEN OPTIONS. Each card is a radio rather than a
-         button, because choosing is no longer the same act as committing:
-         role tells a screen reader it is one choice among eleven, and
-         aria-checked tells it which. Only the selected card is tabbable, so
-         Tab reaches the group once and the arrow keys move inside it — the
-         pattern a radiogroup is expected to have. */
-      b.setAttribute('role', 'radio');
-      b.setAttribute('aria-checked', 'false');
-      b.tabIndex = (i === 0 && !done) ? 0 : -1;
-      /* THE LABEL IS ON THE CONTROL, not only inside a child of it. A screen
-         reader reads the accessible name of the button, and with the text in a
-         generic span the tree showed the label detached from the thing you
-         press. */
-      b.setAttribute('aria-label', done
-        ? (mine ? d.section + ' — the door you opened'
-                : d.section + ' — not yours today')
-        : d.section + ', ' + (DECK_WORD[d.deck] || d.deck));
-      b.innerHTML = '<span class="d-club">' + esc(d.section) + '</span>' +
-        '<span class="d-year">' + esc(DECK_WORD[d.deck] || d.deck) + '</span>' +
-        '<span class="d-cap">How deep it goes</span>' +
-        (mine ? '<span class="d-mine">Yours today</span>' : '');
-      if (!done) {
-        b.addEventListener('click', function () { choose(d, b); });
-        b.addEventListener('keydown', function (ev) { arrowMove(ev, b); });
-      }
+      var c = cards[i];
+      var b = document.createElement('div');
+      b.setAttribute('role', 'listitem');
+      b.className = 'door frc' + (c ? (c.solved ? ' frc-got' : ' frc-lost') : (i + 1 === next ? ' frc-next' : ''));
+      var say = c ? (c.solved ? (c.answer || 'Got') + ' · ' + c.score : 'Not this time' + (c.answer ? ' · ' + c.answer : ''))
+                  : (i + 1 === next ? 'Up next' : 'To come');
+      b.innerHTML = '<span class="d-club">Card ' + (i + 1) + '</span>' +
+        '<span class="d-year">' + esc(d.section) + '</span>' +
+        '<span class="d-cap">' + esc(say) + '</span>';
       el.doors.appendChild(b);
     });
-    if (el.commit) el.commit.hidden = done || !BOARD.doors.length;
-    if (el.playChoice) el.playChoice.disabled = true;
-    if (el.commitPick) el.commitPick.textContent = '';
-
-    /* AND THE LINE ABOVE THEM STOPS BEING UNTRUE. It read "Pick a club. One
-       player behind each door, and you get one go at him" to somebody who had
-       already had their go. */
-    if (el.lede) {
-      el.lede.textContent = done
-        ? (state.solved
-            ? 'You got yours today. The other two are somebody else\u2019s.'
-            : 'That was your go today. The other two are somebody else\u2019s.')
-        : 'Pick a door. One character behind each, and you get one go at them.';
+    var dayDone = cards.length >= n;
+    if (el.commit) el.commit.hidden = dayDone || !n;
+    if (el.playChoice) {
+      el.playChoice.disabled = dayDone;
+      el.playChoice.innerHTML = (cards.length || state.playId ? 'Carry on' : 'Start') +
+        ' <span aria-hidden="true">&#8594;</span>';
     }
-    /* SORTED AND UNATTRIBUTED, exactly as the server sent them. Rendering these
-       beside their doors would undo the whole point of sorting them. */
-    /* ONE NUMBER PER PLAYER, LABELLED, AND THIS IS THE SECOND VERSION.
-       It was eleven numbers, one per door, sorted — and sorting stopped a
-       number being attributed to a door but left the GROUPING in plain sight.
-       "3, 3, 3, 6, 6, 6, 8, 10, 10, 10, 13" says three doors share a three-club
-       player, which lets anyone holding the name list pair doors off each other
-       before guessing anything. The server dedupes to players now, so a board
-       of six players shows six numbers and the multiplicities are gone.
-       LABELLED because bare numbers read as noise. "Player 1 · 3 clubs" says
-       there is a one-club man and a journeyman in here today; "3, 6, 13" says
-       nothing. The numbering is this list's own order, which is sorted and
-       attributes to nobody. */
-    /* THE SENTENCE, NOT THE BADGES. "Player 1 · 3 clubs" told nobody anything
-       it did not already have to decode, and it was the first thing under the
-       heading. What a player needs is the RULE: two of these cards can be the
-       same man, so eleven choices are not eleven puzzles.
-       BOTH FIGURES ARE COUNTED. doors.length is the spells on the board and
-       careers.length is the players they come from — "six" was never a
-       constant, and a board that ever holds five would have made a sentence
-       with a 6 in it a lie on the front of the game. */
-    var spells = (BOARD.doors || []).length;
-    var players = (BOARD.careers || []).length;
+    if (el.commitPick) el.commitPick.textContent = dayDone ? '' : 'Card ' + next + ' of ' + n;
+    if (el.lede) {
+      el.lede.textContent = dayDone
+        ? 'That’s today done: ' + dayScore() + ' of ' + dayMax() + '.'
+        : n + ' cards, one after another. Use the clues to work out who is behind each.';
+    }
     if (el.mechanism) {
-      el.mechanism.textContent = spells
-        ? 'Today’s ' + spells + ' doors each hide one character, with three clues behind them. Choose one to play.'
+      el.mechanism.textContent = n
+        ? 'Each card hides one character, with three clues. A wrong name costs a point, and three in a row bring out the next clue.'
         : '';
     }
   }
+
+  /* THE NEXT CARD: the one after the last finished, or the one already open. */
+  function openNext() {
+    var cards = state.cards || [];
+    var d = BOARD.doors[cards.length];
+    if (!d) { showDone(); return; }
+    if (state.playId && !state.finished && Number(state.slot) === Number(d.slot)) { resumeDoor(); return; }
+    openDoor(d);
+  }
+
+  /* THE DAY'S SCORE: the cards, and the bonus when every one was got. */
+  function dayScore() {
+    var cards = state.cards || [];
+    var sum = cards.reduce(function (a, c) { return a + (Number(c.score) || 0); }, 0);
+    var all = cards.length === BOARD.doors.length && cards.every(function (c) { return c.solved; });
+    return sum + (all ? BONUS : 0);
+  }
+  function dayMax() { return BOARD.doors.length * CARD_MAX + BONUS; }
 
   /* PICKING UP A DOOR ALREADY OPEN, which is not the same as opening one.
    *
@@ -451,29 +425,22 @@ function renderClock() {
    * first rung again, which is served for nothing and carries the current
    * minute — so the clock comes back where it actually is rather than at zero.
    */
-  function resumeDoor() {
+function resumeDoor() {
+    /* PICKING UP THE CARD ALREADY OPEN -- never a second /play for it, which
+       would be a second round for one card. Every clue it had is replayed,
+       free. A saved slot not on today's board is a stale save: start again. */
     var door = null;
     for (var i = 0; i < BOARD.doors.length; i++) {
       if (Number(BOARD.doors[i].slot) === Number(state.slot)) door = BOARD.doors[i];
     }
-    /* A SAVED SLOT THAT IS NOT ON TODAY'S BOARD is a stale save — the board was
-       re-imported under it, or the day rolled. Start again rather than show a
-       door that is not there. */
     if (!door) {
-      state.playId = null;
-      state.slot = null;
-      state.finished = false;
-      save();
-      show('screenDoors');
-      renderDoors();
+      state.playId = null; state.slot = null; state.finished = false;
+      save(); renderDoors(); show('screenDoors');
       return;
     }
-    /* No `current` here: this game has no such variable — that line came from
-       QuickFire's client by hand and would have thrown on the resume path, in
-       strict mode, the moment anybody came back to a saved round. Caught by
-       grepping for the name rather than by running it, which is luck. */
+    el.giveUp.disabled = false;
     el.playClub.textContent = door.section;
-    el.playLeft.textContent = 'Door ' + door.slot;
+    el.playLeft.textContent = 'Card ' + door.slot + ' of ' + BOARD.doors.length;
     var stack1 = document.getElementById('clueStack');
     if (stack1) stack1.innerHTML = '';
     if (el.playNums) el.playNums.innerHTML = '';
@@ -484,9 +451,8 @@ function renderClock() {
     renderTries();
     renderLadder();
     show('screenPlay');
-    playsStart();
+    if (!(window.XIPlays && window.XIPlays.active && window.XIPlays.active())) playsStart();
     startTicking();
-    /* EVERY RUNG THAT WAS BOUGHT, in order, each replayed for nothing. */
     var upTo = Math.max(1, state.stage || 1);
     var chain = Promise.resolve();
     for (var st = 1; st <= upTo; st++) {
@@ -494,12 +460,13 @@ function renderClock() {
     }
   }
 
-  function openDoor(door) {
+function openDoor(door) {
     if (busy) return;
     busy = true;
     post('/api/whoami/whoami_fr/play', { date: BOARD.day, slot: door.slot })
       .then(function (r) {
         busy = false;
+        var first = !(state.cards || []).length;
         state.playId = r.playId;
         state.slot = door.slot;
         state.stage = 1;
@@ -507,9 +474,15 @@ function renderClock() {
         state.guesses = [];
         state.finished = false;
         state.solved = false;
+        state.worth = r.worthNow != null ? r.worthNow : CARD_MAX;
+        state.wrongs = 0;
+        state.ring = 0;
+        state.answer = null;
         save();
+        /* "Tell me" on the last card disabled it; a new card starts with it. */
+        el.giveUp.disabled = false;
         el.playClub.textContent = door.section;
-        el.playLeft.textContent = 'Door ' + door.slot;
+        el.playLeft.textContent = 'Card ' + door.slot + ' of ' + BOARD.doors.length;
         var stack0 = document.getElementById('clueStack');
         if (stack0) stack0.innerHTML = '';
         el.clues.innerHTML = '';
@@ -518,8 +491,7 @@ function renderClock() {
         setFeedback('');
         renderTries();
         show('screenPlay');
-        playsStart();
-        anchorClock(r.minute || 0);
+        if (first) playsStart();
         renderClock();
         startTicking();
         buyStage(1);
@@ -561,9 +533,13 @@ function buyStage(stage) {
         busy = false;
         state.stage = Math.max(state.stage, r.stage);
         state.pointsSpent = r.pointsSpent;
+        if (r.worthNow != null) state.worth = r.worthNow;
+        if (r.ring != null) state.ring = r.ring;
+        if (r.wrongs != null) state.wrongs = r.wrongs;
         renderClock();
         renderClue(r);
         renderLadder();
+        renderTries();
         save();
       })
       .catch(function (e) { busy = false; trouble(e); });
@@ -649,18 +625,52 @@ function submitGuess() {
         busy = false;
         state.guesses.push({ guess: typed, verdict: r.verdict });
         state.pointsSpent = r.pointsSpent != null ? r.pointsSpent : state.pointsSpent;
+        if (r.wrongs != null) state.wrongs = r.wrongs;
+        if (r.ring != null) state.ring = r.ring;
+        if (r.worthNow != null) state.worth = r.worthNow;
         renderTries();
         save();
 
         if (r.verdict === 'right') {
           state.finished = true;
           state.solved = true;
+          state.answer = r.answer || null;
+          state.worth = r.score;
           renderClock();
-          setFeedback('That\u2019s them \u2014 ' + r.score +
+          renderLadder();
+          setFeedback('That’s ' + (r.answer || 'them') + ' — ' + r.score +
             (r.score === 1 ? ' point.' : ' points.'), 'goal');
           finish();
           return;
         }
+        /* THE RING FULL ON THE LAST CLUE: the card is lost, and who it was is
+           said, because a game that says "no" three times owes the answer. */
+        if (r.lost) {
+          state.finished = true;
+          state.solved = false;
+          state.answer = r.answer || null;
+          state.worth = 0;
+          renderClock();
+          renderLadder();
+          setFeedback('Three wrong on the last clue. It was ' + (r.answer || 'someone else') + '.', 'miss');
+          finish();
+          return;
+        }
+        /* THE RING FULL BEFORE THE LAST: the next clue, by itself, at its price. */
+        if (r.autoClue && r.clue) {
+          state.stage = Math.max(state.stage, r.clue.stage || state.stage);
+          renderClue(r.clue);
+          renderLadder();
+          renderClock();
+          /* Redrawn AFTER the stage moved: on the last clue the ring now warns
+             that the card itself is at stake. */
+          renderTries();
+          setFeedback('Three wrong. Here’s the next clue.', 'near');
+          el.guessInput.value = '';
+          el.guessInput.focus();
+          return;
+        }
+        renderClock();
         if (r.verdict === 'other') {
           setFeedback('That\u2019s someone else in the deck \u2014 but not the one behind this door.', 'near');
         } else if (r.verdict === 'ambiguous' && r.options && r.options.length) {
@@ -684,65 +694,101 @@ function submitGuess() {
         el.guessInput.value = '';
         el.guessInput.focus();
       })
-      .catch(trouble);
+      .catch(function (e) { busy = false; trouble(e); });
   }
 
 function renderTries() {
-    var n = state.guesses.length;
-    var near = state.guesses.filter(function (g) { return g.verdict === 'other'; }).length;
-    el.tries.textContent = n
-      ? n + (n === 1 ? ' name tried' : ' names tried') +
-        (near ? ', ' + near + ' from elsewhere in the deck' : '')
-      : '';
+    var ring = Math.min(RING, state.ring || 0);
+    var C = 17, R = 16, svg = '<svg class="fr-ring" viewBox="0 0 34 34" width="34" height="34" aria-hidden="true">';
+    for (var i = 0; i < RING; i++) {
+      var a0 = -Math.PI / 2 + i * 2 * Math.PI / RING, a1 = a0 + 2 * Math.PI / RING;
+      var x0 = (C + R * Math.cos(a0)).toFixed(2), y0 = (C + R * Math.sin(a0)).toFixed(2);
+      var x1 = (C + R * Math.cos(a1)).toFixed(2), y1 = (C + R * Math.sin(a1)).toFixed(2);
+      svg += '<path d="M' + C + ' ' + C + ' L' + x0 + ' ' + y0 + ' A' + R + ' ' + R + ' 0 0 1 ' + x1 + ' ' + y1 +
+        ' Z" style="fill:' + (i < ring ? 'var(--danger, #B3261E)' : 'var(--tint-strong, #E4E6E1)') +
+        ';stroke:var(--card, #fff);stroke-width:1.5"/>';
+    }
+    svg += '</svg>';
+    var last = (state.stage || 1) >= (LADDER.length || 3);
+    var left = RING - ring;
+    var say = state.finished ? ''
+      : ring === 0 ? (last ? 'Three wrong names on this clue and the card is lost.' : 'Three wrong names bring out the next clue.')
+      : ring + ' wrong · ' + left + ' more ' + (last ? 'and the card is lost.' : 'and the next clue comes out.');
+    el.tries.innerHTML = state.finished ? '' : svg + '<span class="fr-ring-say">' + esc(say) + '</span>';
+    el.tries.setAttribute('aria-label', say);
   }
 
   /* ------------------------------------------------------------- the end */
 
-  function finish() {
+function finish() {
     post('/api/whoami/whoami_fr/finish', { playId: state.playId })
-      .then(function (r) {
-        state.finished = true;
-        state.solved = !!r.solved;
-        save();
-        bankResult(r);
-        playsEnd(true);
-        showDone(r);
-      })
-      .catch(function (e) {
-        console.error("Who Am I finish:", e);
-        showDone(null);
+      .then(function (r) { closeCard(r); })
+      .catch(function (e) { console.error('Who Am I finish:', e); closeCard(null); });
+  }
+
+  /* A CARD CLOSES: its result joins the day, once, and the next card comes up
+     by itself after a moment to read the verdict -- or, after the last, the
+     day's Full Time. */
+  function closeCard(r) {
+    var cards = state.cards || (state.cards = []);
+    var slot = Number(state.slot);
+    if (!cards.some(function (c) { return Number(c.slot) === slot; })) {
+      cards.push({
+        slot: slot,
+        section: (r && r.section) || '',
+        solved: r ? !!r.solved : !!state.solved,
+        score: r && typeof r.score === 'number' ? r.score : 0,
+        clues: Math.max(1, state.stage || 1),
+        wrongs: r && r.wrongs != null ? r.wrongs : (state.wrongs || 0),
+        answer: (r && r.answer) || state.answer || null
       });
+    }
+    state.finished = true;
+    save();
+    stopTicking();
+    renderClock();
+    var count = cards.length;
+    if (count >= BOARD.doors.length) {
+      bankResult();
+      playsEnd(true);
+      setTimeout(showDone, 1600);
+      return;
+    }
+    setTimeout(function () {
+      if (state.finished && (state.cards || []).length === count) openNext();
+    }, 1800);
   }
 
   /* FULL TIME, THE FAMILY'S WAY (shared/xi-fulltime.js). One door a day,
      not eleven answers, so the panel shows the door and the clue ladder it
      took in place of boxes -- and, now the door has closed, who it was. */
-function showDone(r) {
-    var solved = r ? r.solved : state.solved;
-    var total = LADDER.length || 3;
-    var used = r && r.subsUsed != null ? r.subsUsed + 1 : Math.min(state.stage || 1, total);
-    var max = MAX_SCORE || 10, score = r && typeof r.score === 'number' ? r.score : 0;
+function showDone() {
+    /* THE DAY'S FULL TIME, the family's panel: the day out of 100 in the ring,
+       a box per card, the help that was used beside it, and who each card was
+       under "Your answers". No right-and-wrong count: the boxes are that. */
+    var cards = state.cards || [];
+    var n = BOARD.doors.length;
+    var got = cards.filter(function (c) { return c.solved; }).length;
+    var score = dayScore(), max = MAX_SCORE || dayMax();
+    var extra = cards.reduce(function (a, c) { return a + Math.max(0, (c.clues || 1) - 1); }, 0);
+    var wrong = cards.reduce(function (a, c) { return a + (c.wrongs || 0); }, 0);
+    var help = [];
+    if (extra) help.push(extra + (extra === 1 ? ' extra clue' : ' extra clues'));
+    if (wrong) help.push(wrong + (wrong === 1 ? ' wrong name' : ' wrong names'));
+    var boxes = BOARD.doors.map(function (d, i) { var c = cards[i]; return { s: c ? (c.solved ? 'g' : 'r') : 'x' }; });
     if (window.XIFullTime && XIFullTime.panel) {
       XIFullTime.panel(el.ftPanel, {
         game: 'whoami_fr', name: 'Who Am I XI: Friends', no: BOARD.no, date: XIFullTime.dayLabel(BOARD.day),
-        /* "That's a wrap" rather than "Full time": the deck is a television
-           show, and full time is a football whistle in a game with no clock. */
         kicker: 'That’s a wrap',
-        score: score, max: max,
-        door: { label: r && r.section ? 'Behind the ' + r.section + ' door' : '', rungs: total, paid: used,
-                answer: r && r.answer ? r.answer : null },
-        stats: (solved ? 'Solved' : 'Not this time') + ' · ' + used + ' of ' + total + ' clues · ' +
-          (function (n) { return n + (n === 1 ? ' name tried' : ' names tried'); })(r ? r.guesses : state.guesses.length) +
-          (r && r.nearMisses ? ' · named someone else ' + r.nearMisses : ''),
-        /* THE SHARE NAMES NOBODY. The other doors are still live for everybody
-           else today: it says how it went in squares, not who it was. */
+        score: score, max: max, boxes: boxes, help: help,
+        stats: got === n ? 'All ' + n + ' got: +' + BONUS + ' bonus' : got + ' of ' + n + ' got',
+        answers: cards.map(function (c) {
+          return { s: c.solved ? 'g' : 'r', m: null, text: c.answer || '', points: c.score };
+        }),
+        /* THE SHARE NAMES NOBODY: the day in squares, not who they were. */
         share: function () {
-          var bar = '';
-          for (var i = 1; i <= total; i++) {
-            bar += i > used ? '⬜' : (solved && i === used ? '🟩' : '🟨');
-          }
-          return 'Who Am I XI: Friends · No. ' + BOARD.no + ' · ' + score + '/' + max + '\n' + bar +
-            (solved ? '  got them' : '  no luck');
+          return 'Who Am I XI: Friends · No. ' + BOARD.no + ' · ' + score + '/' + max +
+            String.fromCharCode(10) + XIFullTime.squares(boxes);
         },
         url: function () { return location.href.split('#')[0]; },
       });
@@ -784,7 +830,7 @@ function showDone(r) {
   }
   function pullResults() {
     if (!account) return Promise.resolve(null);
-    return apiAuth("/api/account/results?game=whoami").then(function (r) {
+    return apiAuth("/api/account/results?game=whoami_fr").then(function (r) {
       var remote = (r && r.results) || [];
       if (!remote.length) return null;
       var byDay = {};
@@ -836,19 +882,24 @@ function showDone(r) {
   syncAccount();
 
 
-  function bankResult(r) {
+function bankResult() {
+    /* THE DAY, BANKED ONCE: its score, how many cards were got, and each card
+       as it was played. First banked wins, the family's rule. */
+    var cards = state.cards || [];
+    var got = cards.filter(function (c) { return c.solved; }).length;
+    var all = got === BOARD.doors.length;
     recordResult({
       game: "whoami_fr",
       day: BOARD.day,
       no: BOARD.no,
       boardId: BOARD.id,
-      slot: state.slot,
-      solved: !!(r ? r.solved : state.solved),
-      score: r ? r.score : null,
-      minute: r ? r.minute : null,
-      subs: r ? r.subsUsed : 0,
-      pointsSpent: state.pointsSpent,
-      guesses: r ? r.guesses : state.guesses.length
+      solved: all,
+      cardsSolved: got,
+      bonus: all ? BONUS : 0,
+      score: dayScore(),
+      cards: cards.map(function (c) {
+        return { slot: c.slot, solved: !!c.solved, score: c.score, clues: c.clues, wrongs: c.wrongs };
+      })
     });
     try {
       if (window.XISeason && window.XISeason.record) window.XISeason.record(BOARD.day);
@@ -868,18 +919,19 @@ function showDone(r) {
       var raw = localStorage.getItem(PREFIX + storageKey);
       if (!raw) return null;
       var s = JSON.parse(raw);
-      return s && s.day === BOARD.day ? s : null;
+      return s && s.day === BOARD.day && Array.isArray(s.cards) ? s : null;
     } catch (e) { return null; }
   }
 
   /* --------------------------------------------------------------- plays */
 
   var runStart = 0;
-  function playsProgress() {
+function playsProgress() {
+    var cards = state.cards || [];
     return {
-      solved: state.solved ? 1 : 0,
+      solved: cards.filter(function (c) { return c.solved; }).length,
       elapsed: runStart ? Math.round((Date.now() - runStart) / 1000) : 0,
-      detail: { slot: state.slot, spent: state.pointsSpent, guesses: state.guesses.length }
+      detail: { cards: cards.length, score: dayScore() }
     };
   }
   function playsStart() {
@@ -892,7 +944,7 @@ function showDone(r) {
       /* ONE DOOR IS THE WHOLE SITTING, so the total is one rather than eleven.
          The owner's exception of 11 Sep 2026: this game's eleven are the CLUBS,
          and it banks one result a day rather than eleven. */
-      total: 1
+      total: BOARD.doors.length
     }, playsProgress);
   }
   function playsEnd(done) {
@@ -936,8 +988,8 @@ function showDone(r) {
     el.waGame.hidden = false;
     /* THREE STATES, AND EACH ONE REBUILDS WHAT IT SHOWS. This used to show a
        screen and render nothing into it, so a resumed round arrived blank. */
-    if (state.finished) { show('screenDone'); finish(); return; }
-    if (state.playId && state.slot) { resumeDoor(); return; }
+    if ((state.cards || []).length >= BOARD.doors.length) { showDone(); return; }
+    if (state.playId && !state.finished) { resumeDoor(); return; }
     renderDoors();
     show('screenDoors');
   });
@@ -964,7 +1016,7 @@ function showDone(r) {
      it is the only path to openDoor — so a card cannot spend the day's single
      go by being clicked once. */
   el.playChoice.addEventListener('click', function () {
-    if (picked) openDoor(picked);
+    openNext();
   });
   el.guessGo.addEventListener('click', submitGuess);
 
@@ -990,9 +1042,9 @@ function showDone(r) {
   var saved = load();
   if (saved) {
     state = saved;
-    el.waTodayState.textContent = saved.finished
-      ? (saved.solved ? 'Solved' : 'Played')
-      : 'In progress';
+    el.waTodayState.textContent = (saved.cards || []).length >= BOARD.doors.length
+      ? 'Played · ' + dayScore() + ' of ' + dayMax()
+      : ((saved.cards || []).length || saved.playId ? 'In progress' : '');
   }
 
   renderDoors();

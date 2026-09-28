@@ -149,8 +149,9 @@ if (daily.json && daily.json.board) {
   const b = daily.json.board;
   const flat = JSON.stringify(b);
 
-  t("the board deals three doors, not football's eleven",
-    Array.isArray(b.doors) && b.doors.length === 3,
+  /* FIVE CARDS A DAY, played in order (the owner's ruling of 28 Sep 2026). */
+  t("the board deals five cards, not football's eleven",
+    Array.isArray(b.doors) && b.doors.length === 5,
     b.doors ? String(b.doors.length) : "no doors");
 
   /* WHAT A DOOR MAY SAY: a slot, a section and a deck. Checked by walking the
@@ -173,9 +174,12 @@ if (daily.json && daily.json.board) {
     !!daily.json.scoring && Array.isArray(daily.json.scoring.ladder) &&
     daily.json.scoring.ladder.length === 3,
     "three rungs");
-  t("and it carries NO curve, because this deck has no clock",
-    !daily.json.scoring.curve && daily.json.scoring.max === 10,
-    "max " + (daily.json.scoring && daily.json.scoring.max));
+  /* THE DAY OUT OF 100: five cards worth 18 and the all-five bonus of 10;
+     a wrong name costs 1 and three of them fill the ring. */
+  const sc = daily.json.scoring || {};
+  t("and it carries NO curve, because this deck has no clock: the day is out of 100",
+    !sc.curve && sc.max === 100 && sc.cardMax === 18 && sc.bonus === 10 && sc.ring === 3 && sc.wrongCost === 1,
+    JSON.stringify({ max: sc.max, cardMax: sc.cardMax, bonus: sc.bonus, ring: sc.ring, wrongCost: sc.wrongCost }));
 
   t("the day is today's and not the future",
     !daily.json.day || daily.json.day <= new Date().toISOString().slice(0, 10),

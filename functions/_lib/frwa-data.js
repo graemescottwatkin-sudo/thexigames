@@ -42,7 +42,10 @@ import { fold, today } from "./wadata.js";
  * being wrong was not a cosmetic mistake: it sat at eleven while the calendar
  * dealt three, so every board in the game resolved to null and the game would
  * have had no days at all. */
-export const DOORS = 3;
+/* FIVE SINCE 28 SEP 2026, the owner's ruling: five cards a day, played in a
+   fixed order, all of them counting ("maybe 5 per day not 3"). The calendar
+   generator deals the same number; the gate asserts the two agree. */
+export const DOORS = 5;
 
 /* WHAT THE PLAYER MAY SEE OF A DOOR. A slot and a section. There is no third
    field, and adding one is how a door starts naming its card. */

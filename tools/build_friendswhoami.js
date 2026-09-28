@@ -43,7 +43,7 @@ const SRC = "football/whoami";
 const OUT = "friends/whoami";
 
 /* THE TAG LIVES HERE, written into every generated file. Bump, regenerate. */
-const TAG = "v001l";
+const TAG = "v001m";
 
 const NAME = "Who Am I XI: Friends";
 /* THREE, NOT ELEVEN. This said eleven -- copied from football's shape before
@@ -125,37 +125,37 @@ function page() {
    * and a mangled attribute is a silent break. Each string is named. */
   const COPY = [
     ["Eleven club doors, one hidden player behind each. Pick your club, get one spell of his career, and name him. A new eleven every day from The XI Games.",
-     "Three doors, one Friends character behind each. Open a door, read a clue, and say who it is. A new three every day from The XI Games.",
+     "Five Friends characters a day, three clues each. Read a clue, say who it is, and score up to 100. A new five every day from The XI Games.",
      "the meta description"],
     ["Eleven club doors, one hidden player behind each. Pick your club and name him.",
-     "Three doors, one Friends character behind each. Open a door and say who it is.",
+     "Five Friends characters a day, three clues each. Say who it is.",
      "the og description"],
     ["Eleven club doors, one hidden player behind each.",
-     "Three doors, one Friends character behind each.",
+     "Five Friends characters a day, three clues each.",
      "the twitter description"],
     [`<p class="ident-sub">Eleven club doors. One hidden player behind each.</p>`,
-     `<p class="ident-sub">Three doors. One Friends character behind each.</p>`,
+     `<p class="ident-sub">Five characters. Three clues each.</p>`,
      "the identity line"],
 
     [`<span class="ch-hint">Club + year left</span>`,
      `<span class="ch-hint">What it is about</span>`, "the door picker's hint"],
     [`<span class="hc-title">Today&rsquo;s eleven</span>`,
-     `<span class="hc-title">Today&rsquo;s three</span>`, "the today card's title"],
+     `<span class="hc-title">Today&rsquo;s five</span>`, "the today card's title"],
     [`<span class="hc-note">Pick a club. You get one spell of his career for
           nothing, and two substitutions if you need them &mdash; but the clock
           runs to ninety and the board is worth less every minute.</span>`,
-     `<span class="hc-note">Open a door. The first clue is free and two more are
-          there if you need them &mdash; but each one costs, so the fewer you
-          take the more the door is worth.</span>`, "the today card's note"],
+     `<span class="hc-note">Five characters, one after another. The first clue
+          is free and two more are there if you need them &mdash; each one costs,
+          and so does a wrong name.</span>`, "the today card's note"],
     [`<span class="hc-cta">Kick off</span>`,
-     `<span class="hc-cta">Open a door</span>`, "the today card's button"],
+     `<span class="hc-cta">Start</span>`, "the today card's button"],
 
     [`<span class="sc-title">One door, one player</span>`,
-     `<span class="sc-title">One door, one sitting</span>`, "how to play, the title"],
+     `<span class="sc-title">Five cards, one sitting</span>`, "how to play, the title"],
     [`<li>Pick one of the eleven clubs. <b>One door a day</b> &mdash; choose
             carefully, because the other ten stay shut.</li>`,
-     `<li>Pick one of the three doors. <b>One door a day</b> &mdash; choose
-            carefully, because the other two stay shut.</li>`, "how to play, step 1"],
+     `<li>Five cards a day, <b>played in order</b>. Each one hides a
+            Friends character.</li>`, "how to play, step 1"],
     [`<li>You get one spell of that player&rsquo;s career free: the club, the
             years, the games and the goals.</li>`,
      `<li>You get the first of that card&rsquo;s three clues free. They run
@@ -163,17 +163,19 @@ function page() {
     [`<li>Stuck? Two substitutions. The first shows his <b>whole career</b>,
             the second his <b>nationality and age</b>. Both cost points.</li>`,
      `<li>Stuck? Ask a friend for the <b>second clue</b>, then the
-            <b>third</b>. Both cost points.</li>`, "how to play, step 3"],
+            <b>third</b>: 5 points each. Three wrong names in a row bring the
+            next clue out by themselves.</li>`, "how to play, step 3"],
     [`<li>Name him. The clock runs to ninety and the board falls from 114,
             so the sooner the better.</li>`,
-     `<li>Say who it is. A door is worth <b>10, 6 or 3</b> depending on how many
-            clues you took &mdash; there is no clock, so take your time.</li>`,
+     `<li>Say who it is. A card is worth <b>18</b>, less 5 for each extra clue
+            and 1 for each wrong name. Get all five for a <b>bonus 10</b>: a
+            perfect day is 100. No clock, so take your time.</li>`,
      "how to play, step 4"],
 
     [`<p class="lede" id="lede">Pick a club and the year a player left. Use his time
       there to work out who he is.</p>`,
-     `<p class="lede" id="lede">Pick a door and the part of the show it comes
-      from. Use the clues to work out who is behind it.</p>`, "the lede"],
+     `<p class="lede" id="lede">Five cards, one after another. Use the clues to
+      work out who is behind each.</p>`, "the lede"],
     [`<span class="cm-note">Start with his appearances and goals for this club.</span>`,
      `<span class="cm-note">Start with the hardest of the three clues.</span>`,
      "the clue note"],
@@ -191,7 +193,7 @@ function page() {
     [`aria-label="Matching players"`, `aria-label="Matching characters"`,
      "the suggestion list"],
     [`Play this clue <span aria-hidden="true">&#8594;</span>`,
-     `Open this door <span aria-hidden="true">&#8594;</span>`, "the play button"],
+     `Start <span aria-hidden="true">&#8594;</span>`, "the play button"],
     [`<span class="ch-hint">Hints cost points. Your choice.</span>`,
      `<span class="ch-hint">Clues cost points. Your choice.</span>`, "the ladder hint"],
   ];
@@ -212,7 +214,7 @@ function page() {
   s = once(s, `<span class="label">Available points</span>
           <span class="worthVal" id="worthNow">114</span>`,
     `<span class="label">Worth now</span>
-          <span class="worthVal" id="worthNow">10</span>`,
+          <span class="worthVal" id="worthNow">18</span>`,
     "the worth readout");
   s = once(s, `<div class="pf-facts" id="startClue">
         <span class="pf-kicker">Your starting clue &middot; included</span>
@@ -250,22 +252,24 @@ function page() {
             <rect class="c" x="302" y="22" width="34" height="112" rx="3"/>
           </g>`,
     `<g class="hc-art-doors">
-            <rect class="c" x="150" y="22" width="46" height="112" rx="3"/>
-            <rect class="b" x="220" y="22" width="46" height="112" rx="3"/>
-            <rect class="c" x="290" y="22" width="46" height="112" rx="3"/>
+            <rect class="c" x="19" y="22" width="46" height="112" rx="3"/>
+            <rect class="c" x="85" y="22" width="46" height="112" rx="3"/>
+            <rect class="b" x="151" y="22" width="46" height="112" rx="3"/>
+            <rect class="c" x="217" y="22" width="46" height="112" rx="3"/>
+            <rect class="c" x="283" y="22" width="46" height="112" rx="3"/>
           </g>`, "the hero's doors");
 
   s = once(s, `<circle class="d" cx="35" cy="80" r="2.4"/><circle class="d" cx="77" cy="80" r="2.4"/>
             <circle class="d" cx="119" cy="80" r="2.4"/>
             <circle class="d" cx="203" cy="80" r="2.4"/><circle class="d" cx="245" cy="80" r="2.4"/>
             <circle class="d" cx="287" cy="80" r="2.4"/><circle class="d" cx="329" cy="80" r="2.4"/>`,
-    `<circle class="d" cx="187" cy="80" r="2.4"/>
-            <circle class="d" cx="327" cy="80" r="2.4"/>`, "the closed doors' handles");
+    `<circle class="d" cx="56" cy="80" r="2.4"/><circle class="d" cx="122" cy="80" r="2.4"/>
+            <circle class="d" cx="254" cy="80" r="2.4"/><circle class="d" cx="320" cy="80" r="2.4"/>`, "the closed doors' handles");
 
   s = once(s, `<circle class="r" cx="151" cy="62" r="11"/>
             <path class="r" d="M136 102a15 15 0 0 1 30 0v22h-30Z"/>`,
-    `<circle class="r" cx="243" cy="62" r="11"/>
-            <path class="r" d="M228 102a15 15 0 0 1 30 0v22h-30Z"/>`,
+    `<circle class="r" cx="174" cy="62" r="11"/>
+            <path class="r" d="M159 102a15 15 0 0 1 30 0v22h-30Z"/>`,
     "the figure behind the open door");
 
   /* NOINDEX WHILE UNLISTED, because this game is generated from an INDEXED
@@ -410,8 +414,8 @@ function config() {
       /* GENERATED by tools/build_friendswhoami.js. A round deals three clues,
          hard to easy; the first is free and the next two cost. */
       { stage: 1, points: 0, sub: 0, label: 'First clue',  reveals: ['clue'] },
-      { stage: 2, points: 4, sub: 1, label: 'Second clue', reveals: ['clue'] },
-      { stage: 3, points: 3, sub: 2, label: 'Third clue',  reveals: ['clue'] }
+      { stage: 2, points: 5, sub: 1, label: 'Second clue', reveals: ['clue'] },
+      { stage: 3, points: 5, sub: 2, label: 'Third clue',  reveals: ['clue'] }
     ` + s.slice(to);
 
   /* THE EXIT'S LABEL, which the server also holds as FR_GIVE_UP.label. Two
@@ -484,15 +488,20 @@ function script() {
   function renderClock() {
     var total = LADDER.length || 3;
     var seen = Math.min(Math.max(1, state.stage || 1), total);
-    var worth = Math.max(0, (MAX_SCORE || 10) - (state.pointsSpent || 0));
-    var key = seen + ':' + worth;
+    /* WORTH NOW IS THE SERVER'S: it takes the wrong names off as well as the
+       clues, and the page does not count those itself. */
+    var worth = state.worth != null ? state.worth : Math.max(0, CARD_MAX - (state.pointsSpent || 0));
+    var done = (state.cards || []).length;
+    var key = seen + ':' + worth + ':' + done;
     if (key === clock.shown) return;
     clock.shown = key;
+    if (window.XIBar) XIBar.set({ progress: Math.min(done + 1, BOARD.doors.length) + '/' + BOARD.doors.length,
+                                  score: dayScore(), worth: worth });
     el.clockValue.textContent = seen;
     el.stripFill.style.width = Math.min(100, (seen / total) * 100) + '%';
     el.stripFill.classList.toggle('late', seen >= total);
     el.worthNow.textContent = worth;
-    el.worthNow.classList.toggle('low', worth <= 3);
+    el.worthNow.classList.toggle('low', worth <= 5);
   }`);
 
   /* THE STACK OF CLUES, one per rung, hardest first. Drawn once each: a
@@ -564,9 +573,13 @@ function script() {
         busy = false;
         state.stage = Math.max(state.stage, r.stage);
         state.pointsSpent = r.pointsSpent;
+        if (r.worthNow != null) state.worth = r.worthNow;
+        if (r.ring != null) state.ring = r.ring;
+        if (r.wrongs != null) state.wrongs = r.wrongs;
         renderClock();
         renderClue(r);
         renderLadder();
+        renderTries();
         save();
       })
       .catch(function (e) { busy = false; trouble(e); });
@@ -591,18 +604,52 @@ function script() {
         busy = false;
         state.guesses.push({ guess: typed, verdict: r.verdict });
         state.pointsSpent = r.pointsSpent != null ? r.pointsSpent : state.pointsSpent;
+        if (r.wrongs != null) state.wrongs = r.wrongs;
+        if (r.ring != null) state.ring = r.ring;
+        if (r.worthNow != null) state.worth = r.worthNow;
         renderTries();
         save();
 
         if (r.verdict === 'right') {
           state.finished = true;
           state.solved = true;
+          state.answer = r.answer || null;
+          state.worth = r.score;
           renderClock();
-          setFeedback('That\\u2019s them \\u2014 ' + r.score +
+          renderLadder();
+          setFeedback('That’s ' + (r.answer || 'them') + ' — ' + r.score +
             (r.score === 1 ? ' point.' : ' points.'), 'goal');
           finish();
           return;
         }
+        /* THE RING FULL ON THE LAST CLUE: the card is lost, and who it was is
+           said, because a game that says "no" three times owes the answer. */
+        if (r.lost) {
+          state.finished = true;
+          state.solved = false;
+          state.answer = r.answer || null;
+          state.worth = 0;
+          renderClock();
+          renderLadder();
+          setFeedback('Three wrong on the last clue. It was ' + (r.answer || 'someone else') + '.', 'miss');
+          finish();
+          return;
+        }
+        /* THE RING FULL BEFORE THE LAST: the next clue, by itself, at its price. */
+        if (r.autoClue && r.clue) {
+          state.stage = Math.max(state.stage, r.clue.stage || state.stage);
+          renderClue(r.clue);
+          renderLadder();
+          renderClock();
+          /* Redrawn AFTER the stage moved: on the last clue the ring now warns
+             that the card itself is at stake. */
+          renderTries();
+          setFeedback('Three wrong. Here’s the next clue.', 'near');
+          el.guessInput.value = '';
+          el.guessInput.focus();
+          return;
+        }
+        renderClock();
         if (r.verdict === 'other') {
           setFeedback('That\\u2019s someone else in the deck \\u2014 but not the one behind this door.', 'near');
         } else if (r.verdict === 'ambiguous' && r.options && r.options.length) {
@@ -626,17 +673,33 @@ function script() {
         el.guessInput.value = '';
         el.guessInput.focus();
       })
-      .catch(trouble);
+      .catch(function (e) { busy = false; trouble(e); });
   }`);
 
+  /* THE RING (the owner, 28 Sep 2026, "a circle with 3 pieces in it similar
+     to Trivial Pursuit"): a piece fills for each wrong name since the last
+     clue; the third fills it and the next clue comes out -- or, on the last
+     clue, the card is lost. It empties on a right answer or a clue revealed. */
   s = replaceFn(s, "renderTries", "right-club", `
   function renderTries() {
-    var n = state.guesses.length;
-    var near = state.guesses.filter(function (g) { return g.verdict === 'other'; }).length;
-    el.tries.textContent = n
-      ? n + (n === 1 ? ' name tried' : ' names tried') +
-        (near ? ', ' + near + ' from elsewhere in the deck' : '')
-      : '';
+    var ring = Math.min(RING, state.ring || 0);
+    var C = 17, R = 16, svg = '<svg class="fr-ring" viewBox="0 0 34 34" width="34" height="34" aria-hidden="true">';
+    for (var i = 0; i < RING; i++) {
+      var a0 = -Math.PI / 2 + i * 2 * Math.PI / RING, a1 = a0 + 2 * Math.PI / RING;
+      var x0 = (C + R * Math.cos(a0)).toFixed(2), y0 = (C + R * Math.sin(a0)).toFixed(2);
+      var x1 = (C + R * Math.cos(a1)).toFixed(2), y1 = (C + R * Math.sin(a1)).toFixed(2);
+      svg += '<path d="M' + C + ' ' + C + ' L' + x0 + ' ' + y0 + ' A' + R + ' ' + R + ' 0 0 1 ' + x1 + ' ' + y1 +
+        ' Z" style="fill:' + (i < ring ? 'var(--danger, #B3261E)' : 'var(--tint-strong, #E4E6E1)') +
+        ';stroke:var(--card, #fff);stroke-width:1.5"/>';
+    }
+    svg += '</svg>';
+    var last = (state.stage || 1) >= (LADDER.length || 3);
+    var left = RING - ring;
+    var say = state.finished ? ''
+      : ring === 0 ? (last ? 'Three wrong names on this clue and the card is lost.' : 'Three wrong names bring out the next clue.')
+      : ring + ' wrong · ' + left + ' more ' + (last ? 'and the card is lost.' : 'and the next clue comes out.');
+    el.tries.innerHTML = state.finished ? '' : svg + '<span class="fr-ring-say">' + esc(say) + '</span>';
+    el.tries.setAttribute('aria-label', say);
   }`);
 
   /* THE END OF A ROUND. The card's name, the door it was behind, the score out
@@ -840,6 +903,302 @@ var BUILD = `, "the deck words");
 
   ];
   for (const [from, to, what] of PLAY) s = once(s, from, to, what);
+
+  /* ---- A DAY OF FIVE CARDS ------------------------------------------------
+     The owner, 28 Sep 2026: five cards a day in a fixed order; a card worth 18, less 5 for each extra clue and 1 for each wrong name; three wrong names reveal the next clue, and on the last clue lose the card; all five got is a bonus 10, and 100 is a perfect day.
+     Each card plays as one door always did; the day wraps them. A card closes,
+     its result joins the day, and the next opens by itself. Replaced here,
+     AFTER the API rewrite, so these carry this game's addresses directly and
+     do not change the count of calls the rewrite checks. */
+  s = replaceFn(s, "renderDoors", "ONE DOOR A DAY", `
+  function renderDoors() {
+    /* THE DAY'S CARDS, IN THE ORDER THEY ARE PLAYED: none is chosen, so this
+       is a list, not a set of buttons -- what is done, what is next, what is to
+       come. The Start button opens the next one. */
+    var cards = state.cards || [];
+    var n = BOARD.doors.length;
+    var next = cards.length + 1;
+    el.doors.innerHTML = '';
+    el.doors.setAttribute('role', 'list');
+    picked = null;
+    BOARD.doors.forEach(function (d, i) {
+      var c = cards[i];
+      var b = document.createElement('div');
+      b.setAttribute('role', 'listitem');
+      b.className = 'door frc' + (c ? (c.solved ? ' frc-got' : ' frc-lost') : (i + 1 === next ? ' frc-next' : ''));
+      var say = c ? (c.solved ? (c.answer || 'Got') + ' · ' + c.score : 'Not this time' + (c.answer ? ' · ' + c.answer : ''))
+                  : (i + 1 === next ? 'Up next' : 'To come');
+      b.innerHTML = '<span class="d-club">Card ' + (i + 1) + '</span>' +
+        '<span class="d-year">' + esc(d.section) + '</span>' +
+        '<span class="d-cap">' + esc(say) + '</span>';
+      el.doors.appendChild(b);
+    });
+    var dayDone = cards.length >= n;
+    if (el.commit) el.commit.hidden = dayDone || !n;
+    if (el.playChoice) {
+      el.playChoice.disabled = dayDone;
+      el.playChoice.innerHTML = (cards.length || state.playId ? 'Carry on' : 'Start') +
+        ' <span aria-hidden="true">&#8594;</span>';
+    }
+    if (el.commitPick) el.commitPick.textContent = dayDone ? '' : 'Card ' + next + ' of ' + n;
+    if (el.lede) {
+      el.lede.textContent = dayDone
+        ? 'That’s today done: ' + dayScore() + ' of ' + dayMax() + '.'
+        : n + ' cards, one after another. Use the clues to work out who is behind each.';
+    }
+    if (el.mechanism) {
+      el.mechanism.textContent = n
+        ? 'Each card hides one character, with three clues. A wrong name costs a point, and three in a row bring out the next clue.'
+        : '';
+    }
+  }
+
+  /* THE NEXT CARD: the one after the last finished, or the one already open. */
+  function openNext() {
+    var cards = state.cards || [];
+    var d = BOARD.doors[cards.length];
+    if (!d) { showDone(); return; }
+    if (state.playId && !state.finished && Number(state.slot) === Number(d.slot)) { resumeDoor(); return; }
+    openDoor(d);
+  }
+
+  /* THE DAY'S SCORE: the cards, and the bonus when every one was got. */
+  function dayScore() {
+    var cards = state.cards || [];
+    var sum = cards.reduce(function (a, c) { return a + (Number(c.score) || 0); }, 0);
+    var all = cards.length === BOARD.doors.length && cards.every(function (c) { return c.solved; });
+    return sum + (all ? BONUS : 0);
+  }
+  function dayMax() { return BOARD.doors.length * CARD_MAX + BONUS; }`);
+
+  s = replaceFn(s, "resumeDoor", "A SAVED SLOT", `
+  function resumeDoor() {
+    /* PICKING UP THE CARD ALREADY OPEN -- never a second /play for it, which
+       would be a second round for one card. Every clue it had is replayed,
+       free. A saved slot not on today's board is a stale save: start again. */
+    var door = null;
+    for (var i = 0; i < BOARD.doors.length; i++) {
+      if (Number(BOARD.doors[i].slot) === Number(state.slot)) door = BOARD.doors[i];
+    }
+    if (!door) {
+      state.playId = null; state.slot = null; state.finished = false;
+      save(); renderDoors(); show('screenDoors');
+      return;
+    }
+    el.giveUp.disabled = false;
+    el.playClub.textContent = door.section;
+    el.playLeft.textContent = 'Card ' + door.slot + ' of ' + BOARD.doors.length;
+    var stack1 = document.getElementById('clueStack');
+    if (stack1) stack1.innerHTML = '';
+    if (el.playNums) el.playNums.innerHTML = '';
+    el.clues.innerHTML = '';
+    el.guessInput.value = '';
+    el.guessGo.disabled = true;
+    setFeedback('');
+    renderTries();
+    renderLadder();
+    show('screenPlay');
+    if (!(window.XIPlays && window.XIPlays.active && window.XIPlays.active())) playsStart();
+    startTicking();
+    var upTo = Math.max(1, state.stage || 1);
+    var chain = Promise.resolve();
+    for (var st = 1; st <= upTo; st++) {
+      (function (k) { chain = chain.then(function () { return buyStage(k); }); })(st);
+    }
+  }`);
+
+  s = replaceFn(s, "openDoor", "/api/whoami/whoami_fr/play", `
+  function openDoor(door) {
+    if (busy) return;
+    busy = true;
+    post('/api/whoami/whoami_fr/play', { date: BOARD.day, slot: door.slot })
+      .then(function (r) {
+        busy = false;
+        var first = !(state.cards || []).length;
+        state.playId = r.playId;
+        state.slot = door.slot;
+        state.stage = 1;
+        state.pointsSpent = 0;
+        state.guesses = [];
+        state.finished = false;
+        state.solved = false;
+        state.worth = r.worthNow != null ? r.worthNow : CARD_MAX;
+        state.wrongs = 0;
+        state.ring = 0;
+        state.answer = null;
+        save();
+        /* "Tell me" on the last card disabled it; a new card starts with it. */
+        el.giveUp.disabled = false;
+        el.playClub.textContent = door.section;
+        el.playLeft.textContent = 'Card ' + door.slot + ' of ' + BOARD.doors.length;
+        var stack0 = document.getElementById('clueStack');
+        if (stack0) stack0.innerHTML = '';
+        el.clues.innerHTML = '';
+        el.guessInput.value = '';
+        el.guessGo.disabled = true;
+        setFeedback('');
+        renderTries();
+        show('screenPlay');
+        if (first) playsStart();
+        renderClock();
+        startTicking();
+        buyStage(1);
+      })
+      .catch(function (e) { busy = false; trouble(e); });
+  }`);
+
+  s = replaceFn(s, "finish", "/api/whoami/whoami_fr/finish", `
+  function finish() {
+    post('/api/whoami/whoami_fr/finish', { playId: state.playId })
+      .then(function (r) { closeCard(r); })
+      .catch(function (e) { console.error('Who Am I finish:', e); closeCard(null); });
+  }
+
+  /* A CARD CLOSES: its result joins the day, once, and the next card comes up
+     by itself after a moment to read the verdict -- or, after the last, the
+     day's Full Time. */
+  function closeCard(r) {
+    var cards = state.cards || (state.cards = []);
+    var slot = Number(state.slot);
+    if (!cards.some(function (c) { return Number(c.slot) === slot; })) {
+      cards.push({
+        slot: slot,
+        section: (r && r.section) || '',
+        solved: r ? !!r.solved : !!state.solved,
+        score: r && typeof r.score === 'number' ? r.score : 0,
+        clues: Math.max(1, state.stage || 1),
+        wrongs: r && r.wrongs != null ? r.wrongs : (state.wrongs || 0),
+        answer: (r && r.answer) || state.answer || null
+      });
+    }
+    state.finished = true;
+    save();
+    stopTicking();
+    renderClock();
+    var count = cards.length;
+    if (count >= BOARD.doors.length) {
+      bankResult();
+      playsEnd(true);
+      setTimeout(showDone, 1600);
+      return;
+    }
+    setTimeout(function () {
+      if (state.finished && (state.cards || []).length === count) openNext();
+    }, 1800);
+  }`);
+
+  s = replaceFn(s, "bankResult", "recordResult({", `
+  function bankResult() {
+    /* THE DAY, BANKED ONCE: its score, how many cards were got, and each card
+       as it was played. First banked wins, the family's rule. */
+    var cards = state.cards || [];
+    var got = cards.filter(function (c) { return c.solved; }).length;
+    var all = got === BOARD.doors.length;
+    recordResult({
+      game: "whoami_fr",
+      day: BOARD.day,
+      no: BOARD.no,
+      boardId: BOARD.id,
+      solved: all,
+      cardsSolved: got,
+      bonus: all ? BONUS : 0,
+      score: dayScore(),
+      cards: cards.map(function (c) {
+        return { slot: c.slot, solved: !!c.solved, score: c.score, clues: c.clues, wrongs: c.wrongs };
+      })
+    });
+    try {
+      if (window.XISeason && window.XISeason.record) window.XISeason.record(BOARD.day);
+    } catch (e) { accountNote("season", e); }
+  }`);
+
+  s = replaceFn(s, "playsProgress", "detail:", `
+  function playsProgress() {
+    var cards = state.cards || [];
+    return {
+      solved: cards.filter(function (c) { return c.solved; }).length,
+      elapsed: runStart ? Math.round((Date.now() - runStart) / 1000) : 0,
+      detail: { cards: cards.length, score: dayScore() }
+    };
+  }`);
+
+  s = s.split(`total: 1
+    }, playsProgress);`).join(`total: BOARD.doors.length
+    }, playsProgress);`);
+  if (s.indexOf("total: BOARD.doors.length") < 0) throw new Error('rewrite "the play total": not found');
+
+
+  /* replaceFn trims what it puts in, so a function it has already replaced
+     starts at the line's first column; put the indent back to find it again. */
+  s = s.split(String.fromCharCode(10) + "function showDone(").join(String.fromCharCode(10) + "  function showDone(");
+  s = replaceFn(s, "showDone", "XIFullTime.panel", `
+  function showDone() {
+    /* THE DAY'S FULL TIME, the family's panel: the day out of 100 in the ring,
+       a box per card, the help that was used beside it, and who each card was
+       under "Your answers". No right-and-wrong count: the boxes are that. */
+    var cards = state.cards || [];
+    var n = BOARD.doors.length;
+    var got = cards.filter(function (c) { return c.solved; }).length;
+    var score = dayScore(), max = MAX_SCORE || dayMax();
+    var extra = cards.reduce(function (a, c) { return a + Math.max(0, (c.clues || 1) - 1); }, 0);
+    var wrong = cards.reduce(function (a, c) { return a + (c.wrongs || 0); }, 0);
+    var help = [];
+    if (extra) help.push(extra + (extra === 1 ? ' extra clue' : ' extra clues'));
+    if (wrong) help.push(wrong + (wrong === 1 ? ' wrong name' : ' wrong names'));
+    var boxes = BOARD.doors.map(function (d, i) { var c = cards[i]; return { s: c ? (c.solved ? 'g' : 'r') : 'x' }; });
+    if (window.XIFullTime && XIFullTime.panel) {
+      XIFullTime.panel(el.ftPanel, {
+        game: 'whoami_fr', name: 'Who Am I XI: Friends', no: BOARD.no, date: XIFullTime.dayLabel(BOARD.day),
+        kicker: 'That’s a wrap',
+        score: score, max: max, boxes: boxes, help: help,
+        stats: got === n ? 'All ' + n + ' got: +' + BONUS + ' bonus' : got + ' of ' + n + ' got',
+        answers: cards.map(function (c) {
+          return { s: c.solved ? 'g' : 'r', m: null, text: c.answer || '', points: c.score };
+        }),
+        /* THE SHARE NAMES NOBODY: the day in squares, not who they were. */
+        share: function () {
+          return 'Who Am I XI: Friends · No. ' + BOARD.no + ' · ' + score + '/' + max +
+            String.fromCharCode(10) + XIFullTime.squares(boxes);
+        },
+        url: function () { return location.href.split('#')[0]; },
+      });
+    }
+    show('screenDone');
+  }`);
+  /* THE DAY'S STATE: the cards so far, and this card's worth, wrong names and
+     ring. A save from before the day had cards is not this game's any more. */
+  s = once(s, `    finished: false,
+    solved: false
+  };`, `    finished: false,
+    solved: false,
+    worth: null,
+    wrongs: 0,
+    ring: 0,
+    answer: null,
+    cards: []
+  };
+  var CARD_MAX = RULE.cardMax || 18;
+  var BONUS = RULE.bonus != null ? RULE.bonus : 10;
+  var RING = RULE.ring || 3;`, "the day's state");
+  s = once(s, "return s && s.day === BOARD.day ? s : null;",
+    "return s && s.day === BOARD.day && Array.isArray(s.cards) ? s : null;", "a save from before the cards");
+
+  s = once(s, `    if (state.finished) { show('screenDone'); finish(); return; }
+    if (state.playId && state.slot) { resumeDoor(); return; }`,
+    `    if ((state.cards || []).length >= BOARD.doors.length) { showDone(); return; }
+    if (state.playId && !state.finished) { resumeDoor(); return; }`, "the today card, by the day");
+  s = once(s, `    if (picked) openDoor(picked);`, `    openNext();`, "the Start button opens the next card");
+  s = once(s, `    el.waTodayState.textContent = saved.finished
+      ? (saved.solved ? 'Solved' : 'Played')
+      : 'In progress';`,
+    `    el.waTodayState.textContent = (saved.cards || []).length >= BOARD.doors.length
+      ? 'Played · ' + dayScore() + ' of ' + dayMax()
+      : ((saved.cards || []).length || saved.playId ? 'In progress' : '');`, "the today card's state");
+  /* THE ACCOUNT'S RESULTS ARE THIS GAME'S: football's name inside a query
+     string is not caught by the identity rewrite, which reads quotes. */
+  s = once(s, '"/api/account/results?game=whoami"', '"/api/account/results?game=whoami_fr"',
+    "the account results this game pulls");
+
 
   /* IDENTITY and STORAGE. Each game keeps its own corner of localStorage and
      may never write another's. */

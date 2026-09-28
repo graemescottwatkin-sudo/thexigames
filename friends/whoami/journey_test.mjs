@@ -49,20 +49,20 @@ const DAY = today();
 
 /* ---- the deck, as migration 044's tables hold it ------------------------- */
 
+/* FIVE CARDS, as a day deals them since 28 Sep 2026 (the owner's ruling: five
+   cards a day, played in order, all counting). */
 const CARDS = [
   { id: "main-07", name: "Rachel Green", deck: "main", section: "Loves & Exes", depth: 12, rounds: 4 },
   { id: "main-01", name: "Monica Geller", deck: "main", section: "Family & Relatives", depth: 12, rounds: 4 },
   { id: "exp-03", name: "Gunther", deck: "expert", section: "Jobs & Ambitions", depth: 6, rounds: 2 },
+  { id: "exp-09", name: "Janice", deck: "expert", section: "Guest Stars", depth: 6, rounds: 2 },
+  { id: "main-05", name: "Phoebe Buffay", deck: "main", section: "The Main Six", depth: 6, rounds: 2 },
 ];
 /* THE DOORS ARE DAILIES, so their letters are DAILY letters — rounds of the
    card's verified subset, from fr_wa_daily_clue — not full-card letters. */
-const DOORS = [
-  { play_date: DAY, slot: 1, card_id: "main-07", round_letter: "A" },
-  { play_date: DAY, slot: 2, card_id: "main-01", round_letter: "A" },
-  { play_date: DAY, slot: 3, card_id: "exp-03", round_letter: "A" },
-];
-/* THE FULL CARD, as fr_wa_clue holds it: twelve clues, full-card letters by
-   stride 4. Only n = 2, 6 and 10 are verified, and they form daily round A.
+const DOORS = CARDS.map((c, i) => ({ play_date: DAY, slot: i + 1, card_id: c.id, round_letter: "A" }));
+/* CARD 1's FULL CARD, as fr_wa_clue holds it: twelve clues, full-card letters
+   by stride 4. Only n = 2, 6 and 10 are verified, and they form daily round A.
    n = 1 is ALSO letter A step 1 — on the FULL card — and it is NOT verified.
    That collision is deliberate: a server that read fr_wa_clue by the daily
    letter would serve n = 1, and the assertions below would catch it. */
@@ -80,17 +80,23 @@ const FULL = Array.from({ length: 12 }, (_, i) => {
            vs: n === 2 ? "ep" : n === 6 ? "trait" : n === 10 ? "cast" : "none",
            ep: n === 2 ? "S1E01" : null };
 });
-const CLUES = FULL;
+/* THE OTHER FOUR: three verified clues each, n 1 to 3, round A. */
+const OTHERS = CARDS.slice(1).flatMap((c) => [1, 2, 3].map((n) => ({
+  card_id: c.id, n, round_letter: "A", step: n, text: "Clue " + n + " about card " + c.id + ".",
+  vs: "ep", ep: "S2E0" + n })));
+const CLUES = FULL.concat(OTHERS);
 const DAILY = [
   { card_id: "main-07", round_letter: "A", step: 1, n: 2 },
   { card_id: "main-07", round_letter: "A", step: 2, n: 6 },
   { card_id: "main-07", round_letter: "A", step: 3, n: 10 },
-];
+].concat(OTHERS.map((c) => ({ card_id: c.card_id, round_letter: "A", step: c.n, n: c.n })));
 const ANSWERS = [
   { card_id: "main-07", answer: fold("Rachel Green"), kind: "accept" },
   { card_id: "main-07", answer: fold("Rachel"), kind: "accept" },
   { card_id: "main-01", answer: fold("Monica Geller"), kind: "accept" },
   { card_id: "exp-03", answer: fold("Gunther"), kind: "accept" },
+  { card_id: "exp-09", answer: fold("Janice"), kind: "accept" },
+  { card_id: "main-05", answer: fold("Phoebe Buffay"), kind: "accept" },
   /* ONE WORD, TWO CARDS: the ambiguous verdict. */
   { card_id: "main-07", answer: fold("Apartment"), kind: "suggest" },
   { card_id: "main-01", answer: fold("Apartment"), kind: "suggest" },
@@ -152,6 +158,10 @@ function makeDB() {
     }
     if (/^SELECT COUNT\(\*\) AS n FROM fr_wa_guess WHERE play_id/.test(sql)) {
       return [{ n: (guesses.get(a[0]) || []).length }];
+    }
+    /* THE RING'S READING: the verdicts in order (wa-play.js tallyOf). */
+    if (/^SELECT n, verdict FROM fr_wa_guess WHERE play_id/.test(sql)) {
+      return (guesses.get(a[0]) || []).slice().sort((x, y) => x.n - y.n).map((g) => ({ n: g.n, verdict: g.verdict }));
     }
     if (/^SELECT n, guess, verdict FROM fr_wa_guess WHERE play_id/.test(sql)) {
       return (guesses.get(a[0]) || []).slice().sort((x, y) => x.n - y.n);
@@ -219,6 +229,11 @@ async function open(opts = {}) {
     runScripts: "outside-only", pretendToBeVisual: true,
   });
   const w = dom.window;
+  /* THE PAGE'S OWN PAUSES between cards -- a second and a half to read a
+     verdict before the next card comes up -- run at once here. Only the
+     page's long waits: anything under a second keeps its time. */
+  const realSet = w.setTimeout.bind(w);
+  w.setTimeout = (fn, ms, ...rest) => realSet(fn, ms >= 1000 ? 0 : ms, ...rest);
   try { if (!opts.keep) w.localStorage.clear(); } catch (e) {}
   if (opts.keep) for (const [k, v] of Object.entries(opts.keep)) w.localStorage.setItem(k, v);
 
@@ -250,7 +265,7 @@ async function open(opts = {}) {
   w.eval(fulltime);
   w.eval(config);
   w.eval(game);
-  const settle = async () => { for (let i = 0; i < 6; i++) await new Promise((r) => setTimeout(r, 0)); };
+  const settle = async () => { for (let i = 0; i < 30; i++) await new Promise((r) => setTimeout(r, 0)); };
   await settle();
   const click = async (el) => { el.dispatchEvent(new w.Event("click", { bubbles: true })); await settle(); };
   const $ = (id) => w.document.getElementById(id);
@@ -271,71 +286,72 @@ async function open(opts = {}) {
   return { w, $, text, click, settle, calls, DB, readable };
 }
 
-async function openTheDoor(p, slot) {
-  await p.click(p.$("waToday"));
-  const door = [...p.w.document.querySelectorAll("#doors .door")][slot - 1];
-  await p.click(door);
-  await p.click(p.$("playChoice"));
-  await p.settle();
-}
-
+/* ONE CARD'S GUESS, as a player types it. */
 const guess = async (p, name) => {
   p.$("guessInput").value = name;
   p.$("guessInput").dispatchEvent(new p.w.Event("input", { bubbles: true }));
   p.$("guessGo").disabled = false;
   await p.click(p.$("guessGo"));
+  await p.settle();
 };
-
 const clueTexts = (p) => [...p.w.document.querySelectorAll("#clueStack .fclue .fc-text")]
   .map((e) => e.textContent.trim());
+const kicker = (p) => p.text(p.w.document.querySelector(".pf-kicker"));
+const nextClue = async (p) => { await p.click(p.w.document.querySelector("#ladder .rung-next")); await p.settle(); };
+const start = async (p) => { await p.click(p.$("waToday")); await p.click(p.$("playChoice")); await p.settle(); };
+const flat = (s) => String(s || "").split(" ").join("");
 
 /* ------------------------------------------------------------------------- */
 
-console.log("=== The doors are this deck's ===");
+console.log("=== The day is five cards, played in order ===");
 {
   const p = await open();
   await p.click(p.$("waToday"));
-  const doors = [...p.w.document.querySelectorAll("#doors .door")];
-  t("three doors, not eleven", doors.length === 3, String(doors.length));
-  t("each door names its section", /Loves & Exes/.test(p.text(doors[0])), p.text(doors[0]));
-  t("and never the internal deck name", !/\bmain\b|\bexpert\b/.test(doors.map(p.text).join(" ")),
-    doors.map(p.text).join(" | "));
-  await p.click(doors[0]);
-  t("choosing a door names it, rather than 'undefined · undefined'",
-    p.text(p.$("commitPick")) === "Door 1 · Loves & Exes", p.text(p.$("commitPick")));
-  t("the button opens a door, not a clue", /Open this door/.test(p.text(p.$("playChoice"))));
+  const cards = [...p.w.document.querySelectorAll("#doors .door")];
+  t("five cards, not eleven and not three", cards.length === 5, String(cards.length));
+  t("each card names its section", p.text(cards[0]).includes("Loves & Exes"), p.text(cards[0]));
+  t("and never the internal deck name",
+    !cards.map(p.text).join(" ").split(" ").some((w) => w === "main" || w === "expert"),
+    cards.map(p.text).join(" | "));
+  t("nothing is chosen: they are a list, with the first up next",
+    p.$("doors").getAttribute("role") === "list" && p.text(cards[0]).includes("Up next") &&
+      !p.w.document.querySelector('#doors [role="radio"]'), p.text(cards[0]));
+  t("the button says which card it starts", p.text(p.$("commitPick")) === "Card 1 of 5", p.text(p.$("commitPick")));
+  t("and it is Start", p.text(p.$("playChoice")).startsWith("Start"), p.text(p.$("playChoice")));
 }
 
-console.log("\n=== A round shows its clues ===");
+console.log("\n=== A card shows its clues ===");
 const p = await open();
-await openTheDoor(p, 1);
+await start(p);
 {
   const shown = clueTexts(p);
   t("THE FIRST CLUE'S TEXT IS ON THE PAGE", shown.length === 1 && shown[0].includes(CLUE_TEXT[0].slice(0, 30)),
     shown.join(" | ") || "no clue drawn");
   t("labelled as clue 1 of 3, the hardest",
-    /Clue 1 of 3 · the hardest/.test(p.text(p.w.document.querySelector("#clueStack .fclue .fc-n"))));
-  t("and marked on record, because its vs is ep",
-    !!p.w.document.querySelector("#clueStack .fclue .fc-src"));
+    p.text(p.w.document.querySelector("#clueStack .fclue .fc-n")).includes("Clue 1 of 3 · the hardest"));
+  t("and marked on record, because its vs is ep", !!p.w.document.querySelector("#clueStack .fclue .fc-src"));
   t("it is the VERIFIED clue, not the unverified one at the same full-card letter",
     !p.readable().includes(UNVERIFIED));
-  t("the door is named on the card", p.text(p.w.document.querySelector(".pf-kicker")) === "Door 1 · Loves & Exes",
-    p.text(p.w.document.querySelector(".pf-kicker")));
-  t("worth now is ten, the door's ceiling", p.text(p.$("worthNow")) === "10", p.text(p.$("worthNow")));
-  t("and there is no match clock", !/90'|Match clock/i.test(p.readable()));
-  t("one clue is offered next, costing four",
-    /Ask a friend.*Clue 2 of 3.*4/.test(p.text(p.$("ladder"))), p.text(p.$("ladder")));
+  t("the card is named as the first of five", kicker(p) === "Card 1 of 5 · Loves & Exes", kicker(p));
+  t("worth now is eighteen, a card's ceiling", p.text(p.$("worthNow")) === "18", p.text(p.$("worthNow")));
+  t("and there is no match clock", !p.readable().includes("Match clock") && !p.readable().includes("90'"));
+  const ladder = p.text(p.$("ladder"));
+  t("one clue is offered next, costing five",
+    ladder.includes("Ask a friend") && ladder.includes("Clue 2 of 3") && ladder.includes("5"), ladder);
   t("and the exit says Tell me", p.text(p.$("giveUp")) === "Tell me", p.text(p.$("giveUp")));
+  t("the ring is empty and says what it is for",
+    p.text(p.$("tries")).includes("Three wrong names bring out the next clue") &&
+      p.$("tries").querySelectorAll(".fr-ring path").length === 3, p.text(p.$("tries")));
 }
 
-await p.click(p.w.document.querySelector("#ladder .rung-next"));
+await nextClue(p);
 {
   const shown = clueTexts(p);
   t("buying adds the SECOND clue's text, beneath the first",
     shown.length === 2 && shown[1].includes(CLUE_TEXT[1].slice(0, 30)), shown.join(" | "));
   t("which is NOT marked on record: a trait is not evidence",
     p.w.document.querySelectorAll("#clueStack .fc-src").length === 1);
-  t("and the door is now worth six", p.text(p.$("worthNow")) === "6", p.text(p.$("worthNow")));
+  t("and the card is now worth thirteen", p.text(p.$("worthNow")) === "13", p.text(p.$("worthNow")));
 }
 
 console.log("\n=== The type-ahead finds names ===");
@@ -344,23 +360,30 @@ console.log("\n=== The type-ahead finds names ===");
   p.$("guessInput").dispatchEvent(new p.w.Event("input", { bubbles: true }));
   await p.settle();
   const offered = p.text(p.$("suggest"));
-  /* The server sent bare strings and the page searched their second letter. */
-  t("typing 'rach' offers Rachel Green", /Rachel Green/.test(offered), offered || "nothing offered");
+  t("typing 'rach' offers Rachel Green", offered.includes("Rachel Green"), offered || "nothing offered");
   p.$("guessInput").value = "";
 }
 
-console.log("\n=== The verdicts this server sends ===");
+console.log("\n=== The verdicts, and the ring ===");
 {
   await guess(p, "Apartment");
   t("an ambiguous word offers the cards it could mean",
-    /Rachel Green/.test(p.text(p.$("suggest"))) && /Monica Geller/.test(p.text(p.$("suggest"))),
+    p.text(p.$("suggest")).includes("Rachel Green") && p.text(p.$("suggest")).includes("Monica Geller"),
     p.text(p.$("suggest")));
+  t("and costs nothing: it is a choice offered, not a wrong name",
+    p.text(p.$("worthNow")) === "13" && p.text(p.$("tries")).includes("Three wrong names"), p.text(p.$("tries")));
   await guess(p, "Monica Geller");
-  t("another card's name is a near miss, not 'Not him.'",
-    /someone else in the deck/i.test(p.text(p.$("feedback"))), p.text(p.$("feedback")));
-  t("and the near miss names nobody", !/Rachel/.test(p.text(p.$("feedback"))));
+  t("another card's name is a near miss", p.text(p.$("feedback")).toLowerCase().includes("someone else in the deck"),
+    p.text(p.$("feedback")));
+  t("and the near miss names nobody", !p.text(p.$("feedback")).includes("Rachel"));
+  t("a wrong name costs a point and fills a piece of the ring",
+    p.text(p.$("worthNow")) === "12" && p.text(p.$("tries")).startsWith("1 wrong · 2 more") &&
+      p.$("tries").querySelectorAll('.fr-ring path[style*="danger"]').length === 1,
+    p.text(p.$("worthNow")) + " | " + p.text(p.$("tries")));
   await guess(p, "Joey Tribbiani");
-  t("a name that is nobody's is a plain miss", /Not them/.test(p.text(p.$("feedback"))), p.text(p.$("feedback")));
+  t("a name that is nobody's is a plain miss, and a second piece",
+    p.text(p.$("feedback")).includes("Not them") && p.text(p.$("worthNow")) === "11" &&
+      p.text(p.$("tries")).startsWith("2 wrong · 1 more"), p.text(p.$("feedback")) + " | " + p.text(p.$("tries")));
 }
 
 console.log("\n=== A reload keeps what was bought ===");
@@ -379,48 +402,129 @@ console.log("\n=== A reload keeps what was bought ===");
   t("both clues are back, in order",
     shown.length === 2 && shown[0].includes(CLUE_TEXT[0].slice(0, 20)) && shown[1].includes(CLUE_TEXT[1].slice(0, 20)),
     shown.length + " clue(s)");
-  t("and the door is still worth six", back.text(back.$("worthNow")) === "6", back.text(back.$("worthNow")));
+  t("and the card is still worth eleven, the ring still two full",
+    back.text(back.$("worthNow")) === "11" && back.text(back.$("tries")).startsWith("2 wrong"),
+    back.text(back.$("worthNow")) + " | " + back.text(back.$("tries")));
 }
 
-console.log("\n=== Solving it ===");
+console.log("\n=== The third wrong name brings the next clue ===");
+{
+  await guess(p, "Ross Geller");
+  const shown = clueTexts(p);
+  t("the third clue comes out by itself", shown.length === 3 && shown[2].includes(CLUE_TEXT[2].slice(0, 30)),
+    shown.length + " clue(s)");
+  t("at its price: 18 - 5 - 5 - 3 wrong = 5", p.text(p.$("worthNow")) === "5", p.text(p.$("worthNow")));
+  t("and the ring is empty again, now warning that the card is at stake",
+    p.text(p.$("tries")).includes("card is lost"), p.text(p.$("tries")));
+  t("the feedback says so", p.text(p.$("feedback")).includes("next clue"), p.text(p.$("feedback")));
+}
+
+console.log("\n=== Solving card one moves to card two ===");
 {
   await guess(p, "Rachel Green");
   await p.settle();
-  /* On the family's Full Time panel (shared/xi-fulltime.js). */
-  const done = p.text(p.$("ftPanel"));
+  t("the next card comes up by itself", kicker(p) === "Card 2 of 5 · Family & Relatives", kicker(p));
+  t("with its own first clue, and worth eighteen again",
+    clueTexts(p).length === 1 && p.text(p.$("worthNow")) === "18", clueTexts(p).length + " | " + p.text(p.$("worthNow")));
+}
+
+console.log("\n=== Cards two to five ===");
+{
+  await guess(p, "Monica Geller");                      // 18
+  await guess(p, "Gunther");                            // 18
+  t("card four is up", kicker(p) === "Card 4 of 5 · Guest Stars", kicker(p));
+  await nextClue(p);
+  await nextClue(p);                                    // 18 - 10 = 8, on the last clue
+  await guess(p, "Nobody One");
+  await guess(p, "Nobody Two");
+  await guess(p, "Nobody Three");                       // the ring on the last clue: lost
+  t("a full ring on the last clue loses the card, and says who it was",
+    kicker(p) === "Card 5 of 5 · The Main Six" || p.text(p.$("feedback")).includes("It was Janice"),
+    kicker(p) + " | " + p.text(p.$("feedback")));
+  t("then the fifth card comes up", kicker(p) === "Card 5 of 5 · The Main Six", kicker(p));
+  await guess(p, "Phoebe Buffay");                      // 18
+  await p.settle();
+}
+
+console.log("\n=== The day's Full Time ===");
+{
+  const panel = p.$("ftPanel");
+  const done = p.text(panel);
   t("the end card is shown", !p.$("screenDone").hidden);
-  t("it names the card", /It was Rachel Green/.test(done), done);
-  t("and the door it was behind", /Behind the Loves & Exes door/.test(done));
-  t("scored out of ten", /6\s*\/\s*10/.test(done), done);
-  t("two of three clues used", /2 of 3 clues/.test(done));
-  t("the near miss is counted under this deck's word", /named someone else 1/.test(done), done);
-  t("in this deck's words, not football's", /That\u2019s a wrap/.test(done) && !/Full time/i.test(done), done.slice(0, 60));
-  const btn = p.$("ftPanel").querySelector(".xft-act .xft-primary");
+  /* 5 + 18 + 18 + 0 + 18 = 59, and no bonus: card four was lost. */
+  t("the day scores 59 of 100: five cards, no bonus for four of five",
+    flat((panel.querySelector(".xft-score") || {}).textContent) === "59/100",
+    (panel.querySelector(".xft-score") || {}).textContent);
+  const boxes = [...panel.querySelectorAll(".xft-b")].map((b) => b.className.split(" ").pop()).join("");
+  t("a box per card, green for got and red for lost", boxes === "gggrg", boxes);
+  const help = [...panel.querySelectorAll(".xft-help li")].map((li) => li.textContent).join(" | ");
+  t("the help used beside the ring: four extra clues and six wrong names",
+    help === "4 extra clues | 6 wrong names", help);
+  t("no right-and-wrong count: the boxes are that", !panel.querySelector(".xft-tally"));
+  t("four of five got, said", done.includes("4 of 5 got"), done);
+  const answers = p.text(panel.querySelector(".xft-answers"));
+  t("and who each card was, under the answers", ["Rachel Green", "Monica Geller", "Gunther", "Janice", "Phoebe Buffay"]
+    .every((n) => answers.includes(n)), answers);
+  t("in this deck's words, not football's", done.includes("That’s a wrap") && !done.toLowerCase().includes("full time"),
+    done.slice(0, 60));
+  const btn = panel.querySelector(".xft-act .xft-primary");
   if (btn) await p.click(btn);
-  const share = (p.w || {}).__shared ? p.w.__shared[0] || "" : "";
-  t("the share text names nobody", !!share && !/Rachel|Green|Loves/.test(share), share.replace(/\n/g, " / "));
-  t("and says which game it is", /^Who Am I XI: Friends/.test(share), share.split("\n")[0]);
+  const share = p.w.__shared[0] || "";
+  t("the share text names nobody",
+    !!share && !["Rachel", "Green", "Loves", "Janice", "Phoebe"].some((n) => share.includes(n)), share.split(String.fromCharCode(10)).join(" / "));
+  t("and says which game and how it went", share.startsWith("Who Am I XI: Friends") && share.includes("59/100"),
+    share.split(String.fromCharCode(10))[0]);
+}
+
+console.log("\n=== Coming back to a finished day ===");
+{
+  const keep = {};
+  for (let i = 0; i < p.w.localStorage.length; i++) {
+    const k = p.w.localStorage.key(i);
+    keep[k] = p.w.localStorage.getItem(k);
+  }
+  const back = await open({ db: p.DB, keep });
+  t("the today card says it was played, and the score", back.text(back.$("waTodayState")) === "Played · 59 of 100",
+    back.text(back.$("waTodayState")));
+  await back.click(back.$("waToday"));
+  t("and opening it shows the day's Full Time again", !back.$("screenDone").hidden &&
+    flat((back.$("ftPanel").querySelector(".xft-score") || {}).textContent) === "59/100");
+  const saved = JSON.parse(back.w.localStorage.getItem("xifw.results.v1") || "[]");
+  const row = saved.find((r) => r && r.day === DAY) || {};
+  t("the day is banked once, with its five cards",
+    saved.filter((r) => r && r.day === DAY).length === 1 && row.score === 59 && row.cardsSolved === 4 &&
+      Array.isArray(row.cards) && row.cards.length === 5 && row.bonus === 0, JSON.stringify(row).slice(0, 120));
+}
+
+console.log("\n=== All five got: the bonus ===");
+{
+  const q = await open();
+  await start(q);
+  for (const name of ["Rachel Green", "Monica Geller", "Gunther", "Janice", "Phoebe Buffay"]) await guess(q, name);
+  await q.settle();
+  t("five on the first clue and the bonus: a perfect 100",
+    flat((q.$("ftPanel").querySelector(".xft-score") || {}).textContent) === "100/100",
+    (q.$("ftPanel").querySelector(".xft-score") || {}).textContent);
+  t("and it says the bonus was earned", q.text(q.$("ftPanel")).includes("All 5 got: +10 bonus"));
+  t("with no help used", [...q.$("ftPanel").querySelectorAll(".xft-help li")].map((li) => li.textContent).join("") === "None");
 }
 
 console.log("\n=== Nothing on screen says undefined, or football ===");
 {
   const all = p.readable();
-  t("no 'undefined' anywhere a player can read", !/\bundefined\b/.test(all));
+  t("no 'undefined' anywhere a player can read", !all.includes("undefined"));
   const FOOTBALL = ["club", "player", "spell", "career", "substitution", "goals", "nationality",
     "minute", "full time", "kick off", "footballquizzes"];
-  const hay = " " + all.toLowerCase().replace(/[^a-z]+/g, " ") + " ";
+  const hay = " " + all.toLowerCase().split("").map((c) => (c >= "a" && c <= "z") ? c : " ").join("") + " ";
   const hit = FOOTBALL.filter((w) => hay.includes(" " + w + " ") || hay.includes(" " + w + "s "));
   t("and no football vocabulary", hit.length === 0, hit.join(", ") || "none");
 }
 
 console.log("\n=== Only the Friends tables were touched ===");
 {
-  /* Every call the page made went to the namespaced address; the stub throws
-     on any football table, so reaching here is half the proof and this is the
-     other half. */
   const off = p.calls.filter((c) => c.startsWith("/api/whoami/") && !c.startsWith("/api/whoami/whoami_fr/"));
   t("every whoami call used this game's address", off.length === 0, off.join(", ") || "all namespaced");
-  t("and there were calls to check", p.calls.filter((c) => c.startsWith("/api/whoami/whoami_fr/")).length >= 6,
+  t("and there were calls to check", p.calls.filter((c) => c.startsWith("/api/whoami/whoami_fr/")).length >= 20,
     String(p.calls.length) + " call(s)");
 }
 

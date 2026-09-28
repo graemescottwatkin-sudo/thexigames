@@ -64,6 +64,10 @@ const GOOD = [
   card("E1", "Gamma Three", "Expert Pile", 36, range(1, 36)),
   /* A location, fully verified — and still no daily round. */
   card("L1", "Delta Place", "Locations", 3, [1, 2, 3]),
+  /* TWO MORE DEALABLE CARDS, since 28 Sep 2026: a day deals five, and a deck
+     of three dealable cards cannot fill one. */
+  card("4", "Zeta Five", "The Main Six", 6, range(1, 6)),
+  card("E2", "Eta Six", "Expert Pile", 6, range(1, 6)),
 ];
 
 function deckDir(name, cards) {
@@ -153,8 +157,12 @@ t("the calendar deals from the synthetic import", cal.status === 0,
 const doors = fs.existsSync(calSql) ? [...fs.readFileSync(calSql, "utf8")
   .matchAll(/INSERT INTO fr_wa_door \(play_date, slot, card_id, round_letter\) VALUES \('([^']*)', (\d+), '([^']*)', '([A-Z])'\);/g)]
   .map((m) => ({ day: m[1], slot: Number(m[2]), card: m[3], letter: m[4] })) : [];
-t("PRECONDITION: it dealt doors", doors.length >= 3, doors.length + " door(s)");
-t("three doors on the first day", doors.filter((d) => d.day === "2026-10-01").length === 3);
+/* HOW MANY A DAY IS THE DEALER'S NUMBER, read from it rather than written
+   here: five since 28 Sep 2026, three before. */
+const PER_DAY = Number((fs.readFileSync(CALENDAR, "utf8").match(/export const DOORS = (\d+);/) || [])[1]) || 0;
+t("PRECONDITION: it dealt doors", PER_DAY > 0 && doors.length >= PER_DAY, doors.length + " door(s), " + PER_DAY + " a day");
+t("a full day of cards on the first day", doors.filter((d) => d.day === "2026-10-01").length === PER_DAY,
+  doors.filter((d) => d.day === "2026-10-01").length + " of " + PER_DAY);
 t("every door's letter is a daily round that card HAS",
   doors.every((d) => roundOf(d.card, d.letter).length === 3),
   doors.map((d) => d.card + ":" + d.letter).join(" "));
