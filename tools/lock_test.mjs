@@ -66,9 +66,21 @@ try { ({ chromium } = await import("playwright")); } catch (e) { chromium = null
 if (!chromium) { t("playwright is available", false, "npm install -D playwright"); done(); }
 
 /* ---- which games, and where each one's lock is proved -------------------- */
+/* The Friends ring starts on its launch day, so its sample boards are that
+   day and the three after it -- football's are 1 to 4 -- AND ONLY THOSE THAT
+   ARE OUT: the future is shut, so on launch day there is one, and four from
+   the fourth day on. Derived from the server's own day, never assumed. */
+const FRSC_FIRST = (await import(pathToFileURL(path.join(ROOT, "functions", "_lib", "games.js")).href))
+  .launchNumber("scrambled_fr");
+const FRSC_TODAY = (await import(pathToFileURL(path.join(ROOT, "functions", "_lib", "daily.js")).href)).dailyNumber();
+const FRSC_BOARDS = [0, 1, 2, 3].map((i) => FRSC_FIRST + i).filter((n) => n <= FRSC_TODAY);
 const LOCKED = {
   scrambled: { kind: "pitch", path: "/football/scrambled/", api: "/api/scrambled/daily", boards: [1, 2, 3, 4] },
   vowels: { kind: "pitch", path: "/football/vowels/", api: "/api/scrambled/daily", boards: [1, 2, 3, 4] },
+  /* Scrambled and Vowels, Friends: the same screen with a list of five where
+     the pitch was, so the same checks with the board's own count. */
+  scrambled_fr: { kind: "pitch", path: "/friends/scrambled/", api: "/api/scrambled_fr/daily", boards: FRSC_BOARDS, tiles: 5 },
+  vowels_fr: { kind: "pitch", path: "/friends/vowels/", api: "/api/scrambled_fr/daily", boards: FRSC_BOARDS, tiles: 5 },
   quickfire: { kind: "quiz", path: "/football/quickfire/" },
   ballpark: { kind: "slider", path: "/football/ballpark/" },
   hilo: { kind: "duel", path: "/football/hilo/" },
@@ -366,7 +378,8 @@ const FT_SAMPLE = (game, name) => ({
    every game at its Full Time, so a game missing here fails there, by name. */
 const FT_BOX = {
   scrambled: "#screenResults", vowels: "#screenResults", quickfire: "#screenResults", hilo: "#screenResults",
-  lightning_fr: "#screenResults", ballpark: "#ft", codeword: "#ft", grid: "#gdFullTime",
+  lightning_fr: "#screenResults", scrambled_fr: "#screenResults", vowels_fr: "#screenResults",
+  ballpark: "#ft", codeword: "#ft", grid: "#gdFullTime",
   whoami: "#screenDone", whoami_fr: "#screenDone", wordsearch: "#result", wordsearch_fr: "#result", crossword: "#doneOverlay",
 };
 async function panelCheck(page, label, id) {
@@ -637,8 +650,8 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
     for (const board of game.boards) {
       const { page, context } = await open(game, board, vp);
       const m = await page.evaluate(measure);
-      t(`${vp[0]} board ${board}: locked, no scroll, eleven tiles of one size, none overlapping or off the pitch`,
-        ok(m) && m.tiles === 11, say(m));
+      t(`${vp[0]} board ${board}: locked, no scroll, ${game.tiles || 11} tiles of one size, none overlapping or off the board`,
+        ok(m) && m.tiles === (game.tiles || 11), say(m));
       if (vp[2]) {
         t(`${vp[0]} board ${board}: the keys are up and the answer row sits above them`,
           m.osk !== null && m.entryBottom !== null && m.entryBottom <= m.osk + 1, `entry ${m.entryBottom}, keys ${m.osk}`);
@@ -649,7 +662,7 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
 
   console.log(`\n${id}: typing, and the bench`);
   for (const vp of [VIEWPORTS[0], VIEWPORTS[1]]) {
-    const { page, context } = await open(game, 1, vp);
+    const { page, context } = await open(game, game.boards[0], vp);
     const bench = await page.$eval("#benchRow", (b) => ({ hidden: b.hidden, shown: getComputedStyle(b).display !== "none" }));
     t(`${vp[0]}: a hidden bench is not drawn (display:flex once beat [hidden] here)`,
       bench.hidden && !bench.shown, JSON.stringify(bench));
@@ -673,7 +686,7 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
      does not cover the tile it is for. */
   console.log(`\n${id}: picking a tile`);
   for (const vp of [VIEWPORTS[0], VIEWPORTS[1], VIEWPORTS[3]]) {
-    const { page, context } = await open(game, 1, vp);
+    const { page, context } = await open(game, game.boards[0], vp);
     const size = () => page.evaluate(() => {
       const r = (e) => e.getBoundingClientRect();
       const tiles = [...document.querySelectorAll("#pitch .slot")].map(r);
@@ -719,7 +732,7 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
 
   console.log(`\n${id}: the old-link banner`);
   for (const vp of [VIEWPORTS[0], VIEWPORTS[1]]) {
-    const { page, context } = await open(game, 1, vp);
+    const { page, context } = await open(game, game.boards[0], vp);
     await bannerCheck(page, id, vp[0], ok, say, measure);
     await context.close();
   }
@@ -731,14 +744,14 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
     await context.close();
   }
   {
-    const { page, context } = await open(game, 1, VIEWPORTS[1]);
+    const { page, context } = await open(game, game.boards[0], VIEWPORTS[1]);
     await howCheck(page, VIEWPORTS[1][0]);
     await context.close();
   }
 
   console.log(`\n${id}: the way out, and back`);
   {
-    const { page, context } = await open(game, 1, VIEWPORTS[1]);
+    const { page, context } = await open(game, game.boards[0], VIEWPORTS[1]);
     await page.evaluate(() => {
       const st = document.createElement("style");
       st.id = "lock-test-big";
@@ -761,7 +774,7 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
 
   console.log(`\n${id}: Full Time`);
   for (const vp of [VIEWPORTS[1], VIEWPORTS[3]]) {
-    const { page, context } = await open(game, 1, vp);
+    const { page, context } = await open(game, game.boards[0], vp);
     page.on("dialog", (d) => d.accept());
     for (let i = 0; i < 11; i++) {
       const open = await page.$$eval("#pitch .slot:not(.solved):not(.given)", (els) => els.map((e) => e.dataset.slot));
@@ -2278,7 +2291,7 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "w
 const PERMA_N = dailyNumber() - 1;
 /* Each game's first board, for the one row that can be younger than PERMA_N. */
 const { launchNumber } = await import(pathToFileURL(path.join(ROOT, "functions", "_lib", "games.js")).href);
-const LAUNCHED_NO = { lightning_fr: launchNumber("lightning_fr") };
+const LAUNCHED_NO = { lightning_fr: launchNumber("lightning_fr"), scrambled_fr: launchNumber("scrambled_fr") };
 const PERMA = {
   "football/ballpark":  { start: "#homeDaily", asks: `/api/ballpark/daily?no=${PERMA_N}`, label: "#startKicker" },
   "football/codeword":  { asks: `/api/codeword/daily?no=${PERMA_N}`, label: "#cwTodayKicker" },
@@ -2299,6 +2312,12 @@ const PERMA = {
      and the label is asked of it from the day after, when #N exists. */
   "friends/lightning":  { asks: `/api/lightning_fr/daily?no=${PERMA_N}`,
     ...(PERMA_N >= LAUNCHED_NO.lightning_fr ? { label: "#startKicker" } : {}) },
+  /* Scrambled and Vowels, Friends: Lightning's rule, for the same reason -- a
+     board is a number the server accepts from the launch on. */
+  "friends/scrambled":  { asks: `/api/scrambled_fr/daily?no=${PERMA_N}`,
+    ...(PERMA_N >= LAUNCHED_NO.scrambled_fr ? { label: "#startKicker" } : {}) },
+  "friends/vowels":     { asks: `/api/scrambled_fr/daily?no=${PERMA_N}&cy=1`,
+    ...(PERMA_N >= LAUNCHED_NO.scrambled_fr ? { label: "#startKicker" } : {}) },
 };
 if (!ONLY || ONLY === "perma") {
   console.log(`\na board's own address, every game (board ${PERMA_N})`);
@@ -2781,7 +2800,7 @@ if (!ONLY || ONLY === "bar") {
   console.log(`\nthe family's top bar`);
   const WANT = ["Progress", "Clock", "Score", "Worth", "Subs"];
   const openers = {
-    pitch: (g, vp) => open(g, 1, vp), quiz: openQuiz, slider: openSlider, duel: openDuel,
+    pitch: (g, vp) => open(g, g.boards[0], vp), quiz: openQuiz, slider: openSlider, duel: openDuel,
     codeword: openCodeword, grid: openGrid, profile: openProfile, wordsearch: openWS,
     lightning: openLightning,
   };
@@ -2857,7 +2876,7 @@ if (!ONLY || ONLY === "keys") {
   const fs = await import("node:fs");
   const types = (dir) => /shared\/xi-keys\.js/.test(fs.readFileSync(dir + "/index.html", "utf8"));
   const openers = {
-    pitch: (g, vp) => open(g, 1, vp), quiz: openQuiz, slider: openSlider, duel: openDuel,
+    pitch: (g, vp) => open(g, g.boards[0], vp), quiz: openQuiz, slider: openSlider, duel: openDuel,
     codeword: openCodeword, grid: openGrid, profile: openProfile, wordsearch: openWS,
     lightning: openLightning,
   };

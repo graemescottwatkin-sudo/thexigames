@@ -98,6 +98,31 @@
 /friends/lightning/js/*
   Cache-Control: public, max-age=31536000, immutable
 
+# SCRAMBLED XI: FRIENDS AND VOWELS XI: FRIENDS — the fourth and fifth, same rules.
+/friends/scrambled/
+  Cache-Control: no-store
+
+/friends/scrambled/index.html
+  Cache-Control: no-store
+
+/friends/scrambled/css/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/friends/scrambled/js/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/friends/vowels/
+  Cache-Control: no-store
+
+/friends/vowels/index.html
+  Cache-Control: no-store
+
+/friends/vowels/css/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/friends/vowels/js/*
+  Cache-Control: public, max-age=31536000, immutable
+
 # XI Word Search — same three rules as the crossword, one pair per game.
 /football/wordsearch/
   Cache-Control: no-store

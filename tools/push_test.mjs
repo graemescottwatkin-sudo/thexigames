@@ -381,11 +381,18 @@ const good = (s, extra = {}) => ({ token: TOK(s), platform: "android", tz: "Euro
     return fcm.SENT;
   };
   let sim = T0, runs = 0, first = null;
-  for (; sim < T0 + 3 * DAY; sim += 15 * MIN) {
-    const st = await run(env, sim, send);
-    if (!first) first = st;
-    runs++;
-  }
+  /* EVERY DECISION IS LOGGED (the owner, 29 Sep 2026: "yes add the skip
+     logging"): captured here with the simulated time it was made at. */
+  const said = [];
+  const realLog = console.log;
+  console.log = (...a) => { const l = a.join(" "); if (l.startsWith("[push]")) said.push({ at: sim, line: l }); else realLog(...a); };
+  try {
+    for (; sim < T0 + 3 * DAY; sim += 15 * MIN) {
+      const st = await run(env, sim, send);
+      if (!first) first = st;
+      runs++;
+    }
+  } finally { console.log = realLog; }
 
   const sends = (k, title) => log.filter((e) => e.token === TOK(k) && (!title || e.title === title));
   const MORN = push.morningMessage().title;
@@ -411,6 +418,25 @@ const good = (s, extra = {}) => ({ token: TOK(s), platform: "android", tz: "Euro
   const laNudge = sends("la", STREAK)[0];
   t("the nudge counts the run from the season rule", laNudge && /^2 days/.test(laNudge.body), laNudge && laNudge.body);
   t("a signed-out phone never gets a streak nudge", sends("london", STREAK).length === 0 && sends("sydney", STREAK).length === 0);
+
+  /* THE LOG SAYS WHY. Counted against what the fake FCM was actually asked,
+     so a line cannot claim a send that did not happen or hide one that did. */
+  const lines = (re) => said.filter((x) => re.test(x.line));
+  const played = lines(/morning skipped: already played today/);
+  t("the morning Los Angeles had already played is logged as skipped, and why, once",
+    played.length === 1 && new Date(played[0].at).toISOString().slice(0, 16) === "2026-09-20T16:00",
+    played.map((x) => new Date(x.at).toISOString().slice(0, 16)).join(", ") || "no line");
+  const okMorn = log.filter((e) => e.title === MORN && e.token !== TOK("flaky") && e.token !== TOK("gone")).length;
+  t("every morning delivered has its line, and no line claims one that was not",
+    okMorn > 0 && lines(/: morning sent$/).length === okMorn, `${lines(/: morning sent$/).length} line(s), ${okMorn} delivered`);
+  t("every failed attempt says it will be retried",
+    lines(/: morning failed, will retry$/).length === sends("flaky", MORN).length, `${lines(/morning failed/).length} line(s), ${sends("flaky", MORN).length} attempt(s)`);
+  t("a gone token says so, once", lines(/token is gone, device removed/).length === 1);
+  t("a nudge with nothing to lose is logged as skipped, and why",
+    lines(/streak nudge skipped: no streak at risk/).length >= 1 &&
+      lines(/: streak nudge sent$/).length === log.filter((e) => e.title === STREAK).length);
+  t("and not one line holds a phone's token",
+    said.length > 0 && !said.some((x) => phones.some(([k]) => x.line.includes(TOK(k)))), said.length + " line(s)");
 
   /* The law the design asked for, over everything the run sent. */
   const perDay = new Map();
@@ -442,6 +468,31 @@ const good = (s, extra = {}) => ({ token: TOK(s), platform: "android", tz: "Euro
     rr.n === runs && rr.last === new Date(T0 + 3 * DAY - 15 * MIN).toISOString(), `${rr.n} of ${runs}; last ${rr.last}`);
   const bad = log.filter((e) => !String(e.address || "").startsWith(push.SITE + push.APP_PATH));
   t("every message carries an address inside the app's path", log.length > 0 && bad.length === 0, bad.length + " outside");
+  /* LAST, because it runs at today's real date, which prunes the simulated
+     week's push_run rows the check above counts.
+     REGISTERED TODAY: the endpoint marks today's morning answered, so the run
+     never picks the phone up -- which on 29 Sep 2026 read as a morning lost.
+     It is said once, in the first run after the phone arrived, and not again. */
+  {
+    await device.onRequestPost({ request: req("POST", { token: TOK("newbie"), platform: "android", tz: "Europe/London" }), env });
+    const nb = row(TOK("newbie"));
+    const t1 = Date.parse(nb.created_at) + MIN;
+    t("PRECONDITION: the new phone's morning is marked answered for the day it registered",
+      nb.sent_morning === utcDay(t1), `${nb.sent_morning} vs ${utcDay(t1)}`);
+    const heard = [];
+    const realLog2 = console.log;
+    console.log = (...a) => { const l = a.join(" "); if (l.startsWith("[push]")) heard.push(l); else realLog2(...a); };
+    try {
+      await run(env, t1, send);
+      const once = heard.filter((l) => /registered today, its first morning is tomorrow/.test(l));
+      t("the first run after a phone registers says why it gets no morning today",
+        once.length === 1 && once[0].includes("android registered " + nb.created_at.slice(0, 16)), once.join(" | ") || "no line");
+      heard.length = 0;
+      await run(env, t1 + 15 * MIN, send);
+      t("and the next run does not say it again", !heard.some((l) => /registered today/.test(l)), heard.join(" | ") || "silent");
+    } finally { console.log = realLog2; }
+    db.prepare("DELETE FROM push_device WHERE token = ?").run(TOK("newbie"));
+  }
 }
 
 /* ======================================================================

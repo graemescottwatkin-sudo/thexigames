@@ -16,7 +16,17 @@
  */
 import SCX_SCORING from "../../football/scrambled/js/scoring.js";
 import SCX_CONFIG from "../../football/scrambled/js/config.js";
-import { loadBoards, boardForToken, tokenCypher } from "./sc-board.js";
+/* THE FRIENDS BOARDS' PAIR: no clock, out of 100 (tools/build_friendsscrambled.js
+   generates both). Chosen by the round's board set, never mixed with the above. */
+import SCX_FR_SCORING from "../../friends/scrambled/js/scoring.js";
+import SCX_FR_CONFIG from "../../friends/scrambled/js/config.js";
+/* Chosen at CALL time, not built into a table at load: the Scrambled tester
+   inlines this file ahead of the engine files it names, and reads them only
+   inside functions -- a table made at load would read them before they exist. */
+const engineOf = (set) => set === "frsc"
+  ? { config: SCX_FR_CONFIG, scoring: SCX_FR_SCORING }
+  : { config: SCX_CONFIG, scoring: SCX_SCORING };
+import { loadBoards, boardForToken, tokenCypher, setOf } from "./sc-board.js";
 
 /* THE RULE AND THE PRICES ARE THE PAGE'S OWN FILES, imported rather than
    restated. Both were written to load as a script and as a module — the same
@@ -32,8 +42,8 @@ const okPlay = (v) => (/^[A-Za-z0-9_-]{6,64}$/.test(String(v || "")) ? String(v)
 /* What each kind of help costs, read from the game's own config so a price
    changes in one place. A kind nobody has priced costs nothing rather than
    NaN: an unknown reveal must not poison a score. */
-export function costOf(kind) {
-  const c = SCX_CONFIG;
+export function costOf(kind, set) {
+  const c = engineOf(set).config;
   const prices = {
     hint: c.REVEAL_HINT_COST,
     letter: c.REVEAL_LETTER_COST,
@@ -99,10 +109,10 @@ export async function alreadyDone(env, playId, slotId) {
  * request would score three points lower than the card for a player who
  * clicked twice. Both keep the same rule, which is the only way the two
  * numbers can agree. */
-export async function recordHelp(env, playId, kind) {
+export async function recordHelp(env, playId, kind, set) {
   const id = okPlay(playId);
   if (!hasDB(env) || !id) return null;
-  const cost = costOf(kind);
+  const cost = costOf(kind, set);
   if (!cost) return 0;
   try {
     if (String(kind) === "hint") {
@@ -136,7 +146,8 @@ export async function verifiedScore(env, playId) {
     const round = await env.DB.prepare(
       "SELECT started_ms, help, token FROM sc_round WHERE play_id = ?").bind(id).first();
     if (!round) return null;
-    const { boards } = await loadBoards(env);
+    /* The round's own token says which board set it was played on. */
+    const { boards } = await loadBoards(env, setOf(round.token));
     const board = boardForToken(round.token, boards);
     /* No board for the token this round was started with: nothing to measure
        a finish against, so nothing is scored. */
@@ -164,7 +175,7 @@ export async function verifiedScore(env, playId) {
     const lastMs = Math.max(...rows.map((r) => Number(r.at_ms)));
     const elapsed = Math.max(0, Math.round((lastMs - Number(round.started_ms)) / 1000));
     const help = Math.max(0, Number(round.help) || 0);
-    const res = SCX_SCORING.computeScore(elapsed, help);
+    const res = engineOf(setOf(round.token)).scoring.computeScore(elapsed, help);
     return {
       score: res.score,
       solved: rows.filter((r) => r.how === "solved").length,
@@ -176,6 +187,9 @@ export async function verifiedScore(env, playId) {
       free: presolved,
       help,
       elapsedSecs: elapsed,
+      /* Which board set the round was on, so the play row it lands on is
+         looked for among that set's games only. */
+      set: setOf(round.token),
     };
   } catch (e) { return null; }
 }

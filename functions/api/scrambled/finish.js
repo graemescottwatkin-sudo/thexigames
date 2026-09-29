@@ -40,7 +40,8 @@ export async function onRequestPost({ request, env }) {
      same bank read half a turn round, but `game` is "vowels" in its rows. So
      no Vowels finish was ever verified: 20 plays and 0 scores on production,
      while this endpoint answered `verified: true` and the page believed it. */
-  const games = ENGINE_GAMES.scrambled;
+  /* And the set's games only: a Friends round lands on a Friends play. */
+  const games = got.set === "frsc" ? ENGINE_GAMES.scrambled_fr : ENGINE_GAMES.scrambled;
   let landed = true;
   try {
     const res = await env.DB.prepare(

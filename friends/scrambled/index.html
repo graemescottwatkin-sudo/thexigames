@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en-GB" data-game="scrambled_fr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
+<meta name="theme-color" content="#F4F5F2">
+<title>Scrambled XI: Friends — the daily Friends anagram | The XI Games</title>
+<meta name="description" content="Five Friends answers under one theme, every one scrambled: characters, places, catchphrases, episodes. Solve in any order, with no clock. A new five every day.">
+<link rel="canonical" href="https://www.thexigames.com/friends/scrambled/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://www.thexigames.com/friends/scrambled/">
+<meta property="og:title" content="Scrambled XI: Friends — the daily Friends anagram">
+<meta property="og:description" content="Five scrambled Friends answers under one theme. One answer box, solve in any order.">
+<meta property="og:site_name" content="The XI Games">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="Scrambled XI: Friends — the daily Friends anagram">
+<meta name="twitter:description" content="Five scrambled Friends answers under one theme. Unravel them all.">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication",
+ "name":"Scrambled XI: Friends","applicationCategory":"Game",
+ "url":"https://www.thexigames.com/friends/scrambled/",
+ "operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"GBP"},
+ "publisher":{"@type":"Organization","name":"The XI Games","url":"https://www.thexigames.com/"}}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/shared/xi-tokens.css?v=v88">
+<link rel="stylesheet" href="/shared/xi-landing.css?v=v88">
+<link rel="stylesheet" href="/shared/xi-chrome.css?v=v88">
+<link rel="stylesheet" href="/shared/xi-matchbar.css?v=v88">
+<link rel="stylesheet" href="/shared/xi-keys.css?v=v88">
+<link rel="stylesheet" href="/shared/xi-share.css?v=v88">
+<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v88">
+<!-- The theme, stamped before first paint: light unless the player chose
+     dark, decided in one shared place for every page of the family. -->
+<script src="/shared/xi-theme.js?v=v88"></script>
+<link rel="stylesheet" href="css/style.css?v=v001a">
+</head>
+<body>
+
+<!-- The shared bar. The burger and the wordmark are inserted by
+     shared/xi-chrome.js; only this game's own control is written here. -->
+<header class="xic-bar">
+  <div class="xic-right">
+    <a class="xic-ghost" href="#how" data-optional>How to play</a>
+  </div>
+</header>
+
+<main class="app">
+
+  <section class="screen prematch" id="screenLoading">
+    <div class="pmCard">
+      <div class="eyebrow">Warming up</div>
+      <p class="pmDate">Scrambled XI: Friends</p>
+      <p class="pmLede">Fetching today's five.</p>
+    </div>
+  </section>
+
+  <!-- The H1 says what the page IS and lives on the pre-match card, the same
+       place the other games keep theirs. The board changes daily; the game
+       does not, so the board's own title is an h2. -->
+  <!-- One H1, first in the body, saying what the game is. The landing shows
+       the name in the masthead, which is furniture; this is the heading a
+       screen reader and a search engine read. -->
+  <h1 class="sr-only">Scrambled XI: Friends &mdash; the daily Friends anagram</h1>
+
+  <!-- WHOSE PAGE THIS IS. The mark, the name and one line saying what the
+       game is — the accent is the fourth signal, after all three of those, so
+       a player who cannot separate sky blue from navy loses nothing. -->
+  <div class="site-ident">
+    <span class="ident-mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none">
+        <rect x="2.4" y="6.6" width="7.6" height="7.6" rx="1.5" transform="rotate(-13 6.2 10.4)"
+              stroke="currentColor" stroke-width="1.7"/>
+        <rect x="13.6" y="4.4" width="7.6" height="7.6" rx="1.5" transform="rotate(11 17.4 8.2)"
+              stroke="currentColor" stroke-width="1.7"/>
+        <rect x="8.4" y="13.8" width="7.6" height="7.6" rx="1.5" transform="rotate(-6 12.2 17.6)"
+              fill="currentColor" fill-opacity=".3" stroke="currentColor" stroke-width="1.7"/>
+      </svg>
+    </span>
+    <div class="ident-say">
+      <p class="site-crumb">Friends <span aria-hidden="true">/</span> <b>Scrambled</b></p>
+      <p class="site-mast">Scrambled <span class="site-xi">XI</span></p>
+      <p class="ident-sub">Untangle five Friends answers.</p>
+    </div>
+    <a class="ident-how" href="#how">How to play</a>
+  </div>
+
+
+  <section class="screen prematch" id="screenStart" hidden>
+    <!-- THE LANDING, THE FAMILY'S. Layout, type and spacing are
+         shared/xi-landing.css — the same file the other two open on — so this
+         is the same page with this game's content in it. -->
+    <div class="site-wrap">
+
+      <div class="site-grid">
+        <div class="site-main">
+          <button class="home-choice hero" id="homeDaily">
+            <span class="hc-kicker" id="startKicker">TODAY</span>
+            <span class="hc-title" id="startTitle">Today&rsquo;s XI</span>
+            <span class="hc-note" id="startPool"></span>
+            <span class="hc-state" id="startClock"></span>
+            <span class="hc-cta">Kick off</span>
+          </button>
+          <!-- OTHER BOARDS, ONE CARD (the owner, 27 Sep 2026: Daily, Other boards, Streaks).
+          The boards it lists open behind it, in #otherBoards; shared/xi-menu.js
+          opens and closes it. -->
+          <button class="home-choice other-card" id="homeOther" type="button" aria-controls="otherBoards" aria-expanded="false">
+          <span class="hc-title">Other boards</span>
+          <span class="hc-note">Previous dailies: every day so far</span>
+          <span class="oc-chev" aria-hidden="true">&rsaquo;</span>
+          </button>
+        </div>
+
+        <aside class="site-side">
+        <!-- THE TWO RUNS, AND THEY ARE DIFFERENT FACTS: this game on
+             consecutive days, and any game on consecutive days. Filled by
+             shared/xi-menu.js from the completions the season already records,
+             so nothing new is stored and a run cannot drift out of step. -->
+        <div class="home-streaks" id="homeStreaks" hidden>
+          <div class="streak" id="streakGame">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M12 2.5s5.5 4.4 5.5 9.4a5.5 5.5 0 1 1-11 0c0-1.9.8-3.6 1.8-5 .2 1.5 1 2.6 2 2.6 1.6 0 1.2-3.6 1.7-7Z"
+                    stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"/>
+            </svg>
+            <span class="st-say">
+              <span class="st-l">Scrambled streak</span>
+              <span class="st-n" id="streakGameN">&mdash;</span>
+            </span>
+          </div>
+          <div class="streak" id="streakDaily">
+            <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <rect x="3" y="4.5" width="18" height="16" rx="2.5" stroke="currentColor" stroke-width="1.6"/>
+              <path d="M3 9.5h18M8 2.5v4M16 2.5v4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"/>
+            </svg>
+            <span class="st-say">
+              <span class="st-l">Any game streak</span>
+              <span class="st-n" id="streakDailyN">&mdash;</span>
+            </span>
+          </div>
+        </div>
+
+
+        </aside>
+      </div>
+
+
+      <div class="other-boards" id="otherBoards" hidden>
+        <button class="ob-back" id="otherBack" type="button">&lsaquo; Back</button>
+      <div class="site-row">
+        <button class="home-choice col" id="homePrevious">
+          <span class="hc-kicker">PREVIOUS DAILIES</span>
+          <span class="hc-title" id="homePreviousCount">Every day so far</span>
+          <svg class="hc-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none"
+               stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M3 5v4h4"/><path d="M3.5 9A9 9 0 1 1 4 15"/><path d="M12 8v4l3 2"/>
+          </svg>
+        </button>
+      </div>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="screenGame" hidden>
+
+    <!-- THE FAMILY'S TOP BAR (shared/xi-matchbar.js), by the owner's ruling
+         of 25 Sep 2026: the same five slots in the same places on every game.
+         The count, the clock and the score boxes below are kept for the
+         numbers the page still writes, and not drawn. -->
+    <div id="xiBar"></div>
+
+    <div class="matchHead">
+      <span class="progress"><span id="solvedCount">0</span> / 5 unravelled</span>
+      <span class="clock"><span id="clockValue">0</span><span class="prime">'</span></span>
+    </div>
+
+    <p class="poolLine" id="poolLine"></p>
+
+    <div class="pitchWrap">
+      <div class="xlist" id="pitch" aria-label="The five answers, under the theme"></div>
+    </div>
+
+    <p class="feedback" id="feedback" role="status" aria-live="polite"></p>
+
+    <!-- THE TILE YOU ARE TYPING AT, ECHOED ABOVE THE BOX. On a phone the
+         system keyboard scrolls the box into view and the pitch out of it,
+         so the picked tile — its position, its letters, the ones you have
+         lifted so far — is repeated here, where the keyboard cannot hide
+         it. The crossword keeps its active clue beside the keys for the same
+         reason. Empty and hidden until a tile is picked. -->
+    <div class="echo" id="echo" hidden>
+      <span class="pos" id="echoPos"></span>
+      <span class="lifted" id="echoLifted"></span>
+      <span class="letters" id="echoLetters"></span>
+      <span class="enum" id="echoEnum"></span>
+    </div>
+    <div class="entry">
+      <!-- inputmode is set to "none" by the game on a touch device, so the
+           system keyboard stays down and the family's own is used instead.
+           Left as "text" here: a device with a real keyboard gets no drawn
+           keyboard, and an input that refuses to be typed into would be worse
+           than the one it replaced. -->
+      <input id="answer" type="text" inputmode="text" autocomplete="off"
+             autocorrect="off" autocapitalize="characters" spellcheck="false"
+             placeholder="Type any name" aria-label="Type any name on the board">
+      <button class="kick" id="submit">Enter</button>
+    </div>
+
+    <div class="benchRow" id="benchRow" hidden>
+      <span class="benchFor" id="benchFor"></span>
+      <button class="benchBtn" id="buyHint"><span id="hintLabel">Reveal</span><span class="cost" id="hintCost"></span></button>
+      <button class="benchBtn" id="buyLetter"><span id="letterLabel">Reveal a letter</span><span class="cost" id="letterCost"></span></button>
+      <button class="benchBtn danger" id="buyName">Reveal the name<span class="cost" id="nameCost"></span></button>
+      <button class="benchBtn quiet" id="benchClose">Close</button>
+      <span class="benchHint" id="benchHint" hidden></span>
+    </div>
+
+    <div class="scoreCluster">
+      <div class="scoreBox">
+        <span class="label">Worth now</span>
+        <span class="scoreVal" id="worthNow">100</span>
+      </div>
+      <div class="worthBox">
+        <span class="label">Help used</span>
+        <span class="worthVal" id="helpSpent">0</span>
+      </div>
+    </div>
+
+    <!-- NO LEAGUE TABLE WHILE PLAYING. The owner, 27 Sep 2026: "Please can the
+         table underneath the clues be removed from the games / we track
+         points out of 114, we display it on the closing (hidden by default)
+         and its not needed in the game". The points are the stats card's
+         WORTH; the table is Full Time's, behind "See the table". -->
+  </section>
+
+  <section class="screen" id="screenResults" hidden>
+    <!-- THE FAMILY'S FULL TIME (shared/xi-fulltime.js, XIFullTime.panel): the
+         result, keep it, share, challenge, then the next game -- the same
+         four blocks on every game, the owner's approved mockup of 26 Sep 2026.
+         The board stays above it, finished. -->
+    <div id="ftPanel"></div>
+    <button class="btn quiet" id="playAgain">Clear this board and replay</button>
+  </section>
+
+
+  <!-- HOW TO PLAY, THIS GAME'S OWN. Both ways in used to lead somewhere wrong:
+       the nav link pointed at /football/scrambled/how-to-play, which has
+       answered 404 on production since the game launched, and the button
+       beside the wordmark had no handler at all. Vowels XI, generated from
+       this file, pointed its nav at the CROSSWORD's rules — thirty minutes and
+       a grid, for a game with neither — which is what an independent review
+       found on 7 September 2026. HiLo XI already had the right shape: the
+       rules on the page, at #how, reachable from both. -->
+  <section class="how" id="how">
+  <!-- On a locked play screen this section opens OVER the game when the bar's
+       "How to play" is used (the #how target), and this is the way back to
+       the board. Hidden everywhere else. -->
+  <a class="how-back" href="#play">&lsaquo; Back</a>
+    <h2>How to play</h2>
+    <p><b>Five answers, scrambled.</b> One theme and five answers from
+       Friends &mdash; characters, places, catchphrases, episodes &mdash; with the
+       letters of every answer shuffled. Solve them in any order; nothing unlocks
+       anything else.</p>
+    <p><b>The theme is the only clue.</b> On an episode board each answer is the
+       title&rsquo;s key word, and solving it shows the whole title.</p>
+    <p><b>No clock.</b> Take as long as you like: your score depends only on the
+       help you use.</p>
+    <p><b>Help costs points.</b> A revealed letter is two, and giving up an answer
+       costs the twenty it was worth.</p>
+    <p><b>100 is the ceiling</b>: twenty for each answer you work out.</p>
+    <p><b>Previous dailies.</b> Any day you missed is in Other boards, to play when you like. Only today&rsquo;s daily keeps a streak going.</p>
+  </section>
+
+  <!-- The family's keyboard, built by shared/xi-keys.js. Outside the screens
+       and last, so it sticks to the bottom of the page rather than to the
+       inside of one section, which is where the crossword's sits too. -->
+  <div class="osk" id="osk"></div>
+
+</main>
+
+<!-- PREVIOUS BOARDS, as a month grid. The same shape the crossword uses, for
+     the same reason: a card that opened yesterday's board was one board with
+     a plural label, and nothing said which days had been played. -->
+<div class="xic-panel" id="archiveSheet">
+  <div class="xic-panel-card">
+    <h3>Previous dailies</h3>
+    <div class="xic-panel-sub" id="archiveSub">Every board so far</div>
+
+    <div class="xic-cal-head">
+      <button id="calPrev" type="button" aria-label="Previous month">&lsaquo;</button>
+      <div class="xic-cal-month" id="calMonth">&mdash;</div>
+      <button id="calNext" type="button" aria-label="Next month">&rsaquo;</button>
+    </div>
+
+    <div class="xic-cal-dow" aria-hidden="true">
+      <span>M</span><span>T</span><span>W</span><span>T</span>
+      <span>F</span><span>S</span><span>S</span>
+    </div>
+    <div class="xic-cal-grid" id="calGrid"></div>
+
+    <div class="xic-cal-key">
+      <span><i class="k done"></i>Played</span>
+      <span><i class="k open"></i>To play</span>
+      <span><i class="k none"></i>Not yet</span>
+      <span><i class="k locked"></i>Sign in</span>
+    </div>
+
+    <button class="btn ghost xic-panel-close" id="archiveClose">Close</button>
+  </div>
+</div>
+
+<!-- THE SHARED FOOTER, AT TOP LEVEL. It carries the family disclaimer. -->
+<footer class="xic-foot"></footer>
+
+<script src="/shared/xi-chrome.js?v=v88"></script>
+<script src="/shared/xi-matchbar.js?v=v88"></script>
+<script src="/shared/xi-menu.js?v=v88"></script>
+<script src="/shared/xi-plays.js?v=v88"></script>
+<script src="/shared/xi-challenge.js?v=v88"></script>
+<script src="/shared/xi-keys.js?v=v88"></script>
+<script src="/shared/xi-share.js?v=v88"></script>
+<!-- xi-played.js first: xi-fulltime.js asks it what has been played today. -->
+<script src="/shared/xi-played.js?v=v88"></script>
+<script src="/shared/xi-fulltime.js?v=v88"></script>
+<script src="js/config.js?v=v001a"></script>
+<script src="js/scoring.js?v=v001a"></script>
+<script src="js/game.js?v=v001a"></script>
+</body>
+</html>

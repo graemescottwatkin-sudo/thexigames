@@ -100,6 +100,15 @@
     { id: "lightning_fr", key: "xifl.results.v1", theme: "friends", dir: "lightning", api: "/api/lightning_fr/daily",
       today: function (d) { return d.day; },
       done: function (r, t) { return r.day === t; } },
+    /* Scrambled and Vowels, Friends: football's pair over the Friends boards,
+       keyed on the board number the same way, and one route with the cypher
+       asked for. */
+    { id: "scrambled_fr", key: "xifs.results", theme: "friends", dir: "scrambled", api: "/api/scrambled_fr/daily",
+      today: function (d) { return d.today; },
+      done: function (r, t) { return r.no === t; } },
+    { id: "vowels_fr", key: "xifv.results", theme: "friends", dir: "vowels", api: "/api/scrambled_fr/daily?cy=1",
+      today: function (d) { return d.today; },
+      done: function (r, t) { return r.no === t; } },
   ];
 
   var byId = {};

@@ -128,6 +128,9 @@ const libs = [
      With no env it only ever calls straight through to the loader, so the
      tester gains a name and no behaviour. */
   "functions/_lib/bank-cache.js",
+  /* The Friends sample before sc-board.js, whose SETS name it at load. The
+     tester plays football's boards; the Friends set is simply there. */
+  "functions/_lib/fr-sc-boards.js",
   "functions/_lib/sc-board.js",
   /* sc-round.js reaches for SCX_SCORING and SCX_CONFIG, which are inlined
      further down with the rest of scrambled/js/ — and that is soon enough,

@@ -186,6 +186,11 @@
       /* LIGHTNING ROUND, launched 28 September 2026 on the owner's "launch
          Lightning Round": the next free number, which is what launching does. */
       { n: 3,  name: "Lightning Round XI: Friends", href: "/friends/lightning/" },
+      /* SCRAMBLED AND VOWELS, FRIENDS, launched together on the owner's "start
+         the Friends Scrambled and Vowels build" and "Straight to public"
+         (29 Sep 2026): the next two free numbers. */
+      { n: 4,  name: "Scrambled XI: Friends", href: "/friends/scrambled/" },
+      { n: 5,  name: "Vowels XI: Friends", href: "/friends/vowels/" },
     ],
   };
 
@@ -1518,7 +1523,7 @@
                             is why aligned_test walks GAMES and fails when one of
                             them is missing here, rather than trusting anyone to
                             remember. */
-                         "xifc.", "xifw.", "xifl.", "xi."];
+                         "xifc.", "xifw.", "xifl.", "xifs.", "xifv.", "xi."];
   var RECORD_KEEP = [
     /* Identity. Wiping this would cut the player off from results already
        synced to their account, which clearing local history has no business
