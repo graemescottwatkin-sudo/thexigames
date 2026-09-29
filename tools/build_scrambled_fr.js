@@ -120,13 +120,20 @@ if (SQL && !CHECK) {
     "-- Every answer on every Friends Scrambled/Vowels board. SECRET: gitignored.",
     "-- Apply migration 050-friends-scrambled.sql first.",
     "",
-    "DELETE FROM fr_sc_board;",
-    "",
   ];
+  /* ONLY WHAT CHANGED IS WRITTEN: an upsert per board that writes where the
+     board differs (updated_at moves with it, not on its own), and a board the
+     bank no longer has is deleted by id. Re-importing the same bank writes
+     nothing; D1 bills rows written, and emptying the table first wrote all 365
+     every time. */
   for (const b of bank.built) {
     lines.push("INSERT INTO fr_sc_board (id, title, payload, source, updated_at) VALUES (" +
-      [b.id, q(b.title), q(JSON.stringify(b)), q(b.source), q(now)].join(", ") + ");");
+      [b.id, q(b.title), q(JSON.stringify(b)), q(b.source), q(now)].join(", ") + ")" +
+      " ON CONFLICT(id) DO UPDATE SET title = excluded.title, payload = excluded.payload, source = excluded.source," +
+      " updated_at = excluded.updated_at WHERE fr_sc_board.title IS NOT excluded.title" +
+      " OR fr_sc_board.payload IS NOT excluded.payload OR fr_sc_board.source IS NOT excluded.source;");
   }
+  lines.push(`DELETE FROM fr_sc_board WHERE id NOT IN (${bank.built.map((b) => b.id).join(", ")});`);
   lines.push("");
   fs.mkdirSync(path.dirname(OUT), { recursive: true });
   fs.writeFileSync(OUT, lines.join("\n"));
