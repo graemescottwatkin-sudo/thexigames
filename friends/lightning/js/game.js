@@ -21,7 +21,7 @@
  * number; the front page is today's. The page asks /api/lightning_fr/daily
  * which day that is before anything starts, and the server bounds it.
  */
-var BUILD = "v001b";
+var BUILD = "v001c";
 
 (function () {
   'use strict';
@@ -103,7 +103,7 @@ var BUILD = "v001b";
   var el = {};
   ['screenStart', 'screenGame', 'screenResults', 'startKicker', 'playDaily', 'playPractice',
     'todayDone', 'startBlurb', 'startNote', 'timerFill', 'clue', 'options', 'feedback', 'penalty', 'lookBar',
-    'ftPanel', 'ftPractice', 'ftBack'].forEach(function (id) { el[id] = document.getElementById(id); });
+    'ftPanel', 'ftReport', 'ftPractice', 'ftBack'].forEach(function (id) { el[id] = document.getElementById(id); });
   var timerBox = document.querySelector('.timer');
 
   /* --------------------------------------------------------------- state */
@@ -533,10 +533,83 @@ var BUILD = "v001b";
         url: function () { return daily ? boardHref(r.no) : location.origin + '/friends/lightning/'; }
       });
     }
+    renderReport(r.answers || [], daily ? r.day : 'practice');
     current = null;
     setStartButtons(false);
     show('screenResults');
     describeBoard();
+  }
+
+  /* ---- reporting a question ---------------------------------------------
+
+     The answer is shown the moment a pick is marked, so a question that is
+     wrong -- or a wrong option that is also right -- is seen at once, and this
+     is where a player says so. The family's endpoint (/api/report-clue), which
+     keeps one report per question per person and asks the player to be signed
+     in. The reports reach the question bank's owners by the bank's own id. */
+  var REASON_RIGHT = 'I was right';
+  var REASON_WRONG = 'The question is wrong';
+
+  function renderReport(answers, puzzle) {
+    var box = el.ftReport;
+    if (!box) return;
+    box.innerHTML = '';
+    var list = answers.filter(function (a) { return a && a.id; });
+    if (!list.length) return;
+    var det = document.createElement('details');
+    det.className = 'lrReport';
+    var sum = document.createElement('summary');
+    sum.textContent = 'Something wrong with a question?';
+    det.appendChild(sum);
+    var note = document.createElement('p');
+    note.className = 'lrReportNote';
+    note.textContent = 'Tell us and we will check it against the episode.';
+    det.appendChild(note);
+    var ol = document.createElement('ol');
+    list.forEach(function (a) {
+      var li = document.createElement('li');
+      var q = document.createElement('p');
+      q.className = 'lrReportClue';
+      q.textContent = a.clue || '';
+      li.appendChild(q);
+      var row = document.createElement('div');
+      row.className = 'lrReportBtns';
+      /* "I was right" only where the pick was marked wrong; a question can be
+         wrong either way. */
+      var reasons = a.correct ? [REASON_WRONG] : [REASON_RIGHT, REASON_WRONG];
+      var buttons = reasons.map(function (reason) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'btn';
+        b.textContent = reason;
+        b.addEventListener('click', function () { report(a.id, reason, puzzle, buttons, li); });
+        row.appendChild(b);
+        return b;
+      });
+      li.appendChild(row);
+      ol.appendChild(li);
+    });
+    det.appendChild(ol);
+    box.appendChild(det);
+  }
+
+  function report(id, reason, puzzle, buttons, li) {
+    buttons.forEach(function (b) { b.disabled = true; });
+    var said = li.querySelector('.lrReportSaid') || li.appendChild(document.createElement('p'));
+    said.className = 'lrReportSaid';
+    call('/api/report-clue', { game: 'lightning_fr', itemId: id, reason: reason, puzzle: puzzle })
+      .then(function () { said.textContent = 'Reported. Thank you.'; })
+      .catch(function (e) {
+        buttons.forEach(function (b) { b.disabled = false; });
+        if (e.status === 401) {
+          said.textContent = 'Sign in to report a question.';
+          var A = window.XIChrome && XIChrome.account;
+          if (A && typeof A.open === 'function') A.open();
+        } else {
+          said.textContent = e.status === 429 ? 'That is a lot of reports. Try again shortly.'
+            : 'That did not reach us. Try again.';
+        }
+      });
   }
 
   /* ---------------------------------------------------------- the start */

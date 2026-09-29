@@ -244,6 +244,13 @@ t("and a wrong pick goes red", /button\.classList\.add\(r\.correct \? 'right' : 
   /\.option\.wrong\{background:var\(--danger\)/.test(css));
 t("and says, at the clock, what the miss cost and the total lost",
   /showPenalty\(cost, Math\.round\(run\.lostMs \/ 1000\)\)/.test(jsCode) && markup.includes('id="penalty"'));
+/* A PLAYER CAN SAY A QUESTION IS WRONG, through the family's endpoint, by the
+   bank's id: the answer is shown at once, so a wrong question is seen at once. */
+t("a question can be reported, by its id, through the family's endpoint", (() => {
+  const code = jsCode.slice(jsCode.indexOf("function report("));
+  return /call\('\/api\/report-clue', \{ game: 'lightning_fr', itemId: id,/.test(code) &&
+    markup.includes('id="ftReport"') && /renderReport\(r\.answers/.test(jsCode);
+})());
 t("the end-of-run review lists them again, from /finish's answers",
   /\ba\.answer\b/.test(jsCode) && /r\.answers/.test(jsCode));
 
@@ -299,6 +306,8 @@ t("every call goes to this game's API, relatively, with the family's CSRF header
   const calls = jsCode.match(/['"]\/api\/[a-z_]+\/[a-z]+/g) || [];
   const own = calls.filter((c) => c.includes("/api/lightning_fr/"));
   return own.length >= 3 && calls.every((c) => /\/api\/(lightning_fr|account|auth)\//.test(c)) &&
+    /* and the family's report endpoint, the one other route it may call */
+    (jsCode.match(/'\/api\/[a-z-]+'/g) || []).every((c) => c === "'/api/report-clue'") &&
     /"X-XI-Games": "1"/.test(jsCode) && !/fetch\(["']https?:/.test(jsCode);
 })());
 t("every route the client calls exists", ["start", "answer", "finish"]

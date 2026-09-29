@@ -120,6 +120,20 @@ a.mode{text-decoration:none;box-sizing:border-box}
 
 /* ---- the result: the family's panel (shared/xi-fulltime.css) ----------- */
 
+/* Reporting a question, folded under the panel so the four blocks stay four. */
+.lrReport{max-width:460px;margin:14px auto 0;width:100%;text-align:left;
+  border:1px solid var(--line);border-radius:10px;background:var(--card);padding:10px 14px}
+.lrReport summary{cursor:pointer;font-family:var(--disp);font-weight:600;letter-spacing:.04em;
+  text-transform:uppercase;font-size:14px;color:var(--ink-soft);min-height:var(--tap);
+  display:flex;align-items:center}
+.lrReportNote{margin:4px 0 10px;font-size:13px;color:var(--ink-soft)}
+.lrReport ol{margin:0;padding:0 0 0 18px}
+.lrReport li{margin:0 0 12px}
+.lrReportClue{margin:0 0 6px;font-size:14px;line-height:1.4}
+.lrReportBtns{display:flex;flex-wrap:wrap;gap:6px}
+.lrReportBtns .btn{min-height:36px;padding:6px 10px;font-size:13px}
+.lrReportSaid{margin:6px 0 0;font-size:13px;color:var(--ink-soft)}
+
 .ftActions{display:flex;flex-direction:column;max-width:460px;margin:0 auto;width:100%}
 
 .btn{min-height:var(--tap);padding:9px 14px;border:1px solid var(--line);border-radius:10px;
