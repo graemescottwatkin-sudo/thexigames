@@ -227,7 +227,7 @@ and diagnose before anything ships. Never push past a red gate.
   `npx wrangler d1 execute crosswordxi --remote --command="..."`.
   **Never run a migration that is already applied** — `ALTER TABLE` is not
   idempotent. Migration state: **001–047 and 049 applied; 048 NOT applied**
-  (as of 29 Sep 2026 — check production) — 035 (QuickFire text
+  (as of 29 Sep 2026 — check production; 024 only since 29 Sep, see below) — 035 (QuickFire text
   ids), 036 and 038 (Codeword and its rounds), 037 and 039 (QuickFire rounds
   and the wrong-pick penalty), 040 and 041 (Who Am I and its score) all landed
   between 13 and 15 Sep 2026 and this line still read "001–034" afterwards.
@@ -290,6 +290,17 @@ and diagnose before anything ships. Never push past a red gate.
   without a matching clue, and 0 daily clues without one. `sourcesFor`'s own
   SQL, run live, returned only step 1 at stage 1. It is one `CREATE TABLE IF
   NOT EXISTS`, so it is safe to re-run.
+  024 (`clue_reports.game` and `idx_clue_reports_game`) WAS NEVER APPLIED
+  until 29 Sep 2026, although the range above has claimed it for weeks. Found by
+  the Lightning session wiring its report button: `pragma_table_info` showed
+  no `game` column, so `/api/report-clue`'s SELECT and INSERT both named a
+  column that did not exist, and reporting was broken on EVERY game. The table
+  held one report, from 17 Aug, before 024 was written. Applied 29 Sep 2026 on
+  the owner's OK and verified from production the same minute: the column and
+  index present, the old row now `game = 'crossword'`, and the endpoint's own
+  SELECT and INSERT compiled against it with `EXPLAIN`, which writes nothing.
+  It is a bare `ALTER TABLE ... ADD COLUMN`: DO NOT RE-RUN IT. A range is a
+  claim about every number inside it, and nobody had checked this one.
   A STALE MIGRATION NUMBER IS THE MOST DANGEROUS FIGURE IN THIS FILE, because
   the sentence immediately before it tells you never to re-run an applied one
   and `ALTER TABLE` is not idempotent — so a reader trusting "034" could
