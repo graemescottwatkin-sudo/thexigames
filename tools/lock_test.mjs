@@ -354,6 +354,14 @@ const FT_SAMPLE = (game, name) => ({
   answers: Array.from({ length: 11 }, (_, i) => ({ s: i === 7 ? "x" : "g", m: i === 7 ? null : 4 + i * 7, text: "A name " + (i + 1), points: "" })),
 });
 
+/* WHERE EACH GAME'S FULL TIME IS DRAWN: the whole of it, which the family's
+   panel (#ftPanel) sits in with whatever the game adds beside it. Asked of
+   every game at its Full Time, so a game missing here fails there, by name. */
+const FT_BOX = {
+  scrambled: "#screenResults", vowels: "#screenResults", quickfire: "#screenResults", hilo: "#screenResults",
+  lightning_fr: "#screenResults", ballpark: "#ft", codeword: "#ft", grid: "#gdFullTime",
+  whoami: "#screenDone", whoami_fr: "#screenDone", wordsearch: "#result", crossword: "#doneOverlay",
+};
 async function panelCheck(page, label, id) {
   const blocks = await page.evaluate(() => {
     const p = document.querySelector("#ftPanel");
@@ -383,6 +391,8 @@ async function panelCheck(page, label, id) {
     return bad;
   });
   t(`${label}: and nothing paints over it`, covered.length === 0, covered.slice(0, 3).join("; "));
+  t(`${label}: this game's Full Time box is named for the reach check below`, !!FT_BOX[id], id);
+  if (FT_BOX[id]) await reachCheck(page, label, FT_BOX[id], "Full Time", "#ftPanel");
   /* AND ON A PHONE, SHARE IS ON SCREEN WITHOUT SCROLLING. Under a board that
      stayed, HiLo's, Scrambled's and Vowels' panels had their score on the
      bottom edge and Share below it (the app's live re-shoot, 26 Sep 2026). */
@@ -397,6 +407,94 @@ async function panelCheck(page, label, id) {
       share.there && share.top >= 0 && share.bottom <= share.vh + 1, JSON.stringify(share));
   }
   if (process.env.LOCK_SHOTS) await page.screenshot({ path: path.join(process.env.LOCK_SHOTS, `${id}-${label}-fulltime.png`) });
+}
+
+/* CAN A FINGER GET THERE. Who Am I's Full Time was overflow:hidden for a day
+   (a rule meant to let it scroll was outranked by a more specific one), and
+   at 360x640 the foot of the result could not be reached -- while every check
+   here was green, because they asked whether the PAGE scrolled, and a script
+   can set scrollTop on a hidden box as easily as on one that scrolls (29 Sep
+   2026). So this asks the question a finger asks, of the computed style: from
+   the thing to be reached, up through every box that holds it, each box it
+   sticks out of must be one that scrolls (overflow-y auto or scroll), and
+   once one does, it is that box that must be reachable in turn -- up to the
+   screen, which on a locked page does not scroll. Nothing is scrolled to find
+   out.
+   AS DRAWN, then MADE TALLER THAN THE SCREEN: a block twice the screen's
+   height added at the foot of it, measured in the same task and taken away,
+   so the question is asked of a result that overflows at every size -- a
+   Full Time that fits proves nothing about the day it does not. The block's
+   own height is reported and asserted, so a block that never landed cannot
+   pass for one that did. Data only in, data only out: it runs in the page. */
+function reachable({ sel, into, grow }) {
+  const host = document.querySelector(sel);
+  if (!host || !host.getBoundingClientRect().height) return { there: false };
+  const pocket = document.querySelector(into || sel);
+  if (!pocket || !host.contains(pocket)) return { there: false };
+  const name = (e) => (e.id ? "#" + e.id : e.tagName.toLowerCase() + [...e.classList].map((c) => "." + c).join(""));
+  let block = null;
+  if (grow) {
+    block = document.createElement("div");
+    block.style.cssText = `display:block;flex:none;height:${Math.round(innerHeight * grow)}px`;
+    pocket.appendChild(block);
+  }
+  const drawn = [...host.querySelectorAll("*")].filter((e) => { const r = e.getBoundingClientRect(); return r.height > 0 && r.width > 0; });
+  const edge = (pick) => drawn.reduce((a, b) => (pick(b.getBoundingClientRect(), a.getBoundingClientRect()) ? b : a));
+  const low = block || (drawn.length ? edge((b, a) => b.bottom > a.bottom) : null);
+  const high = drawn.length ? edge((b, a) => b.top < a.top) : null;
+  const html = document.documentElement, body = document.body;
+  /* The screen's own overflow is the root's, or the body's when the root's is
+     visible (it is propagated), and a locked page sets it hidden. */
+  const ov = (e) => getComputedStyle(e).overflowY;
+  const screenScrolls = !/^(hidden|clip)$/.test(ov(html) !== "visible" ? ov(html) : ov(body));
+  const walk = (el) => {
+    let cur = el;
+    const via = [];
+    for (let n = el, a = el.parentElement; a && a !== html; n = a, a = a.parentElement) {
+      /* A fixed box is held by the screen, not by the boxes it sits in. */
+      if (getComputedStyle(n).position === "fixed") break;
+      if (a === body && ov(html) === "visible") continue;
+      const oy = ov(a), r = a.getBoundingClientRect(), c = cur.getBoundingClientRect();
+      if (/^(auto|scroll)$/.test(oy)) {
+        if (a.scrollHeight > a.clientHeight + 1) via.push(name(a));
+        cur = a;
+      } else if (/^(hidden|clip)$/.test(oy) && (c.bottom > r.bottom + 1 || c.top < r.top - 1)) {
+        return { cut: `${name(a)} is overflow-y:${oy}`, via };
+      }
+    }
+    const c = cur.getBoundingClientRect();
+    if (c.bottom > innerHeight + 1 || c.top < -1) {
+      if (!screenScrolls) return { cut: "the screen, which is locked", via };
+      via.push("the page");
+    }
+    return { cut: null, via };
+  };
+  const out = {
+    there: true, grew: block ? Math.round(block.getBoundingClientRect().height) : null, want: grow ? Math.round(innerHeight * grow) : null,
+    low: low ? walk(low) : { cut: "nothing drawn", via: [] }, high: high ? walk(high) : { cut: "nothing drawn", via: [] },
+    locked: body.classList.contains("locked"), pageScroll: html.scrollHeight - innerHeight,
+  };
+  if (block) block.remove();
+  return out;
+}
+const reachSay = (r) => !r.there ? "not drawn" :
+  `foot ${r.low.cut ? "CUT: " + r.low.cut : "reached"}${r.low.via.length ? " via " + r.low.via.join(" > ") : ""}; ` +
+  `head ${r.high.cut ? "CUT: " + r.high.cut : "reached"}${r.grew !== null ? `; block ${r.grew}px of ${r.want}` : ""}; locked ${r.locked}, page scroll ${r.pageScroll}`;
+/* A panel meant to scroll in itself: whole as drawn -- EVERYTHING in the box
+   named, not only the part the block goes into: Friends' sources sit beside
+   #ftPanel in #screenDone, not in it -- and when made too tall,
+   reached by scrolling a box that scrolls. On a locked screen that box is
+   inside it and the page does not move; a page that is not locked (Lightning's
+   result, a size that fell back to scrolling, the crossword with its own lock)
+   may be the box, and the walk has already asked whether the screen scrolls. */
+async function reachCheck(page, label, sel, what, into = sel) {
+  const as = await page.evaluate(reachable, { sel, into, grow: 0 });
+  t(`${label}: ${what} as drawn -- every part of it can be reached by a finger`,
+    as.there && !as.low.cut && !as.high.cut, reachSay(as));
+  const tall = await page.evaluate(reachable, { sel, into, grow: 2 });
+  t(`${label}: ${what} made taller than the screen can be scrolled to its foot (every box it overflows is overflow-y auto or scroll), and a locked page does not move`,
+    tall.there && tall.grew >= tall.want - 1 && !tall.low.cut && !tall.high.cut && tall.low.via.length > 0 &&
+      (!tall.locked || (tall.pageScroll <= 1 && !tall.low.via.includes("the page"))), reachSay(tall));
 }
 
 async function announcedCheck(page, label) {
@@ -510,6 +608,7 @@ async function howCheck(page, label) {
   t(`${label}: "How to play" opens over the locked game, inside the screen, with a way back`,
     opened.shown && opened.top >= 0 && opened.bottom <= opened.vh + 1 && opened.back && opened.locked && opened.scroll <= 1,
     JSON.stringify(opened));
+  await reachCheck(page, label, "#how", '"How to play"');
   const closed = await page.evaluate(async () => {
     document.querySelector("#how .how-back").click();
     await new Promise((r) => setTimeout(r, 250));
@@ -981,6 +1080,7 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "l
       !end.locked && end.scrollX <= 1 && end.score === "1" && end.marks >= 10 && end.marks <= 21, JSON.stringify(end));
     t(`${vp[0]}: and now, after the whistle, every miss is listed with its answer`,
       end.missed === end.marks - 1 && end.named, JSON.stringify(end));
+    await reachCheck(page, vp[0], FT_BOX[id], "the result", "#ftPanel");
     await context.close();
   }
 }
@@ -1401,6 +1501,7 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "d
     const later = await page.evaluate(measureDuel);
     t(`${vp[0]}: four calls later -- the settled rows scroll in their panel and the live pair is still whole`,
       duelOk(later) && later.settled >= 4, duelSay(later));
+    await reachCheck(page, vp[0], "#rows", "the settled calls");
     /* Asked as a share of the screen, not against a settled row: this suite's
        names are padded to the bank's longest, so its settled rows run 126 to
        168px and a ratio passed the very 320px pair it exists to refuse. The
@@ -1575,6 +1676,7 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "c
         items: a.querySelectorAll("#hints li").length, scroll: document.documentElement.scrollHeight - innerHeight, vh: innerHeight };
     });
     t("opened, they are a panel inside the screen with all eleven", open.shown && open.top >= 0 && open.bottom <= open.vh + 1 && open.items === 11 && open.scroll <= 1, JSON.stringify(open));
+    await reachCheck(page, VIEWPORTS[1][0], "#cwAnswers", "the answers");
     await page.click("#hints li");
     await until(page, () => getComputedStyle(document.getElementById("cwAnswers")).display === "none");
     const closed = await page.evaluate(() => getComputedStyle(document.getElementById("cwAnswers")).display);
@@ -1901,6 +2003,7 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
     const bought = await page.evaluate(measureProfile);
     t(`${vp[0]}: with every clue bought, they scroll in their own panel and the rest stays on screen`,
       profileOk(bought) && bought.cluesH > 0, profileSay(bought));
+    await reachCheck(page, vp[0], id === "whoami_fr" ? "#clueStack" : "#clues", "the clues bought");
     if (process.env.LOCK_SHOTS) await page.screenshot({ path: path.join(process.env.LOCK_SHOTS, `${id}-${vp[0]}-bought.png`) });
     /* THE OWNER'S THREE, 25 Sep 2026, football only (Friends has no career
        list and draws its clues in the profile): the one-line clue above the
