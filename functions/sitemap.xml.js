@@ -93,6 +93,9 @@ const STATIC = [
   ["/friends/whoami/", "daily", "0.9"],
   /* The third, public from its launch on 28 Sep 2026. */
   ["/friends/lightning/", "daily", "0.9"],
+  /* Scrambled and Vowels, Friends, public from their launch on 29 Sep 2026. */
+  ["/friends/scrambled/", "daily", "0.9"],
+  ["/friends/vowels/", "daily", "0.9"],
   ["/football/crossword/how-to-play", "monthly", "0.5"],
   ["/football/crossword/privacy", "yearly", "0.3"],
 ];

@@ -15,7 +15,7 @@
  * `solved` is the player's own claim about their progress and is not trusted
  * with anything. Lying about it can only re-solve a slot they already had.
  */
-import { json, bad, boardForToken, boardForPreviewToken, loadBoards, revealName, topClubs } from "../../_lib/sc-board.js";
+import { json, bad, boardForToken, boardForPreviewToken, setOf, loadBoards, revealName, topClubs } from "../../_lib/sc-board.js";
 import { matchesSlot } from "../../_lib/sc-names.js";
 import { recordSolve } from "../../_lib/sc-round.js";
 
@@ -27,7 +27,8 @@ export async function onRequestPost({ request, env }) {
 
   if (typeof guess !== "string" || guess.length > 60) return bad("Not a name.");
 
-  const { boards } = await loadBoards(env);
+  /* The token names its board set: football's, or the Friends boards. */
+  const { boards } = await loadBoards(env, setOf(token));
   /* An owner previewing a board plays it like any other, so the play endpoints
      accept the preview token — but only after re-reading the admin flag from
      the database on THIS request. A token is not authority. */

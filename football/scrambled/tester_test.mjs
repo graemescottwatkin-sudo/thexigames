@@ -129,6 +129,11 @@ t("it says out loud that the answers are inside it",
   const ACCOUNTED_FOR = new Set([
     "functions/_lib/sc-boards.js",
     "functions/_lib/auth.js",
+    /* The Friends engine (no clock, out of 100), which sc-round.js reads only
+       for a Friends token -- frsc: -- inside functions. The tester plays
+       football's boards with football's tokens, so it never reaches them. */
+    "friends/scrambled/js/scoring.js",
+    "friends/scrambled/js/config.js",
   ]);
 
   const missing = [];

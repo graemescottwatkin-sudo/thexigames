@@ -23,7 +23,33 @@
  */
 import { dailyNumber } from "./daily.js";
 import { SC_BOARDS } from "./sc-boards.js";
+import { FR_SC_BOARDS } from "./fr-sc-boards.js";
 import { keptBank } from "./bank-cache.js";
+import { launchNumber } from "./games.js";
+
+/* TWO BOARD SETS, ONE ENGINE. Football's boards (sc_board) and the Friends
+ * boards (fr_sc_board, migration 050; the owner, 29 Sep 2026: "start the
+ * Friends Scrambled and Vowels build") are read, ringed, played and judged by
+ * the same code, and must never mix: each has its own table, its own fallback
+ * sample, and its own token prefix, so a play token says which set its board
+ * came from and every route that is handed one can find it again.
+ *
+ * `first` is the family number the ring starts on. Football's ring counts
+ * from board 1, as it always has; the Friends ring starts on the day the game
+ * launched, so its first player gets board 1 rather than whichever board the
+ * family number happened to land on. Null before launch: no board.
+ *
+ * "sc" is the default everywhere, so every caller written before this file
+ * knew about sets means exactly what it meant. */
+export const SETS = {
+  sc: { table: "sc_board", sample: SC_BOARDS, prefix: "sc", first: () => 1 },
+  frsc: { table: "fr_sc_board", sample: FR_SC_BOARDS, prefix: "frsc", first: () => launchNumber("scrambled_fr") },
+};
+const setIs = (set) => (SETS[set] ? set : "sc");
+/* Which set a token belongs to: its prefix, and nothing else. */
+export function setOf(token) {
+  return /^frsc:/.test(String(token || "")) ? "frsc" : "sc";
+}
 
 /* THE TOKEN. Scrambled XI's own prefix, parsed beside the rotation that
 
@@ -42,13 +68,17 @@ import { keptBank } from "./bank-cache.js";
 export function hasDB(env) { return !!(env && env.DB); }
 
 /* Parsed once per Worker and kept: see functions/_lib/bank-cache.js. */
-export function loadBoards(env) { return keptBank(env, "sc", () => readBank(env)); }
-
-async function readBank(env) {
-  if (!hasDB(env)) return { boards: SC_BOARDS, source: "module" };
+export function loadBoards(env, set) {
+  const s = setIs(set);
+  return keptBank(env, s, () => readBank(env, s));
+}
+async function readBank(env, set) {
+  const { table, sample } = SETS[set];
+  if (!hasDB(env)) return { boards: sample, source: "module" };
   try {
+    /* The table name is one of two constants above, never a request value. */
     const { results } = await env.DB
-      .prepare("SELECT payload FROM sc_board ORDER BY id").all();
+      .prepare(`SELECT payload FROM ${table} ORDER BY id`).all();
     const rows = (results || [])
       .map((r) => { try { return JSON.parse(r.payload); } catch (e) { return null; } })
       .filter(Boolean);
@@ -57,7 +87,7 @@ async function readBank(env) {
        module is the honest answer, and `source` says so. */
     if (rows.length) return { boards: rows, source: "d1" };
   } catch (e) { /* table absent, or unreadable: fall through to the module */ }
-  return { boards: SC_BOARDS, source: "module" };
+  return { boards: sample, source: "module" };
 }
 
 /* THE LAST-TWO BOARDS, WHICH ARE NOT THE BANK. Each current club's last two
@@ -82,14 +112,15 @@ export async function loadLast2(env) {
    a key is built in one file and read in another. Crossword XI uses `daily:`
    and the word search uses `ws:`; a third game inventing a fourth spelling of
    "which board" is how they end up disagreeing. */
-export const scKey = (n, mode) => "sc:" + (mode === "consonants" ? "c:" : "") + n;
+export const scKey = (n, mode, set) =>
+  SETS[setIs(set)].prefix + ":" + (mode === "consonants" ? "c:" : "") + n;
 
 /* WHICH CYPHER A TOKEN ASKS FOR, for the daily and the finals alike.
    Anything unrecognised is the anagram, which is what every token issued
    before this existed meant — so a token already sitting in somebody's
    localStorage still means what it meant when it was written. */
 export function tokenCypher(token) {
-  return /^sc:(?:iconic:)?c:\d+$/.test(String(token || "")) ? "consonants" : "anagram";
+  return /^(?:fr)?sc:(?:iconic:)?c:\d+$/.test(String(token || "")) ? "consonants" : "anagram";
 }
 
 /* THE DAILY RING IS THE ELIGIBLE BOARDS, NOT THE WHOLE BANK.
@@ -112,8 +143,8 @@ export function tokenCypher(token) {
    Written twice they would disagree the first time the flag changed spelling. */
 export function outOfRotation(board) { return !!board && board.daily === false; }
 
-export function dailyRing(boards) {
-  const all = boards && boards.length ? boards : SC_BOARDS;
+export function dailyRing(boards, set) {
+  const all = boards && boards.length ? boards : SETS[setIs(set)].sample;
   const ring = all.filter((b) => b && !outOfRotation(b));
   /* Every board excluded is a bank nobody can play a daily from. Falling back
      to the whole bank is the honest failure: a wrong board beats no game. */
@@ -122,9 +153,14 @@ export function dailyRing(boards) {
 
 /* Which board is board number N. The bank is a ring: with a small bank the
    rotation repeats, and it repeats visibly rather than pretending not to. */
-export function boardForNumber(n, boards, mode) {
-  const ring = dailyRing(boards);
+export function boardForNumber(n, boards, mode, set) {
+  const s = setIs(set);
+  const ring = dailyRing(boards, s);
+  const first = SETS[s].first();
   if (!Number.isInteger(n) || n < 1 || !ring.length) return null;
+  /* Before the set's first day there is no board, and before its game has
+     launched there is no first day. */
+  if (!Number.isInteger(first) || n < first) return null;
   /* HALF A TURN AWAY, so the two games never show one eleven on one day and
      a board's turn in the other game is half a year off. It cannot collide,
      because it collides only where the offset is zero — which is why this is
@@ -133,7 +169,7 @@ export function boardForNumber(n, boards, mode) {
      An offset of one would satisfy the rule and break the spirit of it:
      tomorrow's board would be today's, in the other cypher. */
   const turn = mode === "consonants" ? Math.floor(ring.length / 2) : 0;
-  return ring[(n - 1 + turn) % ring.length];
+  return ring[(n - first + turn) % ring.length];
 }
 
 /* TEST MODE — THE WHOLE BANK IS PLAYABLE, AND THIS MUST BE FLIPPED BEFORE
@@ -171,10 +207,15 @@ export function consonantsPublic() { return CONSONANTS_PUBLIC; }
 export function playableTokenNo(token) {
   /* The optional c: says which cypher. It does not change WHICH DAY, and it
      must not change when a board becomes playable: one rule, one place. */
-  const m = /^sc:(?:c:)?(\d+)$/.exec(String(token || ""));
+  const m = /^(frsc|sc):(?:c:)?(\d+)$/.exec(String(token || ""));
   if (!m) return null;
-  const asked = Number(m[1]);
+  const asked = Number(m[2]);
   if (asked < 1) return false;
+  /* A Friends board from before the Friends ring began is not a board. */
+  if (m[1] === "frsc") {
+    const first = SETS.frsc.first();
+    if (!Number.isInteger(first) || asked < first) return false;
+  }
   /* The ring wraps, as it always has, so any positive number resolves to a
      board. No bound is invented here: this function is given a token, not the
      bank, and a limit it cannot check is a limit that lies. */
@@ -188,7 +229,7 @@ export function boardForToken(token, boards) {
      guess against the anagram's board for that day, which is a different
      eleven — the tile on screen and the answer being checked would not be
      the same board. */
-  if (typeof no === "number") return boardForNumber(no, boards, tokenCypher(token));
+  if (typeof no === "number") return boardForNumber(no, boards, tokenCypher(token), setOf(token));
   /* A finals token resolves here rather than in guess.js and reveal.js, which
      is the difference between one rule and two copies of it. */
   return boardForIconicToken(token, boards);
@@ -300,6 +341,9 @@ export function publicBoard(board, no, token) {
     band: s.band,          // which line of the formation this slot sits on
     x: s.x,                // where along that line, 0..1
     pos: s.pos,            // GK / RB / CM / ST — shown, and part of the puzzle
+    /* A list board's row instead (the Friends boards): the order of the
+       eleven under the theme. Absent on a pitch board, which has none. */
+    ...(s.row ? { row: s.row } : {}),
     ...(consonants ? {
       cy: s.cy,            // the name with its vowels blanked, which is the point
       /* A NO-VOWEL NAME RIDES DOWN IN FULL, because its cypher IS the name and
@@ -322,6 +366,8 @@ export function publicBoard(board, no, token) {
     pool: board.pool,            // the visible statement of what the XI is
     formation: board.formation,
     bands: board.bands,          // band ids and their vertical placement
+    /* "list" on a Friends board: eleven rows under the title, no pitch. */
+    ...(board.layout ? { layout: board.layout } : {}),
     hintField: board.hintField,  // which hint this board sells; not the values
     hintLabel: hintLabel(board),  // null when the bench has nothing to sell
     /* A last-two board's identity is its fixture, and the fixture is the hint,

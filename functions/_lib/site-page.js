@@ -20,7 +20,7 @@
 /* THE SHARED LAYER'S TAG, as every page carries it in its ?v=. One more
    place the tag is written; tools/aligned_test.mjs asserts it agrees with the
    pages, so it cannot fall behind them quietly. */
-export const SHARED_TAG = "v87";
+export const SHARED_TAG = "v88";
 
 /* What each game's masthead says and where its tabs go. The current tab is
    marked by path; a page with no game (a hub-level page) gets no masthead. */
@@ -128,6 +128,18 @@ const MAST = {
     name: "Lightning Round", home: "/friends/lightning/",
     nav: [["Today", "/friends/lightning/"], ["Archive", "/friends/lightning/archive/"],
           ["How to play", "/friends/lightning/#how"]],
+  },
+  /* Scrambled and Vowels, Friends: the same shape, no Answers tab -- every
+     answer is shown at the end of the board. */
+  scrambled_fr: {
+    name: "Scrambled", home: "/friends/scrambled/",
+    nav: [["Today", "/friends/scrambled/"], ["Archive", "/friends/scrambled/archive/"],
+          ["How to play", "/friends/scrambled/#how"]],
+  },
+  vowels_fr: {
+    name: "Vowels", home: "/friends/vowels/",
+    nav: [["Today", "/friends/vowels/"], ["Archive", "/friends/vowels/archive/"],
+          ["How to play", "/friends/vowels/#how"]],
   },
   crossword_fr: {
     name: "Crossword", home: "/friends/crossword/",

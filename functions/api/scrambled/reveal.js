@@ -16,7 +16,7 @@
  * started_at the server wrote and a count of the reveals it served — the same
  * shape Crossword XI uses. Until that exists, "unverified" is the truth.
  */
-import { json, bad, boardForToken, boardForPreviewToken, slotHint, hintLabel, loadBoards, revealName, topClubs } from "../../_lib/sc-board.js";
+import { json, bad, boardForToken, boardForPreviewToken, setOf, slotHint, hintLabel, loadBoards, revealName, topClubs } from "../../_lib/sc-board.js";
 import { normalise } from "../../_lib/sc-names.js";
 import { recordHelp, recordSolve, alreadyDone } from "../../_lib/sc-round.js";
 
@@ -25,7 +25,8 @@ export async function onRequestPost({ request, env }) {
   try { body = await request.json(); } catch { return bad("Expected a JSON body."); }
   const { token, slotId, kind } = body || {};
 
-  const { boards } = await loadBoards(env);
+  /* The token names its board set: football's, or the Friends boards. */
+  const { boards } = await loadBoards(env, setOf(token));
   /* An owner previewing a board plays it like any other, so the play endpoints
      accept the preview token — but only after re-reading the admin flag from
      the database on THIS request. A token is not authority. */
@@ -63,7 +64,7 @@ export async function onRequestPost({ request, env }) {
     /* CHARGED WHERE IT IS SERVED. recordHelp keeps the board-wide rule the
        page keeps — one purchase, a second press free — so the two arrive at
        the same number. */
-    await recordHelp(env, body.playId, "hint");
+    await recordHelp(env, body.playId, "hint", setOf(token));
     return json({ kind, slotId: slot ? slot.id : null, label: hintLabel(board), hints });
   }
 
@@ -87,7 +88,7 @@ export async function onRequestPost({ request, env }) {
        reveal at the cheaper price — the rule the letter reveal already keeps. */
     if (had >= spots.length - 1) return json({ kind, slotId: slot.id, index: null, letter: null });
     /* Nothing served, nothing charged — the branch above returns before this. */
-    await recordHelp(env, body.playId, "vowel");
+    await recordHelp(env, body.playId, "vowel", setOf(token));
     return json({ kind, slotId: slot.id, index: spots[had], letter: basis[spots[had]] });
   }
 
@@ -97,7 +98,7 @@ export async function onRequestPost({ request, env }) {
     /* Never the last one. A letter reveal that completes the name is a name
        reveal at the cheaper price. */
     if (known >= letters.length - 1) return json({ kind, slotId: slot.id, index: null, letter: null });
-    await recordHelp(env, body.playId, "letter");
+    await recordHelp(env, body.playId, "letter", setOf(token));
     return json({ kind, slotId: slot.id, index: known, letter: letters[known] });
   }
 
@@ -110,7 +111,7 @@ export async function onRequestPost({ request, env }) {
        'revealed', because a name bought is not a name worked out and full
        time counts them apart. */
     if (!(await alreadyDone(env, body.playId, slot.id))) {
-      await recordHelp(env, body.playId, "name");
+      await recordHelp(env, body.playId, "name", setOf(token));
       await recordSolve(env, body.playId, slot.id, "revealed", Date.now());
     }
     return json({ kind, slotId: slot.id, name: revealName(slot), clubs: topClubs(slot) });

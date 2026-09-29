@@ -85,6 +85,11 @@ export const PERMA_GAMES = {
      from launch to today resolves -- there is no calendar to ask. The first
      time a day is asked for, its run is stored (fr_lr_daily) and kept. */
   lightning_fr: { name: "Lightning Round XI: Friends", schedule: "ring" },
+  /* Scrambled XI: Friends and Vowels XI: Friends. A RING, like football's:
+     the Friends boards counted from the game's launch day (sc-board.js), so
+     every number from launch to today resolves by arithmetic, and it wraps. */
+  scrambled_fr: { name: "Scrambled XI: Friends", schedule: "ring" },
+  vowels_fr: { name: "Vowels XI: Friends", schedule: "ring" },
   wordsearch: { name: "Wordsearch XI", schedule: "day" },
   scrambled: { name: "Scrambled XI", schedule: "ring" },
   hilo: { name: "HiLo XI", schedule: "day" },
@@ -377,6 +382,8 @@ export const THEME_OF = {
   whoami_fr: "friends",
   /* THE THIRD, launched 28 September 2026. */
   lightning_fr: "friends",
+  scrambled_fr: "friends",
+  vowels_fr: "friends",
 };
 export const themeOf = (game) => THEME_OF[game] || "football";
 
@@ -444,6 +451,10 @@ export const SLUG_OF = {
   /* /friends/lightning/: the id carries _fr for the same uniqueness reason,
      and the address does not need it. */
   lightning_fr: "lightning",
+  /* /friends/scrambled/ and /friends/vowels/: football's words, the theme in
+     front of them telling the two apart. */
+  scrambled_fr: "scrambled",
+  vowels_fr: "vowels",
 };
 export const slugOf = (game) => SLUG_OF[game] || game;
 

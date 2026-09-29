@@ -25,7 +25,7 @@ import { dailyKey, dailyDayKey, dailyNoForDay } from "./daily.js";
    because football holds that one and an id maps to exactly one theme; the
    SLUG is `whoami`, so the address still reads /friends/whoami/. Both are
    UNLISTED: live, banked, streaked, and advertised nowhere. */
-export const GAMES = ["crossword", "wordsearch", "scrambled", "hilo", "vowels", "grid", "quickfire", "codeword", "whoami", "ballpark", "crossword_fr", "whoami_fr", "lightning_fr"];
+export const GAMES = ["crossword", "wordsearch", "scrambled", "hilo", "vowels", "grid", "quickfire", "codeword", "whoami", "ballpark", "crossword_fr", "whoami_fr", "lightning_fr", "scrambled_fr", "vowels_fr"];
 
 export const DEFAULT_GAME = "crossword";
 
@@ -122,6 +122,15 @@ export const LAUNCHED = {
      each day's run is dealt from the date the first time anyone asks, and
      kept (fr_lr_daily), so the launch day is simply the first day it deals. */
   lightning_fr: "2026-09-28",
+  /* Scrambled XI: Friends and Vowels XI: Friends (the owner, 29 Sep 2026:
+     "start the Friends Scrambled and Vowels build"). One ring, the Friends
+     boards, and it STARTS ON THIS DAY: sc-board.js counts the Friends ring
+     from Scrambled's launch number, so its first day is board 1 and Vowels'
+     first day is board 1 half a ring round. Launched together and public
+     from the first day, by the owner's choice of 29 Sep 2026 ("Straight to
+     public"). */
+  scrambled_fr: "2026-09-29",
+  vowels_fr: "2026-09-29",
 };
 
 /* ---- WHICH LAUNCHED GAMES ARE NOT ADVERTISED ------------------------------
@@ -179,6 +188,10 @@ export const NO_SEASON = {
   /* And the third, for the same reason: friends/lightning/index.html loads
      no xi-season.js. The Friends streak is xi-played's, not the season's. */
   lightning_fr: true,
+  /* And Scrambled's and Vowels' Friends pages, whose generator drops the
+     season script on the way through, for the same reason. */
+  scrambled_fr: true,
+  vowels_fr: true,
 };
 
 export const inSeason = (game) => !NO_SEASON[game];
@@ -219,6 +232,9 @@ export const isListed = (game) => !!LAUNCHED[game] && !UNLISTED[game];
  * is one line to change. */
 export const ENGINE_GAMES = {
   scrambled: ["scrambled", "vowels"],
+  /* The same engine over the Friends boards: its own pair, because a Friends
+     round must land on a Friends play and never on a football one. */
+  scrambled_fr: ["scrambled_fr", "vowels_fr"],
   crossword: ["crossword"],
   wordsearch: ["wordsearch"],
   hilo: ["hilo"],
@@ -385,6 +401,8 @@ export const LABELS = {
      reader cannot tell apart. */
   whoami_fr: "Who Am I XI: Friends",
   lightning_fr: "Lightning Round XI: Friends",
+  scrambled_fr: "Scrambled XI: Friends",
+  vowels_fr: "Vowels XI: Friends",
   wordsearch: "Wordsearch XI",
   scrambled: "Scrambled XI",
   vowels: "Vowels XI",
@@ -455,6 +473,15 @@ export function entryKey(game, row) {
     const n = Number(row && row.no);
     if (!Number.isFinite(n) || n <= 0) return null;
     return (game === "vowels" ? "vw:" : "sc:") + Math.floor(n);
+  }
+  if (game === "scrambled_fr" || game === "vowels_fr") {
+    /* The Friends pair, keyed on the board number with prefixes of their own:
+       both run on the same days as football's pair, and a shared prefix would
+       file a Friends result and a football one for the same number under one
+       key -- the first banked would win and the other would be thrown away. */
+    const n = Number(row && row.no);
+    if (!Number.isFinite(n) || n <= 0) return null;
+    return (game === "vowels_fr" ? "frvw:" : "frsc:") + Math.floor(n);
   }
   if (game === "quickfire") {
     /* A QuickFire daily is addressed by its play date — qf_daily is keyed on
@@ -604,7 +631,7 @@ export function playedOn(game, row) {
      history sorts as null is the word search's fault of 6 September, and Grid's
      repeat of it. */
   if (game === "scrambled" || game === "vowels" || game === "grid" ||
-      game === "crossword_fr") {
+      game === "crossword_fr" || game === "scrambled_fr" || game === "vowels_fr") {
     return dailyDayKey(row && row.no);
   }
   return null;
@@ -658,7 +685,7 @@ export function detailOf(game, row) {
       result: ["W", "D", "L"].includes(row.result) ? row.result : null,
     });
   }
-  if (game === "scrambled" || game === "vowels") {
+  if (game === "scrambled" || game === "vowels" || game === "scrambled_fr" || game === "vowels_fr") {
     /* What a Scrambled result keeps beyond the shared columns: the help
        bought, the names revealed outright, and the board's title so a row
        reads as a board rather than a number. Vowels XI is the same engine

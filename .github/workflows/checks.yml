@@ -555,6 +555,21 @@ jobs:
           # produce. --check gates and writes nothing, so a board edited by
           # hand in functions/_lib/ shows up here rather than in production.
           node tools/build_scrambled.js --check
+          # SCRAMBLED XI: FRIENDS AND VOWELS XI: FRIENDS. Football's pair over the
+          # Friends boards (fr_sc_board, five answers a board, no clock): the
+          # board module must be the one its sample builds through football's
+          # own gate, both pages must be what football's pages generate, the
+          # board-set rules are executed -- two sets on one engine, never mixed
+          # -- and one board of each is played from kick off to Full Time.
+          node tools/build_scrambled_fr.js --check
+          node tools/build_friendsscrambled.js --check
+          node friends/scrambled/board_test.mjs
+          node friends/scrambled/journey_test.mjs
+          node friends/vowels/journey_test.mjs
+          # Named here and never run in CI, like every live_check: they read
+          # the DEPLOYED site, and prove the boards are served from D1.
+          #   ->  node friends/scrambled/live_check.mjs --expect v001a
+          #   ->  node friends/vowels/live_check.mjs --expect v001a
           # HiLo XI, released. Its gate on the board shape and the
           # judge, its API executed against the sample bank, its club pages,
           # and one round played from kick off to full time through the real
@@ -752,6 +767,12 @@ jobs:
           # missing noindex, or a canonical. And it refuses the page reading an
           # answer off a verdict mid-run -- answers are held to the end.
           node friends/lightning/deploy_check.mjs
+          # SCRAMBLED AND VOWELS XI: FRIENDS'S GATES. The tag law, both pages
+          # generated rather than written, the launch's five things together,
+          # and the refusal the build rests on: a board served through the real
+          # daily route carries none of its answers, proved by execution.
+          node friends/scrambled/deploy_check.mjs
+          node friends/vowels/deploy_check.mjs
 
   render:
     name: Sixteen viewports, real browser

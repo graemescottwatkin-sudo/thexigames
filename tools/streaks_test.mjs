@@ -50,11 +50,16 @@ console.log("=== A game's id, by its address and theme ===");
     P.idOf("/friends/crossword/") === "crossword_fr", P.idOf("/friends/crossword/"));
   t("and Friends Who Am I is whoami_fr", P.idOf("/friends/whoami/") === "whoami_fr", P.idOf("/friends/whoami/"));
   t("and Lightning Round is lightning_fr", P.idOf("/friends/lightning/") === "lightning_fr", P.idOf("/friends/lightning/"));
+  t("and Scrambled and Vowels, Friends, are theirs", P.idOf("/friends/scrambled/") === "scrambled_fr" &&
+    P.idOf("/friends/vowels/") === "vowels_fr", P.idOf("/friends/scrambled/") + " " + P.idOf("/friends/vowels/"));
+  t("while football's Scrambled and Vowels keep theirs", P.idOf("/football/scrambled/") === "scrambled" &&
+    P.idOf("/football/vowels/") === "vowels");
   t("football's keep their own ids", P.idOf("/football/crossword/") === "crossword" && P.idOf("/football/whoami/") === "whoami");
   const ids = P.list("friends").map((g) => g.id).join(",");
   t("the Friends squad joins to the Friends probes, and their own results",
-    ids === "crossword_fr,whoami_fr,lightning_fr" &&
-      P.list("friends").map((g) => g.key).join(",") === "xifc.results,xifw.results.v1,xifl.results.v1", ids);
+    ids === "crossword_fr,whoami_fr,lightning_fr,scrambled_fr,vowels_fr" &&
+      P.list("friends").map((g) => g.key).join(",") ===
+        "xifc.results,xifw.results.v1,xifl.results.v1,xifs.results,xifv.results", ids);
 }
 
 console.log("\n=== Which days count ===");

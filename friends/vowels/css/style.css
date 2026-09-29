@@ -1,0 +1,922 @@
+/* Vowels XI — style.css (generated from Scrambled XI's)
+ *
+ * Every colour, font and radius comes from shared/xi-tokens.css. Nothing is
+ * restated here: a palette declared twice is the fault that made the word
+ * search and the crossword stop looking like the same suite, and it is the one
+ * this file is not allowed to repeat. There are no .xic- rules here either —
+ * the chrome is styled by shared/xi-chrome.css and a game styling the chrome
+ * is a second chrome starting.
+ */
+
+* { box-sizing: border-box; }
+
+html, body {
+  margin: 0;
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--body);
+  -webkit-text-size-adjust: 100%;
+}
+
+/* THE 720 IS THE PITCH'S, NOT THE APP'S. This capped everything the game
+   renders, landing included — so the shared landing shell, built to 1080 and
+   used at 1080 by the crossword, the word search and HiLo, was squeezed to 692
+   here and this game opened visibly narrower than its siblings for no reason
+   anyone chose. The owner spotted it clicking through from the front door: the
+   five games did not look like one family.
+   The cap now sits on the screens that need it — the formation and the full
+   time card — and the landing takes the width the shell asks for. */
+.app {
+  margin: 0 auto;
+  padding: 12px 14px 40px;
+}
+.screen:not(.prematch) {
+  max-width: 720px;
+  margin: 0 auto;
+}
+
+.screen[hidden] { display: none; }
+/* The same for the two rows that are display:flex. Without this a flex rule
+   beats the browser's [hidden], so the bench stood open with nothing picked
+   and its Close button closed nothing -- on the live game until 24 Sep 2026. */
+.benchRow[hidden], .echo[hidden] { display: none; }
+
+/* ---- Pre-match ---------------------------------------------------------- */
+
+.prematch { display: flex; justify-content: center; padding-top: 18px; }
+
+.pmCard {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 26px 22px 28px;
+  width: 100%;
+  text-align: center;
+}
+
+.eyebrow {
+  font-family: var(--disp);
+  font-weight: 600;
+  letter-spacing: .12em;
+  text-transform: uppercase;
+  font-size: 13px;
+  color: var(--ink-soft);
+}
+
+.pmCard h1 {
+  font-family: var(--disp);
+  font-weight: 700;
+  font-size: 44px;
+  line-height: 1.05;
+  margin: 6px 0 2px;
+}
+
+.pmDate {
+  font-family: var(--disp);
+  font-weight: 600;
+  font-size: 20px;
+  color: var(--ink-soft);
+  margin: 0 0 14px;
+}
+
+.pmPool, .poolLine {
+  font-size: 15px;
+  line-height: 1.5;
+  color: var(--ink);
+  margin: 0 0 14px;
+}
+
+.pmLede { font-size: 15px; line-height: 1.55; color: var(--ink-soft); margin: 0 0 20px; }
+
+.tiny { font-size: 12.5px; color: var(--ink-faint); margin: 14px 0 0; }
+
+/* ---- Buttons ------------------------------------------------------------ */
+
+.kick, .btn, .benchBtn {
+  font-family: var(--disp);
+  font-weight: 600;
+  font-size: 17px;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+  min-height: var(--tap);
+  padding: 0 20px;
+  border-radius: var(--radius);
+  border: 1px solid var(--pitch-deep);
+  background: var(--pitch);
+  color: #fff;
+  cursor: pointer;
+}
+
+.kick:focus-visible, .btn:focus-visible, .benchBtn:focus-visible {
+  outline: 2px solid var(--ink);
+  outline-offset: 2px;
+}
+
+.btn, .benchBtn {
+  font-size: 14px;
+  padding: 0 14px;
+  background: var(--card);
+  color: var(--ink);
+  border-color: var(--line);
+}
+
+.benchBtn.danger { color: var(--danger); }
+.benchBtn.quiet, .btn.quiet { color: var(--ink-soft); }
+.benchBtn .cost {
+  font-family: var(--body);
+  font-size: 12px;
+  margin-left: 7px;
+  color: var(--xi-ink);
+}
+
+/* ---- Match head --------------------------------------------------------- */
+
+.matchHead {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  margin: 6px 2px 10px;
+}
+
+.progress {
+  font-family: var(--disp);
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  font-size: 14px;
+  color: var(--ink-soft);
+}
+
+.clock { font-family: var(--disp); font-weight: 700; font-size: 26px; }
+.clock .prime { color: var(--ink-faint); }
+
+.poolLine { font-size: 13.5px; color: var(--ink-soft); margin: 0 2px 12px; }
+
+/* ---- The pitch ---------------------------------------------------------- */
+
+.pitchWrap { position: relative; }
+
+.pitch {
+  position: relative;
+  aspect-ratio: 3 / 4;
+  border-radius: var(--radius);
+  background: var(--pitch-deep);
+  border: 1px solid var(--pitch-deep);
+  overflow: hidden;
+}
+
+/* Chalk. Halfway line, centre circle, the two boxes — drawn with borders
+   rather than an image so it themes with everything else. */
+.pitch::before,
+.pitch::after { content: ""; position: absolute; pointer-events: none; }
+.pitch::before {
+  left: 0; right: 0; top: 50%;
+  border-top: 1px solid rgba(255,255,255,.16);
+}
+.pitch::after {
+  left: 50%; top: 50%;
+  width: 34%; aspect-ratio: 1;
+  transform: translate(-50%,-50%);
+  border: 1px solid rgba(255,255,255,.16);
+  border-radius: 50%;
+}
+
+.box {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 56%;
+  height: 13%;
+  border: 1px solid rgba(255,255,255,.16);
+  pointer-events: none;
+}
+.box.bottom { bottom: -1px; border-bottom: 0; }
+.box.top { top: -1px; border-top: 0; }
+
+.slot {
+  position: absolute;
+  transform: translate(-50%, -50%);
+  width: 27%;
+  min-height: var(--tap);
+  padding: 5px 4px 6px;
+  border-radius: 10px;
+  border: 1px solid rgba(255,255,255,.22);
+  background: rgba(0,0,0,.28);
+  color: #fff;
+  text-align: center;
+  cursor: pointer;
+  font: inherit;
+}
+.slot:focus-visible { outline: 2px solid var(--gold); outline-offset: 2px; }
+
+.slot .pos {
+  display: block;
+  font-family: var(--disp);
+  font-weight: 600;
+  font-size: 10.5px;
+  letter-spacing: .1em;
+  color: rgba(255,255,255,.62);
+}
+
+.slot .letters {
+  display: block;
+  font-family: var(--disp);
+  font-weight: 700;
+  font-size: clamp(12px, 3.4vw, 17px);
+  letter-spacing: .06em;
+  line-height: 1.15;
+  /* Between words or not at all: game.js fitNames() shrinks a word that is
+     wider than its tile rather than letting it break in the middle. */
+  word-break: normal;
+  overflow-wrap: normal;
+  white-space: normal;
+}
+
+.slot .enum {
+  display: block;
+  font-size: 10.5px;
+  color: rgba(255,255,255,.58);
+  margin-top: 2px;
+}
+
+.slot .hint {
+  display: block;
+  font-size: 10.5px;
+  color: var(--gold);
+  margin-top: 2px;
+  /* A career is not one word. "Reveal club" returned "Aston Villa"; "Reveal
+     career" can return six clubs and ninety-five characters, and an
+     absolutely-positioned tile with no bound on its hint pushes itself across
+     the pitch and over its neighbours.
+     Bounded in ch rather than px so it scales with the type, wrapping instead
+     of growing sideways, and with the separators given room to breathe so a
+     long history reads as a list rather than a paragraph. */
+  max-width: 22ch;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  line-height: 1.35;
+  margin-left: auto;
+  margin-right: auto;
+}
+
+.slot.solved {
+  background: var(--pitch);
+  border-color: var(--gold);
+}
+.slot.solved .letters { letter-spacing: .02em; }
+.slot.given { background: rgba(0,0,0,.5); border-style: dashed; }
+.slot.given .letters { color: rgba(255,255,255,.72); }
+.slot.picked { outline: 2px solid var(--gold); outline-offset: 1px; }
+
+/* ---- Entry -------------------------------------------------------------- */
+
+.feedback {
+  min-height: 20px;
+  margin: 10px 2px 6px;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--ink-soft);
+}
+.feedback.good { color: var(--ok); }
+.feedback.bad { color: var(--danger); }
+
+/* The picked tile echoed above the box, so the keyboard cannot hide what
+   is being typed at. The same three parts as the tile — lifted letters, the
+   rest of the bag, the enumeration — at a size that reads at arm's length. */
+.echo { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 10px; margin: 0 0 8px; font-family: var(--disp); }
+.echo .pos { font-size: 11px; letter-spacing: .14em; text-transform: uppercase; color: var(--ink-soft); }
+.echo .lifted { font-weight: 700; font-size: 22px; letter-spacing: .06em; color: var(--pitch-ink); }
+.echo .lifted:empty { display: none; }
+.echo .letters { font-weight: 700; font-size: 22px; letter-spacing: .06em; color: var(--ink); }
+.echo .enum { font-size: 12px; color: var(--ink-soft); }
+.entry { display: flex; gap: 8px; }
+
+.entry input {
+  flex: 1 1 auto;
+  min-height: var(--tap);
+  padding: 0 14px;
+  font-family: var(--disp);
+  font-size: 19px;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--ink);
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.entry input:focus-visible { outline: 2px solid var(--ink); outline-offset: 1px; }
+
+.benchRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-top: 10px;
+  padding: 10px;
+  background: var(--tint);
+  border-radius: var(--radius);
+}
+.benchFor {
+  font-family: var(--disp);
+  font-weight: 600;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  font-size: 13px;
+  color: var(--ink-soft);
+  width: 100%;
+}
+
+/* ---- Score -------------------------------------------------------------- */
+
+.scoreCluster { display: flex; gap: 10px; margin-top: 14px; }
+
+.scoreBox, .worthBox {
+  flex: 1 1 0;
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  padding: 10px 12px;
+}
+
+.scoreBox .label, .worthBox .label {
+  display: block;
+  font-family: var(--disp);
+  font-weight: 600;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  font-size: 11.5px;
+  color: var(--ink-soft);
+}
+
+.scoreVal, .worthVal { font-family: var(--disp); font-weight: 700; font-size: 26px; }
+.worthVal { color: var(--xi-ink); }
+
+/* ---- Full time ---------------------------------------------------------- */
+
+/* The rest of Full Time is the family's panel (shared/xi-fulltime.css). */
+
+@media (min-width: 620px) {
+  .pitch { aspect-ratio: 4 / 5; }
+  .slot { width: 21%; }
+}
+
+/* ---- The lifted letters ------------------------------------------------
+   What the player has typed that THIS tile could supply, above the bag it
+   came out of. It has to read as a different KIND of thing from the scramble,
+   not a bolder version of it — the whole point is "these letters are mine and
+   those are still the puzzle's".
+
+   Four things carry that, because colour alone fails in the two places it
+   matters: a gold-on-dark tile at arm's length, and anyone who cannot separate
+   gold from white.
+     - gold, the family's own highlight token, not a new colour
+     - wide tracking, so the letters read as counters rather than a word
+     - a rule underneath, which is the actual boundary between mine and the bag
+     - and the bag steps back to .55 while anything is held above it
+
+   Not an outline: .slot.picked already owns a gold outline, and two states
+   sharing one signal is how a player stops trusting either. */
+.slot .lifted {
+  display: block;
+  min-height: 1.15em;
+  font-family: var(--disp);
+  font-weight: 700;
+  font-size: clamp(12px, 3.4vw, 17px);
+  letter-spacing: .28em;
+  line-height: 1.15;
+  color: var(--gold);
+  text-shadow: 0 1px 0 rgba(0, 0, 0, .5);
+}
+/* The rule appears only when something is held, so an empty tile is not a
+   tile with a line through it. */
+.slot.could .lifted { border-bottom: 2px solid var(--gold); padding-bottom: 2px; }
+.slot.could .letters { opacity: .55; }
+
+/* THE CAREER OF THE TILE IN HAND.
+   One purchase reveals all eleven careers, which is a lot of gold text on a
+   pitch. The one the player actually picked is repeated here at a readable
+   size, so the board-wide reveal does not bury the answer to the question
+   they asked. Full width on its own line: a career runs to six clubs. */
+.benchHint {
+  flex: 1 0 100%;
+  margin-top: 6px;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--gold);
+  word-break: break-word;
+}
+
+/* And on the pitch, the picked tile's career is the one lit; the other ten
+   stay legible but recede, so the eye is not asked to read all eleven. */
+.slot .hint { opacity: 0.62; }
+.slot .hint.focus {
+  opacity: 1;
+  font-weight: 600;
+}
+
+/* The two clubs under a solved name. Quieter than the name it belongs to —
+   the name is the answer, this is the recognition that follows it — and
+   bounded like the career hint so a long club name wraps instead of pushing
+   an absolutely-positioned tile across its neighbours. */
+.slot .clubs {
+  display: block;
+  margin-top: 2px;
+  font-size: 11px;
+  line-height: 1.35;
+  /* ON GREEN, NOT ON PAPER. A solved tile is pitch green and a revealed one
+     is near black, and --ink-soft is the soft ink for the page's paper — on
+     the tile it read as grey on green and could not be seen at all. The
+     family's token for quiet text on the pitch is the right one here. */
+  color: var(--on-pitch-soft);
+  max-width: 22ch;
+  overflow-wrap: break-word;
+}
+
+/* ---- SHEETS: PREVIOUS BOARDS, AND THE FINALS -------------------------------
+
+   LIFTED, 6 September 2026. The sheet and the month grid were written out here
+   and again in the crossword's stylesheet — one design, two copies, and a
+   third in Vowels because Vowels is generated from this file. They now live
+   once, as .xic-sheet* and .xic-cal* in shared/xi-chrome.css, and this game's
+   markup names them there. What stays below is what is actually this game's:
+   the finals list, and the rows inside a sheet rather than the sheet.
+
+   The note that used to be here said the lift was worth doing but should not
+   ride along with a feature, because it bumps SHARED_TAG and every game's tag
+   with it. That is exactly how it was done: this commit carries the move and
+   nothing else. */
+
+
+/* ---- the month grid ---- */
+
+/* Not released. A dot rather than a number: there is nothing there to choose,
+   and an empty square with a date on it reads as something you failed to do. */
+/* The date and the score are separate lines. Inline, a 24th with a score of
+   97 rendered as "2497". */
+
+/* ---- the finals list ----
+
+   Two lines per row: the side, which is what somebody is looking for, and the
+   fixture under it. One line with both ran to sixty characters and wrapped on
+   a phone, and a wrapped row in a list of five hundred is unreadable. */
+
+.fin-search {
+  width: 100%;
+  padding: 11px 12px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--paper);
+  color: var(--ink);
+  font: inherit;
+  font-size: 15px;
+  margin-bottom: 10px;
+}
+.fin-list { max-height: 52vh; overflow: auto; }
+.fin-head {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-family: var(--disp);
+  font-weight: 700;
+  font-size: 11px;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--ink-soft);
+  border-bottom: 1px solid var(--line);
+  padding: 12px 0 4px;
+  position: sticky;
+  top: 0;
+  background: var(--card);
+}
+.fin-head i { font-style: normal; color: var(--ink-faint); font-size: 10px; }
+.fin-row {
+  display: block;
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: none;
+  padding: 9px 4px;
+  border-bottom: 1px solid var(--line);
+  color: var(--ink);
+  cursor: pointer;
+}
+.fin-row:hover { background: var(--paper); }
+.fin-side { display: block; font-weight: 600; font-size: 14.5px; }
+.fin-when { display: block; font-size: 12px; color: var(--ink-faint); margin-top: 1px; }
+
+/* ---- THE KEYBOARD ----------------------------------------------------------
+
+   The keys are the family's: shared/xi-keys.css sizes them and shared/xi-keys.js
+   builds them. What is here is what belongs to this game's layout — when the
+   keyboard is shown at all, and leaving the answer box room above it. */
+
+/* Only over the board. show() puts .playing on the body for the game screen
+   and takes it off everywhere else; without this the keyboard would sit under
+   the landing and the full-time card, where there is nothing to type. */
+body:not(.playing) .osk { display: none; }
+
+/* FIXED, NOT STICKY. The crossword's keyboard is sticky and pins itself,
+   because its board fills the screen and there is always something below the
+   keys pushing them down. This page is ordinary document flow and the keyboard
+   is the last thing in it, so sticky had nothing to stick against: it sat
+   wherever the content ended, with empty page underneath it. Fixed to the
+   bottom of the viewport is what it looked like it was doing and now is. */
+body.touch.playing .osk {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+}
+
+/* The answer row is what the keys type into, so it is the one thing that must
+   never be behind them: parked directly above the keyboard, using the block
+   height the keys publish rather than a number guessed at here. */
+body.touch.playing .entry {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: var(--osk-block);
+  z-index: 19;
+  background: var(--paper);
+  border-top: 1px solid var(--line);
+  padding: 7px 10px;
+  margin: 0;
+}
+
+/* And room under the board for both, so the bench and the score can be
+   scrolled clear of the keys instead of living behind them. */
+body.touch.playing #screenGame {
+  padding-bottom: calc(var(--osk-block) + var(--osk-h) + 24px);
+}
+
+/* A DAY BEHIND THE LOCK. Shown rather than hidden: what is behind it is the
+   reason to register, and a day that simply vanished from the grid would say
+   nothing at all. Quieter than an open day and plainly not a button that
+   plays — the padlock is the whole message. */
+
+/* FULL TIME: THE BOARD STAYS, THE CONTROLS GO. The finished XI is the payoff
+   and it used to vanish the moment the last name went in — the results screen
+   replaced it. Now it sits above the result, readable, with everything that
+   belongs to a round in progress taken away. */
+.screen.finished .entry,
+.screen.finished .benchRow,
+.screen.finished .echo,
+.screen.finished .feedback { display: none; }
+/* A little air between the finished board and the card under it, so they read
+   as two things rather than one run-on. */
+.screen.finished { padding-bottom: 4px; }
+
+/* A consonant board lifts nothing, so its tiles give up the line that would
+   hold the lifted letters. */
+.pitch.bagless .slot .lifted { display: none; }
+/* The tile being read can carry a career; it is drawn over its neighbours
+   rather than under them. */
+.slot.picked { z-index: 2; }
+
+/* ---- THE PLAY SCREEN, LOCKED ----------------------------------------------
+
+   The owner's ruling, 24 Sep 2026, from the Play build: "id like the game to
+   fit on the screen in whole, much like the crossword, i.e. the screen is
+   fixed, so no scrolling needed" -- and then, for every size, "just change
+   the size of elements to scale up". So while a round is in play the page is
+   exactly the viewport: the bar, then the board, then the answer row and the
+   keys, and nothing below them to scroll to.
+
+   Everything that is not the round steps aside: the game's ident, its tabs,
+   the how-to-play, the footer and the pool line all said something the
+   landing already said. The score moves up beside the clock. The live table
+   goes beside the pitch where there is room for it and is not shown where
+   there is not, because a table under the keys is a table nobody can reach.
+
+   body.locked is set by game.js checkRoom() while a round is in play or at
+   Full Time, and only while the tiles fit: when they cannot -- a phone on its
+   side, or large system text -- it is taken off, every rule here stands down,
+   and the page scrolls as it always did. The landing is never locked.
+
+   The pitch fills what is left and the tiles scale with it -- sized in units
+   of the pitch (cqw, cqh), not the viewport, because the pitch is what they
+   have to fit in. */
+body.locked {
+  height: 100vh;
+  height: 100dvh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+body.locked > * { flex: none; }
+body.locked > footer { display: none; }
+body.locked > .app {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 4px 8px 0;
+}
+body.locked .app > * { flex: none; }
+body.locked .site-ident,
+body.locked .site-head,
+body.locked .how,
+body.locked .poolLine { display: none; }
+
+body.locked #screenGame {
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+  max-width: 1280px;
+  margin: 0 auto;
+  padding-bottom: 6px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: auto minmax(0, 1fr) auto auto auto auto;
+  grid-template-areas:
+    "head score"
+    "pitch pitch"
+    "feedback feedback"
+    "echo echo"
+    "entry entry"
+    "bench bench";
+  column-gap: 12px;
+}
+/* The family's top bar stands in for the count, the clock and the score
+   boxes (shared/xi-matchbar.css), across the top row of the grid. */
+#screenGame > .matchHead, #screenGame > .scoreCluster { display: none; }
+body.locked #xiBar { grid-row: 1; grid-column: 1 / 3; }
+body.locked .matchHead {
+  grid-area: head;
+  align-self: center;
+  margin: 0 2px 4px;
+  gap: 12px;
+  justify-content: flex-start;
+}
+body.locked .clock { font-size: 22px; }
+body.locked .scoreCluster {
+  grid-area: score;
+  align-self: center;
+  margin: 0 0 4px;
+  gap: 6px;
+}
+body.locked .scoreBox,
+body.locked .worthBox {
+  padding: 2px 8px;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+body.locked .scoreBox .label,
+body.locked .worthBox .label { font-size: 9.5px; letter-spacing: .08em; }
+body.locked .scoreVal,
+body.locked .worthVal { font-size: 18px; }
+body.locked #tablePanel { display: none; }
+
+body.locked .pitchWrap {
+  grid-area: pitch;
+  min-height: 0;
+  container-type: size;
+  display: flex;
+  justify-content: center;
+}
+/* The pitch takes the whole of its cell, up to a landscape of 13:10: wider
+   than that and a formation's rows are strung out across a desk monitor with
+   the eye running end to end to read one line. Past it, centred. */
+body.locked .pitch {
+  aspect-ratio: auto;
+  height: 100%;
+  width: min(100%, 130cqh);
+  container-type: size;
+}
+body.locked .feedback { grid-area: feedback; min-height: 18px; margin: 4px 2px 2px; font-size: 13.5px; }
+/* A short screen: the family's top bar is a line taller than the count and
+   clock it replaced, and the feedback line gives some of it back. */
+@media (max-height: 700px) {
+  body.locked .feedback { min-height: 15px; margin: 2px 2px 1px; font-size: 12.5px; line-height: 15px; }
+  /* And the keys, a little: at 640 tall a name being typed no longer fitted
+     its tile (the room check's "clipped"), and 3px a row is what it needed. */
+  body.locked .osk { --osk-h: 31px; --osk-gap: 3px; padding: 3px 4px calc(3px + env(safe-area-inset-bottom)); }
+  /* And the cards take a little more of a shorter pitch, so a name being
+     typed still fits: 15% of its height, where 14% left them 3px short. The
+     room check still refuses any that would meet. */
+  body.locked .pitch .slot { height: 15cqh; }
+}
+/* PICKING A TILE DOES NOT MOVE THE BOARD. The bench and the echo were rows of
+   this grid, so the pitch gave up a third of its height whenever a tile was
+   picked (the owner, 25 Sep 2026: "if i select a name the sizing changes").
+   The bench is laid over the pitch, in the pitch's own cell, at the end away
+   from the picked tile (game.js placeBench); the echo is not drawn here at
+   all -- it repeats the tile for a screen where the system keyboard hides the
+   pitch, and on a locked screen the pitch is never hidden and the picked tile
+   is marked on it. */
+body.locked .echo { display: none; }
+body.locked .benchRow {
+  grid-area: pitch;
+  align-self: end;
+  z-index: 6;
+  margin: 0 8px 8px;
+  padding: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, .35);
+}
+body.locked .benchRow.atTop { align-self: start; margin: 8px 8px 0; }
+
+/* The answer row and the keys are in the flow at the foot of the screen, not
+   fixed over it: the board is sized to what they leave, so there is nothing
+   underneath for them to cover. */
+/* ONE ENTER, ON THE KEYS. Where the family's keyboard is drawn it has its
+   own Enter, bottom left, so the button beside the box was a second one (the
+   owner's approval, 25 Sep 2026: the separate button only where there are no
+   drawn keys). */
+body.touch #submit { display: none; }
+body.locked .entry {
+  grid-area: entry;
+  position: static;
+  border: 0;
+  padding: 0;
+  background: none;
+}
+body.locked #screenGame { padding-bottom: 6px; }
+body.locked .osk { position: static; }
+
+/* The tiles, in units of the pitch. The clamps are the floor a phone can
+   read and the ceiling past which a tile stops getting easier to read and
+   starts crowding its row. */
+body.locked .slot {
+  /* ONE SIZE OF CARD. Every tile the same share of the pitch, whatever is
+     written on it; a name that needs two lines is fitted into the box by
+     game.js fitNames() rather than growing it. The tile being read is the
+     exception below: it carries a career, and is drawn over its row. */
+  height: 14cqh;
+  min-height: 0;
+  padding: .4cqh 3px .6cqh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  border-radius: clamp(6px, 1.4cqw, 14px);
+}
+/* The lifted line holds its height so a card does not jump as letters are
+   typed. A locked card is one height already and centres what it holds, so
+   the empty line is only a line of nothing the name needed. */
+body.locked .slot .lifted:empty { min-height: 0; }
+body.locked .slot:has(.hint),
+body.locked .slot:has(.clubs) { height: auto; min-height: 14cqh; overflow: visible; z-index: 3; }
+body.locked .slot .pos,
+body.locked .slot .enum { font-size: clamp(9px, min(2.8cqw, 2.8cqh), 18px); }
+body.locked .slot .letters,
+body.locked .slot .lifted { font-size: clamp(12px, min(5cqw, 5cqh), 36px); }
+body.locked .slot .hint,
+body.locked .slot .clubs { font-size: clamp(10px, min(2.6cqw, 2.2cqh), 16px); }
+
+/* Room beside the pitch: the table comes back, in a column of its own, and
+   scrolls inside that column if the season is longer than the screen. */
+/* FULL TIME, LOCKED. The board keeps its place and the result is a panel of
+   its own that scrolls inside itself -- the crossword's shape, where the
+   result opens beside the grid and the grid stays. On a phone the panel takes
+   the lower half and the board the upper; beside the board where there is
+   room. The table goes at Full Time: the result card says where the club
+   finished. */
+body.locked.fulltime #screenGame { padding-bottom: 4px; }
+body.locked.fulltime #tablePanel { display: none; }
+body.locked.fulltime .app > #screenResults {
+  flex: 0 1 auto;
+  min-height: 0;
+  max-height: 52%;
+  overflow: auto;
+  width: 100%;
+  max-width: 720px;
+  margin: 0 auto;
+  padding: 8px 4px 12px;
+  border-top: 1px solid var(--line);
+}
+/* ON A PHONE THE PANEL TAKES THE SCREEN. Under the pitch it had half the
+   height, so at 412 the score sat on the bottom edge and Sign in, Share and
+   Challenge were below it (the app's live re-shoot of the new Full Time, 26
+   Sep 2026). A wide screen keeps the finished XI beside the panel, below. */
+@media (max-width: 959px) {
+  body.locked.fulltime .app > #screenGame { display: none; }
+  body.locked.fulltime .app > #screenResults { flex: 1 1 auto; max-height: none; border-top: 0; }
+}
+@media (min-width: 960px) {
+  body.locked.fulltime > .app {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 400px;
+    grid-template-rows: minmax(0, 1fr);
+    column-gap: 16px;
+  }
+  body.locked.fulltime .app > #screenGame { grid-column: 1; grid-row: 1; }
+  body.locked.fulltime .app > #screenResults {
+    grid-column: 2; grid-row: 1;
+    max-height: none;
+    height: 100%;
+    border-top: 0;
+    border-left: 1px solid var(--line);
+    padding: 4px 4px 16px 16px;
+  }
+}
+
+@media (min-width: 960px) {
+  body.locked:not(.fulltime) #screenGame {
+    grid-template-columns: minmax(0, 1fr) auto 300px;
+    grid-template-areas:
+      "head score table"
+      "pitch pitch table"
+      "feedback feedback table"
+      "echo echo table"
+      "entry entry table"
+      "bench bench table";
+  }
+  body.locked:not(.fulltime) #tablePanel {
+    display: block;
+    grid-area: table;
+    min-height: 0;
+    overflow: auto;
+    align-self: stretch;
+  }
+}
+
+/* HOW TO PLAY, ON A LOCKED SCREEN. The bar's "How to play" goes to #how, and
+   while the play screen is locked that section is hidden with the rest of the
+   landing -- so the link did nothing mid-game (found 24 Sep 2026, the day the
+   screens were locked). As its target it opens over the game instead, a panel
+   the height of the screen that scrolls in itself, with the way back at the
+   top; leaving the target closes it. The page under it never scrolls. */
+.how-back{display:none}
+body.locked #how:target{display:block!important;position:fixed;inset:0;z-index:60;margin:0;max-width:none;
+  overflow:auto;overscroll-behavior:contain;background:var(--paper);padding:14px 16px 40px;box-sizing:border-box}
+body.locked #how:target .how-back{display:inline-flex;align-items:center;min-height:var(--tap,44px);padding:0 16px;
+  margin:0 0 10px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink);
+  font-family:var(--disp);font-weight:700;letter-spacing:.08em;text-transform:uppercase;text-decoration:none}
+
+
+/* ==== GENERATED by tools/build_friendsscrambled.js: the Friends list ====
+
+   THE LIST, WHERE THE PITCH WAS. The board's theme, then its five answers
+   one row each, top to bottom. Same panel, same tile, same states as the
+   pitch -- solved, given, picked, could -- so every rule above that paints a
+   tile still paints a row; only the placing is new. */
+.xlist {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  padding: 10px;
+  border-radius: var(--radius);
+  background: var(--pitch-deep);
+  border: 1px solid var(--pitch-deep);
+}
+.xlist .listHead {
+  margin: 0 0 2px;
+  font-family: var(--disp);
+  font-weight: 700;
+  font-size: 17px;
+  letter-spacing: .08em;
+  text-transform: uppercase;
+  color: #fff;
+  text-align: center;
+}
+.xlist .slot {
+  position: static;
+  transform: none;
+  width: 100%;
+  min-height: 40px;
+  display: grid;
+  grid-template-columns: 1.8em minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 8px;
+  padding: 4px 10px;
+  text-align: left;
+}
+.xlist .slot .pos { text-align: right; }
+.xlist .slot .lifted:empty { display: none; }
+.xlist .slot .letters { white-space: nowrap; overflow: hidden; }
+.xlist .slot.solved .letters,
+.xlist .slot.given .letters { white-space: normal; line-height: 1.1; }
+.xlist .slot .enum { margin: 0; white-space: nowrap; }
+.xlist .slot .hint { grid-column: 2 / 4; }
+
+/* LOCKED: the list fills the board's cell exactly, the theme and eleven equal
+   rows, sized from the cell's height -- the same container the pitch used. */
+body.locked .xlist {
+  height: 100%;
+  width: min(100%, 760px);
+  box-sizing: border-box;
+  display: grid;
+  grid-template-rows: auto repeat(5, minmax(0, 1fr));
+  gap: .8cqh;
+  padding: 1cqh 8px;
+}
+body.locked .xlist .listHead { font-size: clamp(12px, 3.4cqh, 20px); margin: 0; }
+/* THE BENCH, LAID OVER THE LIST, IS SOLID: football's is a translucent tint,
+   and over rows of text the rows read through it. */
+body.locked .benchRow { background: var(--card); }
+/* body.locked .slot makes a pitch tile a centred column; a row stays a row. */
+body.locked .xlist .slot {
+  display: grid;
+  flex-direction: initial;
+  justify-content: initial;
+  height: auto;
+  min-height: 0;
+  padding: 0 10px;
+}
+body.locked .xlist .slot .letters,
+body.locked .xlist .slot .lifted { font-size: clamp(14px, 6.5cqh, 34px); }
+body.locked .xlist .slot .pos,
+body.locked .xlist .slot .enum { font-size: clamp(10px, 3.4cqh, 18px); }

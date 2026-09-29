@@ -483,8 +483,15 @@ export function gate(src, shape) {
       `rather than a slot to fill`);
   });
   if (shape.error) problems.push(shape.error);
-  if (xi.length !== 11) {
-    problems.push(`${xi.length} players — an XI has eleven, and that is the whole product`);
+  /* ELEVEN, EXCEPT WHERE A BOARD SET SAYS OTHERWISE: the Friends boards are
+     five (the owner, 29 Sep 2026: "for this we dont need 11, we can have 3, 4
+     or 5 phrases or names or places etc", then "Always 5"). The size rides on
+     the shape, which only a list build sets; football's is eleven as ever. */
+  const size = (shape && shape.size) || 11;
+  if (xi.length !== size) {
+    problems.push(size === 11
+      ? `${xi.length} players — an XI has eleven, and that is the whole product`
+      : `${xi.length} answers — a board in this set has ${size}`);
   }
   if (!src.source) {
     problems.push("no source — a board is a claim about who played and must carry the URL that backs it");
@@ -798,8 +805,16 @@ export function poolOf(src) {
     `gameweek ${src.gameweek}, ${src.kickoff}`;
 }
 
-export function build(src, file, pkg) {
-  const shape = parseFormation(src.formation);
+/* A LIST, NOT A PITCH: `opts.list` builds a board that has no formation --
+   the Friends boards (the owner, 29 Sep 2026: "start the Friends Scrambled
+   and Vowels build"), whose eleven are a list under the board's theme. Every
+   name rule is the same one, run by the same gate; what goes is only the
+   placing -- no bands, no x, no position -- and each slot says its row
+   instead. Football never passes it, so a football board is built exactly as
+   it always was, key for key. */
+export function build(src, file, pkg, opts) {
+  const list = !!(opts && opts.list);
+  const shape = list ? { list: true, size: opts.size || 11 } : parseFormation(src.formation);
   const problems = gate(src, shape);
   if (problems.length) {
     console.error(`\n${file} refused:\n`);
@@ -808,9 +823,9 @@ export function build(src, file, pkg) {
   }
 
   const rand = rng(seedOf(src));
-  const bands = shape.bands;
+  const bands = list ? null : shape.bands;
   const slotBand = [];
-  bands.forEach((b) => { for (let j = 0; j < b.size; j++) slotBand.push({ band: b.id, i: j, of: b.size }); });
+  if (!list) bands.forEach((b) => { for (let j = 0; j < b.size; j++) slotBand.push({ band: b.id, i: j, of: b.size }); });
 
   /* Derived for the eleven at once: a collision is a fact about the board,
      not about a name, so it cannot be decided a slot at a time. */
@@ -835,11 +850,14 @@ export function build(src, file, pkg) {
       throw new Error(`${file}: "${p.name}" — the scramble is the name.`);
     }
     const place = slotBand[i];
-    return {
-      id: "s" + (i + 1),
+    const where = list ? { row: i + 1 } : {
       band: place.band,
       x: Number(((place.i + 1) / (place.of + 1)).toFixed(4)),
       pos: p.pos || shape.labels[i],
+    };
+    return {
+      id: "s" + (i + 1),
+      ...where,
       name: p.name,
       /* TWO NAME FIELDS, DELIBERATELY.
          `name` is the CYPHER — the surname, and the only thing scrambled. A
@@ -922,7 +940,7 @@ export function build(src, file, pkg) {
       daily: false,
     } : {}),
     source: src.source,
-    bands: bands.map((b) => ({ id: b.id, y: b.y })),
+    ...(list ? { layout: "list" } : { bands: bands.map((b) => ({ id: b.id, y: b.y })) }),
     slots,
   };
 }
