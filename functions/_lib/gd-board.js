@@ -26,6 +26,7 @@ import { GD_SAMPLE_BOARDS, GD_SAMPLE_SCHEDULE } from "./gd-sample.js";
    client. See football/grid/js/rules.js, which says why that is safe: the
    algorithm is public and the answer is not. */
 import XIGR_RULES from "../../football/grid/js/rules.js";
+import { keptBank } from "./bank-cache.js";
 
 export function hasDB(env) { return !!(env && env.DB); }
 export function todayKey(now = Date.now()) { return utcDay(now); }
@@ -43,7 +44,10 @@ export const boardToken = (id) => "gd:" + id;
 
 /* ---- the bank ---------------------------------------------------------- */
 
-export async function loadBank(env) {
+/* Parsed once per Worker and kept: see functions/_lib/bank-cache.js. */
+export function loadBank(env) { return keptBank(env, "gd", () => readBank(env)); }
+
+async function readBank(env) {
   if (!hasDB(env)) return sampleBank();
   try {
     const boards = await env.DB.prepare(

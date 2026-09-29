@@ -22,6 +22,7 @@
 import { HL_SAMPLE_BOARDS, HL_SAMPLE_SCHEDULE } from "./hl-sample.js";
 import { LAUNCHED } from "./games.js";
 import { utcDay } from "./daily.js";
+import { keptBank } from "./bank-cache.js";
 
 export function hasDB(env) { return !!(env && env.DB); }
 
@@ -110,7 +111,10 @@ export function clubSlug(name) {
 }
 
 /* ---- the bank ---- */
-export async function loadBank(env) {
+/* Parsed once per Worker and kept: see functions/_lib/bank-cache.js. */
+export function loadBank(env) { return keptBank(env, "hl", () => readBank(env)); }
+
+async function readBank(env) {
   if (!hasDB(env)) return { boards: HL_SAMPLE_BOARDS, schedule: HL_SAMPLE_SCHEDULE, source: "sample" };
   try {
     const b = await env.DB.prepare("SELECT payload FROM hl_board ORDER BY id").all();
