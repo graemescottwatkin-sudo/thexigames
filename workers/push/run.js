@@ -31,10 +31,26 @@ export const RUN_KEEP = 7 * DAY;
 const iso = (ms) => new Date(ms).toISOString();
 const changes = (r) => Number((r && r.meta && r.meta.changes) || 0);
 
+/* WHY A DEVICE GOT WHAT IT GOT, one line per decision (the owner, 29 Sep
+ * 2026: "yes add the skip logging"). push_run keeps counts, and on 29 Sep a
+ * tablet marked sent with nothing delivered took a morning to explain: it had
+ * registered that day, which marks today's morning as answered. So every
+ * decision says itself -- sent, failed, gone, or skipped and why.
+ *
+ * A DEVICE IS NAMED BY ITS PLATFORM AND WHEN IT REGISTERED, never its token:
+ * that is enough to find its row in push_device, and a token in a log is a
+ * way to message a stranger's phone. */
+const who = (dev) => `${dev.platform || "device"} registered ${String(dev.created_at || "?").slice(0, 16)}`;
+const note = (dev, what) => console.log(`[push] ${who(dev)}: ${what}`);
+
 export async function run(env, now, send) {
   const db = env.DB;
   const day = utcDay(now);
   const stats = { sent: 0, failed: 0, pruned: 0 };
+  /* When the run before this one was, read before this run writes its own
+     row: a device registered since then is new to this run (below). */
+  const prev = await db.prepare("SELECT MAX(ran_at) AS at FROM push_run").first();
+  const since = prev && prev.at ? prev.at : iso(now - DAY);
 
   /* A token not re-registered for STALE_DAYS belongs to an app nobody opens.
      FCM may still accept messages for it, which is why this is not left to
@@ -73,12 +89,23 @@ export async function run(env, now, send) {
 
   const mark = (column, token) => db.prepare(
     `UPDATE push_device SET ${column} = ? WHERE token = ?`).bind(day, token).run();
+  const said = (out) => out === SENT ? "sent" : out === GONE ? "not delivered: FCM says the token is gone, device removed"
+    : "failed, will retry";
+
+  /* REGISTERED TODAY: its morning is marked answered at registration
+     (functions/api/push/device.js), so the query below never sees it and it
+     would get no line at all. Said once, in the first run after it arrived. */
+  const fresh = (await db.prepare(
+    `SELECT platform, created_at FROM push_device
+      WHERE want_morning = 1 AND sent_morning = ?1 AND created_at > ?2 AND created_at <= ?3`)
+    .bind(day, since, iso(now)).all()).results || [];
+  for (const dev of fresh) note(dev, "morning skipped: registered today, its first morning is tomorrow's");
 
   /* Only devices with something still owed today. The time checks are done
      here in JS rather than in SQL, because they need the device's time zone
      and SQLite has none. */
   const { results } = await db.prepare(
-    `SELECT token, user_id, tz, morning_minute, want_morning, want_streak, sent_morning, sent_streak
+    `SELECT token, platform, created_at, user_id, tz, morning_minute, want_morning, want_streak, sent_morning, sent_streak
        FROM push_device
       WHERE (want_morning = 1 AND (sent_morning IS NULL OR sent_morning <> ?1))
          OR (want_streak = 1 AND user_id IS NOT NULL AND (sent_streak IS NULL OR sent_streak <> ?1))`)
@@ -91,12 +118,14 @@ export async function run(env, now, send) {
       if (morningDue(dev, now)) {
         const played = dev.user_id ? playedOn(await daysOf(dev.user_id), day) : false;
         const out = played ? SENT : await deliver(dev.token, morningMessage());
+        note(dev, played ? "morning skipped: already played today" : "morning " + said(out));
         if (out === GONE) continue;
         if (out === SENT) await mark("sent_morning", dev.token);
       }
       if (streakDue(dev, now)) {
         const at = streakAtRisk(await daysOf(dev.user_id), day);
         const out = at > 0 ? await deliver(dev.token, streakMessage(at)) : SENT;
+        note(dev, at > 0 ? "streak nudge " + said(out) : "streak nudge skipped: no streak at risk (played today, or none to lose)");
         if (out === GONE) continue;
         if (out === SENT) await mark("sent_streak", dev.token);
       }
