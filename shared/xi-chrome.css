@@ -84,6 +84,18 @@
 }
 .xic-home:hover { text-decoration: underline; text-underline-offset: 3px; }
 .xic-home .xic-xi { color: var(--xi-ink); }
+/* "The XI Games - Football": the theme beside the wordmark, in its face and a
+   step quieter, so the site reads first and the theme second. */
+.xic-sep { margin: 0 6px; color: var(--ink-faint); font-family: var(--disp); }
+.xic-theme {
+  font-family: var(--disp);
+  font-size: 16px;
+  font-weight: 500;
+  color: var(--ink-soft);
+  text-decoration: none;
+  white-space: nowrap;
+}
+.xic-theme:hover { color: var(--ink); text-decoration: underline; text-underline-offset: 3px; }
 
 .xic-right {
   margin-left: auto;

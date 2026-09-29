@@ -66,12 +66,20 @@ for (const [name, doc, home] of [["crossword", cw, "/football/"], ["wordsearch",
                            ["the Friends crossword", frc, "/friends/"], ["the Friends hub", frh, "/friends/"]]) {
   t(`${name}: the bar has a burger`, !!doc.querySelector(".xic-bar .xic-burger"));
   /* The wordmark goes home from EVERY view, including mid-board. This is the
-     actual fix for being stranded on a puzzle. HOME IS THIS THEME'S HUB (the
-     owner, 28 Sep 2026: "Football should go to .../Football/ / Friends
-     should go to .../friends/"), in the bar and in the drawer alike. */
+     actual fix for being stranded on a puzzle. "THE XI GAMES - FOOTBALL", BOTH
+     CLICKABLE (the owner, 29 Sep 2026): the wordmark goes to the site root,
+     which is the theme picker, and the theme beside it to that theme's hub. */
   const homes = [...doc.querySelectorAll(".xic-bar .xic-home, .xic-drawer .xic-home")].map((a) => a.getAttribute("href"));
-  t(`${name}: the wordmark goes to ${home}, in the bar and the drawer`,
-    homes.length >= 2 && homes.every((h) => h === home), homes.join(" "));
+  t(`${name}: the wordmark goes to the site root, in the bar and the drawer`,
+    homes.length >= 2 && homes.every((h) => h === "/"), homes.join(" "));
+  const th = doc.querySelector(".xic-bar .xic-theme");
+  const want = home === "/friends/" ? "Friends" : "Football";
+  t(`${name}: and beside it "${want}", going to ${home}`,
+    !!th && th.textContent === want && th.getAttribute("href") === home &&
+      th.previousElementSibling && th.previousElementSibling.classList.contains("xic-sep") &&
+      th.previousElementSibling.previousElementSibling === doc.querySelector(".xic-bar .xic-home") &&
+      [...doc.querySelectorAll(".xic-bar")].every((b) => b.querySelectorAll(".xic-theme").length === 1),
+    th ? th.textContent + " -> " + th.getAttribute("href") : "no theme link");
   t(`${name}: the drawer is built`, !!doc.querySelector(".xic-drawer"));
   t(`${name}: the footer is built`, !!doc.querySelector(".xic-foot .xic-foot-in"));
 }
@@ -87,6 +95,8 @@ t("the crossword carries a bar in BOTH its views, so a board is never a dead end
   const at = render(themeHubFile("football"), "https://www.thexigames.com/");
   const hs = [...at.querySelectorAll(".xic-bar .xic-home, .xic-drawer .xic-home")].map((a) => a.getAttribute("href"));
   t("on the site root, the theme picker, the wordmark goes to the root", hs.length >= 2 && hs.every((h) => h === "/"), hs.join(" "));
+  t("and names no theme beside it, since the picker is in none",
+    !at.querySelector(".xic-bar .xic-theme") && !at.querySelector(".xic-bar .xic-sep"));
 }
 /* THE PICKER'S FOOTER LISTS EVERY THEME'S GAMES (the owner, 29 Sep 2026:
    "Yes, both games for now"): a column per theme, headed with its name, and
@@ -118,9 +128,14 @@ console.log("\nThe apps");
     "Mozilla/5.0 (iPhone) XIGamesApp/0.2.0 XIApp/quizzes");
   t("in the Quizzes app the wordmark goes to the site root, even on a Friends page",
     homes(qz).length >= 2 && homes(qz).every((h) => h === "/"), homes(qz).join(" "));
+  t("with Friends beside it, going to the Friends hub",
+    !!qz.querySelector(".xic-bar .xic-theme") && qz.querySelector(".xic-bar .xic-theme").getAttribute("href") === "/friends/");
   const fb = render("football/crossword/index.html", "https://www.thexigames.com/football/crossword/",
     "Mozilla/5.0 (iPhone) XIGamesApp/0.2.0 XIApp/football");
   t("in the Football app it goes to the football hub", homes(fb).length >= 2 && homes(fb).every((h) => h === "/football/"), homes(fb).join(" "));
+  /* Football's alone: the root would show it Friends, so there is no picker to
+     go back to and no theme to name. */
+  t("and names no theme beside it: that app is football's alone", !fb.querySelector(".xic-bar .xic-theme"));
   t("and the Get XI Quizzes button is not drawn while its store pages do not exist",
     !fb.querySelector(".xic-quizzes"));
   const old = render("football/crossword/index.html", "https://www.thexigames.com/football/crossword/",
@@ -129,8 +144,9 @@ console.log("\nThe apps");
     old.chrome.app() === "football" && fb.chrome.app() === "football" && qz.chrome.app() === "quizzes", old.chrome.app());
   t("and the football app is offered no store page until one exists", fb.chrome.quizzesOffer() === null);
   const web = render("football/crossword/index.html", "https://www.thexigames.com/football/crossword/");
-  t("and on the web: no app, no button, and the theme's hub", web.chrome.app() === null && !web.querySelector(".xic-quizzes") &&
-    homes(web).every((h) => h === "/football/"));
+  t("and on the web: no app, no button, the site root, and the theme beside it",
+    web.chrome.app() === null && !web.querySelector(".xic-quizzes") && homes(web).every((h) => h === "/") &&
+      !!web.querySelector(".xic-bar .xic-theme") && web.querySelector(".xic-bar .xic-theme").getAttribute("href") === "/football/");
 }
 
 console.log("\nThe squad is declared once");

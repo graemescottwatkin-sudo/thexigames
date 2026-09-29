@@ -197,17 +197,31 @@
     var seg = (location.pathname.split("/")[1] || "").toLowerCase();
     return SQUADS[seg] ? seg : "football";
   }
-  /* HOME IS THIS THEME'S HUB, not the site root. The owner, 28 Sep 2026, from
-     the Friends app: "if i click TheXIGames in the top left it takes me to
-     TheXIGames.com which is the football page / Football should go to:
-     https://www.thexigames.com/Football/ / Friends should go to:
-     https://www.thexigames.com/friends/". The root is football's by ruling,
-     so a Friends page linking to "/" sent its player into football. */
-  /* The picker's own wordmark stays on the picker: its first segment is
-     empty, and themeHere() would read that as football. */
+  /* THE WORDMARK IS THE SITE, AND THE THEME IS BESIDE IT. The owner, 29 Sep
+     2026, once the root became the theme picker: "if i go to Football i would
+     like to see / The XI Games - Football / but both clickable / so The XI
+     Games takes me to www.TheXIGames.com / so Football takes me to
+     www.TheXIGames.com/Football". That replaces the 28 Sep ruling that sent
+     the wordmark to the theme's hub, which was right only while the root was
+     football's.
+     THE FOOTBALL APP IS THE EXCEPTION: it is football's alone and opens on
+     /football/ (the owner, 28 Sep 2026: "football app links to
+     thexigames.com/football"), and the root would show it Friends. So there
+     the wordmark stays on the football hub and no theme is written beside it. */
   function homeHref() {
-    if (appName() === "quizzes" || (location.pathname || "/") === "/") return "/";
-    return "/" + themeHere() + "/";
+    return appName() === "football" ? "/football/" : "/";
+  }
+
+  /* THE THEME THIS PAGE IS IN, BY NAME, or null where it is in none: the
+     picker, or a page outside every theme. Read from the first segment
+     directly, not themeHere(), which falls back to football for anything
+     unrecognised -- and a crumb that said Football on a page that is not
+     would be the wrong answer stated confidently. */
+  function themeName(t) { return t.charAt(0).toUpperCase() + t.slice(1); }
+  function themeCrumb() {
+    if (appName() === "football") return null;
+    var seg = (location.pathname.split("/")[1] || "").toLowerCase();
+    return SQUADS[seg] ? { name: themeName(seg), href: "/" + seg + "/" } : null;
   }
 
   /* WHICH OF THE APPS THIS PAGE IS IN, from the user agent's `XIApp/<name>`
@@ -1111,6 +1125,16 @@
       var home = el("a", "xic-home", WORDMARK);
       home.href = homeHref();
       bar.insertBefore(home, burger.nextSibling);
+      /* "The XI Games - Football", both links: the site, then this theme. */
+      var crumb = themeCrumb();
+      if (crumb) {
+        var sep = el("span", "xic-sep", "&ndash;");
+        sep.setAttribute("aria-hidden", "true");
+        var th = el("a", "xic-theme", crumb.name);
+        th.href = crumb.href;
+        bar.insertBefore(sep, home.nextSibling);
+        bar.insertBefore(th, sep.nextSibling);
+      }
     }
 
     /* THE UNIVERSAL TRIO, at the right-hand end of every bar, after anything
@@ -1195,7 +1219,7 @@
       Object.keys(SQUADS).forEach(function (t) {
         var squad = SQUADS[t] || [];
         if (!squad.some(function (g) { return g.href && g.name; })) return;
-        inner.appendChild(gamesColumn(t.charAt(0).toUpperCase() + t.slice(1), squad));
+        inner.appendChild(gamesColumn(themeName(t), squad));
       });
     } else {
       inner.appendChild(gamesColumn("The XI Games", SQUAD));
