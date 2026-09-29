@@ -226,8 +226,8 @@ and diagnose before anything ships. Never push past a red gate.
 - `results`/`plays` sanity via wrangler if relevant:
   `npx wrangler d1 execute crosswordxi --remote --command="..."`.
   **Never run a migration that is already applied** — `ALTER TABLE` is not
-  idempotent. Migration state: **001–047 all applied** (as of 28 Sep 2026 —
-  check production) — 035 (QuickFire text
+  idempotent. Migration state: **001–047 and 049 applied; 048 NOT applied**
+  (as of 29 Sep 2026 — check production) — 035 (QuickFire text
   ids), 036 and 038 (Codeword and its rounds), 037 and 039 (QuickFire rounds
   and the wrong-pick penalty), 040 and 041 (Who Am I and its score) all landed
   between 13 and 15 Sep 2026 and this line still read "001–034" afterwards.
@@ -280,7 +280,16 @@ and diagnose before anything ships. Never push past a red gate.
   Lightning session at launch. A second session verified all eight objects from
   production the same day, with 2,829 questions in `fr_lr_question`. It is only
   `CREATE ... IF NOT EXISTS`, so it is safe to re-run. 048 (Friends word
-  search) is written and was NOT applied as of that day.
+  search) is written, lives on the `wordsearch` branch with the game, and is
+  NOT applied.
+  049 (`fr_wa_source`: where each Friends Who Am I clue came from, shown after
+  the card by the owner's ruling of 29 Sep 2026, "Yes show the source after the
+  round") was applied 29 Sep 2026, AHEAD of 048, as 022 was ahead of 023. It
+  was verified from production the same minute: all nine columns present. The
+  deck import that fills it followed and was checked too: 1,956 citations, 0
+  without a matching clue, and 0 daily clues without one. `sourcesFor`'s own
+  SQL, run live, returned only step 1 at stage 1. It is one `CREATE TABLE IF
+  NOT EXISTS`, so it is safe to re-run.
   A STALE MIGRATION NUMBER IS THE MOST DANGEROUS FIGURE IN THIS FILE, because
   the sentence immediately before it tells you never to re-run an applied one
   and `ALTER TABLE` is not idempotent — so a reader trusting "034" could
