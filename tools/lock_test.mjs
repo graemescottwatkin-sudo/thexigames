@@ -1037,24 +1037,26 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "l
   for (const vp of [VIEWPORTS[1], VIEWPORTS[3]]) {
     const { page, context } = await openLightning(game, vp);
     await lightningPick(page, true);
-    /* A MISS SAYS NOTHING ABOUT THE ANSWER until the run is over (the owner,
-       28 Sep 2026): no option lit as right, and the right text nowhere in the
-       feedback line. Read in the moment after the verdict, before the next. */
+    /* A MISS SHOWS THE ANSWER AT ONCE (the owner, 29 Sep 2026, reversing the
+       28 Sep hold): the pick red, the right option green, and what it cost
+       said at the clock. Read in the one-second look, before the next. */
     const miss = await page.evaluate(async (right) => {
       const b = [...document.querySelectorAll("#options .option:not([disabled])")].find((x) => x.textContent !== right);
       b.click();
       const start = Date.now();
       while (!b.classList.contains("wrong") && Date.now() - start < 5000) await new Promise((r) => setTimeout(r, 20));
-      return { marked: b.classList.contains("wrong"), lit: document.querySelectorAll("#options .option.right").length,
-        said: document.getElementById("feedback").textContent };
+      const lit = [...document.querySelectorAll("#options .option.right")];
+      const tag = document.getElementById("penalty");
+      return { marked: b.classList.contains("wrong"), lit: lit.length, litIsRight: lit.length === 1 && lit[0].textContent === right,
+        cost: tag ? tag.textContent : "", look: document.getElementById("lookBar").classList.contains("on") };
     }, LR_RIGHT);
-    t(`${vp[0]}: a miss is marked, and the right answer is not shown mid-run`,
-      miss.marked && miss.lit === 0 && !miss.said.includes(LR_RIGHT), JSON.stringify(miss));
-    /* Misses until the clock runs out: twenty at three seconds is the whole
-       minute, fewer once the real seconds between picks are counted too, and
-       never more than twenty-one (one right, then the minute in misses). */
-    await wait(800);
-    for (let i = 0; i < 25; i++) {
+    t(`${vp[0]}: a miss goes red, the right answer green at once, the cost at the clock and the look filling`,
+      miss.marked && miss.litIsRight && /^−[0-9]+s/.test(miss.cost) && miss.look, JSON.stringify(miss));
+    /* Misses until the clock runs out: at two seconds off and a one-second look
+       each, about thirty fill the ninety seconds, and never more than forty-six
+       (one right, then ninety seconds in two-second penalties). */
+    await wait(1200);
+    for (let i = 0; i < 50; i++) {
       if (!(await page.$eval("#screenResults", (e) => e.hidden))) break;
       await lightningPick(page, false);
     }
@@ -1077,7 +1079,7 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "l
       }),
     }));
     t(`${vp[0]}: the run ends on the clock, and the result is a page that reads rather than a locked screen`,
-      !end.locked && end.scrollX <= 1 && end.score === "1" && end.marks >= 10 && end.marks <= 21, JSON.stringify(end));
+      !end.locked && end.scrollX <= 1 && end.score === "1" && end.marks >= 10 && end.marks <= 46, JSON.stringify(end));
     t(`${vp[0]}: and now, after the whistle, every miss is listed with its answer`,
       end.missed === end.marks - 1 && end.named, JSON.stringify(end));
     await reachCheck(page, vp[0], FT_BOX[id], "the result", "#ftPanel");

@@ -17,10 +17,11 @@
  * a missing hash is a failure, because a comparison against nothing is the
  * sentinel fault.
  *
- * WHAT IS THIS GAME'S OWN. Lightning Round holds its answers back until the
- * run is over (the owner, 28 Sep 2026). The server's half of that is proved by
- * friends/lightning/round_test.mjs; the page's half — it never reads an answer
- * off a verdict — is checked here.
+ * WHAT IS THIS GAME'S OWN. Lightning Round shows the right answer the moment a
+ * pick is marked (the owner, 29 Sep 2026, "Immediately upon answering",
+ * reversing the 28 Sep hold to the end of the run). The server's half -- every
+ * verdict names its own question's answer and a served question never does --
+ * is proved by friends/lightning/round_test.mjs; the page's half is here.
  */
 import fs from "node:fs";
 import path from "node:path";
@@ -230,12 +231,20 @@ t("PRECONDITION: the row carries its answer", ROW.answer.length > 0);
 t("a served question has the four options and no answer field",
   !/"answer"/.test(sent) && JSON.parse(sent).options.length === 4, sent);
 
-/* THE PAGE'S HALF OF "ANSWERS AT THE END". The verdict from /answer carries no
-   answer (round_test proves the server); the page must not go looking for one,
-   or the day the server regresses the page would show it mid-run. */
-t("the page reads no answer off a verdict mid-run", !/\br\.answer\b/.test(jsCode),
-  "only the end-of-run review (a.answer, from /finish's answers) names answers");
-t("and the end-of-run review does, from /finish's answers",
+/* THE PAGE'S HALF OF "THE ANSWER THE MOMENT IT IS GIVEN" (the owner, 29 Sep
+   2026, reversing the 28 Sep hold to the end). The verdict from /answer names
+   the right option (round_test proves the server); the page must light it, or
+   a player is told "wrong" and not what was right -- and it must light it from
+   THE VERDICT, never from a question as served, which carries no answer. */
+t("the page lights the right option green from the verdict",
+  /if \(r\.answer\) markRight\(r\.answer\);/.test(jsCode) &&
+    /b\.classList\.add\('right'\)/.test(jsCode.slice(jsCode.indexOf("function markRight"))),
+  "settle() -> markRight(r.answer)");
+t("and a wrong pick goes red", /button\.classList\.add\(r\.correct \? 'right' : 'wrong'\)/.test(jsCode) &&
+  /\.option\.wrong\{background:var\(--danger\)/.test(css));
+t("and says, at the clock, what the miss cost and the total lost",
+  /showPenalty\(cost, Math\.round\(run\.lostMs \/ 1000\)\)/.test(jsCode) && markup.includes('id="penalty"'));
+t("the end-of-run review lists them again, from /finish's answers",
   /\ba\.answer\b/.test(jsCode) && /r\.answers/.test(jsCode));
 
 /* ---- one fact, one place ------------------------------------------------ */
@@ -322,7 +331,7 @@ const readable = (() => {
   return body.replace(/<[^>]+>/g, " ") + " " + attrs + " " + strings;
 })();
 const hay = " " + readable.toLowerCase().replace(/[^a-z]+/g, " ").trim() + " ";
-t("PRECONDITION: the scan can see the copy", hay.includes(" sixty seconds ") && hay.includes(" practice "));
+t("PRECONDITION: the scan can see the copy", hay.includes(" ninety seconds ") && hay.includes(" practice "));
 const FOOTBALL = ["club", "clubs", "player", "players", "pitch", "substitution", "substitutions", "goal",
   "goals", "footballer", "kick off", "full time", "match", "minute", "eleven"];
 t("no football vocabulary in what a player can read", (() => {

@@ -168,7 +168,8 @@ console.log("\n=== A run ===");
   const wrongPick = (q) => q.options.find((o) => o !== right(q));
 
   let a1 = await answerRun(env, run, 1, right(r.question), T0 + 2000);
-  t("a right answer scores one", a1.correct && a1.score === 1 && !("answer" in a1));
+  t("a right answer scores one", a1.correct && a1.score === 1);
+  t("and names the right one, which is the pick", a1.answer === right(r.question));
   t("and the next question comes back with it", a1.next && a1.next.idx === 2);
   t("the clock is the server's", a1.msLeft === RUN_MS - 2000);
 
@@ -180,10 +181,12 @@ console.log("\n=== A run ===");
   let a2 = await answerRun(env, run, 2, wrongPick(a1.next), T0 + 4000);
   t("a wrong answer scores nothing", !a2.correct && a2.score === 1 && a2.wrong === 1);
   t(`and costs ${WRONG_PENALTY_MS / 1000} seconds`, a2.penaltyMs === WRONG_PENALTY_MS && a2.msLeft === RUN_MS - 4000 - WRONG_PENALTY_MS);
-  t("but does not say what it was until the run is over", !("answer" in a2) && !JSON.stringify(a2).includes("Right " + a1.next.id));
+  /* THE ANSWER THE MOMENT IT IS MISSED (the owner, 29 Sep 2026, reversing the
+     28 Sep hold to the end): the page lights it green straight away. */
+  t("and says what it was, straight away", a2.answer === "Right " + a1.next.id);
   run = await getRun(env, r.runId);
   const replayWrong = await answerRun(env, run, 2, right(a1.next), T0 + 4200);
-  t("nor on a replay of it", replayWrong.replayed && !("answer" in replayWrong));
+  t("and the same on a replay of it", replayWrong.replayed && replayWrong.answer === "Right " + a1.next.id && !replayWrong.correct);
 
   run = await getRun(env, r.runId);
   t("a question not yet served cannot be answered", (await answerRun(env, run, 5, "x", T0 + 5000)).error);
@@ -207,6 +210,7 @@ console.log("\n=== A run ===");
     JSON.stringify({ score: fin.score, wrong: fin.wrong, answered: fin.answered }));
   t("and lists the one they missed, with its answer, now", fin.missed.length === 1 && fin.missed[0].answer === "Right " + a1.next.id);
   t("and the marks in order", fin.marks.join("") === "101");
+  t("and the time the misses cost", fin.lostMs === WRONG_PENALTY_MS, String(fin.lostMs));
   run = await getRun(env, r.runId);
   t("finishing twice is the same result", (await finishRun(env, run, end + 9000)).score === 2);
   t("and a finished run takes no more answers", (await answerRun(env, run, 4, "x", end + 9000)).error);
@@ -240,7 +244,7 @@ console.log("\n=== Which board a number is ===");
     pastRun.seq === JSON.stringify(await dailySeq(env, "2026-09-29")) && pastRun.seed === "daily:2026-09-29");
   t("a board from the future does not start", (await startRun(env, { mode: "daily", no: 16, now: LATER })).error === "no such board");
   t("nor one from before the launch", (await startRun(env, { mode: "daily", no: 10, now: LAUNCH })).error === "no such board");
-  const fin = await finishRun(env, pastRun, LATER + 61000);
+  const fin = await finishRun(env, pastRun, LATER + RUN_MS + 1000);
   t("and its result names its board", fin.no === 12 && fin.day === "2026-09-29");
 }
 
@@ -282,7 +286,10 @@ console.log("\n=== The routes ===");
   t("and the whole response carries no answer", !/"answer"/.test(JSON.stringify(body)));
   const a = await post(answerRoute, { runId: body.runId, idx: 1, pick: body.question.options[0] });
   t("an answer is marked", a.status === 200);
-  t("and its response carries no answer, right or wrong", !/"answer"/.test(JSON.stringify(await a.json())));
+  const verdict = await a.json();
+  t("and its verdict names the right one, and only that question's",
+    typeof verdict.answer === "string" && body.question.options.includes(verdict.answer) &&
+      !(verdict.next && "answer" in verdict.next));
   t("the store keeps nothing cached", s.headers.get("Cache-Control") === "no-store");
 }
 

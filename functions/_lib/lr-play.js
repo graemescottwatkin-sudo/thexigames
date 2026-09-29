@@ -2,12 +2,12 @@
  *
  * The rules are in lr-round.js; this is where a run is kept, so the routes
  * stay thin. The shape is QuickFire's (qf-play.js): the server deals, the
- * server holds the clock, the server marks, and the answer leaves only for a
- * question the run has missed, and only once the run is over.
+ * server holds the clock, the server marks, and an answer leaves only with the
+ * verdict on its own question, once that question is settled.
  *
  * ONE CLOCK FOR THE RUN, NOT ONE PER QUESTION. QuickFire stamps each question
- * as it is served; here sixty seconds start when the run is written and every
- * wrong answer moves the end three seconds closer. The next question travels
+ * as it is served; here the run's time (config RUN_MS) starts when the run is
+ * written and every wrong answer moves the end WRONG_PENALTY_MS closer. The next question travels
  * back with the verdict on the last, so a run costs one round trip an answer.
  */
 import { utcDay, dailyNumber, dailyDayKey, dailyNoForDay } from "./daily.js";
@@ -221,15 +221,21 @@ export async function answerRun(env, run, idx, pick, now = Date.now()) {
     wrong: Number(run.wrong) + (verdict.correct ? 0 : 1),
     penaltyMs: penalty,
     msLeft: Math.max(0, leftAfter),
-    /* NO ANSWER MID-RUN, the owner's call of 28 Sep 2026: every wrong pick
-       naming its answer made unlimited practice a way to read the bank out.
-       The ones they missed are given back by finishRun(), after the whistle. */
+    /* THE RIGHT ONE, WITH EVERY VERDICT, so the page can light it green the
+       moment a pick is marked: the owner, 29 Sep 2026, "Immediately upon
+       answering" -- reversing the 28 Sep hold to the end of the run. Only ever
+       for the question this request has just settled; a question not yet
+       answered never carries it (shape() sends none), and the cap on starts
+       per hour is what stands between this and the bank read out. */
+    answer: row.answer,
     next,
   };
 }
 
 async function replay(env, run, idx, seq, correct, now) {
   const fresh = (await getRun(env, run.run_id)) || run;
+  /* The same verdict the first time gave, answer and all. */
+  const row = await questionRow(env, seq[idx - 1]);
   let next = null;
   const left = msLeft(fresh, now);
   if (left > 0 && Number(fresh.served) === idx + 1 && idx < seq.length) {
@@ -240,6 +246,7 @@ async function replay(env, run, idx, seq, correct, now) {
     idx, correct, replayed: true,
     score: Number(fresh.score), wrong: Number(fresh.wrong), penaltyMs: 0,
     msLeft: Math.max(0, left),
+    ...(row ? { answer: row.answer } : {}),
     next,
   };
 }
@@ -267,10 +274,11 @@ export async function finishRun(env, run, now = Date.now()) {
     mode: run.mode, day: run.play_date,
     no: run.mode === "daily" ? dailyNoForDay(run.play_date) : null,
     score, wrong: answers.filter((r) => !r.correct).length, answered: answers.length,
+    /* What the misses took off the clock, as charged. */
+    lostMs: Number(run.penalty_ms) || 0,
     marks: answers.map((r) => (r.correct ? 1 : 0)),
-    /* THE ONES THEY MISSED, with their answers. This is the only place an
-       answer leaves the server, and only for a finished run: the run itself
-       says right or wrong and nothing more. */
+    /* THE ONES THEY MISSED, with their answers, gathered for the review after
+       the whistle (each was also shown the moment it was missed). */
     missed: answers.filter((r) => !r.correct).map((r) => ({ clue: r.clue, pick: r.pick, answer: r.answer })),
     /* EVERY ONE, IN ORDER, for the family panel's folded "Your answers": the
        clue and whether it was got, and the answer only where it was missed --

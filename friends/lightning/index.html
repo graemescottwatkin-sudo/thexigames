@@ -4,19 +4,19 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
 <meta name="theme-color" content="#F4F5F2">
-<title>Lightning Round XI: Friends — sixty seconds of Friends questions | The XI Games</title>
-<meta name="description" content="Sixty seconds, all the Friends questions you can answer. Four options each; a wrong one costs three seconds. A new run every day from The XI Games.">
+<title>Lightning Round XI: Friends — ninety seconds of Friends questions | The XI Games</title>
+<meta name="description" content="Ninety seconds, all the Friends questions you can answer. Four options each; a wrong one costs two seconds. A new run every day from The XI Games.">
 <!-- LAUNCHED 28 Sep 2026, and public like the other Friends games: found from
      /friends/ and search, never from the football site. -->
 <link rel="canonical" href="https://www.thexigames.com/friends/lightning/">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://www.thexigames.com/friends/lightning/">
-<meta property="og:title" content="Lightning Round XI: Friends — sixty seconds of Friends questions">
-<meta property="og:description" content="Sixty seconds, all the Friends questions you can answer.">
+<meta property="og:title" content="Lightning Round XI: Friends — ninety seconds of Friends questions">
+<meta property="og:description" content="Ninety seconds, all the Friends questions you can answer.">
 <meta property="og:site_name" content="The XI Games">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Lightning Round XI: Friends — sixty seconds of Friends questions">
-<meta name="twitter:description" content="Sixty seconds, all the Friends questions you can answer.">
+<meta name="twitter:title" content="Lightning Round XI: Friends — ninety seconds of Friends questions">
+<meta name="twitter:description" content="Ninety seconds, all the Friends questions you can answer.">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"WebApplication",
  "name":"Lightning Round XI: Friends","applicationCategory":"Game",
@@ -34,7 +34,7 @@
 <link rel="stylesheet" href="/shared/xi-share.css?v=v87">
 <link rel="stylesheet" href="/shared/xi-fulltime.css?v=v87">
 <script src="/shared/xi-theme.js?v=v87"></script>
-<link rel="stylesheet" href="css/style.css?v=v001a">
+<link rel="stylesheet" href="css/style.css?v=v001b">
 </head>
 <body>
 
@@ -51,10 +51,10 @@
       <!-- THE BOARD, named from the server: "Today's run · #11", or a past
            run's own number and date. Written once the page knows which board
            its address is (js/game.js describeBoard). -->
-      <div class="eyebrow" id="startKicker">Sixty seconds</div>
+      <div class="eyebrow" id="startKicker">Ninety seconds</div>
       <h1>Lightning Round XI: Friends</h1>
       <p class="pmQuote">“Thirty seconds, all the questions you can answer.” <span>Ross, The One with the Embryos</span></p>
-      <p class="pmLede" id="startBlurb">Sixty seconds. Four answers to each question. A right one scores, a wrong one costs three seconds.</p>
+      <p class="pmLede" id="startBlurb">Ninety seconds. Four answers to each question. A right one scores, a wrong one costs two seconds.</p>
       <p class="todayDone" id="todayDone" hidden></p>
       <button class="kick" id="playDaily" disabled>Play today’s run</button>
       <button class="mode" id="playPractice">
@@ -73,7 +73,11 @@
     <div id="xiBar"></div>
     <div class="timer" aria-hidden="true"><div class="timerFill" id="timerFill"></div></div>
     <p class="clue" id="clue">—</p>
+    <!-- THE FOUR, TWO BY TWO (the owner, 29 Sep 2026): A B over C D. -->
     <div class="options" id="options" role="group" aria-label="Choose an answer"></div>
+    <!-- After a miss: the look filling, and the seconds it cost at the clock. -->
+    <div class="lookBar" id="lookBar" aria-hidden="true"><div class="lookFill"></div></div>
+    <div class="penalty" id="penalty" aria-hidden="true"></div>
     <p class="feedback" id="feedback" role="status" aria-live="polite"></p>
   </section>
 
@@ -92,8 +96,8 @@
   <section class="how" id="how">
     <a class="how-back" href="#play">&lsaquo; Back</a>
     <h2>How to play</h2>
-    <p><b>Sixty seconds.</b> Answer as many Friends questions as you can. Each has four answers and one is right.</p>
-    <p><b>Right is a point.</b> Wrong costs three seconds off the clock. The answers to the ones you missed are shown when the time is up.</p>
+    <p><b>Ninety seconds.</b> Answer as many Friends questions as you can. Each has four answers and one is right.</p>
+    <p><b>Right is a point.</b> Wrong goes red, the right answer lights up green, and two seconds come off the clock.</p>
     <p><b>Each day’s run</b> is the same questions for everyone, so scores can be compared. It opens on an easy one and gets harder in places. Your first run of the day is the one that counts.</p>
     <p><b>Practice</b> as often as you like. It avoids questions you have seen lately and today’s run.</p>
   </section>
@@ -109,8 +113,8 @@
      and the Friends streaks read it. -->
 <script src="/shared/xi-played.js?v=v87"></script>
 <script src="/shared/xi-fulltime.js?v=v87"></script>
-<script src="js/config.js?v=v001a"></script>
+<script src="js/config.js?v=v001b"></script>
 <script src="/shared/xi-plays.js?v=v87"></script>
-<script src="js/game.js?v=v001a"></script>
+<script src="js/game.js?v=v001b"></script>
 </body>
 </html>

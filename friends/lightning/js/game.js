@@ -6,19 +6,22 @@
  * NOTHING ABOUT A SCORE IS DECIDED HERE, QuickFire's rule:
  *
  *   the deal     is the server's — /start deals the run and serves question one
- *   the clock    is the server's — sixty seconds from /start, less three a miss
- *   the marking  is the server's — /answer says right or wrong, and sends the next
+ *   the clock    is the server's — ninety seconds from /start, less two a miss
+ *   the marking  is the server's — /answer says right or wrong and which was
+ *                                  right, and sends the next
  *   the score    is the server's — /finish counts its own rows
  *
- * ANSWERS ARE HELD BACK UNTIL THE RUN IS OVER (the owner, 28 Sep 2026): a run
- * says right or wrong and nothing more, and the family's Full Time panel lists
- * the missed ones with their answers.
+ * EVERY ANSWER IS SHOWN THE MOMENT IT IS GIVEN (the owner, 29 Sep 2026,
+ * "Immediately upon answering", reversing the 28 Sep hold to the end): the
+ * pick goes red when it is wrong and the right option green, for a one-second
+ * look the clock runs through -- shown filling, with the seconds it cost
+ * called out at the clock. The Full Time panel lists them again.
  *
  * WHICH BOARD. /friends/lightning/daily/<no> is board <no>, the family's daily
  * number; the front page is today's. The page asks /api/lightning_fr/daily
  * which day that is before anything starts, and the server bounds it.
  */
-var BUILD = "v001a";
+var BUILD = "v001b";
 
 (function () {
   'use strict';
@@ -99,7 +102,7 @@ var BUILD = "v001a";
 
   var el = {};
   ['screenStart', 'screenGame', 'screenResults', 'startKicker', 'playDaily', 'playPractice',
-    'todayDone', 'startBlurb', 'startNote', 'timerFill', 'clue', 'options', 'feedback',
+    'todayDone', 'startBlurb', 'startNote', 'timerFill', 'clue', 'options', 'feedback', 'penalty', 'lookBar',
     'ftPanel', 'ftPractice', 'ftBack'].forEach(function (id) { el[id] = document.getElementById(id); });
   var timerBox = document.querySelector('.timer');
 
@@ -182,9 +185,47 @@ var BUILD = "v001a";
       el.options.appendChild(b);
     });
     setFeedback('');
+    hideLook();
     renderBar();
     queueRoom();
   }
+
+  /* QuickFire's: the option whose text is the answer. The importer refuses a
+     set without exactly one, so this lights one button and never two. */
+  function markRight(answer) {
+    Array.prototype.forEach.call(el.options.querySelectorAll('.option'), function (b) {
+      if (b.textContent === answer) b.classList.add('right');
+    });
+  }
+
+  /* THE COST, AT THE CLOCK: "−2s" pops out under the bar's own clock, which
+     the shared bar draws, so it is placed by the clock slot's position rather
+     than written into a bar this game does not own. */
+  function showPenalty(secs, totalSecs) {
+    var tag = el.penalty;
+    if (!tag || !secs) return;
+    var slot = document.querySelector('#xiBar [data-k="clock"]');
+    var host = el.screenGame.getBoundingClientRect();
+    if (slot) {
+      var r = slot.getBoundingClientRect();
+      tag.style.left = (r.left - host.left) + 'px';
+      tag.style.top = (r.bottom - host.top + 2) + 'px';
+    }
+    /* AND THE RUNNING TOTAL once there is more than this one (the owner,
+       29 Sep 2026: "show the total time lost"). */
+    tag.textContent = '−' + secs + 's' + (totalSecs > secs ? ' · ' + totalSecs + 's lost' : '');
+    tag.classList.remove('show'); void tag.offsetWidth; tag.classList.add('show');
+  }
+
+  /* THE LOOK, FILLING: 0 to 100% across the pause after a miss, so a player
+     sees the game is showing them something and not stuck. */
+  function showLook(ms) {
+    var bar = el.lookBar;
+    if (!bar) return;
+    bar.style.setProperty('--look', (Number(ms) || 0) + 'ms');
+    bar.classList.remove('on'); void bar.offsetWidth; bar.classList.add('on');
+  }
+  function hideLook() { if (el.lookBar) el.lookBar.classList.remove('on'); }
 
   function lockOptions(on) {
     Array.prototype.forEach.call(el.options.querySelectorAll('.option'), function (b) { b.disabled = on; });
@@ -303,12 +344,19 @@ var BUILD = "v001a";
     anchor(r.msLeft);
     renderClock();
     button.classList.add(r.correct ? 'right' : 'wrong');
+    /* THE RIGHT ONE, LIT GREEN, from the verdict: the server names it for the
+       question it has just settled, and for no other. */
+    if (r.answer) markRight(r.answer);
     if (r.correct) {
       setFeedback('+1', 'good');
     } else {
-      /* NO ANSWER HERE: it is held back until the run is over (the owner,
-         28 Sep 2026), and the panel at the end lists every one missed. */
-      setFeedback('−3 seconds', 'miss');
+      /* WHAT THE MISS COST, as the server charged it: said beside the clock,
+         and the look shown filling so the pause reads as time going. */
+      var cost = Math.round((Number(r.penaltyMs) || 0) / 1000);
+      setFeedback('Wrong — the right one is in green', 'miss');
+      run.lostMs = (run.lostMs || 0) + (Number(r.penaltyMs) || 0);
+      showPenalty(cost, Math.round(run.lostMs / 1000));
+      showLook(CONFIG.WRONG_PAUSE_MS);
       if (timerBox) { timerBox.classList.remove('hit'); void timerBox.offsetWidth; timerBox.classList.add('hit'); }
     }
     renderBar();
@@ -469,7 +517,9 @@ var BUILD = "v001a";
         kicker: "Time's up",
         date: daily ? (isFirst ? XIFullTime.dayLabel(r.day) : 'Played again') : 'Practice',
         score: r.score, max: answered, boxes: boxes, tally: true,
-        stats: r.offline ? 'This result did not reach us, so it is the page’s own count.' : null,
+        /* THE TIME THE MISSES COST, the server's own sum of what it charged. */
+        stats: r.offline ? 'This result did not reach us, so it is the page’s own count.'
+          : (r.lostMs ? Math.round(r.lostMs / 1000) + ' seconds lost to wrong answers' : 'No time lost to wrong answers'),
         answers: (r.answers || []).map(function (a) {
           return { s: a.correct ? 'g' : 'r', text: a.clue || '', was: a.correct ? null : a.answer,
                    points: a.correct ? 1 : 0 };
@@ -477,7 +527,7 @@ var BUILD = "v001a";
         share: function () {
           var sm = (shown && shown.marks) || marks;
           return NAME + (daily ? ' · #' + r.no : ' · practice') + '\n' +
-            '⚡ ' + (shown ? shown.score : r.score) + ' in 60 seconds\n' +
+            '⚡ ' + (shown ? shown.score : r.score) + ' in ' + Math.round(CONFIG.RUN_MS / 1000) + ' seconds\n' +
             XIFullTime.squares(sm.map(function (m) { return { s: m ? 'g' : 'r' }; }));
         },
         url: function () { return daily ? boardHref(r.no) : location.origin + '/friends/lightning/'; }

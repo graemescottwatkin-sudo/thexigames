@@ -11,9 +11,10 @@
  *
  * WHAT THIS EXISTS TO CATCH, in order of how badly it would hurt:
  *
- *   1. an ANSWER leaving the server mid-run. Answers are held back until the
- *      run is over (the owner, 28 Sep 2026); a verdict carrying one would make
- *      unlimited practice a way to read the bank out.
+ *   1. an ANSWER leaving the server before its question is answered. A served
+ *      question never carries one; the verdict on a pick names the right one,
+ *      at once (the owner, 29 Sep 2026, reversing the 28 Sep hold to the end),
+ *      and names nothing about the question that comes next with it.
  *   2. a run being ended early, or a pick being marked, on the page's say-so
  *      rather than the server's clock.
  *   3. a board from the future, which is a daily seen before its day.
@@ -30,6 +31,7 @@
  * catches a crash, the floor catches a block that goes quiet without crashing.
  */
 import { gamePath } from "../../functions/_lib/permalink.js";
+import CONFIG from "./js/config.js";
 
 const BASE = "https://www.thexigames.com";
 const GAME = "lightning_fr";
@@ -113,7 +115,8 @@ t("a practice run starts: the tables and the pool are there", start.status === 2
 const q1 = start.json && start.json.question;
 t("with question one and four options", !!q1 && typeof q1.clue === "string" && Array.isArray(q1.options) && q1.options.length === 4);
 t("and no answer anywhere in it", !/"answer"/.test(start.text));
-t("and the full minute on the server's clock", !!start.json && start.json.msLeft === 60000, start.json && String(start.json.msLeft));
+t("and the full run on the server's clock", !!start.json && start.json.msLeft === CONFIG.RUN_MS,
+  start.json && start.json.msLeft + " of " + CONFIG.RUN_MS);
 
 let verdict = null;
 if (q1) {
@@ -123,8 +126,11 @@ if (q1) {
   verdict = await post("/api/lightning_fr/answer", { runId: start.json.runId, idx: 1, pick: q1.options[0] });
   t("a pick is marked", verdict.status === 200 && !!verdict.json && typeof verdict.json.correct === "boolean",
     verdict.text.slice(0, 120));
-  /* THE ONE THIS FILE EXISTS FOR: right or wrong, the verdict names nothing. */
-  t("and the verdict carries no answer, right or wrong", !/"answer"/.test(verdict.text));
+  /* THE ONE THIS FILE EXISTS FOR: the verdict names the right one of THIS
+     question's four, and the next question arrives without its own. */
+  t("and the verdict names the right option, and nothing of the next question's",
+    !!verdict.json && q1.options.includes(verdict.json.answer) &&
+      !!verdict.json.next && !("answer" in verdict.json.next));
   t("and brings the next question with it",
     !!verdict.json && !!verdict.json.next && verdict.json.next.idx === 2 && verdict.json.next.options.length === 4);
   const early = await post("/api/lightning_fr/finish", { runId: start.json.runId });

@@ -71,8 +71,12 @@ a.mode{text-decoration:none;box-sizing:border-box}
 
 .clue{font-family:var(--disp);font-weight:600;font-size:24px;line-height:1.2;margin:14px 0 4px}
 
-.options{display:flex;flex-direction:column;gap:9px;margin:18px 0 12px}
-.option{width:100%;min-height:var(--tap);padding:13px 15px;text-align:left;
+/* TWO BY TWO, A B over C D (the owner, 29 Sep 2026). Every cell the same
+   height, so a long answer wraps in its own cell and the grid stays square to
+   the eye; the text is centred so a short answer does not sit in a corner. */
+.options{display:grid;grid-template-columns:1fr 1fr;grid-auto-rows:1fr;gap:9px;margin:18px 0 12px}
+.option{width:100%;min-height:var(--tap);padding:13px 12px;text-align:center;
+  overflow-wrap:anywhere;hyphens:auto;
   background:var(--paper);border:1.5px solid var(--line);border-radius:11px;
   color:var(--ink);font-family:var(--disp);font-weight:600;
   font-size:clamp(16px,4.4vw,19px);line-height:1.25;
@@ -81,9 +85,33 @@ a.mode{text-decoration:none;box-sizing:border-box}
 .option:active:not(:disabled){transform:translateY(1px)}
 .option:disabled{cursor:default}
 .option.chosen{border-color:var(--ink-soft)}
+/* RIGHT FILLS GREEN, WRONG FILLS RED (the owner, 29 Sep 2026: "Highlight in
+   amber or red if wrong / Highlight the correct option in green"), in the
+   family's own tokens. Not on hue alone: each carries its mark, a tick or a
+   cross, so the two differ for a player who cannot tell the colours apart. */
 .option.right{background:var(--ok);border-color:var(--ok);color:var(--paper)}
-.option.wrong{border-style:dashed;border-color:var(--danger);color:var(--danger)}
+.option.wrong{background:var(--danger);border-color:var(--danger);color:var(--paper)}
+.option.right::after{content:" ✓"}
+.option.wrong::after{content:" ✕"}
 .option:disabled:not(.right):not(.wrong){opacity:.45}
+
+/* THE LOOK AFTER A MISS, filling 0 to 100% across it. Always in the layout,
+   only drawn when on, so the screen does not jump when it appears. */
+.lookBar{height:6px;border-radius:3px;background:var(--tint-strong);overflow:hidden;
+  margin:0 0 10px;visibility:hidden}
+.lookBar.on{visibility:visible}
+.lookFill{height:100%;width:0;background:var(--danger)}
+.lookBar.on .lookFill{animation:lookFill var(--look,1000ms) linear forwards}
+@keyframes lookFill{from{width:0}to{width:100%}}
+
+/* THE COST, AT THE CLOCK: placed under the bar's clock by game.js. */
+#screenGame{position:relative}
+.penalty{position:absolute;left:0;top:0;z-index:5;pointer-events:none;opacity:0;
+  font-family:var(--disp);font-weight:700;font-size:30px;line-height:1;color:var(--paper);
+  background:var(--danger);border-radius:8px;padding:4px 10px}
+.penalty.show{animation:penaltyPop 1.2s ease-out forwards}
+@keyframes penaltyPop{0%{opacity:0;transform:scale(.6)}15%{opacity:1;transform:scale(1.15)}
+  30%{transform:scale(1)}75%{opacity:1}100%{opacity:0;transform:translateY(6px)}}
 
 .feedback{min-height:1.5em;margin:0 0 14px;font-family:var(--disp);font-weight:600;
   font-size:15px;letter-spacing:.04em;text-transform:uppercase;color:var(--ink-soft)}
@@ -117,8 +145,9 @@ body.locked .timer{height:max(6px,.9cqh);margin-bottom:1.4cqh}
 body.locked .clue{flex:1 1 auto;min-height:0;overflow:hidden;display:flex;align-items:center;
   margin:1cqh 0;font-size:clamp(20px,min(8.4cqw,5.6cqh),56px)}
 body.locked .options{gap:max(8px,1.2cqh);margin:0 0 1.2cqh}
-body.locked .option{font-size:clamp(16px,min(4.8cqw,3.4cqh),32px);
-  min-height:max(var(--tap),9.5cqh);padding:1cqh 16px;border-radius:12px}
+body.locked .option{font-size:clamp(15px,min(4.2cqw,3.2cqh),30px);
+  min-height:max(var(--tap),12cqh);padding:1cqh 10px;border-radius:12px}
+body.locked .lookBar{height:max(6px,.8cqh);margin:0 0 1cqh}
 body.locked .feedback{margin:0 0 .8cqh;font-size:clamp(14px,2.2cqh,22px)}
 
 @media (prefers-reduced-motion:reduce){
