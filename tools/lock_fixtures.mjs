@@ -160,7 +160,13 @@ export function whoamiStub(pathname, body, asked) {
     return { stage: st, label: ["First clue", "Second clue", "Third clue"][st - 1], pointsSpent: [0, 4, 7][st - 1], minute: 0, worthNow: 10 - [0, 4, 7][st - 1], replayed: false, finished: false, solved: false, step: st, of: 3, text: CLUES[st - 1], cited: st !== 2 }; }
   if (what === "guess") return { verdict: "wrong", pointsSpent: 4, minute: 0, worthNow: 6, finished: false, solved: false };
   if (what === "giveup") return { label: "Tell me", minute: 0, score: 0, worthNow: 0, pointsSpent: 7, finished: true, solved: false, answer: "Fixture Character", section: "Loves & Exes", deck: "main" };
-  if (what === "finish") return { day, slot: 1, solved: false, finished: true, pointsSpent: 7, subsUsed: 2, guesses: 1, nearMisses: 0, score: 0, minute: 0, answer: "Fixture Character", section: "Loves & Exes", deck: "main" };
+  /* WHERE THE CLUES CAME FROM (/finish, a closed card only): every clue the
+     card dealt, each with a citation, so Full Time's sources block is drawn at
+     its fullest -- three clues on each of five cards. */
+  if (what === "finish") return { day, slot: 1, solved: false, finished: true, pointsSpent: 7, subsUsed: 2, guesses: 1, nearMisses: 0, score: 0, minute: 0, answer: "Fixture Character", section: "Loves & Exes", deck: "main",
+    clues: CLUES.map((text, i) => ({ step: i + 1, text, sources: [
+      { kind: "script", label: "Season 1, episode " + (i + 1) + ", line 12", url: null, quote: "Fixture: a line of the script it rests on, long enough to wrap." },
+      { kind: "web", label: "wikipedia.org", url: "https://en.wikipedia.org/wiki/Fixture", quote: "A sentence on the page." }] })) };
   return {};
 }
 

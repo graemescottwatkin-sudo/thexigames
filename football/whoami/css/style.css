@@ -513,7 +513,13 @@ body.locked .wa-ed .rung{min-height:0;padding:10px 12px}
 body.locked .wa-ed .rung .r-label{font-size:17px}
 body.locked .wa-ed .clues{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;margin:10px 0 0;align-content:start}
 body.locked .wa-ed .giveup{margin-top:8px}
-body.locked #screenDone:not([hidden]){overflow:auto}
+/* THE RESULT SCROLLS IN ITSELF, and this rule has to OUTRANK the screen rule
+   above to say so. It read `body.locked #screenDone:not([hidden])` -- one id
+   against that rule's id and four classes -- so it never applied: Full Time
+   was overflow:hidden, and a result longer than the screen was cut off with no
+   way to reach the rest. A script can still set scrollTop on a hidden box,
+   which is how a check that moved it by hand passed over it (29 Sep 2026). */
+body.locked #waGame .app>#screenDone:not([hidden]){overflow:auto;overscroll-behavior:contain}
 /* On a phone the strapline and the title above the clock ("One career. One
    name.") give their 80px to the round: the board's heading already says what
    this is, and the clock and the points are what the round needs. */

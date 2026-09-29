@@ -1811,6 +1811,8 @@ function measureProfile() {
     scrollX: document.documentElement.scrollWidth - innerWidth,
     screen: sec ? sec.id : null,
     secCut: !!sec && sec.scrollHeight > sec.clientHeight + 1,
+    /* Whether a FINGER can scroll it: a hidden box that overflows is a cut. */
+    secScrolls: !!sec && /^(auto|scroll)$/.test(getComputedStyle(sec).overflowY),
     offscreen,
     cluesScroll: vis(clues) ? clues.scrollHeight > clues.clientHeight + 1 : false,
     cluesH: vis(clues) ? Math.round(rect(clues).height) : 0,
@@ -1979,9 +1981,43 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
     await wait(600);
     const m = await page.evaluate(measureProfile);
     t(`${vp[0]}: Full Time is locked and the page does not scroll; the result scrolls in itself`,
-      m.locked && m.scrollY <= 1 && m.scrollX <= 1 && m.screen === "screenDone", profileSay(m));
+      m.locked && m.scrollY <= 1 && m.scrollX <= 1 && m.screen === "screenDone" && (!m.secCut || m.secScrolls),
+      profileSay(m) + (m.secCut ? (m.secScrolls ? " (and scrolls)" : " (and CANNOT be scrolled)") : ""));
     await announcedCheck(page, vp[0]);
     await panelCheck(page, vp[0], id);
+    /* WHERE THE CLUES CAME FROM (Friends, the owner's ruling of 29 Sep 2026):
+       folded under the panel, and opening it all keeps the page locked, the
+       block scrolling with the result (#screenDone scrolls in itself) rather
+       than the page scrolling under it -- and its last line can be reached.
+       HOW MANY is the fixture's, derived: its board's doors times what its
+       /finish says of each card. */
+    if (id === "whoami_fr") {
+      const doors = whoamiStub("/api/whoami/whoami_fr/daily", {}, null).board.doors.length;
+      const perCard = whoamiStub("/api/whoami/whoami_fr/finish", {}, null).clues
+        .reduce((a, c) => a + c.sources.length, 0);
+      const shut = await page.evaluate(() => { const b = document.getElementById("frSources");
+        return !!b && !b.hidden && !b.open && b.getBoundingClientRect().height > 0; });
+      t(`${vp[0]}: the clues' sources are there, folded under Full Time`, shut, String(shut));
+      await page.click("#frSources summary");
+      await wait(300);
+      const o = await page.evaluate(measureProfile);
+      const n = await page.evaluate(() => document.querySelectorAll("#frSources .frs-src").length);
+      t(`${vp[0]}: opened, every citation is drawn and the page stays locked`,
+        perCard > 0 && n === doors * perCard && o.locked && o.scrollY <= 1 && o.scrollX <= 1 && o.screen === "screenDone",
+        `${n} of ${doors * perCard} citation(s); ` + profileSay(o));
+      const reach = await page.evaluate(() => {
+        /* SCROLLABLE BY A FINGER, not merely by script: an overflow:hidden box
+           still takes a scrollTop, so moving it proves nothing on its own. */
+        const box = document.getElementById("screenDone");
+        const last = [...document.querySelectorAll("#frSources .frs-src")].pop();
+        if (!box || !last) return { there: false };
+        box.scrollTop = box.scrollHeight;
+        const r = last.getBoundingClientRect();
+        return { there: true, overflowY: getComputedStyle(box).overflowY, bottom: Math.round(r.bottom), vh: innerHeight, pageScroll: document.documentElement.scrollHeight - innerHeight };
+      });
+      t(`${vp[0]}: and the last of them can be scrolled to within the result`,
+        reach.there && /^(auto|scroll)$/.test(reach.overflowY) && reach.bottom <= reach.vh + 1 && reach.pageScroll <= 1, JSON.stringify(reach));
+    }
     await context.close();
   }
 }

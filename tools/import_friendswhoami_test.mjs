@@ -70,10 +70,18 @@ const GOOD = [
   card("E2", "Eta Six", "Expert Pile", 6, range(1, 6)),
 ];
 
-function deckDir(name, cards) {
+/* WHERE THE CLUES CAME FROM: card 3's three clues cite one of each kind the
+   deck writes -- a script line checked by hand, a published page, and a phrase
+   found in an episode that also names an article from the sources map. */
+const SOURCES = { wp: { tag: "WP", name: "Wikipedia: a list", url: "https://en.wikipedia.org/wiki/List" } };
+Object.assign(GOOD[2].clues[0], { vs: "ep", ep: "0118", hand: true, qline: 7, quote: "Ross: It's a line." });
+Object.assign(GOOD[2].clues[1], { vs: "web", ep: "1017-1018", web: { url: "https://en.wikipedia.org/wiki/X", quote: "A sentence on the page." } });
+Object.assign(GOOD[2].clues[2], { vs: "ep", q: "a phrase", qep: "0508", src: "wp" });
+
+function deckDir(name, cards, sources = SOURCES) {
   const dir = path.join(TMP, name);
   fs.mkdirSync(dir, { recursive: true });
-  const json = JSON.stringify({ cards, stats: {} });
+  const json = JSON.stringify({ cards, sources, stats: {} });
   fs.writeFileSync(path.join(dir, "who-am-i-app.html"),
     `<!doctype html><html><body><script type="application/json" id="deck-data">${json}</script></body></html>`);
   return dir;
@@ -128,6 +136,23 @@ t("the importer reports the endless-only card by name",
   /endless play only \(1\): Beta Two/.test(imp.stdout), (imp.stdout.match(/no daily rounds.*$/m) || [""])[0]);
 t("and no transaction statement: D1 refuses them", !/BEGIN TRANSACTION|COMMIT;/.test(sql));
 
+/* WHERE THE CLUES CAME FROM (the owner, 29 Sep 2026: "Yes show the source
+   after the round"). The rows are the deck's citations in the deck app's own
+   order, cleared and rewritten every run like the rest of the deck. */
+const cites = sql.split("\n").filter((l) => l.startsWith("INSERT INTO fr_wa_source "));
+const citeOf = (n) => cites.filter((l) => l.includes("VALUES ('3', " + n + ", "));
+t("the sources table is cleared before it is written", sql.indexOf("DELETE FROM fr_wa_source;") > -1 &&
+  sql.indexOf("DELETE FROM fr_wa_source;") < sql.indexOf("INSERT INTO fr_wa_source"));
+t("a hand-checked clue cites its episode, its line and the words",
+  citeOf(1).length === 1 && citeOf(1)[0].includes("1, 'script', '0118', 7, NULL, NULL, 'Ross: It''s a line.'"), citeOf(1)[0]);
+t("a web-checked clue cites the page and the sentence on it",
+  citeOf(2).length === 1 && citeOf(2)[0].includes("1, 'web', NULL, NULL, 'https://en.wikipedia.org/wiki/X', NULL, 'A sentence on the page.'"), citeOf(2)[0]);
+t("a phrase cites the episode it was found in, then the named article after it",
+  citeOf(3).length === 2 && citeOf(3)[0].includes("1, 'phrase', '0508', NULL, NULL, NULL, 'a phrase'") &&
+    citeOf(3)[1].includes("2, 'article', NULL, NULL, 'https://en.wikipedia.org/wiki/List', 'Wikipedia: a list', NULL"),
+  citeOf(3).join(" | "));
+t("and a clue with no citation writes no row", cites.length === 4, cites.length + " row(s)");
+
 /* ---- what the importer refuses ----------------------------------------- */
 
 console.log("\n=== What the importer refuses ===");
@@ -145,6 +170,23 @@ console.log("\n=== What the importer refuses ===");
   t("a location id filed under a main section",
     r.status !== 0 && /its id says location but its section/.test(r.stdout),
     (r.stdout.match(/its id says.*$/m) || ["exit " + r.status])[0]);
+}
+
+{
+  const bad = GOOD.map((c) => JSON.parse(JSON.stringify(c)));
+  bad[2].clues[2].src = "ds";                     // a source the map does not hold
+  const r = node(IMPORTER, ["--source", deckDir("missing-src", bad), "--check"]);
+  t("a clue naming a source the deck's map does not hold",
+    r.status !== 0 && /src "ds", which the deck's sources map does not hold/.test(r.stdout),
+    (r.stdout.match(/cites.*$/m) || ["exit " + r.status])[0]);
+}
+{
+  const bad = GOOD.map((c) => JSON.parse(JSON.stringify(c)));
+  bad[2].clues[1].web.url = "http://example.com/x"; // not https
+  const r = node(IMPORTER, ["--source", deckDir("plain-http", bad), "--check"]);
+  t("a web source that is not an https page",
+    r.status !== 0 && /a web source that is not an https page/.test(r.stdout),
+    (r.stdout.match(/cites.*$/m) || ["exit " + r.status])[0]);
 }
 
 /* ---- the calendar deals daily letters ---------------------------------- */

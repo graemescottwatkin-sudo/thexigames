@@ -513,7 +513,13 @@ body.locked .wa-ed .rung{min-height:0;padding:10px 12px}
 body.locked .wa-ed .rung .r-label{font-size:17px}
 body.locked .wa-ed .clues{flex:1 1 auto;min-height:0;overflow:auto;overscroll-behavior:contain;margin:10px 0 0;align-content:start}
 body.locked .wa-ed .giveup{margin-top:8px}
-body.locked #screenDone:not([hidden]){overflow:auto}
+/* THE RESULT SCROLLS IN ITSELF, and this rule has to OUTRANK the screen rule
+   above to say so. It read `body.locked #screenDone:not([hidden])` -- one id
+   against that rule's id and four classes -- so it never applied: Full Time
+   was overflow:hidden, and a result longer than the screen was cut off with no
+   way to reach the rest. A script can still set scrollTop on a hidden box,
+   which is how a check that moved it by hand passed over it (29 Sep 2026). */
+body.locked #waGame .app>#screenDone:not([hidden]){overflow:auto;overscroll-behavior:contain}
 /* On a phone the strapline and the title above the clock ("One career. One
    name.") give their 80px to the round: the board's heading already says what
    this is, and the clock and the points are what the round needs. */
@@ -663,6 +669,22 @@ body.locked .wa-ed .screen:has(#clues:empty) .profile:not(:has(#clueStack)) .pf-
 
 /* The ambiguous verdict's choices, which reuse the suggestion list. */
 .wa-ed .suggest .sugg{margin:4px 6px 0 0}
+
+/* WHERE THE CLUES CAME FROM, under Full Time: closed until asked for, each
+   clue as it was read, then its citation in the small type the round's own
+   "On record in an episode" line uses. */
+.wa-ed .fr-sources{margin:14px 0 6px;border:1px solid var(--wa-line, var(--line));border-radius:8px;
+  background:var(--wa-card, var(--paper));padding:0 14px}
+.wa-ed .fr-sources summary{cursor:pointer;padding:12px 0;font-family:var(--disp);font-size:12px;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--ink)}
+.wa-ed .frs-card{padding:4px 0 12px;border-top:1px solid var(--wa-line, var(--line))}
+.wa-ed .frs-who{margin:10px 0 6px;font-size:15px;color:var(--ink)}
+.wa-ed .frs-clues{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:10px}
+.wa-ed .frs-clues > li{font-size:14px;color:var(--ink-soft)}
+.wa-ed .frs-clue{display:block;font-size:14px;line-height:1.45;color:var(--ink)}
+.wa-ed .frs-src{margin-top:4px;font-size:12px;line-height:1.45;color:var(--ink-soft);overflow-wrap:anywhere}
+.wa-ed .frs-src a{color:var(--pitch)}
+.wa-ed .frs-quote{display:block;margin-top:2px;font-style:italic;color:var(--ink-faint)}
 
 /* [hidden] MUST WIN. Football's .wa-ed .pf-nums{display:flex} is an author
    rule and beats the user-agent's display:none for [hidden], so a row this page

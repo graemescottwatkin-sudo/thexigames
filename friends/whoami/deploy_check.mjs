@@ -331,13 +331,15 @@ t("nor how many clues the card has, which would say how often it comes back",
 
 /* A BOUGHT CLUE IS ONE SENTENCE. clueBody is what the rung returns, and the
    episode is deliberately NOT in it — a citation shown mid-round is a clue
-   nobody paid for. clueSource is the separate answer, for a round that is over. */
+   nobody paid for. sourcesFor is the separate answer, read by /finish for a
+   card that is over (the owner, 29 Sep 2026: "Yes show the source after the
+   round"). */
 const CLUE = { n: 5, step: 2, text: "She was a waitress here.", vs: "ep", ep: "S2E14" };
 const body = frwa.clueBody(CLUE, 2, 3);
 t("a bought clue carries its sentence and its position", body.text === CLUE.text && body.of === 3);
 t("and says only THAT a source exists, never which episode",
   body.cited === true && JSON.stringify(body).indexOf(CLUE.ep) === -1,
-  "the episode is clueSource's answer, for a round that has ended");
+  "the episode is sourcesFor's answer, for a card that has closed");
 
 /* ---- the ladder is this deck's ------------------------------------------ */
 

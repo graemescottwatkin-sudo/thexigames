@@ -44,6 +44,23 @@ const FRIENDS_DOOR = {
   section: "Loves & Exes", deck: "main", depth: 12, rounds: 4,
 };
 
+/* A ROUND'S CITATIONS, as fr_wa_source joined to its daily clues returns them.
+   One per kind the deck writes, and a second round's row that must never be
+   read for this door. */
+const SOURCE_ROWS = [
+  { card_id: "main-07", letter: "B", step: 1, text: "clue 1", seq: 1, kind: "script", ep: "0214", line: 7,
+    url: null, name: null, quote: "Ross: Uh, Rach, we're running low on resumes." },
+  { card_id: "main-07", letter: "B", step: 2, text: "clue 2", seq: 1, kind: "web", ep: null, line: null,
+    url: "https://en.wikipedia.org/wiki/Rachel_Green", name: null, quote: "Rachel works at Central Perk." },
+  { card_id: "main-07", letter: "B", step: 2, text: "clue 2", seq: 2, kind: "article", ep: null, line: null,
+    url: "https://www.digitalspy.com/tv/x/", name: "Digital Spy: the ranking", quote: null },
+  { card_id: "main-07", letter: "B", step: 3, text: "clue 3", seq: 1, kind: "script", ep: "1017-1018", line: 40,
+    url: null, name: null, quote: "Rachel: I got off the plane." },
+  { card_id: "main-07", letter: "A", step: 1, text: "another round", seq: 1, kind: "script", ep: "0101", line: 1,
+    url: null, name: null, quote: "not this door's" },
+];
+const sourceAsks = [];
+
 /* THE STUB RE-APPLIES EACH RULE IN JS rather than rubber-stamping, which is
    this project's standing rule for stubbed databases: a stub that said yes to
    everything would prove nothing at all. */
@@ -85,6 +102,15 @@ function makeEnv(fr) {
         }
         if (/FROM \w*wa_guess WHERE play_id/.test(q))
           return { results: guesses.map((g, i) => ({ n: i + 1, ...g })) };
+        /* WHERE THE CLUES CAME FROM: every step of the door's round is in the
+           "table", and the stub keeps only what the binds allow -- this card,
+           this letter, steps up to the one asked for -- so a query that
+           dropped a bound would hand back a clue the player never saw. */
+        if (/LEFT JOIN fr_wa_source/.test(q)) {
+          sourceAsks.push(a);
+          return { results: SOURCE_ROWS.filter((r) =>
+            r.card_id === a[0] && r.letter === a[1] && r.step <= a[2]) };
+        }
         return { results: [] };
       },
       run: async () => {
@@ -254,6 +280,79 @@ console.log("\nThe and a");
   t("football's judge is unchanged: no article is dropped there", fg.solved !== true, fg.verdict);
 }
 
+/* WHERE THE CLUES CAME FROM, once the card is over (the owner, 29 Sep 2026:
+   "Yes show the source after the round"). */
+console.log("\nThe sources, after the round");
+{
+  const G = "whoami_fr";
+  const { env } = makeEnv(true);
+  const open = await openRound(env, "2026-09-22", 2, G);
+  const at = () => getRound(env, open.playId, G);
+  await buyClue(env, await at(), 1, G);
+  await buyClue(env, await at(), 2, G);
+  sourceAsks.length = 0;
+  const mid = await finishRound(env, await at(), G);
+  t("a card still in play has no sources, and nothing was asked for them",
+    !("clues" in mid) && sourceAsks.length === 0, JSON.stringify(Object.keys(mid)));
+  await judgeGuess(env, await at(), "Rachel Green", G);
+  const done = await finishRound(env, await at(), G);
+  const steps = (done.clues || []).map((c) => c.step);
+  t("a closed card carries the clues it dealt, with their sentences",
+    steps.join(",") === "1,2" && done.clues[0].text === "clue 1" && done.clues[1].text === "clue 2", steps.join(","));
+  t("and asked for this door's card and round, up to the stage it reached",
+    sourceAsks.length === 1 && sourceAsks[0][0] === "main-07" && sourceAsks[0][1] === "B" && sourceAsks[0][2] === 2,
+    JSON.stringify(sourceAsks));
+  t("not the third clue, which this sitting never showed",
+    JSON.stringify(done).indexOf("clue 3") === -1 && JSON.stringify(done).indexOf("off the plane") === -1);
+  t("nor another round's", JSON.stringify(done).indexOf("not this door's") === -1);
+  const one = done.clues[0].sources[0];
+  t("a script line reads as its episode and line, with the words it rests on",
+    one.label === "Season 2, episode 14, line 7" && /running low on resumes/.test(one.quote), one.label);
+  t("and carries no link, because the transcripts' host is not on the family's list",
+    one.url === null, String(one.url));
+  const two = done.clues[1].sources;
+  t("a published page links where the family allows it: Wikipedia",
+    two[0].label === "wikipedia.org" && two[0].url === "https://en.wikipedia.org/wiki/Rachel_Green", JSON.stringify(two[0]));
+  t("and a named article keeps its name but loses a link nobody has approved",
+    two[1].label === "Digital Spy: the ranking" && two[1].url === null, JSON.stringify(two[1]));
+
+  /* A LOST CARD REACHED THE LAST CLUE, so it shows all three. */
+  const { env: env2 } = makeEnv(true);
+  const o2 = await openRound(env2, "2026-09-22", 2, G);
+  const at2 = () => getRound(env2, o2.playId, G);
+  await buyClue(env2, await at2(), 1, G);
+  for (const w of ["a1", "a2", "a3", "b1", "b2", "b3", "c1", "c2", "c3"]) await judgeGuess(env2, await at2(), "Nobody " + w, G);
+  const lost = await finishRound(env2, await at2(), G);
+  t("a lost card reached the last clue, so it shows all three",
+    lost.score === 0 && (lost.clues || []).map((c) => c.step).join(",") === "1,2,3" &&
+      lost.clues[2].sources[0].label === "Season 10, episodes 17\u201318, line 40",
+    JSON.stringify((lost.clues || []).map((c) => c.step)));
+
+  /* A CITATION IS NEVER WORTH A RESULT: with the table missing -- the code
+     live before migration 049 -- finish still reports the card, score and
+     answer, only without its sources. */
+  const { env: env3 } = makeEnv(true);
+  const o3 = await openRound(env3, "2026-09-22", 2, G);
+  await buyClue(env3, await getRound(env3, o3.playId, G), 1, G);
+  await judgeGuess(env3, await getRound(env3, o3.playId, G), "Rachel Green", G);
+  const real = env3.DB.prepare;
+  env3.DB.prepare = (text) => {
+    if (/fr_wa_source/.test(text)) throw new Error("D1_ERROR: no such table: fr_wa_source");
+    return real.call(env3.DB, text);
+  };
+  const warn = console.warn; console.warn = () => {};
+  let fin; try { fin = await finishRound(env3, await getRound(env3, o3.playId, G), G); } catch (e) { fin = { threw: e.message }; }
+  console.warn = warn;
+  t("with the sources table missing, finish still reports the card, only without them",
+    fin && !fin.threw && fin.score === 18 && fin.answer === "Rachel Green" && !("clues" in fin), JSON.stringify(fin).slice(0, 120));
+
+  const { episodeLabel, sourceView } = await import("../../functions/_lib/frwa-data.js");
+  t("an episode code the deck never uses is shown as written, not guessed at",
+    episodeLabel("S2E14") === "Episode S2E14" && episodeLabel("0118") === "Season 1, episode 18", episodeLabel("S2E14"));
+  t("and a host that only looks like an allowed one gets no link",
+    sourceView({ kind: "web", url: "https://wikipedia.org.evil.com/x", quote: "q" }).url === null);
+}
+
 console.log("\nGiving up, which is not a substitution");
 {
   const { env } = makeEnv(true);
@@ -293,6 +392,7 @@ console.log("\nFootball, unchanged");
     s.got.career === "Chelsea, Arsenal" && s.got.article === "/x");
   t("and finish still adds the club, which only it has ever carried",
     s.done.club === "Chelsea");
+  t("and no clue sources, which are the Friends deck's", !("clues" in s.done));
 
   const named = s.sql.join(" ");
   t("every statement it ran named football's tables",

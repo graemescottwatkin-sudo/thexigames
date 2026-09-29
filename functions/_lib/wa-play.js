@@ -423,6 +423,18 @@ export async function finishRound(env, round, game) {
     out.minute = round.minute == null ? null : Number(round.minute);
     const door = await doorOf(env, game, round.play_date, round.slot);
     if (door) Object.assign(out, w.data.doorBody(door));
+    /* WHERE ITS CLUES CAME FROM, for a deck that keeps that (Friends; the
+       owner's ruling of 29 Sep 2026). Only here, only closed, and only the
+       clues this sitting reached -- the stage read off what was paid, as
+       everywhere else in this file.
+       A CITATION IS NEVER WORTH A RESULT. This response is what the page
+       banks the card from, so a failure here -- the table not there yet, a
+       row that will not read -- leaves the card without its sources and
+       otherwise exactly as it was. */
+    if (door && w.data.sourcesFor) {
+      try { out.clues = await w.data.sourcesFor(env, door, stageOf(spent, game)); }
+      catch (e) { console.warn("sources for " + game + ":", e && e.message ? e.message : e); }
+    }
   } else {
     /* STILL IN PLAY: what it is worth at this moment, which is not a score and
        is not stored. No answer, because asking to finish must not be a way to

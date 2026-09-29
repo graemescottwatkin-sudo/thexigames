@@ -138,6 +138,40 @@ function placeOf(n, rounds) {
  * there cannot diverge, including the day somebody teaches the fold about a new
  * accent. */
 import { fold } from "../functions/_lib/wadata.js";
+
+/* WHERE A CLUE CAME FROM, in the deck's own order (the owner's ruling of
+ * 29 Sep 2026: "Yes show the source after the round").
+ *
+ * THE ORDER IS THE DECK APP'S, read off its srcQuote(): a clue checked by hand
+ * against the script cites that episode and line; otherwise a published page
+ * and the sentence on it; otherwise the episode its phrase was found in. Then,
+ * whichever of those it had, the article its `src` names. Restating that here
+ * rather than inventing a rule is the point: the player is shown the citation
+ * the deck's own reviewers were shown.
+ *
+ * Returns the rows, or a string saying why it cannot. */
+function citationsOf(cl, sources) {
+  const out = [];
+  if (cl.hand && cl.ep) {
+    out.push({ kind: "script", ep: String(cl.ep), line: Number.isInteger(cl.qline) ? cl.qline : null,
+               quote: cl.quote || null });
+  } else if (cl.web) {
+    if (!cl.web.url || !/^https:[/][/]/.test(cl.web.url)) return `a web source that is not an https page (${cl.web.url})`;
+    out.push({ kind: "web", url: cl.web.url, quote: cl.web.quote || null });
+  } else if (cl.q && cl.qep) {
+    out.push({ kind: "phrase", ep: String(cl.qep), quote: cl.q });
+  }
+  if (cl.src) {
+    /* A NAMED SOURCE THE MAP DOES NOT HOLD IS A FAULT, not a gap. The deck's
+       app skips it silently; a citation that points at nothing is a citation
+       nobody can check, and saying so is this file's job. */
+    const s = sources && sources[cl.src];
+    if (!s) return `src "${cl.src}", which the deck's sources map does not hold`;
+    if (!s.url || !/^https:[/][/]/.test(s.url)) return `src "${cl.src}", whose page is not https (${s.url})`;
+    out.push({ kind: "article", url: s.url, name: s.name || s.tag || cl.src });
+  }
+  return out.map((r, i) => ({ seq: i + 1, ...r }));
+}
 /* ANSWERS ARE STORED UNDER THE KEY THEY ARE JUDGED UNDER: answerKey drops a
    leading "the" or "a" (the owner, 28 Sep 2026), and wa-play.js asks the same
    function of every guess. */
@@ -194,6 +228,8 @@ for (const c of cards) {
       faults.push(`${c.id} "${c.name}": clue ${i + 1} has verified = ` +
         `${JSON.stringify(cl.verified)}, which is neither true nor absent`);
     }
+    const cites = citationsOf(cl, deck.sources);
+    if (typeof cites === "string") faults.push(`${c.id} "${c.name}": clue ${i + 1} cites ${cites}`);
   });
 
   /* ONCE PER CARD: "Monkey" and "The Monkey" are one key now, and a card
@@ -287,12 +323,13 @@ lines.push("-- carries every clue and every answer.");
    DB will return to its original state"), which is the property the wrapper
    was reaching for. No other importer in tools/ carries one; these two were
    written without looking. */
+lines.push("DELETE FROM fr_wa_source;");
 lines.push("DELETE FROM fr_wa_daily_clue;");
 lines.push("DELETE FROM fr_wa_clue;");
 lines.push("DELETE FROM fr_wa_answer;");
 lines.push("DELETE FROM fr_wa_card;");
 
-let clueCount = 0, answerCount = 0;
+let clueCount = 0, answerCount = 0, sourceCount = 0, uncited = 0;
 let dailyRounds = 0, dailyCards = 0, dailyRows = 0;
 const noDaily = [];
 for (const c of cards) {
@@ -312,6 +349,16 @@ for (const c of cards) {
       `${q(c.id)}, ${i + 1}, ${q(p.letter)}, ${p.step}, ${q(cl.t)}, ` +
       `${cl.vs ? q(cl.vs) : "NULL"}, ${cl.ep ? q(cl.ep) : "NULL"});`);
     clueCount++;
+    const cites = citationsOf(cl, deck.sources);
+    if (!cites.length) uncited++;
+    for (const r of cites) {
+      const v = (x) => (x == null ? "NULL" : q(x));
+      lines.push(
+        `INSERT INTO fr_wa_source (card_id, n, seq, kind, ep, line, url, name, quote) VALUES (` +
+        `${q(c.id)}, ${i + 1}, ${r.seq}, ${q(r.kind)}, ${v(r.ep)}, ${r.line == null ? "NULL" : Number(r.line)}, ` +
+        `${v(r.url)}, ${v(r.name)}, ${v(r.quote)});`);
+      sourceCount++;
+    }
   }
 
   /* THE DAILY ROUNDS: VERIFIED CLUES ONLY, the owner's ruling of 23 Sep 2026.
@@ -379,6 +426,7 @@ const cited = cards.reduce((a, c) => a + c.clues.filter((x) => x.vs === "ep").le
 console.log(`  clues with an episode located: ${cited}`);
 const flagged = cards.reduce((a, c) => a + c.clues.filter((x) => x.verified === true).length, 0);
 console.log(`  clues flagged verified: ${flagged}`);
+console.log(`  citations: ${sourceCount}; clues with none: ${uncited}`);
 console.log(`  daily rounds (verified only): ${dailyRounds} from ${dailyCards} character card(s), ` +
   `${dailyRows} rows — about ${Math.floor(dailyRounds / FR_DOORS)} days at ${FR_DOORS} a day (the calendar's count, with rest, is the real one)`);
 if (noDaily.length) {
@@ -393,5 +441,5 @@ if (CHECK) {
   /* THE PATH IT WROTE, not the default's name: with --out it said
      data/fr-whoami-production.sql while writing elsewhere (28 Sep 2026). */
   console.log(`  wrote ${path.relative(ROOT, OUT) || OUT} (${(sql.length / 1024).toFixed(0)} KB)`);
-  console.log("  apply with: npx wrangler d1 execute crosswordxi --remote --file=data/fr-whoami-production.sql");
+  console.log(`  apply with: npx wrangler d1 execute crosswordxi --remote --file=${path.relative(ROOT, OUT).split(path.sep).join("/") || OUT}`);
 }

@@ -27,6 +27,7 @@
  * is the projection.
  */
 import { fold, today } from "./wadata.js";
+import { showableUrl } from "./sources.js";
 
 /* THE DOORS A DAY DEALS, AND IT IS THREE, NOT THE FAMILY'S ELEVEN.
  *
@@ -252,11 +253,85 @@ export function clueBody(clue, step, steps) {
   };
 }
 
-/* THE EPISODE, FOR A ROUND THAT IS OVER. Separate from clueBody because the
-   two are answers to different questions asked at different moments, and
-   putting `ep` in the clue body is how it ends up on screen mid-round. */
-export function clueSource(clue) {
-  return clue && clue.ep ? { episode: clue.ep } : null;
+/* ---- where the clues came from, for a card that is over -----------------
+ *
+ * THE OWNER'S RULING, 29 Sep 2026: "Yes show the source after the round".
+ * Separate from clueBody because the two are answers to different questions
+ * asked at different moments, and putting a citation in the clue body is how
+ * it ends up on screen mid-round -- the quoted line usually names the scene.
+ *
+ * THE CLUES THIS CARD DEALT, AND NO OTHERS. A round that was solved on its
+ * first clue never showed the other two, and they are still somebody's clue:
+ * the card's other outings share nothing with this one, but endless play will
+ * deal the full card. So the caller passes the stage reached and this reads
+ * steps 1..stage of that door's daily round.
+ *
+ * A LINK ONLY WHERE THE FAMILY ALLOWS ONE. sources.js holds the one list of
+ * hosts a player may be sent to; a citation on any other host still shows its
+ * label and its words, without the link. The list grows by asking. */
+const TRANSCRIPTS = "https://fangj.github.io/friends/season/";
+
+/* "0118" is season 1, episode 18; "1017-1018" is the two-parter. Anything else
+   is shown as the deck wrote it rather than guessed at. */
+export function episodeLabel(ep) {
+  const one = (x) => /^[0-9]{4}$/.test(x) ? { s: Number(x.slice(0, 2)), e: Number(x.slice(2)) } : null;
+  const parts = String(ep || "").split("-").map(one);
+  if (!parts.length || parts.some((p) => !p)) return ep ? "Episode " + ep : null;
+  if (parts.length === 1) return `Season ${parts[0].s}, episode ${parts[0].e}`;
+  if (parts.length === 2 && parts[0].s === parts[1].s) return `Season ${parts[0].s}, episodes ${parts[0].e}\u2013${parts[1].e}`;
+  return "Episode " + ep;
+}
+
+function hostLabel(url) {
+  try { return new URL(url).hostname.replace(/^(www|en)[.]/, ""); } catch (e) { return null; }
+}
+
+/* ONE CITATION, AS A PLAYER MAY SEE IT: a label, the words, and a url only
+   when the host is one the family shows. */
+export function sourceView(row) {
+  if (!row || !row.kind) return null;
+  let label = null, url = null;
+  if (row.kind === "script" || row.kind === "phrase") {
+    label = episodeLabel(row.ep);
+    if (label && row.kind === "script" && row.line != null) label += ", line " + Number(row.line);
+    url = row.ep ? TRANSCRIPTS + row.ep + ".html" : null;
+  } else if (row.kind === "web") {
+    label = hostLabel(row.url);
+    url = row.url;
+  } else if (row.kind === "article") {
+    label = row.name || hostLabel(row.url);
+    url = row.url;
+  } else return null;
+  if (!label) return null;
+  return {
+    kind: row.kind,
+    label,
+    url: url && showableUrl(url) ? url : null,
+    quote: row.quote || null,
+  };
+}
+
+export async function sourcesFor(env, door, stage) {
+  const upTo = Number(stage) || 0;
+  if (!door || upTo < 1) return [];
+  const { results } = await env.DB.prepare(`
+    SELECT d.step, c.text, s.seq, s.kind, s.ep, s.line, s.url, s.name, s.quote
+    FROM fr_wa_daily_clue d
+    JOIN fr_wa_clue c ON c.card_id = d.card_id AND c.n = d.n
+    LEFT JOIN fr_wa_source s ON s.card_id = d.card_id AND s.n = d.n
+    WHERE d.card_id = ?1 AND d.round_letter = ?2 AND d.step <= ?3
+    ORDER BY d.step, s.seq
+  `).bind(String(door.card_id), String(door.round_letter), upTo).all();
+  const out = [];
+  for (const r of results || []) {
+    const step = Number(r.step);
+    if (step > upTo) continue;
+    let clue = out.find((x) => x.step === step);
+    if (!clue) { clue = { step, text: r.text, sources: [] }; out.push(clue); }
+    const v = sourceView(r);
+    if (v) clue.sources.push(v);
+  }
+  return out;
 }
 
 /* ---- the play adapter ----------------------------------------------------

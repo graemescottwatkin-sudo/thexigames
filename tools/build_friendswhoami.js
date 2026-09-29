@@ -43,7 +43,7 @@ const SRC = "football/whoami";
 const OUT = "friends/whoami";
 
 /* THE TAG LIVES HERE, written into every generated file. Bump, regenerate. */
-const TAG = "v001n";
+const TAG = "v001o";
 
 const NAME = "Who Am I XI: Friends";
 /* THREE, NOT ELEVEN. This said eleven -- copied from football's shape before
@@ -321,6 +321,13 @@ function page() {
      genuine streak and no season. See NO_SEASON in functions/_lib/games.js. */
   s = s.replace(new RegExp(`^.*<script src="/shared/xi-season\\.js\\?v=${SHARED}"></script>\\n`, "gm"), "");
 
+  /* WHERE THE CLUES CAME FROM, under Full Time (the owner, 29 Sep 2026:
+     "Yes show the source after the round"). Empty and hidden until a day with
+     sources is shown. */
+  s = once(s, `    <div id="ftPanel"></div>`,
+    `    <div id="ftPanel"></div>
+    <details class="fr-sources" id="frSources" hidden></details>`, "the sources under Full Time");
+
   /* PATHS, then the tags for this game's own assets. */
   s = s.split(`/${SRC}/`).join(`/${OUT}/`);
   s = s.replace(/((?:css\/style\.css|js\/[a-z]+\.js)\?v=)[a-z0-9]+/g, `$1${TAG}`);
@@ -416,6 +423,22 @@ const FRIENDS_CSS = `
 
 /* The ambiguous verdict's choices, which reuse the suggestion list. */
 .wa-ed .suggest .sugg{margin:4px 6px 0 0}
+
+/* WHERE THE CLUES CAME FROM, under Full Time: closed until asked for, each
+   clue as it was read, then its citation in the small type the round's own
+   "On record in an episode" line uses. */
+.wa-ed .fr-sources{margin:14px 0 6px;border:1px solid var(--wa-line, var(--line));border-radius:8px;
+  background:var(--wa-card, var(--paper));padding:0 14px}
+.wa-ed .fr-sources summary{cursor:pointer;padding:12px 0;font-family:var(--disp);font-size:12px;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--ink)}
+.wa-ed .frs-card{padding:4px 0 12px;border-top:1px solid var(--wa-line, var(--line))}
+.wa-ed .frs-who{margin:10px 0 6px;font-size:15px;color:var(--ink)}
+.wa-ed .frs-clues{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:10px}
+.wa-ed .frs-clues > li{font-size:14px;color:var(--ink-soft)}
+.wa-ed .frs-clue{display:block;font-size:14px;line-height:1.45;color:var(--ink)}
+.wa-ed .frs-src{margin-top:4px;font-size:12px;line-height:1.45;color:var(--ink-soft);overflow-wrap:anywhere}
+.wa-ed .frs-src a{color:var(--pitch)}
+.wa-ed .frs-quote{display:block;margin-top:2px;font-style:italic;color:var(--ink-faint)}
 
 /* [hidden] MUST WIN. Football's .wa-ed .pf-nums{display:flex} is an author
    rule and beats the user-agent's display:none for [hidden], so a row this page
@@ -1103,7 +1126,10 @@ var BUILD = `, "the deck words");
         score: r && typeof r.score === 'number' ? r.score : 0,
         clues: Math.max(1, state.stage || 1),
         wrongs: r && r.wrongs != null ? r.wrongs : (state.wrongs || 0),
-        answer: (r && r.answer) || state.answer || null
+        answer: (r && r.answer) || state.answer || null,
+        /* THE CLUES IT DEALT AND WHERE THEY CAME FROM, which /finish sends
+           only for a closed card -- shown at Full Time, never before. */
+        cited: r && Array.isArray(r.clues) ? r.clues : null
       });
     }
     state.finished = true;
@@ -1201,7 +1227,41 @@ var BUILD = `, "the deck words");
         url: function () { return location.href.split('#')[0]; },
       });
     }
+    renderSources(cards);
     show('screenDone');
+  }
+
+  /* WHERE THE CLUES CAME FROM, card by card: each clue the player saw, then
+     what it rests on -- the episode and the line, or the page and the sentence.
+     A link only where the server sent one; it sends one only for a host the
+     family shows, and this refuses anything that is not https besides. */
+  function renderSources(cards) {
+    var box = document.getElementById('frSources');
+    if (!box) return;
+    /* A card whose clues carry no citation has nothing to show here, and a
+       day with none shows no block at all rather than an empty one. */
+    var withAny = cards.filter(function (c) {
+      return (c.cited || []).some(function (cl) { return cl.sources && cl.sources.length; });
+    });
+    if (!withAny.length) { box.hidden = true; box.innerHTML = ''; return; }
+    var html = '<summary>Where the clues came from</summary>';
+    withAny.forEach(function (c) {
+      html += '<div class="frs-card"><h3 class="frs-who">' + esc(c.answer || 'This card') + '</h3><ol class="frs-clues">';
+      c.cited.forEach(function (cl) {
+        html += '<li><q class="frs-clue">' + esc(cl.text || '') + '</q>';
+        (cl.sources || []).forEach(function (s) {
+          var label = esc(s.label || '');
+          var link = s.url && /^https:[/][/]/.test(s.url)
+            ? '<a href="' + esc(s.url) + '" target="_blank" rel="noopener noreferrer">' + label + '</a>'
+            : '<span>' + label + '</span>';
+          html += '<div class="frs-src">' + link + (s.quote ? '<q class="frs-quote">' + esc(s.quote) + '</q>' : '') + '</div>';
+        });
+        html += '</li>';
+      });
+      html += '</ol></div>';
+    });
+    box.innerHTML = html;
+    box.hidden = false;
   }`);
   /* THE DAY'S STATE: the cards so far, and this card's worth, wrong names and
      ring. A save from before the day had cards is not this game's any more. */

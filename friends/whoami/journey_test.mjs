@@ -90,6 +90,24 @@ const DAILY = [
   { card_id: "main-07", round_letter: "A", step: 2, n: 6 },
   { card_id: "main-07", round_letter: "A", step: 3, n: 10 },
 ].concat(OTHERS.map((c) => ({ card_id: c.card_id, round_letter: "A", step: c.n, n: c.n })));
+/* WHERE THE CLUES CAME FROM, as migration 049's fr_wa_source holds it (the
+   owner, 29 Sep 2026: "Yes show the source after the round"). Card one's three
+   daily clues cite a script line, a published page and a named article; card
+   two's second and third clues have sources too, and card two is solved on its
+   first clue -- so they must never reach the page. */
+const SOURCES = [
+  { card_id: "main-07", n: 2, seq: 1, kind: "script", ep: "0101", line: 12, url: null, name: null,
+    quote: "Rachel: Oh, I just had to get out of there." },
+  { card_id: "main-07", n: 6, seq: 1, kind: "web", ep: null, line: null,
+    url: "https://en.wikipedia.org/wiki/Rachel_Green", name: null, quote: "Her father is a wealthy doctor." },
+  { card_id: "main-07", n: 10, seq: 1, kind: "article", ep: null, line: null,
+    url: "https://www.digitalspy.com/tv/x/", name: "Digital Spy: the ranking", quote: null },
+  { card_id: "main-01", n: 1, seq: 1, kind: "script", ep: "0302", line: 1, url: null, name: null,
+    quote: "Monica: The line card two's first clue rests on." },
+  { card_id: "main-01", n: 2, seq: 1, kind: "script", ep: "0302", line: 3, url: null, name: null,
+    quote: "UNSEEN SOURCE FOR CARD TWO" },
+];
+
 const ANSWERS = [
   { card_id: "main-07", answer: fold("Rachel Green"), kind: "accept" },
   { card_id: "main-07", answer: fold("Rachel"), kind: "accept" },
@@ -103,6 +121,8 @@ const ANSWERS = [
 ];
 
 /* ---- a D1 that answers the real SQL by shape ---------------------------- */
+
+const sourceReads = [];
 
 function makeDB() {
   const rounds = new Map();
@@ -132,6 +152,20 @@ function makeDB() {
       if (!d) return [];
       const c = CLUES.find((x) => x.card_id === d.card_id && x.n === d.n);
       return c ? [{ n: c.n, step: d.step, text: c.text, vs: c.vs, ep: c.ep }] : [];
+    }
+    /* THE SOURCES OF THE CLUES A CLOSED CARD DEALT: the daily round's rows up
+       to the stage bound, joined to the sentence, LEFT-joined to citations --
+       re-applied in JS, so a clue with none still comes back, once. */
+    if (/^SELECT d\.step, c\.text, s\.seq, s\.kind, s\.ep, s\.line, s\.url, s\.name, s\.quote FROM fr_wa_daily_clue d JOIN fr_wa_clue c ON c\.card_id = d\.card_id AND c\.n = d\.n LEFT JOIN fr_wa_source s ON s\.card_id = d\.card_id AND s\.n = d\.n WHERE d\.card_id = \?1 AND d\.round_letter = \?2 AND d\.step <= \?3/.test(sql)) {
+      sourceReads.push(a.slice());
+      return DAILY.filter((x) => x.card_id === a[0] && x.round_letter === a[1] && x.step <= Number(a[2]))
+        .sort((x, y) => x.step - y.step)
+        .flatMap((d) => {
+          const c = CLUES.find((x) => x.card_id === d.card_id && x.n === d.n);
+          const cites = SOURCES.filter((x) => x.card_id === d.card_id && x.n === d.n).sort((x, y) => x.seq - y.seq);
+          const blank = { seq: null, kind: null, ep: null, line: null, url: null, name: null, quote: null };
+          return (cites.length ? cites : [blank]).map((s) => ({ step: d.step, text: c.text, ...blank, ...s }));
+        });
     }
     if (/^SELECT COUNT\(\*\) AS n FROM fr_wa_daily_clue WHERE card_id/.test(sql)) {
       return [{ n: DAILY.filter((x) => x.card_id === a[0] && x.round_letter === a[1]).length }];
@@ -467,6 +501,40 @@ console.log("\n=== The day's Full Time ===");
     .every((n) => answers.includes(n)), answers);
   t("in this deck's words, not football's", done.includes("That’s a wrap") && !done.toLowerCase().includes("full time"),
     done.slice(0, 60));
+
+  /* WHERE THE CLUES CAME FROM, under the panel and closed until asked for. */
+  const src = p.$("frSources");
+  t("the sources are there, folded away under Full Time",
+    !!src && !src.hidden && src.tagName === "DETAILS" && !src.open &&
+      p.text(src.querySelector("summary")) === "Where the clues came from", src ? p.text(src.querySelector("summary")) : "no block");
+  const blocks = [...src.querySelectorAll(".frs-card")];
+  /* CARDS THREE TO FIVE CITE NOTHING in this fixture, so they draw no block:
+     a card with nothing to show is left out rather than shown empty. */
+  t("a block per card with a citation, named once it is over, and none for a card without",
+    blocks.length === 2 && p.text(blocks[0].querySelector(".frs-who")) === "Rachel Green" &&
+      p.text(blocks[1].querySelector(".frs-who")) === "Monica Geller",
+    blocks.map((b) => p.text(b.querySelector(".frs-who"))).join(", "));
+  const r1 = [...blocks[0].querySelectorAll(".frs-clues > li")];
+  t("card one lists the three clues it dealt, in order",
+    r1.length === 3 && CLUE_TEXT.every((c, i) => p.text(r1[i].querySelector(".frs-clue")) === c), String(r1.length));
+  const s1 = r1[0].querySelector(".frs-src");
+  t("a script line reads as its episode and line, with the words",
+    p.text(s1).startsWith("Season 1, episode 1, line 12") && p.text(s1).includes("I just had to get out of there"), p.text(s1));
+  t("and with no link: the transcripts' host is not on the family's list", !s1.querySelector("a"));
+  const a2 = r1[1].querySelector(".frs-src a");
+  t("a Wikipedia page is a link that opens apart from the game",
+    !!a2 && a2.getAttribute("href") === "https://en.wikipedia.org/wiki/Rachel_Green" &&
+      a2.getAttribute("target") === "_blank" && /noopener/.test(a2.getAttribute("rel") || ""), a2 ? a2.outerHTML : "no link");
+  t("a named article nobody has approved keeps its name and loses the link",
+    p.text(r1[2].querySelector(".frs-src")) === "Digital Spy: the ranking" && !r1[2].querySelector(".frs-src a"));
+  const r2 = blocks[1] ? [...blocks[1].querySelectorAll(".frs-clues > li")] : [];
+  t("card two was solved on its first clue, so it lists only that one",
+    r2.length === 1 && p.text(r2[0].querySelector(".frs-clue")) === "Clue 1 about card main-01.", String(r2.length));
+  t("and nothing it never dealt reaches the page",
+    !p.readable().includes("UNSEEN SOURCE") && !p.readable().includes("Clue 2 about card main-01"));
+  t("the server was asked for each card's sources once, at its close, bounded by its stage",
+    sourceReads.length >= 5 && sourceReads.some((r) => r[0] === "main-07" && r[2] === 3) &&
+      sourceReads.some((r) => r[0] === "main-01" && r[2] === 1), JSON.stringify(sourceReads.slice(0, 5)));
   const btn = panel.querySelector(".xft-act .xft-primary");
   if (btn) await p.click(btn);
   const share = p.w.__shared[0] || "";
@@ -489,6 +557,8 @@ console.log("\n=== Coming back to a finished day ===");
   await back.click(back.$("waToday"));
   t("and opening it shows the day's Full Time again", !back.$("screenDone").hidden &&
     flat((back.$("ftPanel").querySelector(".xft-score") || {}).textContent) === "59/100");
+  t("with the sources still under it, kept on the device rather than asked for again",
+    !back.$("frSources").hidden && back.$("frSources").querySelectorAll(".frs-card").length === 2);
   const saved = JSON.parse(back.w.localStorage.getItem("xifw.results.v1") || "[]");
   const row = saved.find((r) => r && r.day === DAY) || {};
   t("the day is banked once, with its five cards",

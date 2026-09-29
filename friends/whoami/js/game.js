@@ -20,7 +20,7 @@
  * and a roster is a candidate list for the door.
  */
 var DECK_WORD = { main: 'Everyday', expert: 'Deep cut' };
-var BUILD = "v001n";
+var BUILD = "v001o";
 
 (function bootstrap() {
   'use strict';
@@ -740,7 +740,10 @@ function finish() {
         score: r && typeof r.score === 'number' ? r.score : 0,
         clues: Math.max(1, state.stage || 1),
         wrongs: r && r.wrongs != null ? r.wrongs : (state.wrongs || 0),
-        answer: (r && r.answer) || state.answer || null
+        answer: (r && r.answer) || state.answer || null,
+        /* THE CLUES IT DEALT AND WHERE THEY CAME FROM, which /finish sends
+           only for a closed card -- shown at Full Time, never before. */
+        cited: r && Array.isArray(r.clues) ? r.clues : null
       });
     }
     state.finished = true;
@@ -793,7 +796,41 @@ function showDone() {
         url: function () { return location.href.split('#')[0]; },
       });
     }
+    renderSources(cards);
     show('screenDone');
+  }
+
+  /* WHERE THE CLUES CAME FROM, card by card: each clue the player saw, then
+     what it rests on -- the episode and the line, or the page and the sentence.
+     A link only where the server sent one; it sends one only for a host the
+     family shows, and this refuses anything that is not https besides. */
+  function renderSources(cards) {
+    var box = document.getElementById('frSources');
+    if (!box) return;
+    /* A card whose clues carry no citation has nothing to show here, and a
+       day with none shows no block at all rather than an empty one. */
+    var withAny = cards.filter(function (c) {
+      return (c.cited || []).some(function (cl) { return cl.sources && cl.sources.length; });
+    });
+    if (!withAny.length) { box.hidden = true; box.innerHTML = ''; return; }
+    var html = '<summary>Where the clues came from</summary>';
+    withAny.forEach(function (c) {
+      html += '<div class="frs-card"><h3 class="frs-who">' + esc(c.answer || 'This card') + '</h3><ol class="frs-clues">';
+      c.cited.forEach(function (cl) {
+        html += '<li><q class="frs-clue">' + esc(cl.text || '') + '</q>';
+        (cl.sources || []).forEach(function (s) {
+          var label = esc(s.label || '');
+          var link = s.url && /^https:[/][/]/.test(s.url)
+            ? '<a href="' + esc(s.url) + '" target="_blank" rel="noopener noreferrer">' + label + '</a>'
+            : '<span>' + label + '</span>';
+          html += '<div class="frs-src">' + link + (s.quote ? '<q class="frs-quote">' + esc(s.quote) + '</q>' : '') + '</div>';
+        });
+        html += '</li>';
+      });
+      html += '</ol></div>';
+    });
+    box.innerHTML = html;
+    box.hidden = false;
   }
 
   /* ---- the durable record and the account ------------------------------ */
