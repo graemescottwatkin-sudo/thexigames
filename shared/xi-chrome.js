@@ -1167,22 +1167,40 @@
     });
   }
 
-  function buildFooter(foot) {
-    var inner = el("div", "xic-foot-in");
-
-    var games = el("div", null, "<h2>The XI Games</h2>");
+  /* A theme's games, as a footer column: named AND linked, which is released.
+     A game in testing has a href and no name, and would otherwise have put an
+     empty link in the footer of every page on the site. */
+  function gamesColumn(title, squad) {
+    var col = el("div", null, "<h2>" + title + "</h2>");
     var gl = el("ul");
-    /* Named AND linked: released. A game in testing has a href and no name,
-       and would otherwise have put an empty link in the footer of every page
-       on the site. */
-    SQUAD.filter(function (g) { return g.href && g.name; }).forEach(function (g) {
+    squad.filter(function (g) { return g.href && g.name; }).forEach(function (g) {
       var li = document.createElement("li");
       var a = el("a", null, g.name);
       a.href = g.href;
       li.appendChild(a);
       gl.appendChild(li);
     });
-    games.appendChild(gl);
+    col.appendChild(gl);
+    return col;
+  }
+
+  function buildFooter(foot) {
+    var inner = el("div", "xic-foot-in");
+
+    /* ON THE THEME PICKER, EVERY THEME'S GAMES (the owner, 29 Sep 2026, asked
+       whether its footer should list both themes: "Yes, both games for now").
+       A column per theme with a released game; every other page lists its own
+       theme's, as it always has. */
+    if ((location.pathname || "/") === "/") {
+      Object.keys(SQUADS).forEach(function (t) {
+        var squad = SQUADS[t] || [];
+        if (!squad.some(function (g) { return g.href && g.name; })) return;
+        inner.appendChild(gamesColumn(t.charAt(0).toUpperCase() + t.slice(1), squad));
+      });
+    } else {
+      inner.appendChild(gamesColumn("The XI Games", SQUAD));
+    }
+
 
     var more = el("div", null, "<h2>More</h2>");
     var ml = el("ul");
@@ -1201,7 +1219,6 @@
     });
     more.appendChild(ml);
 
-    inner.appendChild(games);
     inner.appendChild(more);
     inner.appendChild(el("div", "xic-note",
       "The <b>XI</b> Games &middot; unofficial football puzzles. " +

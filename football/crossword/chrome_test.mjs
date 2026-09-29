@@ -88,6 +88,23 @@ t("the crossword carries a bar in BOTH its views, so a board is never a dead end
   const hs = [...at.querySelectorAll(".xic-bar .xic-home, .xic-drawer .xic-home")].map((a) => a.getAttribute("href"));
   t("on the site root, the theme picker, the wordmark goes to the root", hs.length >= 2 && hs.every((h) => h === "/"), hs.join(" "));
 }
+/* THE PICKER'S FOOTER LISTS EVERY THEME'S GAMES (the owner, 29 Sep 2026:
+   "Yes, both games for now"): a column per theme, headed with its name, and
+   every other page still lists its own theme's alone. */
+{
+  const at = render(themeHubFile("football"), "https://www.thexigames.com/");
+  const heads = [...at.querySelectorAll(".xic-foot-in h2")].map((h) => h.textContent);
+  const cols = [...at.querySelectorAll(".xic-foot-in > div")].filter((d) => d.querySelector("h2") && ["Football", "Friends"].includes(d.querySelector("h2").textContent));
+  const fr = cols.find((d) => d.querySelector("h2").textContent === "Friends");
+  t("on the picker the footer has a Football column and a Friends column, each with its games",
+    heads.includes("Football") && heads.includes("Friends") && !heads.includes("The XI Games") &&
+      !!fr && fr.querySelectorAll("a[href^='/friends/']").length >= 2, heads.join(", "));
+  const game = render("football/crossword/index.html", "https://www.thexigames.com/football/crossword/");
+  const gh = [...game.querySelectorAll(".xic-foot-in h2")].map((h) => h.textContent);
+  t("and a game page's footer still lists its own theme's games alone",
+    gh.includes("The XI Games") && !gh.includes("Friends") &&
+      ![...game.querySelectorAll(".xic-foot-in a")].some((a) => (a.getAttribute("href") || "").startsWith("/friends/")), gh.join(", "));
+}
 
 /* THE TWO APPS (the owner, 28 Sep 2026: "football app links to
    thexigames.com/football / universal links to Thexigames.com"). In the
