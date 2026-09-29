@@ -124,6 +124,10 @@ const libs = [
      dailyNoForDay at load, so it comes after daily.js. */
   "functions/_lib/games.js",
   "functions/_lib/archive.js",
+  /* bank-cache.js before sc-board.js, whose loadBoards goes through keptBank.
+     With no env it only ever calls straight through to the loader, so the
+     tester gains a name and no behaviour. */
+  "functions/_lib/bank-cache.js",
   "functions/_lib/sc-board.js",
   /* sc-round.js reaches for SCX_SCORING and SCX_CONFIG, which are inlined
      further down with the rest of scrambled/js/ — and that is soon enough,
