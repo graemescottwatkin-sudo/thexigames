@@ -300,18 +300,21 @@ body.locked #how:target .how-back{display:inline-flex;align-items:center;min-hei
 .word.done .wc{text-decoration:line-through;color:var(--ink-faint)}
 .word.sel{box-shadow:var(--ring,0 0 0 2px var(--pitch))}
 .clueNow{display:none}
-@media (max-width:760px){
-  .words{gap:5px}
-  .word{display:inline-flex;min-width:36px;justify-content:center;padding:6px 8px}
-  .word .wc,.word .wa{display:none}
-  .word .wn{color:var(--ink)}
-  .word.done{background:var(--c);border-color:var(--c)}
-  .word.done .wn{color:var(--gold-ink)}
-  .clueNow{display:block;margin-top:6px;font-size:14px;line-height:1.35;min-height:2.7em}
-  .clueNow b{font-family:var(--disp);margin-right:4px}
-  body.locked .word{font-size:13px;padding:4px 7px}
-  body.locked .clueNow{font-size:13px;margin-top:4px}
-}
+/* COMPACT: numbered chips, and the chosen clue written out under them. Set by
+   game.js (fitClues) on a phone, AND wherever the full list will not fit
+   beside the board -- eleven clues of up to 120 characters overflowed the
+   panel on a 768 tablet and a 1440x900 desk (tools/lock_test.mjs, 29 Sep
+   2026). A breakpoint could not say that; only measuring the list can. */
+.side.compact .words{display:flex;flex-wrap:wrap;overflow:visible;gap:5px;align-content:flex-start;flex:none}
+.side.compact .word{display:inline-flex;min-width:36px;justify-content:center;padding:6px 8px;white-space:nowrap}
+.side.compact .word .wc,.side.compact .word .wa{display:none}
+.side.compact .word .wn{color:var(--ink)}
+.side.compact .word.done{background:var(--c);border-color:var(--c)}
+.side.compact .word.done .wn{color:var(--gold-ink)}
+.side.compact .clueNow{display:block;margin-top:6px;font-size:14px;line-height:1.35;min-height:2.7em}
+.side.compact .clueNow b{font-family:var(--disp);margin-right:4px}
+body.locked .side.compact .word{font-size:13px;padding:4px 7px}
+body.locked .side.compact .clueNow{font-size:13px;margin-top:4px}
 /* The boards list: the catalogue, by category, on the landing. */
 .cat-group{margin:10px 0 0}
 .cat-group h3{font-family:var(--disp);font-size:13px;letter-spacing:.08em;text-transform:uppercase;

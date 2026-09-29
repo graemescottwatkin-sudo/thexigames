@@ -192,3 +192,36 @@ export async function lightningEnv() {
   });
   return { DB: d1 };
 }
+
+/* WORDSEARCH XI: FRIENDS. Its list is CLUES rather than names, so the clues
+   are the thing that might not fit: every one here is 120 characters, the
+   builder's ceiling (WordsearchXI_Friends/scripts/build_boards.py CLUE_MAX),
+   and the bonus clue too. The words are fixtures on a Q-filled grid, one per
+   row, as friends/wordsearch/fixture.mjs lays them out. Scheduled on `day`
+   and the day before, through the real routes over migration 048. */
+export async function wordsearchFrEnv(day) {
+  const { db, d1 } = await sqliteD1();
+  const WORDS = ["ALPHA", "BRAVO", "CHARLIE", "DELTA", "ECHO", "FOXTROT", "GOLF", "HOTEL", "INDIA", "JULIETT", "KILO"];
+  const grid = Array.from({ length: 14 }, () => Array(12).fill("Q"));
+  const clue120 = (i, w) => {
+    let s = `Fixture clue ${i}: a question as long as the longest a Friends board may carry, to prove the list still fits`;
+    while (s.length < 120 - 4) s += ".";
+    return (s.slice(0, 120 - 4) + ` (${w.length})`).slice(0, 120);
+  };
+  const answers = WORDS.map((w, n) => {
+    for (let k = 0; k < w.length; k++) grid[n][k] = w[k];
+    return { clue: clue120(n + 1, w), display: w, grid: w,
+      placement: { direction: "E", start_row: n, start_col: 0, end_row: n, end_col: w.length - 1 } };
+  });
+  "LIMA".split("").forEach((c, k) => { grid[12][k] = c; });
+  const bonus = { clue: clue120(12, "LIMA"), display: "LIMA", grid: "LIMA", category: "Bonus clue",
+    placement: { direction: "E", start_row: 12, start_col: 0, end_row: 12, end_col: 3 } };
+  const payload = JSON.stringify({ grid: grid.map((r) => r.join("")), answers, bonus });
+  db.prepare("INSERT INTO fr_ws_puzzles (id, theme, category, status, hash, version, share_key, payload) VALUES (?,?,?,?,?,?,?,?)")
+    .run("FRWS-9001", "Fixture board with the longest clues", "Fixture", "ready", "fixture00000000", 1, "FRWS-9001-v1", payload);
+  const prev = new Date(Date.parse(day + "T00:00:00Z") - 86400000).toISOString().slice(0, 10);
+  const sch = db.prepare("INSERT INTO fr_ws_schedule (day, puzzle_id) VALUES (?, ?)");
+  sch.run(day, "FRWS-9001");
+  sch.run(prev, "FRWS-9001");
+  return { DB: d1 };
+}

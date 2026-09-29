@@ -20,7 +20,7 @@
 (function () {
   "use strict";
 
-  var BUILD = "v000f";
+  var BUILD = "v000g";
   var GAME = "wordsearch_fr", NAME = "Wordsearch XI: Friends", API = "/api/wordsearch_fr/";
   var PAGE = "https://www.thexigames.com/friends/wordsearch/";
   window.WORDSEARCHXI_FR_BUILD = BUILD;
@@ -243,6 +243,21 @@
       list.appendChild(d);
     });
   }
+  /* THE LIST FITS OR IT FOLDS. The full list shows every clue beside the
+     board; where it would overflow -- a phone, or long clues on a tablet or a
+     laptop -- the side folds to numbered chips with the chosen clue written
+     out (css: .side.compact). Decided by measuring, from the full list each
+     time, so a wider window gets the full list back. */
+  function fitClues() {
+    var side = $("side"), list = $("wordList");
+    if (!side || !list) return;
+    side.classList.remove("compact");
+    if (window.innerWidth <= 760) { side.classList.add("compact"); return; }
+    var over = list.scrollHeight > list.clientHeight + 1;
+    var last = list.lastElementChild, box = $("bonusBox");
+    var below = [last, box].some(function (e) { return e && e.getBoundingClientRect().bottom > window.innerHeight + 1; });
+    if (over || below) side.classList.add("compact");
+  }
   function syncPanelHeight() {
     var shell = $("gridShell"), side = $("side");
     if (!shell || !side) return;
@@ -291,6 +306,7 @@
   function checkRoom() {
     var body = document.body, app = $("gameApp"), shell = $("gridShell");
     if (!app || app.classList.contains("hidden") || !shell) return;
+    fitClues();
     var size = window.innerWidth + "x" + window.innerHeight;
     if (!body.classList.contains("locked")) {
       if (unlockedFor === size) return;
@@ -309,7 +325,7 @@
     roomQueued = true;
     (window.requestAnimationFrame || setTimeout)(function () { roomQueued = false; checkRoom(); });
   }
-  window.addEventListener("resize", function () { unlockedFor = null; queueRoom(); });
+  window.addEventListener("resize", function () { unlockedFor = null; fitClues(); queueRoom(); });
 
   var pts = new Map(), pinchStartDist = 0, pinchStartCell = 0;
   function pinchDist() {
@@ -718,7 +734,7 @@
     $("finishPrompt").classList.remove("show");
     $("themeTitle").textContent = p.theme;
     $("modeLabel").textContent = label;
-    renderGrid(); renderWords(); updateUI(); refreshMenus();
+    renderGrid(); renderWords(); updateUI(); refreshMenus(); fitClues();
   }
   function restore(rec) {
     found = new Set((rec.found || []).map(Number)); bonusFound = !!rec.bonus_found;

@@ -80,6 +80,9 @@ const LOCKED = {
      every play screen and not a launch checklist item. */
   lightning_fr: { kind: "lightning", path: "/friends/lightning/" },
   wordsearch: { kind: "wordsearch", path: "/football/wordsearch/" },
+  /* In build, like Lightning: its list is CLUES, eleven of up to 120
+     characters, so whether they fit is exactly what this proves. */
+  wordsearch_fr: { kind: "wordsearch", path: "/friends/wordsearch/" },
 };
 /* Not locked yet, by name, so the list of what is left is a fact in the tree
    and not a memory. Moving a game from here to LOCKED is its whole test. */
@@ -111,7 +114,7 @@ console.log("The roster");
 
 /* ---- the server ----------------------------------------------------------- */
 const { dailyNumber } = await import(pathToFileURL(path.join(ROOT, "functions", "_lib", "daily.js")).href);
-const { quickfireEnv, codewordRawBoard, whoamiStub, lightningEnv, LR_RIGHT } = await import(pathToFileURL(path.join(ROOT, "tools", "lock_fixtures.mjs")).href);
+const { quickfireEnv, codewordRawBoard, whoamiStub, lightningEnv, LR_RIGHT, wordsearchFrEnv } = await import(pathToFileURL(path.join(ROOT, "tools", "lock_fixtures.mjs")).href);
 const { publicBoard: cwPublic } = await import(pathToFileURL(path.join(ROOT, "functions", "_lib", "cw-board.js")).href);
 /* Codeword refuses to run without a database, and its round endpoints write
    to one, so the board is the fixture through the real publicBoard() and the
@@ -134,6 +137,9 @@ const QF_ENV = await quickfireEnv(utcDay());
    a fixture pool (tools/lock_fixtures.mjs): the deal, the clock and the marking
    are the server's, so a stub would be testing a game that does not exist. */
 const LR_ENV = await lightningEnv();
+/* WORDSEARCH XI: FRIENDS through its real routes over migration 048, with a
+   board whose eleven clues are all as long as the builder allows. */
+const WSF_ENV = await wordsearchFrEnv(utcDay());
 /* THE FRIENDS CROSSWORD'S BOARD, through its REAL route over a stubbed D1 --
    the same stub shape friends/crossword/daily_test.mjs uses, and the board
    built by the real layout engine (fixture.mjs), never by hand. Without it the
@@ -147,7 +153,8 @@ const FR_ENV = { DB: { prepare: (sql) => ({ bind: () => ({
 }) }) } };
 const envFor = (p) => (p.startsWith("/api/quickfire/") ? QF_ENV
   : p.startsWith("/api/crossword/crossword_fr/") ? FR_ENV
-  : p.startsWith("/api/lightning_fr/") ? LR_ENV : {});
+  : p.startsWith("/api/lightning_fr/") ? LR_ENV
+  : p.startsWith("/api/wordsearch_fr/") ? WSF_ENV : {});
 const TYPES = { ".html": "text/html; charset=utf-8", ".css": "text/css", ".js": "text/javascript",
   ".json": "application/json", ".png": "image/png", ".svg": "image/svg+xml", ".webp": "image/webp",
   ".ico": "image/x-icon", ".woff2": "font/woff2" };
@@ -360,7 +367,7 @@ const FT_SAMPLE = (game, name) => ({
 const FT_BOX = {
   scrambled: "#screenResults", vowels: "#screenResults", quickfire: "#screenResults", hilo: "#screenResults",
   lightning_fr: "#screenResults", ballpark: "#ft", codeword: "#ft", grid: "#gdFullTime",
-  whoami: "#screenDone", whoami_fr: "#screenDone", wordsearch: "#result", crossword: "#doneOverlay",
+  whoami: "#screenDone", whoami_fr: "#screenDone", wordsearch: "#result", wordsearch_fr: "#result", crossword: "#doneOverlay",
 };
 async function panelCheck(page, label, id) {
   const blocks = await page.evaluate(() => {
