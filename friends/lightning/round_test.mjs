@@ -208,6 +208,8 @@ console.log("\n=== A run ===");
   const fin = await finishRun(env, run, end + 2000);
   t("the whistle counts the server's rows", fin.score === 2 && fin.wrong === 1 && fin.answered === 3,
     JSON.stringify({ score: fin.score, wrong: fin.wrong, answered: fin.answered }));
+  t("and every answer carries its question's id, for reporting",
+    fin.answers.length === 3 && fin.answers.every((a) => typeof a.id === "string" && a.id.length > 0));
   t("and lists the one they missed, with its answer, now", fin.missed.length === 1 && fin.missed[0].answer === "Right " + a1.next.id);
   t("and the marks in order", fin.marks.join("") === "101");
   t("and the time the misses cost", fin.lostMs === WRONG_PENALTY_MS, String(fin.lostMs));

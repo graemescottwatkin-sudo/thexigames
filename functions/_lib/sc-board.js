@@ -23,6 +23,7 @@
  */
 import { dailyNumber } from "./daily.js";
 import { SC_BOARDS } from "./sc-boards.js";
+import { keptBank } from "./bank-cache.js";
 
 /* THE TOKEN. Scrambled XI's own prefix, parsed beside the rotation that
 
@@ -40,7 +41,10 @@ import { SC_BOARDS } from "./sc-boards.js";
    small bank, and nothing was reading the tell. */
 export function hasDB(env) { return !!(env && env.DB); }
 
-export async function loadBoards(env) {
+/* Parsed once per Worker and kept: see functions/_lib/bank-cache.js. */
+export function loadBoards(env) { return keptBank(env, "sc", () => readBank(env)); }
+
+async function readBank(env) {
   if (!hasDB(env)) return { boards: SC_BOARDS, source: "module" };
   try {
     const { results } = await env.DB

@@ -34,6 +34,7 @@ import { BP_SAMPLE_BOARDS, BP_SAMPLE_SCHEDULE } from "./bp-sample.js";
    the clock and what a substitution costs, executed on the server and rendered
    by the client. See football/ballpark/js/rules.js. */
 import XIBP_RULES from "../../football/ballpark/js/rules.js";
+import { keptBank } from "./bank-cache.js";
 
 export function hasDB(env) { return !!(env && env.DB); }
 export function todayKey(now = Date.now()) { return utcDay(now); }
@@ -50,7 +51,10 @@ const PUBLIC_KEYS = ["id", "question", "detail", "lo", "hi", "tolerance",
 
 /* ---- the bank ---------------------------------------------------------- */
 
-export async function loadBank(env) {
+/* Parsed once per Worker and kept: see functions/_lib/bank-cache.js. */
+export function loadBank(env) { return keptBank(env, "bp", () => readBank(env)); }
+
+async function readBank(env) {
   if (!hasDB(env)) return sampleBank();
   try {
     const boards = await env.DB.prepare(

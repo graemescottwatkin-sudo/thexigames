@@ -265,7 +265,7 @@ export async function finishRun(env, run, now = Date.now()) {
       .bind(now, run.run_id).run();
   }
   const { results } = await env.DB.prepare(
-    "SELECT a.idx, a.pick, a.correct, q.clue, q.answer FROM fr_lr_answer a " +
+    "SELECT a.idx, a.question_id, a.pick, a.correct, q.clue, q.answer FROM fr_lr_answer a " +
     "LEFT JOIN fr_lr_question q ON q.id = a.question_id WHERE a.run_id = ? ORDER BY a.idx"
   ).bind(run.run_id).all();
   const answers = results || [];
@@ -283,7 +283,9 @@ export async function finishRun(env, run, now = Date.now()) {
     /* EVERY ONE, IN ORDER, for the family panel's folded "Your answers": the
        clue and whether it was got, and the answer only where it was missed --
        a right pick already is the answer. */
-    answers: answers.map((r) => (r.correct ? { correct: true, clue: r.clue }
-      : { correct: false, clue: r.clue, pick: r.pick, answer: r.answer })),
+    /* With each question's id, so a player can report one by the id the bank
+       knows it by (the family's /api/report-clue). */
+    answers: answers.map((r) => (r.correct ? { id: r.question_id, correct: true, clue: r.clue }
+      : { id: r.question_id, correct: false, clue: r.clue, pick: r.pick, answer: r.answer })),
   };
 }

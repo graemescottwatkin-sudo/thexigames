@@ -231,6 +231,16 @@ jobs:
           node tools/season_store_test.mjs
           node tools/season_device_test.mjs
 
+      # A BANK IS PARSED ONCE PER WORKER, AND NOTHING CHANGES IT. The Play bot
+      # failed seven nights of eight on Cloudflare's `exceededResources`: every
+      # Scrambled, Vowels and HiLo request parsed its whole bank (7.75 MB, 3 MB)
+      # for one board. functions/_lib/bank-cache.js keeps it; this proves the
+      # keeping through the four real loaders, and runs each game's hot routes
+      # against one kept bank, which must come back byte for byte -- a route
+      # that sorted it in place would do it to every player after.
+      - name: A bank is parsed once and nothing changes it
+        run: node tools/bank_cache_test.mjs
+
       - name: API
         run: |
           node football/crossword/functions_test.mjs
