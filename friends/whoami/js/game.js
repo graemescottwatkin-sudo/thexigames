@@ -20,7 +20,7 @@
  * and a roster is a candidate list for the door.
  */
 var DECK_WORD = { main: 'Everyday', expert: 'Deep cut' };
-var BUILD = "v001o";
+var BUILD = "v001p";
 
 (function bootstrap() {
   'use strict';
@@ -183,6 +183,7 @@ function start() {
   }
 
 function renderClock() {
+    renderStrip();
     var total = LADDER.length || 3;
     var seen = Math.min(Math.max(1, state.stage || 1), total);
     /* WORTH NOW IS THE SERVER'S: it takes the wrong names off as well as the
@@ -192,13 +193,39 @@ function renderClock() {
     var key = seen + ':' + worth + ':' + done;
     if (key === clock.shown) return;
     clock.shown = key;
+    /* NO CLOCK IN THE BAR EITHER: it read 0' all round, football's match
+       minute on a game that has none (the owner's iPad, 30 Sep 2026). A dash,
+       as Scrambled XI: Friends shows. */
     if (window.XIBar) XIBar.set({ progress: Math.min(done + 1, BOARD.doors.length) + '/' + BOARD.doors.length,
-                                  score: dayScore(), worth: worth });
+                                  clock: '–', score: dayScore(), worth: worth });
     el.clockValue.textContent = seen;
     el.stripFill.style.width = Math.min(100, (seen / total) * 100) + '%';
     el.stripFill.classList.toggle('late', seen >= total);
     el.worthNow.textContent = worth;
     el.worthNow.classList.toggle('low', worth <= 5);
+  }
+
+  /* THE DAY'S CARDS ACROSS THE TOP OF THE ROUND (the owner, 30 Sep 2026:
+     "have room to show Person / place 1, 2, 3, 4 and 5 above. Once it's
+     guessed and you move onto 2, answer one is visible still. Highlight the
+     one we are in"). One chip a card: its number, then who it was once the
+     card has closed -- got or told -- and the card in play ringed. Built
+     from state.cards, the same record Full Time and the list of cards read,
+     so it cannot say a card was got that the day did not bank. */
+  function renderStrip() {
+    var strip = document.getElementById('frStrip');
+    if (!strip) return;
+    var cards = state.cards || [];
+    var at = state.playId && !state.finished ? cards.length : -1;
+    var html = '';
+    BOARD.doors.forEach(function (d, i) {
+      var c = cards[i];
+      var cls = 'frs' + (c ? (c.solved ? ' got' : ' lost') : '') + (i === at ? ' now' : '');
+      var say = c ? (c.answer || (c.solved ? 'Got' : 'Missed')) : (i === at ? 'Playing' : '?');
+      html += '<li class="' + cls + '"' + (i === at ? ' aria-current="step"' : '') + '>' +
+        '<span class="frs-n">' + (i + 1) + '</span><span class="frs-a">' + esc(say) + '</span></li>';
+    });
+    if (strip.innerHTML !== html) strip.innerHTML = html;
   }
 
   function tick() {
@@ -277,8 +304,18 @@ function renderClock() {
     el.guessGo.disabled = !el.guessInput.value.trim();
   }
 
+  /* THE VERDICT IS A CALLOUT, NOT A CAPTION (the owner, 30 Sep 2026: "Can we
+     have some sort of notification about the answer being right or wrong,
+     it's hard to see clearly right now"). It was a line of small grey
+     capitals, and a miss was grey on grey. Now each verdict is a coloured
+     box with its own mark (style.css), and it is PLAYED AGAIN every time:
+     the class comes off, the box is measured, and the class goes back on, so
+     a second "Not him" in a row arrives as a second verdict rather than
+     leaving the first one sitting there looking unchanged. */
   function setFeedback(text, kind) {
     el.feedback.textContent = text || '';
+    el.feedback.className = 'feedback';
+    if (text) void el.feedback.offsetWidth;
     el.feedback.className = 'feedback' + (kind ? ' ' + kind : '');
   }
 
@@ -567,6 +604,31 @@ function renderClue(r) {
     stack.insertBefore(li, before);
     li.classList.add('fresh');
     setTimeout(function () { li.classList.remove('fresh'); }, 900);
+    drawLocked(stack, of);
+  }
+
+  /* THE CLUES STILL TO COME ARE ON THE CARD, BLURRED (the owner, 30 Sep
+     2026: "have clue 1,2 and 3 all showing in the game but only clue 1
+     legible, 2 and 3 not clear until reveal 2 and 3 is pressed"). A card per
+     clue not yet bought, after the last one that was, with its number and
+     tier readable and its sentence not. THE SENTENCE IS A STAND-IN, never the
+     clue: the server sends a clue's text only once it has been paid for, so
+     the page has nothing real to blur -- and a blur over real text is one
+     "inspect element" from being read. Redrawn whenever a clue lands. */
+  function drawLocked(stack, of) {
+    [].slice.call(stack.querySelectorAll('.fclue.locked')).forEach(function (c) { c.remove(); });
+    var top = 0;
+    [].forEach.call(stack.children, function (c) { top = Math.max(top, Number(c.getAttribute('data-step')) || 0); });
+    for (var k = top + 1; k <= of; k++) {
+      var lk = document.createElement('li');
+      lk.className = 'fclue locked';
+      lk.setAttribute('data-locked', k);
+      lk.innerHTML =
+        '<span class="fc-n">Clue ' + k + ' of ' + of + ' &middot; ' + (k >= of ? 'the easiest' : 'getting warmer') + '</span>' +
+        '<span class="fc-text fc-hid" aria-hidden="true">This one stays out of focus until you ask a friend for it.</span>' +
+        '<span class="sr-only">Not asked for yet.</span>';
+      stack.appendChild(lk);
+    }
   }
 
   /* ---------------------------------------------------------- the guessing */

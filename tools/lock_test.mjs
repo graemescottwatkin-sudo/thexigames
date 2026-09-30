@@ -1792,6 +1792,8 @@ function measureGrid() {
     ft: vis(document.getElementById("gdFullTime")),
     keys: vis(document.getElementById("gdKbd")),
     entries: vis(document.getElementById("gdEntries")),
+    /* A key whose letter spills out of it (the owner's iPad, 30 Sep 2026). */
+    spill: [...document.querySelectorAll("#gdKbd .osk-key")].filter((e) => vis(e) && e.scrollWidth > e.clientWidth + 1).map((e) => e.textContent).join(" "),
   };
 }
 const gridOk = (m) => m.locked && m.scrollY <= 1 && m.scrollX <= 1 && m.boardWhole && m.cell >= 18 && m.offscreen === 0;
@@ -1823,6 +1825,7 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "g
         gridOk(m) && m.keys, gridSay(m));
     }
     if (vp[1].width >= 900) t(`${vp[0]}: the entries come back in the column beside the board`, m.entries, gridSay(m));
+    t(`${vp[0]}: every key holds its letter -- none spills out of its key`, m.keys && m.spill === "", m.spill || "none");
     /* THE CROSSWORD'S BOARD. The owner, 25 Sep 2026: Grid should "look more
        like the crossword I.e. background, similar layout, boxes". The pitch
        with its markings behind the board, squares joined rather than
@@ -1852,6 +1855,43 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "g
     t(`${vp[0]}: the board is the crossword's -- on the pitch, squares joined and square-cornered, the answer tinted and the cursor ringed as the crossword's are`,
       look.pitch && look.joined === true && look.radius === "0px" && look.word === true && look.ring === true, JSON.stringify(look));
     if (process.env.LOCK_SHOTS) await page.screenshot({ path: path.join(process.env.LOCK_SHOTS, `${id}-${vp[0]}-board.png`) });
+    await context.close();
+  }
+
+  /* ON A TABLET, THE CROSSWORD'S SHAPE. The owner, 30 Sep 2026, from a
+     13-inch iPad both ways up: "Grid layout is not fit for purpose". On its
+     side the keys were a 380px column -- 31px keys, overlapping, ENTER cut to
+     ENT -- and upright the same two columns left a small board floating in
+     the middle and ran the keys off the right edge. Held here to what the
+     crossword's tablet checks hold its keys to, plus the two faults seen. */
+  console.log(`\n${id}: on a tablet`);
+  for (const [label, viewport, upright] of [["ipad-pro-13 on its side", { width: 1366, height: 1024 }, false], ["ipad-pro-13 upright", { width: 1024, height: 1366 }, true], ["ipad-air on its side", { width: 1180, height: 820 }, false], ["ipad-air upright", { width: 820, height: 1180 }, true]]) {
+    const { page, context } = await openGrid(game, [label, viewport, true]);
+    const m = await page.evaluate(measureGrid);
+    const k = await page.evaluate(() => {
+      const r = (e) => e.getBoundingClientRect();
+      const rows = [...document.querySelectorAll("#gdKbd .osk-row")].map((row) => [...row.children].map(r));
+      const top = rows[0] || [];
+      /* SPILL, NOT BOX OVERLAP: the boxes never overlapped -- the letters did,
+         pushed out of 31px keys by 32px of padding. Measured first as box
+         overlap, which read false on exactly the layout the owner sent. */
+      const overlap = [...document.querySelectorAll("#gdKbd .osk-key")].some((e) => e.scrollWidth > e.clientWidth + 1);
+      const key = document.querySelector("#gdKbd .osk-key:not(.wide):not(.go)");
+      const go = document.querySelector("#gdKbd .osk-key.go");
+      const b = r(document.getElementById("gdBoard")), kb = r(document.getElementById("gdKbd"));
+      return { span: top.length ? Math.round((top[top.length - 1].right - top[0].left) / innerWidth * 100) : 0,
+        overlap, h: key ? Math.round(r(key).height) : 0,
+        enterCut: go ? go.scrollWidth > go.clientWidth + 1 : true,
+        boardAbove: b.bottom <= kb.top + 1,
+        boardMid: Math.round(Math.abs((b.left + b.right) / 2 - innerWidth / 2)),
+        entries: getComputedStyle(document.getElementById("gdEntries")).display !== "none" };
+    });
+    t(`${label}: locked, no scroll, the board whole at hittable squares, the keys on screen`, gridOk(m) && m.keys, gridSay(m));
+    t(`${label}: the keys are tablet keys -- at least 48px tall, no letter spilling out of its key, ENTER not cut -- and the top row spans 85% of the width or more`,
+      k.h >= 48 && !k.overlap && !k.enterCut && k.span >= 85, JSON.stringify(k));
+    t(`${label}: the board sits above the keys${upright ? ", centred across the screen rather than in a column" : ""}, and the entries are on screen`,
+      k.boardAbove && (!upright || k.boardMid <= 20) && k.entries, JSON.stringify(k));
+    if (process.env.LOCK_SHOTS) await page.screenshot({ path: path.join(process.env.LOCK_SHOTS, `${id}-${label.replace(/ /g, "-")}.png`) });
     await context.close();
   }
 
@@ -2020,6 +2060,44 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "p
       profileOk(bought) && bought.cluesH > 0, profileSay(bought));
     await reachCheck(page, vp[0], id === "whoami_fr" ? "#clueStack" : "#clues", "the clues bought");
     if (process.env.LOCK_SHOTS) await page.screenshot({ path: path.join(process.env.LOCK_SHOTS, `${id}-${vp[0]}-bought.png`) });
+    /* THE VERDICT IS A CALLOUT (the owner, 30 Sep 2026: "Can we have some
+       sort of notification about the answer being right or wrong, it's hard
+       to see clearly right now"). It was grey capitals, and a miss grey on
+       grey. Drawn here as the page draws it -- the page's own setFeedback is
+       not reachable from outside, so the element is given what it sets -- and
+       asked of the browser: a wrong answer is a box in the danger colour with
+       a cross in a disc, a right one the ok colour with a tick, and the round
+       still fits the screen with it showing. */
+    {
+      const v = await page.evaluate(() => {
+        const fb = document.getElementById("feedback");
+        const col = (name) => { const s = document.createElement("span"); s.style.color = `var(${name})`; document.body.appendChild(s); const c = getComputedStyle(s).color; s.remove(); return c; };
+        const read = (text, kind) => {
+          fb.textContent = text; fb.className = "feedback " + kind;
+          const cs = getComputedStyle(fb), mark = getComputedStyle(fb, "::before");
+          return { border: cs.borderTopColor, bg: cs.backgroundColor, mark: mark.content, markBg: mark.backgroundColor, h: Math.round(fb.getBoundingClientRect().height) };
+        };
+        const miss = read("Not him.", "miss"), goal = read("That is him.", "goal");
+        const out = { miss, goal, danger: col("--danger"), ok: col("--ok"), card: col("--card"),
+          scroll: document.documentElement.scrollHeight - innerHeight };
+        read("Not him.", "miss");
+        return out;
+      });
+      t(`${vp[0]}: a wrong answer is a callout -- the danger colour, a cross in a disc, a tinted box -- and a right one the ok colour with a tick`,
+        v.miss.border === v.danger && v.miss.markBg === v.danger && v.miss.mark === '"✕"' && v.miss.bg !== v.card && v.miss.bg !== "rgba(0, 0, 0, 0)" &&
+          v.goal.border === v.ok && v.goal.markBg === v.ok && v.goal.mark === '"✓"' && v.miss.h >= 36,
+        JSON.stringify(v));
+      t(`${vp[0]}: and the round still fits the screen with it showing`,
+        await page.evaluate(isLocked) && v.scroll <= 1, `scroll ${v.scroll}`);
+      await page.evaluate(() => { const fb = document.getElementById("feedback"); fb.textContent = ""; fb.className = "feedback"; });
+    }
+    /* NO CLOCK ON A FRIENDS CARD, NOT EVEN IN THE BAR: it read 0' all round,
+       football's match minute on a game without one (the owner's iPad, 30 Sep
+       2026). A dash, as Scrambled XI: Friends shows. */
+    if (id === "whoami_fr") {
+      const clk = await page.evaluate(() => { const v = document.querySelector('#xiBar [data-k="clock"] .xmb-v'); return v ? v.textContent : null; });
+      t(`${vp[0]}: the bar's clock slot is a dash, not football's minute`, clk === "–", JSON.stringify(clk));
+    }
     /* THE OWNER'S THREE, 25 Sep 2026, football only (Friends has no career
        list and draws its clues in the profile): the one-line clue above the
        career that scrolls; no empty lines holding the clue panel down; and
@@ -2804,6 +2882,11 @@ if (!ONLY || ONLY === "bar") {
     for (const [id, go] of games) {
       const { page, context } = await go();
       await wait(300);
+      /* A DOUBLE TAP DOES NOT ZOOM (the owner, 30 Sep 2026, on Scrambled in
+         the app: "if I double click in the app it zooms in"). Two quick taps
+         are ordinary play on every board; pinch zoom is left alone. */
+      const touch = await page.evaluate(() => getComputedStyle(document.body).touchAction);
+      t(`${vp[0]} ${id}: two quick taps are play, not a zoom (touch-action ${touch})`, touch === "manipulation");
       const b = await page.evaluate(() => {
         const bar = document.getElementById("xiBar");
         if (!bar || !bar.classList.contains("xmb")) return { missing: !bar ? "no #xiBar on the page" : "not mounted", XIBar: typeof window.XIBar };

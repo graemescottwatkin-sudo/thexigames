@@ -1065,8 +1065,10 @@ t("and no game writes the link itself", (() => {
   return guilty.length === 0;
 })(), "the href lives once, in shared/xi-chrome.js");
 
-const SHARED_TAG = "v88";
-/* The bytes that ship AS v88, AND THE TAG HAD TO MOVE FOR THEM.
+const SHARED_TAG = "v89";
+/* The bytes that ship AS v89, AND THE TAG HAD TO MOVE FOR THEM.
+   v88 WAS LIVE when a double tap on a page zoomed it in the Football app (body touch-action: manipulation in xi-chrome.css), so v88 -> v89 across every page and site-page.js's constant.
+   The note below is the move before this one.
    v87 WAS LIVE when Scrambled XI: Friends and Vowels XI: Friends join the Friends squad, streaks and records, so v87 -> v88 across every page and site-page.js's constant.
    The note below is the move before this one.
    v86 WAS LIVE when the top bar reads The XI Games - Football, both links, so v86 -> v87 across every page and site-page.js's constant.
@@ -1148,7 +1150,7 @@ const SHARED_TAG = "v88";
    v53, which is this project's oldest fault in miniature: a measurement left
    standing after it stopped being true, in the comment that tells the next
    reader whether they may leave the tag alone. */
-const SHARED_HASH = "e510af5f46146c2e";
+const SHARED_HASH = "86d0fe19306b7ed9";
 /* MOVED AGAIN WITHOUT THE TAG MOVING, which is the other half of the rule
    above and is worth showing rather than only stating. xi-chrome.js changed a
    second time in the same unpushed run -- the Friends squad slot going from

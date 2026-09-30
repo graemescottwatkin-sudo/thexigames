@@ -279,7 +279,14 @@ body.locked .keys{margin-top:6px}
 .gridbox{position:relative}
 .gridbox>.cw-pitch{position:static}
 .cw-pitch .grid{position:relative;z-index:1;gap:0;padding:0;background:transparent;border-radius:2px}
-.cw-pitch .cell{background:var(--grid-cell)}
+/* THE HAIRLINE BETWEEN SQUARES, the crossword's (shared/xi-board.css). The
+   `border:0` in .cell above -- there to clear a button's own border -- also
+   wiped the shared hairline, so a word read as one white bar with no squares
+   in it (the owner, 30 Sep 2026: "you should be able to see where a box ends
+   similar to the word break but more feint"). The word break stays the bold
+   3px bar; this is the faint line the crossword draws. */
+.cw-pitch .cell{background:var(--grid-cell);
+  border-right:1px solid var(--grid-line);border-bottom:1px solid var(--grid-line)}
 .cw-pitch .cell.block{background:transparent;border-color:transparent}
 .cw-pitch .cell.same{background:var(--sel-word)}
 .cw-pitch .cell.sel{background:var(--sel)}

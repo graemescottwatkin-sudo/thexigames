@@ -256,18 +256,55 @@ server.listen(0, "127.0.0.1", async () => {
     const onBoard = letters().replace(/Z/g, "");
     t("and no letter the player did not type is on the board",
       onBoard === "", onBoard || "(only the typed Zs)");
+
+    /* A GREY LETTER CANNOT BE TYPED (the owner, 30 Sep 2026: "I can still
+       select greyed out letters, this should not be possible"). Z came back
+       absent in every square, so it is grey on this entry's keys, and neither
+       the key nor a physical keyboard may put it back into the answer. */
+    t("this entry's answer holds no Z, or the checks below prove nothing",
+      !e.answer.includes("Z") && !e.answer.includes("Q"), e.answer.length + " letters");
+    const zKey = d.querySelector('#gdKbd .osk-key[data-key="Z"]');
+    t("the Z key is grey and cannot be pressed",
+      !!zKey && zKey.classList.contains("a") && zKey.disabled === true,
+      zKey ? zKey.className + " disabled=" + zKey.disabled : "no Z key");
+    const qKey = d.querySelector('#gdKbd .osk-key[data-key="Q"]');
+    t("and a letter not yet tried still can be",
+      !!qKey && !qKey.disabled, qKey ? "Q disabled=" + qKey.disabled : "no Q key");
+    G.type("Z");
+    t("typing Z anyway puts nothing in the answer",
+      !G.state().typed.some((x, i) => x === "Z" && !G.state().confirmed[e.cells[i]]),
+      JSON.stringify(G.state().typed));
+
+    /* EVERY ATTEMPT AT THE ENTRY IN HAND, THE LATEST INCLUDED, OLDEST FIRST
+       (the owner, 30 Sep 2026). It showed only the ones before the latest, so
+       after one guess it showed nothing at all. */
+    const rows = () => [...d.querySelectorAll("#gdHist .g")].map((g) => g.textContent);
+    t("one guess made, one attempt listed",
+      rows().length === 1 && rows()[0] === "Z".repeat(e.len), JSON.stringify(rows()));
+    "Q".repeat(e.len).split("").forEach((ch) => G.type(ch));
+    G.submit();
+    await settled();
+    t("two guesses made, both listed, in the order they were made",
+      rows().length === 2 && rows()[0] === "Z".repeat(e.len) && rows()[1] === "Q".repeat(e.len),
+      JSON.stringify(rows()));
+    t("and the list says which entry it is for",
+      d.getElementById("gdHist").textContent.includes("attempts at " + e.n + (e.dir === "across" ? "A" : "D")),
+      d.getElementById("gdHist").textContent.slice(0, 40));
   }
 
   console.log("\nThe right answer solves it, and its letters cross");
   {
     const e = BOARD.entries[0];
     G.pick(0);
+    /* Measured, not assumed: the block above spends two wrong guesses. */
+    const before = Number(d.getElementById("gdTurns").textContent);
     e.answer.split("").forEach((ch) => G.type(ch));
     G.submit();
     await settled();
     const st = G.state();
     t("the entry is solved", st.solved[e.n] === true);
-    t("the turn came back", d.getElementById("gdTurns").textContent === String(RULES.TURNS_START),
+    t("the turn came back", before === RULES.TURNS_START - 2 &&
+      d.getElementById("gdTurns").textContent === String(before + 1),
       d.getElementById("gdTurns").textContent);
     t("its cells are confirmed, by the server",
       e.cells.every((c) => st.confirmed[c] === e.answer[e.cells.indexOf(c)]));
