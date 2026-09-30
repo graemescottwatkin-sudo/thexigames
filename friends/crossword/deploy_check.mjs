@@ -45,8 +45,8 @@ const DIR = "friends/crossword";
 
 /* WHAT IS LIVE. Bump both after a deploy with tools/post_deploy.mjs, which
    derives them from the live page rather than trusting anyone's memory. */
-const LAST_SHIPPED = "v002z";
-const LAST_SHIPPED_ASSETS = "e36890ca8c2812d0";
+const LAST_SHIPPED = "v003";
+const LAST_SHIPPED_ASSETS = "c74082bd4785e6aa";
 
 let pass = 0, fail = 0;
 function t(name, ok, note) {
