@@ -331,3 +331,12 @@ body.locked #how:target{display:block!important;position:fixed;inset:0;z-index:6
 body.locked #how:target .how-back{display:inline-flex;align-items:center;min-height:var(--tap,44px);padding:0 16px;
   margin:0 0 10px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink);
   font-family:var(--disp);font-weight:700;letter-spacing:.08em;text-transform:uppercase;text-decoration:none}
+
+/* THE CALL'S LEVEL, under the V (the owner, 30 Sep 2026): Easy, Medium or
+   Hard, how close the two values are. The family's own colours: the ok green,
+   the gold, the danger red, each as a tint with its word in the full colour. */
+.vs .tier{display:block;margin:4px auto 0;width:max-content;padding:1px 7px;border-radius:999px;
+  font-family:var(--disp);font-weight:700;font-size:10px;letter-spacing:.08em;text-transform:uppercase;line-height:1.5}
+.vs .tier-easy{color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent)}
+.vs .tier-medium{color:var(--xi-ink);background:color-mix(in srgb,var(--gold) 22%,transparent)}
+.vs .tier-hard{color:var(--danger);background:color-mix(in srgb,var(--danger) 12%,transparent)}

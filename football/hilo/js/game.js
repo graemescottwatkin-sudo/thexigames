@@ -10,7 +10,7 @@
  * more, 114 the ceiling. This file is the page: the landing the family
  * shares, the ladder of two rows, the clock, the answers list, the share.
  */
-var BUILD = "v002u";
+var BUILD = "v002v";
 
 (function () {
   "use strict";
@@ -553,6 +553,7 @@ var BUILD = "v002u";
     right.querySelector(".sub").textContent = "";
     right.querySelector(".val").textContent = "?";
     right.querySelector(".val").className = "val q";
+    setVs($("live").querySelector(".vs"), round, round.step);
     var f = faces(b), ref = fmt(round.values[round.step], b.unit);
     /* Name the subject and the reference, every call: the subject is the
        hidden item on the right, the reference the value on the left. */
@@ -574,6 +575,23 @@ var BUILD = "v002u";
     paint(g);
     showPair(g, false);
     startClock();
+  }
+  /* THE CALL'S LEVEL, Easy / Medium / Hard (the owner, 30 Sep 2026), as a
+     chip under the V: how close the two values are, never which is higher.
+     `call` is the call's index, 0 for the first. A board without levels
+     (club boards, and the dailies served before 1 Oct 2026) shows none. */
+  function tierChip(round, call) {
+    var t = round.board && round.board.tiers ? round.board.tiers[call] : null;
+    if (!t) return null;
+    var c = document.createElement("span");
+    c.className = "tier tier-" + t;
+    c.textContent = t.charAt(0).toUpperCase() + t.slice(1);
+    return c;
+  }
+  function setVs(el, round, call) {
+    el.textContent = "V";
+    var chip = tierChip(round, call);
+    if (chip) el.appendChild(chip);
   }
   function paint(round) {
     Array.prototype.forEach.call($("ladder").children, function (d, i) {
@@ -699,7 +717,7 @@ var BUILD = "v002u";
     var lw = document.createElement("div"); lw.className = "who"; lw.textContent = L.name;
     var lv = document.createElement("div"); lv.className = "val"; lv.textContent = fmt(g.values[g.step], b.unit);
     l.appendChild(lw); l.appendChild(lv);
-    var vs = document.createElement("div"); vs.className = "vs"; vs.textContent = "V";
+    var vs = document.createElement("div"); vs.className = "vs"; setVs(vs, g, g.step);
     var r = document.createElement("div"); r.className = "player " + (v.right ? "ok" : "bad");
     var rw = document.createElement("div"); rw.className = "who"; rw.textContent = R.name;
     var rv = document.createElement("div"); rv.className = "val"; rv.textContent = fmt(v.value, b.unit);

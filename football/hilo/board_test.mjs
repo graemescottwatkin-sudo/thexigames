@@ -70,6 +70,20 @@ t("the verdict releases the row's context with its value", (() => {
   return !!v && v.context === (daily.chain[1].context || "");
 })());
 t("the token rides with it", pub.token === "hl:2026-09-03");
+/* THE CALL'S LEVEL (the owner, 30 Sep 2026): a daily board from 1 Oct 2026
+   carries difficulty.calls, eleven of easy/medium/hard, and they go out as
+   `tiers` -- how close each pair is, never which is higher. A board without
+   them, or with them malformed, sends null, and the page shows no label. */
+{
+  const levels = ["easy", "medium", "hard", "easy", "medium", "hard", "easy", "medium", "hard", "easy", "medium"];
+  const withLv = publicBoard({ ...daily, difficulty: { calls: levels, sigma: 1 } }, dayToken("2026-10-01"));
+  t("a board with levels sends all eleven, in call order", JSON.stringify(withLv.tiers) === JSON.stringify(levels), JSON.stringify(withLv.tiers));
+  t("and nothing else of the difficulty object", !("difficulty" in withLv) && !/"sigma"/.test(JSON.stringify(withLv)));
+  t("a board without them sends null", pub.tiers === null, String(pub.tiers));
+  t("and so does one whose levels are the wrong length or an unknown word",
+    publicBoard({ ...daily, difficulty: { calls: levels.slice(1) } }, "x").tiers === null &&
+      publicBoard({ ...daily, difficulty: { calls: ["easy", ...levels.slice(1, 10), "trivial"] } }, "x").tiers === null);
+}
 
 console.log("\n=== The judge ===");
 const truth = (i) => (daily.chain[i].value > daily.chain[i - 1].value ? "higher" : "lower");

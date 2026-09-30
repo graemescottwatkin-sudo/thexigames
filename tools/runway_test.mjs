@@ -27,8 +27,12 @@ const TODAY = "2026-09-14";
    no recognised date column has none, and MAX over no rows is null. */
 const stub = (tables) => (sql) => {
   if (sql.includes("sqlite_master")) {
+    /* The named exceptions are read from the query itself, so this stub
+       follows what the tool asks rather than restating the list. */
+    const inList = (sql.match(/name IN \(([^)]*)\)/) || [, ""])[1];
+    const named = [...inList.matchAll(/'([^']+)'/g)].map((m) => m[1]);
     return Object.keys(tables)
-      .filter((n) => n.endsWith("_schedule") || n === "qf_daily")
+      .filter((n) => n.endsWith("_schedule") || named.includes(n))
       .sort().map((name) => ({ name }));
   }
   const m = sql.match(/PRAGMA table_info\((\w+)\)/);
@@ -125,6 +129,18 @@ console.log("\nThe list is derived from the database, and ring games are not in 
   t("the game name comes off the table name", rows.map((r) => r.game).join() === "hl,qf");
   t("qf_daily is read even though it is not named _schedule",
     rows.some((r) => r.table === "qf_daily" && r.last === "2026-10-31"));
+}
+{
+  /* EVERY QUICKFIRE SET'S CALENDAR (functions/_lib/qf-sets.js): QuickFire XI:
+     Friends' fr_qf_daily, from 30 Sep 2026, beside football's. */
+  const rows = readRunway(stub({
+    qf_daily:    { columns: ["play_date", "status"], last: "2026-12-03", rows: 64 },
+    fr_qf_daily: { columns: ["play_date", "status"], last: "2027-02-22", rows: 147 },
+    fr_qf_round: { columns: ["play_id"], last: null, rows: 3 },
+  }));
+  t("QuickFire XI: Friends' calendar is read too, under its own name",
+    rows.map((r) => r.game).join() === "fr_qf,qf" && rows.some((r) => r.table === "fr_qf_daily" && r.last === "2027-02-22"),
+    rows.map((r) => r.table).join());
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

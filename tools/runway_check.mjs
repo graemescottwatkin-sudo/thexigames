@@ -161,6 +161,15 @@ function d1(sql) {
   return parsed.results;
 }
 
+/* QUICKFIRE'S DAILY TABLES, one per set, named <pre>daily rather than
+   <game>_schedule (qf_daily predates the convention; fr_qf_daily, QuickFire XI:
+   Friends' from 30 Sep 2026, follows qf_daily). Read from the registry that
+   owns them, so a third QuickFire set is checked by existing, the way a
+   _schedule table is -- before this, the Friends calendar was nowhere in this
+   report. Names from a constant file, never a request. */
+import { QF_SETS } from "../functions/_lib/qf-sets.js";
+const QF_DAILY = Object.values(QF_SETS).map((s) => s.pre + "daily");
+
 export function readRunway(query) {
   /* DERIVED. Every _schedule table, plus qf_daily — QuickFire's schedule under
      a name that predates the convention. Named here because it is a fact about
@@ -174,7 +183,7 @@ export function readRunway(query) {
      same thing more plainly. */
   const tables = query(
     "SELECT name FROM sqlite_master WHERE type='table' " +
-    "AND (substr(name, -9) = '_schedule' OR name = 'qf_daily') ORDER BY name"
+    "AND (substr(name, -9) = '_schedule' OR name IN (" + QF_DAILY.map((n) => "'" + n + "'").join(", ") + ")) ORDER BY name"
   ).map((r) => r.name);
 
   const rows = [];

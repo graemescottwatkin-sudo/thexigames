@@ -33,6 +33,11 @@ const playDay = HL_SAMPLE_SCHEDULE[today] ? today : days[0];
 const board = HL_SAMPLE_BOARDS.find((b) => String(b.id) === HL_SAMPLE_SCHEDULE[playDay]);
 if (!board) throw new Error("no sample board for " + playDay);
 const truth = (i) => (board.chain[i].value > board.chain[i - 1].value ? "higher" : "lower");
+/* THE CALL'S LEVEL. The sample's boards were served before levels existed,
+   so this one is given eleven, as every daily from 1 Oct 2026 carries them;
+   the handlers read this same object, so the page is served them. */
+const LEVELS = ["easy", "medium", "hard", "easy", "medium", "hard", "easy", "medium", "hard", "easy", "medium"];
+board.difficulty = { calls: LEVELS };
 
 const ORIGIN = "http://localhost";
 const plays = [];
@@ -229,12 +234,26 @@ const numbersOnPage = () => {
     ", right=" + JSON.stringify($("right").querySelector(".val").textContent));
 }
 
+console.log("\n=== The call's level ===");
+{
+  const chip = () => $("live").querySelector(".vs .tier");
+  t("the first call's level is on the live pair, under the V", !!chip() && chip().textContent === "Easy" && chip().classList.contains("tier-easy"),
+    chip() ? chip().outerHTML : "no label");
+}
+
 console.log("\n=== The calls ===");
 /* Ten right calls, then one timed out: the engine's clock cannot be waited on
    in a suite, so the time-out is reached by its hook. */
 for (let i = 1; i <= 10; i++) {
   $(truth(i)).dispatchEvent(new window.Event("click"));
   await settle(10);
+}
+{
+  const settledChips = [...doc.querySelectorAll(".duel.settled .vs .tier")].map((c) => c.textContent);
+  t("each settled row keeps its own call's level", settledChips.length === 10 &&
+    settledChips.every((c, i) => c.toLowerCase() === LEVELS[i]), settledChips.join(","));
+  t("and the live pair shows the eleventh call's", ($("live").querySelector(".vs .tier") || {}).textContent === "Medium",
+    ($("live").querySelector(".vs .tier") || {}).textContent);
 }
 t("ten right calls have settled into ten stamped rows",
   doc.querySelectorAll(".duel.settled.ok").length === 10 && doc.querySelectorAll(".duel.settled.bad").length === 0);

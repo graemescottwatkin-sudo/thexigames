@@ -206,8 +206,21 @@ export function publicBoard(board, token) {
     trueAsOf: board.trueAsOf || null,
     sourceLine: board.sourceLine || null,
     club: clubOf(board),
+    /* HOW CLOSE EACH CALL IS, easy / medium / hard, one per call in play
+       order (the owner, 30 Sep 2026: a level on every call "as the other
+       games have"). HiLo's bank measures the gap between the two values in
+       standard deviations of the category's pool, so a tier says how near
+       the two are and never which is higher. Only daily boards from 1 Oct
+       2026 carry it; a board without it sends null and shows no label. */
+    tiers: tiersOf(board),
     rows,
   };
+}
+const TIERS = ["easy", "medium", "hard"];
+function tiersOf(board) {
+  const calls = board && board.difficulty && board.difficulty.calls;
+  if (!Array.isArray(calls) || calls.length !== (board.chain || []).length - 1) return null;
+  return calls.every((c) => TIERS.includes(c)) ? calls.slice() : null;
 }
 
 /* THE JUDGE. Call i (1..11) asks whether row i is higher than row i-1. The
