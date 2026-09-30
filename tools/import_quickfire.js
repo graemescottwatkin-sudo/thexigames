@@ -454,6 +454,94 @@ function servedClash(prev, next, today) {
 
 let WOULD_CLASH = false;
 
+/* ---- AND WHAT A SERVED QUESTION SAYS ----------------------------------------
+ *
+ * servedClash compares which question sits in which slot, and that is not all a
+ * player saw. 30 Sep 2026, QuickFire XI: Friends: a rebuild kept every served
+ * slot's id and regenerated the rows behind them, so 17 of the 28 questions
+ * already played on 29-30 Sep came back with their four options in another
+ * order and one with three new wrong options -- and this importer, asked only
+ * about ids, loaded it clean. The owner's ruling that day: "yes tighten the
+ * importer guard". So a served question's answer, clue and options, in their
+ * order, are part of what was served, and a change to them is refused the same
+ * way, with the same override.
+ *
+ * READ AS VALUES, NOT AS THE NTH QUOTED STRING: a NULL is written unquoted, and
+ * counting quoted strings slides every later column one place left -- the
+ * parsing fault that misreported 69 Who Am I players the same day. */
+const ROW_FIELDS = ["answer", "clue", "option_1", "option_2", "option_3", "option_4"];
+
+export function sqlValues(text) {
+  const out = [];
+  let i = 0;
+  while (i < text.length) {
+    while (text[i] === " " || text[i] === ",") i++;
+    if (i >= text.length) break;
+    if (text[i] === "'") {
+      let v = "";
+      i++;
+      for (;;) {
+        if (i >= text.length) throw new Error("an unterminated string in a question row");
+        if (text[i] === "'" && text[i + 1] === "'") { v += "'"; i += 2; }
+        else if (text[i] === "'") { i++; break; }
+        else v += text[i++];
+      }
+      out.push(v);
+    } else {
+      /* NULL, a number, or a call such as datetime('now'): up to the next comma
+         outside any brackets, a quoted argument copied whole. */
+      let v = "", depth = 0;
+      while (i < text.length && !(depth === 0 && text[i] === ",")) {
+        const c = text[i];
+        if (c === "'") {
+          v += c; i++;
+          while (i < text.length && text[i] !== "'") v += text[i++];
+          v += text[i++];
+          continue;
+        }
+        if (c === "(") depth++;
+        if (c === ")") depth--;
+        v += c; i++;
+      }
+      v = v.trim();
+      out.push(v === "NULL" ? null : v);
+    }
+  }
+  return out;
+}
+
+function servedRowsFromSql(sql) {
+  const head = "INSERT INTO " + T("question") + " (";
+  const rows = {};
+  for (const line of sql.split(/\r?\n/)) {
+    if (!line.startsWith(head)) continue;
+    const cols = line.slice(head.length, line.indexOf(")")).split(",").map((c) => c.trim());
+    const at = line.indexOf(" VALUES (");
+    const vals = sqlValues(line.slice(at + " VALUES (".length, line.lastIndexOf(");")));
+    if (vals.length !== cols.length) throw new Error(`a question row with ${vals.length} values for ${cols.length} columns`);
+    const r = {};
+    cols.forEach((c, k) => { r[c] = vals[k]; });
+    rows[r.id] = r;
+  }
+  return rows;
+}
+
+/* Every served question whose words changed, named, with the fields that did. */
+function servedRowClash(prevCal, prevRows, today) {
+  const out = [];
+  const same = (a, b) => String(a ?? "") === String(b ?? "");
+  for (const day of Object.keys(prevCal || {}).sort()) {
+    if (day > today) continue;
+    for (const slot of prevCal[day]) {
+      const was = prevRows[slot.qid], now = byId.get(slot.qid);
+      if (!was || !now) continue;   // a missing question is the slot guard's to report
+      const moved = ROW_FIELDS.filter((f) => !same(was[f], now[f]));
+      if (moved.length) out.push(`${day}: ${slot.role} slot ${slot.slot}, question ${slot.qid}: its ${moved.join(", ")} would change`);
+    }
+  }
+  return out;
+}
+
 function servedCalendarFromSql(sql) {
   const cal = {};
   /* The set's own slot table, so each game reads its own record. */
@@ -483,6 +571,7 @@ function servedCalendarFromSql(sql) {
   }
 
   const clashes = servedClash(previous, next, todayKey);
+  if (fs.existsSync(OUT)) clashes.push(...servedRowClash(previous, servedRowsFromSql(fs.readFileSync(OUT, "utf8")), todayKey));
 
   if (clashes.length && !process.argv.includes("--rewrite-history")) {
     console.error(`REFUSED: ${clashes.length} day(s) at or before today would change.`);

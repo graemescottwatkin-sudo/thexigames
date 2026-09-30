@@ -347,5 +347,69 @@ console.log("=== The days that have been served ===");
   fs.rmSync(dir, { recursive: true, force: true });
 }
 
+console.log("\n=== What a served question says, not only which it is ===");
+{
+  /* THE OWNER'S RULING, 30 Sep 2026: "yes tighten the importer guard". A
+     rebuild kept every served slot's id and regenerated the rows behind them:
+     17 of 28 questions already played came back with their options in another
+     order and one with new wrong options, and the slot guard loaded it clean.
+     Each case below changes ONE field of ONE question and keeps every id in its
+     slot, so only the new guard can refuse it. */
+  const day = (n) => new Date(Date.now() - n * 86400000).toISOString().slice(0, 10);
+  const PAST = [day(2), day(1)], FUTURE = day(-3);
+  const staged = () => {
+    const d = fs.mkdtempSync(path.join(os.tmpdir(), "qfrows-"));
+    fs.mkdirSync(path.join(d, "src")); fs.mkdirSync(path.join(d, "data"));
+    return d;
+  };
+  const go = (d, bank, extra = []) => {
+    fs.writeFileSync(path.join(d, "src", "bank.json"), JSON.stringify(bank));
+    const r = spawnSync(process.execPath, [SCRIPT, "--source", path.join(d, "src"), ...extra], { cwd: d, encoding: "utf8" });
+    return { status: r.status, out: String(r.stdout || "") + String(r.stderr || "") };
+  };
+  const base = () => cleanBank(3, [...PAST, FUTURE]);
+  const dir = staged();
+  const sql = path.join(dir, "data", "qf-production.sql");
+  const first = go(dir, base());
+  t("PRECONDITION: a first import with two served days and one to come", first.status === 0 && fs.existsSync(sql), first.out.split("\n")[0]);
+  const before = fs.statSync(sql).mtimeMs;
+  const q = (bank, dayIdx, slot) => bank.questions.find((x) => x.id === bank.dailies[dayIdx].questionIds[slot]);
+
+  const reordered = base();
+  { const x = q(reordered, 0, 3); [x.option_1, x.option_2] = [x.option_2, x.option_1]; }
+  const r1 = go(dir, reordered);
+  t("REFUSES a served question whose options come back in another order",
+    r1.status === 1 && /question \S+: its option_1, option_2 would change/.test(r1.out) && r1.out.includes(PAST[0]),
+    (r1.out.split("\n").find((l) => l.includes("would change")) || r1.out.split("\n")[0]).trim());
+  t("  and writes nothing", fs.statSync(sql).mtimeMs === before);
+
+  const reworded = base();
+  q(reworded, 1, 0).clue = "The same question, asked differently";
+  const r2 = go(dir, reworded);
+  t("REFUSES a served question whose clue is reworded", r2.status === 1 && /its clue would change/.test(r2.out),
+    (r2.out.split("\n").find((l) => l.includes("would change")) || "").trim());
+
+  const newWrong = base();
+  { const x = q(newWrong, 0, 5); x.option_4 = x.answer + " (e)"; }
+  const r3 = go(dir, newWrong);
+  t("REFUSES new wrong options on a served question", r3.status === 1 && /its option_4 would change/.test(r3.out));
+
+  const bench = base();
+  { const x = bench.questions.find((y) => y.id === bench.dailies[1].benchIds[1]); x.clue = "A bench question, reworded"; }
+  const r4 = go(dir, bench);
+  t("and a served day's BENCH question too: a sub shows it", r4.status === 1 && /bench slot 2, question \S+: its clue would change/.test(r4.out));
+
+  /* THE SAME CHANGE TO A DAY STILL TO COME IS THE WHOLE POINT OF RE-IMPORTING. */
+  const future = base();
+  { const x = q(future, 2, 3); [x.option_1, x.option_2] = [x.option_2, x.option_1]; x.clue = "A future question, reworded"; }
+  const r5 = go(dir, future);
+  t("but the same changes to a day still to come are accepted", r5.status === 0, r5.out.split("\n")[0]);
+
+  const r6 = go(dir, reordered, ["--rewrite-history"]);
+  t("--rewrite-history lets a served row change through, and says so",
+    r6.status === 0 && /REWRITING HISTORY/.test(r6.out) && fs.existsSync(sql.replace(/[.]sql$/, ".rewritten.sql")));
+  fs.rmSync(dir, { recursive: true, force: true });
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
