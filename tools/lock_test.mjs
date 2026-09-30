@@ -2424,6 +2424,8 @@ const PERMA = {
   "football/vowels":    { asks: `/api/scrambled/daily?no=${PERMA_N}&cy=1`, label: "#startKicker" },
   "football/whoami":    { asks: `/api/whoami/daily?no=${PERMA_N}`, label: "#waTodayKicker", title: "#waToday .hc-title" },
   "football/wordsearch": { asks: "/api/wordsearch/archive" },
+  /* Friends Wordsearch resolves the number the same way: from its archive list. */
+  "friends/wordsearch": { asks: "/api/wordsearch_fr/archive" },
   "friends/crossword":  { asks: `/api/crossword/crossword_fr/daily?no=${PERMA_N}` },
   "friends/whoami":     { asks: `/api/whoami/whoami_fr/daily?no=${PERMA_N}`, label: "#waTodayKicker", title: "#waToday .hc-title" },
   /* Lightning asks which day its board is before anything starts, and names it

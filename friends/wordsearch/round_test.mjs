@@ -27,7 +27,8 @@
  */
 import fs from "node:fs";
 import path from "node:path";
-import { clock, TODAY, YESTERDAY, BOARDS, WORDS, BONUS, freshEnv, call, dragFor, ROOT } from "./fixture.mjs";
+import { clock, TODAY, YESTERDAY, LONG_AGO, BOARDS, WORDS, BONUS, freshEnv, call, dragFor, ROOT } from "./fixture.mjs";
+import { LAUNCHED } from "../../functions/_lib/games.js";
 import XIWS_SCORING from "../../football/wordsearch/js/scoring.js";
 import { publicPuzzle } from "../../functions/_lib/frws-public.js";
 
@@ -85,10 +86,18 @@ console.log("\n=== Which boards open whole ===");
   t("the catalogue lists what may open, and not today's or tomorrow's",
     JSON.stringify(ids) === JSON.stringify([BOARDS.yesterday.id, BOARDS.old.id, BOARDS.never.id].sort()), ids.join(", "));
   t("and names no answer", Object.values(BOARDS).every((b) => leaks(withoutGrid(cat.text), b).length === 0));
+  /* BOUNDED BY THE LAUNCH (games.js LAUNCHED), not the schedule's first row:
+     a day before the game launched is not a day it ran. What is expected is
+     derived from the fixture's days and the launch, so the check holds on
+     launch day (nothing yet) and every day after. */
   const arc = await call(env, "archive");
-  t("previous dailies stop at yesterday, newest first",
-    arc.body.days.length === 2 && arc.body.days[0].day === YESTERDAY && arc.body.days.every((d) => d.day < TODAY),
-    arc.body.days.map((d) => d.day).join(", "));
+  const want = [LONG_AGO, YESTERDAY].filter((d) => d >= LAUNCHED.wordsearch_fr && d < TODAY).sort().reverse();
+  t("previous dailies are the days since the launch and before today, newest first, each numbered",
+    JSON.stringify(arc.body.days.map((d) => d.day)) === JSON.stringify(want) &&
+      arc.body.days.every((d) => Number.isInteger(d.no)), arc.body.days.map((d) => d.day).join(", ") || "none, as derived");
+  t("and none before the launch", arc.body.days.every((d) => d.day >= LAUNCHED.wordsearch_fr));
+  const dly = await call(env, "daily");
+  t("today's board carries its board number", Number.isInteger(dly.body.no), String(dly.body.no));
 }
 
 console.log("\n=== A round, judged by the server ===");

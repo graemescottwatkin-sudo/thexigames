@@ -41,8 +41,8 @@ const API = "/api/wordsearch_fr/";
 const ROUTE_FILES = ["archive.js", "catalog.js", "daily.js", "find.js", "finish.js", "puzzle.js", "round.js"];
 
 /* WHAT IS LIVE. Bump both after a deploy with tools/post_deploy.mjs. */
-const LAST_SHIPPED = "v000";
-const LAST_SHIPPED_ASSETS = null; // nothing has shipped yet
+const LAST_SHIPPED = "v001a";      // the launch build, 30 Sep 2026
+const LAST_SHIPPED_ASSETS = null;  // recorded by tools/post_deploy.mjs once v001a is live
 
 let pass = 0, fail = 0;
 function t(name, ok, note) {
@@ -80,7 +80,10 @@ function ownAssetHash() {
 const tag = (markup.match(/"js\/game\.js\?v=(v[0-9a-z]+)"/) || [])[1];
 t("asset URLs carry a build tag so a cached copy cannot be reused", !!tag, tag);
 t("the build tag never goes backwards", !!tag && tag >= LAST_SHIPPED, `now ${tag}, live ${LAST_SHIPPED}`);
-if (LAST_SHIPPED_ASSETS === null && !launched) {
+/* THE LAUNCH BUILD, BEFORE IT IS LIVE: LAST_SHIPPED names the tag the launch
+   ships and post_deploy records its hash once it has. Only that one state
+   skips, as Lightning's launch did; any later tag with no hash is a failure. */
+if (LAST_SHIPPED_ASSETS === null && (!launched || LAST_SHIPPED === "v001a")) {
   skip("the game's own assets cannot change without its build tag moving",
     `nothing has shipped; assets now ${ownAssetHash()}`);
 } else {
@@ -268,8 +271,12 @@ t("and no other game uses it", (() => {
   return users.length === 0;
 })());
 t("every call goes to this game's API, relatively, with the family's CSRF header", (() => {
-  const apis = jsCode.match(/["']\/api\/[^"']*["']/g) || [];
-  return apis.length === 1 && apis[0].includes(API) && /"X-XI-Games": "1"/.test(jsCode) && !/fetch\(["']https?:/.test(jsCode);
+  /* This game's API, and the family's account and session routes, which every
+     launched game calls to bank a result: nothing else. */
+  const apis = (jsCode.match(/["']\/api\/[^"']*["']/g) || []).map((a) => a.slice(1, -1));
+  const allowed = (a) => a === API || /^\/api\/account\/(migrate|results\?game=)$/.test(a) || a === "/api/auth/session";
+  return apis.includes(API) && apis.every(allowed) && /"X-XI-Games": "1"/.test(jsCode) && !/fetch\(["']https?:/.test(jsCode)
+    ? true : (console.log("        calls: " + apis.join(", ")), false);
 })());
 t("every route the client calls exists", (() => {
   const called = [...new Set([...jsCode.matchAll(/\b(?:api|post)\("([a-z]+)/g)].map((m) => m[1]))];

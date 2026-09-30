@@ -191,6 +191,9 @@
          (29 Sep 2026): the next two free numbers. */
       { n: 4,  name: "Scrambled XI: Friends", href: "/friends/scrambled/" },
       { n: 5,  name: "Vowels XI: Friends", href: "/friends/vowels/" },
+      /* WORDSEARCH, FRIENDS, launched 30 September 2026 on the owner's go:
+         the next free number. */
+      { n: 6,  name: "Wordsearch XI: Friends", href: "/friends/wordsearch/" },
     ],
   };
 
@@ -1523,7 +1526,7 @@
                             is why aligned_test walks GAMES and fails when one of
                             them is missing here, rather than trusting anyone to
                             remember. */
-                         "xifc.", "xifw.", "xifl.", "xifs.", "xifv.", "xi."];
+                         "xifc.", "xifw.", "xifl.", "xifs.", "xifv.", "xifws.", "xi."];
   var RECORD_KEEP = [
     /* Identity. Wiping this would cut the player off from results already
        synced to their account, which clearing local history has no business

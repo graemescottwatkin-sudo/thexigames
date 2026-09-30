@@ -123,6 +123,19 @@
 /friends/vowels/js/*
   Cache-Control: public, max-age=31536000, immutable
 
+# WORDSEARCH XI: FRIENDS — the sixth, same three rules.
+/friends/wordsearch/
+  Cache-Control: no-store
+
+/friends/wordsearch/index.html
+  Cache-Control: no-store
+
+/friends/wordsearch/css/*
+  Cache-Control: public, max-age=31536000, immutable
+
+/friends/wordsearch/js/*
+  Cache-Control: public, max-age=31536000, immutable
+
 # XI Word Search — same three rules as the crossword, one pair per game.
 /football/wordsearch/
   Cache-Control: no-store

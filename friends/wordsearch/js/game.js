@@ -11,16 +11,17 @@
  *   ticked off by its place in the list, `n`, which the server names when it
  *   judges a drag. Nothing here is keyed by a word the page was never told.
  *
- *   NOT YET REGISTERED WITH THE FAMILY. The game is in build: it is not in
- *   GAMES or LAUNCHED, so the account, the season, the plays counter and the
- *   permalinks — which all ask that list — are not wired, and results are kept
- *   on this device only. The round's id is minted here rather than by
- *   /api/play for the same reason. See WordsearchXI_Friends/README.md.
+ *   LAUNCHED 30 SEPTEMBER 2026. Results bank to the account (/api/account/
+ *   migrate, keyed "frws:<day>" in games.js), plays are counted through
+ *   shared/xi-plays.js, and a board has its own address (/daily/N). The
+ *   round's id is still minted here: the server's round is keyed on it, and it
+ *   must survive a reload on the day it was made. No season, as every Friends
+ *   game: its streaks are shared/xi-played.js's.
  */
 (function () {
   "use strict";
 
-  var BUILD = "v000h";
+  var BUILD = "v001a";
   var GAME = "wordsearch_fr", NAME = "Wordsearch XI: Friends", API = "/api/wordsearch_fr/";
   var PAGE = "https://www.thexigames.com/friends/wordsearch/";
   window.WORDSEARCHXI_FR_BUILD = BUILD;
@@ -35,7 +36,7 @@
 
   /* ---- state ----------------------------------------------------------- */
   var mode = "daily";           // daily | free
-  var puzzle = null, serverDay = null, catalogBoards = [];
+  var puzzle = null, serverDay = null, serverNo = null, openNo = null, catalogBoards = [];
   /* The clues found, by their place in the list. */
   var found = new Set(), bonusFound = false;
   var foundAt = {};
@@ -57,9 +58,12 @@
 
   /* ---- storage (this game's prefix) ------------------------------------ */
   var PREFIX = "xifws.", RESULTS_KEY = PREFIX + "results", SCORING_VERSION = 1;
-  function store(k, v) { try { localStorage.setItem(k, v); } catch (e) {} }
+  /* Every write names its key where the call is, so tools/aligned_test.mjs can
+     prove each one is under this game's prefix: a wrapper taking any key is a
+     write it cannot see. */
   function fetchKey(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }
   function dailyStorageKey() { return PREFIX + "daily." + serverDay; }
+  function playKey() { return PREFIX + "play." + serverDay; }
   function readResults() {
     try { var r = JSON.parse(fetchKey(RESULTS_KEY) || "[]"); return Array.isArray(r) ? r : []; }
     catch (e) { return []; }
@@ -67,7 +71,64 @@
   function recordResult(rec) {
     var all = readResults().filter(function (r) { return r.day !== rec.day; });
     all.push(rec);
-    store(RESULTS_KEY, JSON.stringify(all.slice(-800)));
+    try { localStorage.setItem(RESULTS_KEY, JSON.stringify(all.slice(-800))); } catch (e) {}
+    pushResults();
+  }
+
+  /* ---- the account: the family's two calls, push then pull --------------
+     First banked wins; the account's row wins outright on a pull; a local row
+     the account has never seen survives. Failures are logged, never shown. */
+  var account = null;
+  function accountNote(what, err) {
+    try { console.warn("[account] " + what + " failed:", err && err.message ? err.message : err); } catch (e) {}
+  }
+  function apiAuth(path, body) {
+    var opts = { method: body ? "POST" : "GET", headers: { "X-XI-Games": "1" }, credentials: "same-origin" };
+    if (body) { opts.headers["Content-Type"] = "application/json"; opts.body = JSON.stringify(body); }
+    return fetch(path, opts).then(function (r) { if (!r.ok) throw new Error(String(r.status)); return r.json(); });
+  }
+  function pushResults() {
+    if (!account) return Promise.resolve(null);
+    return apiAuth("/api/account/migrate", { game: GAME, results: readResults() })
+      .catch(function (e) { accountNote("push", e); return null; });
+  }
+  function pullResults() {
+    if (!account) return Promise.resolve(null);
+    return apiAuth("/api/account/results?game=" + GAME).then(function (r) {
+      var remote = (r && r.results) || [];
+      if (!remote.length) return null;
+      var byDay = {};
+      readResults().forEach(function (x) { if (x && x.day) byDay[x.day] = x; });
+      remote.forEach(function (x) { if (x && x.day) byDay[x.day] = x; });
+      var merged = Object.keys(byDay).sort().map(function (k) { return byDay[k]; });
+      try { localStorage.setItem(RESULTS_KEY, JSON.stringify(merged.slice(-800))); } catch (e) {}
+      return merged.length;
+    }).catch(function (e) { accountNote("pull", e); return null; });
+  }
+  function syncAccount() {
+    return apiAuth("/api/auth/session").then(function (r) {
+      account = (r && r.user) || null;
+      if (!account) return null;
+      return pushResults().then(pullResults);
+    }).catch(function (e) { accountNote("session", e); return null; });
+  }
+  document.addEventListener("xi:account", function (ev) {
+    var d = ev.detail || {};
+    if (d.type === "signout") { account = null; return; }
+    syncAccount();
+  });
+
+  /* ---- counting plays (shared/xi-plays.js): a start, and an end ---------- */
+  function playsStart(kind, boardKey) {
+    if (!window.XIPlays) return;
+    window.XIPlays.start({ game: GAME, mode: kind, boardKey: boardKey,
+      dailyNo: kind === "daily" ? serverNo : null, total: WORDS }, function () {
+      return { solved: found.size, elapsed: Math.round(elapsed || 0),
+               detail: { bonusFound: bonusFound, assisted: assisted, penaltyMinutes: penaltyMinutes } };
+    });
+  }
+  function playsEnd(completed) {
+    if (window.XIPlays && window.XIPlays.active()) window.XIPlays.end(!!completed);
   }
   function pruneDailyState() {
     try {
@@ -84,12 +145,12 @@
      fouls hang off it, so a reload resumes the same round. */
   function playIdOf() {
     if (mode !== "daily" || !serverDay) return null;
-    var k = PREFIX + "play." + serverDay, id = fetchKey(k);
+    var id = fetchKey(playKey());
     if (!id || !/^[A-Za-z0-9_-]{6,64}$/.test(id)) {
       var a = new Uint8Array(12);
       (window.crypto || {}).getRandomValues ? crypto.getRandomValues(a) : a.forEach(function (_, i) { a[i] = Math.random() * 256; });
       id = "fw" + Array.prototype.map.call(a, function (b) { return ("0" + b.toString(16)).slice(-2); }).join("");
-      store(k, id);
+      try { localStorage.setItem(playKey(), id); } catch (e) {}
     }
     return id;
   }
@@ -113,12 +174,12 @@
   function saveDailyProgress() {
     if (mode !== "daily" || !puzzle || !startedAt || !serverDay) return;
     if (!varActive()) elapsed = (Date.now() - startedAt) / 1000;
-    store(dailyStorageKey(), JSON.stringify(dailySnapshot("in_progress")));
+    try { localStorage.setItem(dailyStorageKey(), JSON.stringify(dailySnapshot("in_progress"))); } catch (e) {}
   }
   function saveDailyComplete(reason) {
     if (mode !== "daily" || !puzzle || !serverDay) return;
     var snap = dailySnapshot("complete"); snap.reason = reason;
-    store(dailyStorageKey(), JSON.stringify(snap));
+    try { localStorage.setItem(dailyStorageKey(), JSON.stringify(snap)); } catch (e) {}
     recordResult({ game: GAME, day: snap.day, puzzle_id: snap.puzzle_id, status: "complete",
       score: snap.final_score, final_score: snap.final_score, minute: snap.minute,
       found_count: snap.found_count, bonus_found: snap.bonus_found, at: Date.now() });
@@ -443,7 +504,7 @@
      today's (the schedule was reloaded under it). Its id is dropped and a
      fresh round kicked off; the drag that learned this is sent again. */
   function renewPlay(retried) {
-    try { localStorage.removeItem(PREFIX + "play." + serverDay); } catch (e) {}
+    try { localStorage.removeItem(playKey()); } catch (e) {}
     return startServerRound(!!retried);
   }
   /* STALE MID-ROUND: the page is still showing the old board. Resending the
@@ -665,6 +726,7 @@
     dragging = false; setPreview([]);
     $("finishPrompt").classList.remove("show");
     lastReason = reason;
+    playsEnd(found.size >= WORDS);
     drawFullTime({ score: finalScore(), minute: footballMinute(), bonus: bonusFound,
                    boxes: boxesOf(foundAt), daily: mode === "daily" });
     saveDailyComplete(reason);
@@ -696,7 +758,7 @@
     var sn = secretName();
     if (sn) answers.push({ s: o.bonus ? "g" : "x", m: null, text: "Secret bonus: " + sn, points: "" });
     XIFullTime.panel($("ftPanel"), {
-      game: GAME, name: NAME, no: null,
+      game: GAME, name: NAME, no: mode === "daily" && typeof serverNo === "number" ? serverNo : openNo,
       date: mode === "daily" && serverDay ? XIFullTime.dayLabel(serverDay) : (puzzle.theme || ""),
       score: o.score, max: S.MAX_SCORE, boxes: o.boxes, stats: stats, help: help,
       answers: answers,
@@ -746,7 +808,7 @@
   function startDaily(p) {
     mode = "daily";
     enterBoard(p, "Today's board");
-    if (window.XIBar) XIBar.set({ day: serverDay, old: false });
+    if (window.XIBar) XIBar.set({ no: serverNo, day: serverDay, old: false });
     var rec = getDailyRecord();
     if (rec && rec.status === "complete") { showStoredResult(rec); return; }
     if (rec) {
@@ -757,6 +819,7 @@
     }
     startTimer(); updateClock(); saveDailyProgress();
     startServerRound();
+    playsStart("daily", "frws:" + serverDay);
   }
   function showStoredResult(rec) {
     clearInterval(timer); timer = null; startedAt = null;
@@ -774,6 +837,7 @@
     mode = "free";
     enterBoard(p, "Free play");
     startTimer(); updateClock();
+    playsStart("free", p.id);
   }
   /* Kick off on the server's clock. It answers with what this round has
      already found, each with its clue number and placement, so a board
@@ -813,6 +877,7 @@
     hidePanels();
     api("puzzle?id=" + encodeURIComponent(board.id)).then(function (r) {
       pending = { puzzle: r.puzzle };
+      openNo = board.no != null ? board.no : null;
       mode = "free";
       enterBoard(r.puzzle, "Free play");
       $("kickKicker").textContent = kicker || "BOARD";
@@ -927,8 +992,34 @@
     });
     $("archiveSub").textContent = archiveDays.length + (archiveDays.length === 1 ? " day" : " days");
   }
+  /* ---- a board's own address: /friends/wordsearch/daily/<no> -------------
+     Held until both facts are in: which number is today's (the daily), and
+     which numbers are previous boards (the archive). Today's number opens the
+     live board and puts the plain address back; an older one opens that board
+     as free play. The shape is the family's, read by shared/xi-chrome.js. */
+  var permaWaiting = window.XIChrome && window.XIChrome.permalink ? window.XIChrome.permalink.read() : null;
+  if (permaWaiting && !/^[0-9]{1,6}$/.test(permaWaiting)) permaWaiting = null;
+  function tryPermalink() {
+    if (!permaWaiting || !serverDay || !archiveDays) return;
+    var no = Number(permaWaiting);
+    permaWaiting = null;
+    if (no === serverNo) {
+      if (window.XIChrome && window.XIChrome.permalink) window.XIChrome.permalink.clear(GAME);
+      if (window.__daily) startDaily(window.__daily);
+      return;
+    }
+    var entry = archiveDays.find(function (e) { return e.no === no; });
+    if (!entry) { toast("That board is not available"); return; }
+    if (window.XIChrome && window.XIChrome.permalink) {
+      window.XIChrome.permalink.show(GAME, String(no));
+      if (window.XIChrome.permalink.aged) window.XIChrome.permalink.aged(GAME, (serverNo || 0) - no);
+    }
+    openBoard(entry, "PREVIOUS DAILY · " + dayLabel(entry.day).toUpperCase(),
+      "Free play — only today's board keeps a streak going.");
+  }
   function goToMenu() {
     if (mode === "daily" && startedAt && found.size < WORDS) saveDailyProgress();
+    playsEnd(false);
     clearInterval(timer); timer = null; startedAt = null;
     varPauseUntil = 0; bonusWindow = false;
     uncover();
@@ -985,6 +1076,12 @@
 
     $("homeDaily").onclick = function () {
       if (!window.__daily) { toast("No board today — try Other boards"); return; }
+      /* What the account says, not only this device: played on another device
+         today is played (XIChrome.playedTodayHas, null when it cannot tell). */
+      if (window.XIChrome && window.XIChrome.playedTodayHas && window.XIChrome.playedTodayHas(GAME)) {
+        toast("Today's board is played on another device");
+        return;
+      }
       startDaily(window.__daily);
     };
     $("homeThemed").onclick = function () { togglePanel("catalogPanel", "homeThemed", renderCatalog); };
@@ -1001,7 +1098,11 @@
       if (!row) return;
       var day = row.getAttribute("data-day");
       var entry = (archiveDays || []).find(function (e) { return e.day === day; });
-      if (entry) openBoard(entry, "PREVIOUS DAILY · " + dayLabel(day).toUpperCase(),
+      if (!entry) return;
+      if (window.XIChrome && window.XIChrome.permalink && entry.no != null) {
+        window.XIChrome.permalink.show(GAME, String(entry.no));
+      }
+      openBoard(entry, "PREVIOUS DAILY · " + dayLabel(day).toUpperCase(),
         "Free play — only today's board keeps a streak going.");
     };
     $("kickBtn").onclick = function () {
@@ -1043,9 +1144,12 @@
     $("againBtn").onclick = function () { goToMenu(); if (featuredId) selectBoard(featuredId, "BOARD OF THE WEEK"); };
     $("resultMenuBtn").onclick = goToMenu;
 
+    syncAccount();
     api("daily").then(function (r) {
-      serverDay = r.day; window.__daily = r.puzzle;
+      serverDay = r.day; serverNo = typeof r.no === "number" ? r.no : null; window.__daily = r.puzzle;
+      if (serverNo && $("homeDailyKicker")) $("homeDailyKicker").textContent = "TODAY · #" + serverNo;
       setDailyState(r.puzzle ? "" : "No board scheduled today — Other boards are open.");
+      tryPermalink();
     }, function () { setDailyState("Could not reach the server — check your connection."); });
     api("catalog").then(function (r) {
       catalogBoards = r.boards || [];
@@ -1057,6 +1161,7 @@
     }, function () { setDailyState("Could not load the board list."); });
     api("archive").then(function (r) {
       archiveDays = r.days || [];
+      tryPermalink();
       renderLanding();
       if (!$("archivePanel").classList.contains("hidden")) renderArchive();
     }, function () { $("archiveSub").textContent = "Could not load the list."; });

@@ -116,6 +116,9 @@ const GAMES = [
      tools/build_friendsscrambled.js with their own prefixes. */
   { id: "scrambled_fr", dir: "friends/scrambled", name: "Scrambled XI: Friends", prefix: "xifs" },
   { id: "vowels_fr", dir: "friends/vowels", name: "Vowels XI: Friends", prefix: "xifv" },
+  /* The sixth, launched 30 September 2026: football's word search with a list
+     of clues, its own tables (fr_ws_*) and its own prefix. */
+  { id: "wordsearch_fr", dir: "friends/wordsearch", name: "Wordsearch XI: Friends", prefix: "xifws" },
 ];
 
 const workflow = read(".github/workflows/checks.yml");
@@ -716,6 +719,10 @@ t("the server's game list and this table agree", (() => {
        family's board number, which dates it. */
     scrambled_fr: { no: 12, score: 80 },
     vowels_fr: { no: 12, score: 80 },
+    /* Wordsearch, Friends: the row friends/wordsearch/js/game.js banks, the
+       server's day dating and keying it. */
+    wordsearch_fr: { game: "wordsearch_fr", day: "2026-09-30", puzzle_id: "FRWS-0001", status: "complete",
+      score: 90, final_score: 90, minute: 20, found_count: 11, bonus_found: true, at: 1790760000000 },
   };
   {
     const { playedOn } = await import("../functions/_lib/games.js");
@@ -1065,8 +1072,10 @@ t("and no game writes the link itself", (() => {
   return guilty.length === 0;
 })(), "the href lives once, in shared/xi-chrome.js");
 
-const SHARED_TAG = "v90";
-/* The bytes that ship AS v90, AND THE TAG HAD TO MOVE FOR THEM.
+const SHARED_TAG = "v91";
+/* The bytes that ship AS v91, AND THE TAG HAD TO MOVE FOR THEM.
+   v90 WAS LIVE when Wordsearch XI: Friends took the sixth Friends shirt (the squad, the reset's prefix and the streak probe), so v90 -> v91 across every page and site-page.js's constant.
+   The note below is the move before this one.
    v89 WAS LIVE when Full Time became the family's sheet over the board, with a close and a Full time button (xi-fulltime.js/css), so v89 -> v90 across every page and site-page.js's constant.
    The note below is the move before this one.
    v88 WAS LIVE when a double tap on a page zoomed it in the Football app (body touch-action: manipulation in xi-chrome.css), so v88 -> v89 across every page and site-page.js's constant.
@@ -1152,7 +1161,7 @@ const SHARED_TAG = "v90";
    v53, which is this project's oldest fault in miniature: a measurement left
    standing after it stopped being true, in the comment that tells the next
    reader whether they may leave the tag alone. */
-const SHARED_HASH = "d24d57c196e30ada";
+const SHARED_HASH = "01f516db9372e373";
 /* MOVED AGAIN WITHOUT THE TAG MOVING, which is the other half of the rule
    above and is worth showing rather than only stating. xi-chrome.js changed a
    second time in the same unpushed run -- the Friends squad slot going from

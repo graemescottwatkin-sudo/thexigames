@@ -109,6 +109,11 @@
     { id: "vowels_fr", key: "xifv.results", theme: "friends", dir: "vowels", api: "/api/scrambled_fr/daily?cy=1",
       today: function (d) { return d.today; },
       done: function (r, t) { return r.no === t; } },
+    /* Wordsearch: Friends. Keyed on the DAY, as football's word search is: one
+       daily board a day, banked with the moment it finished (`at`). */
+    { id: "wordsearch_fr", key: "xifws.results", theme: "friends", dir: "wordsearch", api: "/api/wordsearch_fr/daily",
+      today: function (d) { return d.day; },
+      done: function (r, t) { return r.day === t; } },
   ];
 
   var byId = {};

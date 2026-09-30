@@ -25,7 +25,7 @@ import { dailyKey, dailyDayKey, dailyNoForDay } from "./daily.js";
    because football holds that one and an id maps to exactly one theme; the
    SLUG is `whoami`, so the address still reads /friends/whoami/. Both are
    UNLISTED: live, banked, streaked, and advertised nowhere. */
-export const GAMES = ["crossword", "wordsearch", "scrambled", "hilo", "vowels", "grid", "quickfire", "codeword", "whoami", "ballpark", "crossword_fr", "whoami_fr", "lightning_fr", "scrambled_fr", "vowels_fr"];
+export const GAMES = ["crossword", "wordsearch", "scrambled", "hilo", "vowels", "grid", "quickfire", "codeword", "whoami", "ballpark", "crossword_fr", "whoami_fr", "lightning_fr", "scrambled_fr", "vowels_fr", "wordsearch_fr"];
 
 export const DEFAULT_GAME = "crossword";
 
@@ -131,6 +131,11 @@ export const LAUNCHED = {
      public"). */
   scrambled_fr: "2026-09-29",
   vowels_fr: "2026-09-29",
+  /* Wordsearch XI: Friends, 30 September 2026, on the owner's go ("please do
+     all 3", item 2 being this launch). SCHEDULED by day, like football's word
+     search: fr_ws_schedule hands one board to one day, dealt from this day, so
+     board one is the launch day and nothing counts from before it. */
+  wordsearch_fr: "2026-09-30",
 };
 
 /* ---- WHICH LAUNCHED GAMES ARE NOT ADVERTISED ------------------------------
@@ -192,6 +197,9 @@ export const NO_SEASON = {
      season script on the way through, for the same reason. */
   scrambled_fr: true,
   vowels_fr: true,
+  /* And Wordsearch's: friends/wordsearch/index.html loads no xi-season.js.
+     Its streaks are xi-played's, as every Friends game's are. */
+  wordsearch_fr: true,
 };
 
 export const inSeason = (game) => !NO_SEASON[game];
@@ -235,6 +243,9 @@ export const ENGINE_GAMES = {
   /* The same engine over the Friends boards: its own pair, because a Friends
      round must land on a Friends play and never on a football one. */
   scrambled_fr: ["scrambled_fr", "vowels_fr"],
+  /* Its own, beside football's: a Friends round is judged on fr_ws_* and must
+     never be read as a football word search play. */
+  wordsearch_fr: ["wordsearch_fr"],
   crossword: ["crossword"],
   wordsearch: ["wordsearch"],
   hilo: ["hilo"],
@@ -403,6 +414,10 @@ export const LABELS = {
   lightning_fr: "Lightning Round XI: Friends",
   scrambled_fr: "Scrambled XI: Friends",
   vowels_fr: "Vowels XI: Friends",
+  /* The theme in the name, as every Friends game that shares a football
+     title has it: two "Wordsearch XI" links would be two a reader cannot tell
+     apart. */
+  wordsearch_fr: "Wordsearch XI: Friends",
   wordsearch: "Wordsearch XI",
   scrambled: "Scrambled XI",
   vowels: "Vowels XI",
@@ -568,6 +583,15 @@ export function entryKey(game, row) {
        /finish, never the device's. */
     const d = String((row && (row.day || row.date || row.play_date)) || "");
     return /^\d{4}-\d{2}-\d{2}$/.test(d) ? "frlr:" + d : null;
+  }
+  if (game === "wordsearch_fr") {
+    /* THE DAY, with a prefix of its own. football's word search keys "ws:" on
+       the same days, so sharing it would file a Friends board and a football
+       board for one Tuesday under one key and the first-banked-wins merge would
+       throw one away -- the collision every Friends game has its own prefix
+       for. The day is the SERVER's, from /api/wordsearch_fr/daily. */
+    const d = String((row && (row.day || row.date)) || "");
+    return /^\d{4}-\d{2}-\d{2}$/.test(d) ? "frws:" + d : null;
   }
   if (game === "ballpark") {
     /* A Ballpark daily is addressed by its DAY. bp_schedule hands one board to
@@ -764,6 +788,15 @@ export function detailOf(game, row) {
       answered: n(row.answered),
       wrong: n(row.wrong),
       marks,
+    });
+  }
+  if (game === "wordsearch_fr") {
+    /* Football's word search's shape: how many of the eleven, the secret, and
+       the minute the board ended on. The score has its column. */
+    return JSON.stringify({
+      foundCount: n(row.foundCount != null ? row.foundCount : row.found_count),
+      bonusFound: !!(row.bonusFound != null ? row.bonusFound : row.bonus_found),
+      minute: n(row.minute),
     });
   }
   if (game === "quickfire") {

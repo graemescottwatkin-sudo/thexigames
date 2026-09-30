@@ -90,6 +90,10 @@ export const PERMA_GAMES = {
      every number from launch to today resolves by arithmetic, and it wraps. */
   scrambled_fr: { name: "Scrambled XI: Friends", schedule: "ring" },
   vowels_fr: { name: "Vowels XI: Friends", schedule: "ring" },
+  /* Wordsearch XI: Friends, launched 30 September 2026. SCHEDULED by day,
+     like football's word search: fr_ws_schedule names one board per day and
+     there is no ring behind it. */
+  wordsearch_fr: { name: "Wordsearch XI: Friends", schedule: "day" },
   wordsearch: { name: "Wordsearch XI", schedule: "day" },
   scrambled: { name: "Scrambled XI", schedule: "ring" },
   hilo: { name: "HiLo XI", schedule: "day" },
@@ -231,6 +235,9 @@ const SCHEDULE_TABLE = {
      launched with /friends/whoami/archive/ listing zero of its boards, found
      by the archive suite and not by anything else. */
   whoami_fr: "fr_wa_board",
+  /* Football's word search's shape (a `day` column, every row a scheduled
+     board), over the Friends tables. */
+  wordsearch_fr: "fr_ws_schedule",
 };
 
 /* WHICH COLUMN HOLDS THE DAY, and which rows count as real.
@@ -384,6 +391,7 @@ export const THEME_OF = {
   lightning_fr: "friends",
   scrambled_fr: "friends",
   vowels_fr: "friends",
+  wordsearch_fr: "friends",
 };
 export const themeOf = (game) => THEME_OF[game] || "football";
 
@@ -455,6 +463,8 @@ export const SLUG_OF = {
      front of them telling the two apart. */
   scrambled_fr: "scrambled",
   vowels_fr: "vowels",
+  /* /friends/wordsearch/: football's word, the theme in front telling them apart. */
+  wordsearch_fr: "wordsearch",
 };
 export const slugOf = (game) => SLUG_OF[game] || game;
 

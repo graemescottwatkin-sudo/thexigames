@@ -19,7 +19,8 @@
 import fs from "node:fs";
 import path from "node:path";
 import { JSDOM } from "jsdom";
-import { clock, BOARDS, WORDS, freshEnv, call, ROUTES, ROOT, TODAY } from "./fixture.mjs";
+import { clock, BOARDS, WORDS, freshEnv, call, ROUTES, ROOT, TODAY, YESTERDAY, LONG_AGO } from "./fixture.mjs";
+import { LAUNCHED } from "../../functions/_lib/games.js";
 
 const DIR = path.join(ROOT, "friends", "wordsearch");
 const html = fs.readFileSync(path.join(DIR, "index.html"), "utf8");
@@ -229,7 +230,10 @@ console.log("\n=== The landing's lists ===");
   t("every board lists what the catalogue allows", rows.length === 3, rows.map((r) => r.getAttribute("data-id")).join(", "));
   await p.click(p.$("homePrevious"));
   const days = [...p.w.document.querySelectorAll("#archiveList .arch-row")];
-  t("previous dailies list the days before today", days.length === 2 && days.every((d) => d.getAttribute("data-day") < TODAY));
+  const want = [LONG_AGO, YESTERDAY].filter((d) => d >= LAUNCHED.wordsearch_fr && d < TODAY);
+  t("previous dailies list the days since the launch and before today, or say the first day is today",
+    days.length === want.length && days.every((d) => d.getAttribute("data-day") < TODAY) &&
+      (want.length > 0 || /first day is today/.test(p.text(p.$("archiveList")))), want.length + " expected");
   const readable = p.text(p.w.document.body);
   t("nothing on the page reads 'undefined' or 'null'", !/\bundefined\b|\bnull\b/.test(readable));
 }
