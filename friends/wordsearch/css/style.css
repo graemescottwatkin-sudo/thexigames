@@ -328,3 +328,9 @@ body.locked .side.compact .clueNow{font-size:13px;margin-top:4px}
 .prematch>.site-wrap{width:100%}
 /* Every board: the page scrolls, not fifteen little boxes inside it. */
 #catalogList .arch-list{max-height:none;overflow:visible}
+/* FULL TIME IS THE FAMILY'S SHEET over the board (shared v90, the owner, 30 Sep
+   2026: "Card over the board, every game"), as football's word search has it:
+   the .modal is data-xft-host, and this overlay only shows and hides it --
+   out of the page when not shown, and never catching a tap. */
+#result{background:none;-webkit-backdrop-filter:none;backdrop-filter:none;pointer-events:none!important}
+#result:not(.show){display:none}

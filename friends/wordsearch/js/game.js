@@ -20,7 +20,7 @@
 (function () {
   "use strict";
 
-  var BUILD = "v000g";
+  var BUILD = "v000h";
   var GAME = "wordsearch_fr", NAME = "Wordsearch XI: Friends", API = "/api/wordsearch_fr/";
   var PAGE = "https://www.thexigames.com/friends/wordsearch/";
   window.WORDSEARCHXI_FR_BUILD = BUILD;
