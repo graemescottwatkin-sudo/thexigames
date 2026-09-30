@@ -122,6 +122,13 @@ export async function onRequestPost({ request, env }) {
      wrong in than silently deleting a real player from them. */
   let byBot = 0;
   try { byBot = (await isBot(request, env)) ? 1 : 0; } catch (e) { byBot = 0; }
+  /* And whether this device is one the owner has marked as his own. Unlike
+     the two above this DOES come from the browser, and that is sound only
+     because of what it can do: it excludes the sender and nobody else. A
+     stranger setting it drops their own rows from the visitor count, which
+     gains them nothing and makes the figures more conservative. Coerced to
+     0/1 rather than trusted as sent — the column is a flag, not a store. */
+  const byDev = body.dev === true || body.dev === 1 ? 1 : 0;
 
   /* THE SEASON'S OWN RECORD. Null for everyone who is not signed in, and for
      them nothing is written at all: their season is their device's. */
@@ -163,14 +170,14 @@ export async function onRequestPost({ request, env }) {
 
     await env.DB.prepare(
       `INSERT INTO plays (id, play_id, game, board_key, mode, daily_no, phase, total, theme_key,
-                          by_owner, by_bot, play_no,
+                          by_owner, by_bot, by_dev, play_no,
                           utm_source, utm_medium, utm_campaign, utm_content,
                           utm_term, referrer, attribution_scope)
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`)
       .bind(newId(), playId, game, boardKey, mode,
             body.dailyNo ? int(body.dailyNo, 100000) : null,
             body.phase === "season" ? "season" : "preseason",
-            int(body.total, 50), themeKey, byOwner, byBot, playNo,
+            int(body.total, 50), themeKey, byOwner, byBot, byDev, playNo,
             slug(attr.utm_source), slug(attr.utm_medium), slug(attr.utm_campaign),
             slug(attr.utm_content), slug(attr.utm_term), slug(attr.referrer),
             "session").run();

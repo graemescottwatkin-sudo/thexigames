@@ -29,6 +29,38 @@
   var ATTR_KEY = "xi.attr", ATTR_LEGACY = "fcw.attr";
   var ATTR_FIELDS = ["utm_source", "utm_medium", "utm_campaign", "utm_content", "utm_term"];
 
+  /* A DEVICE THE OWNER HAS MARKED AS HIS OWN.
+   *
+   * by_owner is read from the session, so it only catches him while signed in
+   * — and most testing is not: a signed-out tab, a second browser, a private
+   * window, a session driving the live site. Over 27-30 Sep that put roughly
+   * 37 of 59 "genuine" plays in the visitor column, including sweeps of all
+   * ten games inside one hour.
+   *
+   * localStorage, not a cookie and not the session, precisely so that signing
+   * out does not lose it. Set by visiting any page with ?dev=1 and cleared
+   * with ?dev=0, on that device only.
+   *
+   * IT CAN ONLY EXCLUDE THE SENDER. That is what makes a client-set value
+   * acceptable here where play.js rightly refuses one for by_owner: a stranger
+   * who sets it removes their own rows and nobody else's, which costs them
+   * nothing and makes the owner's figures more conservative rather than less.
+   * It grants no privilege and nothing else reads it. */
+  var DEV_KEY = "xi.dev";
+
+  function devFlag() {
+    try {
+      var q = new URLSearchParams(location.search || "");
+      var asked = q.get("dev");
+      if (asked === "1") localStorage.setItem(DEV_KEY, "1");
+      else if (asked === "0") localStorage.removeItem(DEV_KEY);
+    } catch (e) {}
+    /* Read in its own try: a browser refusing storage must not stop a play
+       being counted, and the honest answer when it cannot be read is "not a
+       dev device" — the direction that keeps a real player in the figures. */
+    try { return localStorage.getItem(DEV_KEY) === "1"; } catch (e) { return false; }
+  }
+
   var meta = null, progress = null, playId = null, playNo = null, sent = false;
 
   /* One slug rule for every value that will be grouped on: a report split
@@ -112,6 +144,7 @@
       boardKey: meta.boardKey || null, total: meta.total || 11,
       dailyNo: meta.dailyNo || null, themeKey: meta.themeKey || null,
       phase: meta.phase || null, attribution: attribution(),
+      dev: devFlag(),
     };
     var p = post(body, false);
     if (!p) return Promise.resolve(null);

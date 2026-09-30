@@ -1079,7 +1079,7 @@ t("and no game writes the link itself", (() => {
   return guilty.length === 0;
 })(), "the href lives once, in shared/xi-chrome.js");
 
-const SHARED_TAG = "v92";
+const SHARED_TAG = "v93";
 /* The bytes that ship AS v92, AND THE TAG HAD TO MOVE FOR THEM.
    v91 WAS LIVE when QuickFire XI: Friends joined the Friends squad and the played-today probes, and the push script stopped saying Android (xi-chrome.js, xi-played.js, xi-push.js), so v91 -> v92 across every page and site-page.js's constant.
    The note below is the move before this one.
@@ -1170,7 +1170,7 @@ const SHARED_TAG = "v92";
    v53, which is this project's oldest fault in miniature: a measurement left
    standing after it stopped being true, in the comment that tells the next
    reader whether they may leave the tag alone. */
-const SHARED_HASH = "f785a15a857fc06d";
+const SHARED_HASH = "e61ffbdb59aab991";
 /* MOVED AGAIN WITHOUT THE TAG MOVING, which is the other half of the rule
    above and is worth showing rather than only stating. xi-chrome.js changed a
    second time in the same unpushed run -- the Friends squad slot going from

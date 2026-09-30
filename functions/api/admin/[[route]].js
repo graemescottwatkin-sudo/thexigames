@@ -196,7 +196,7 @@ export async function onRequest({ request, env, params }) {
     if (gameAsked && !game) return json({ error: "Unknown game." }, 400);
     const rows = await env.DB.prepare(
       `SELECT game, board_key, mode, daily_no, phase, solved, total, completed, elapsed_secs,
-              ended_at, theme_key, by_owner, by_bot, utm_campaign
+              ended_at, theme_key, by_owner, by_bot, by_dev, utm_campaign
          FROM plays
         WHERE started_at > datetime('now', ?) AND (? IS NULL OR game = ?)
         ORDER BY started_at DESC LIMIT 5000`).bind("-" + hours + " hours", game, game).all();
@@ -218,6 +218,10 @@ export async function onRequest({ request, env, params }) {
        by_owner cannot catch these (the gate is not signed in) and by_bot
        cannot either (it is not the play bot), so the campaign is the only
        thing that distinguishes them. */
+    /* And the owner's own DEVICES, which by_owner cannot see: it reads the
+       session, and most testing is signed out. Counted with his signed-in
+       attempts rather than apart from them — both are him, and two lines
+       saying so would be a distinction without a use. */
     let ownerPlays = 0, ownerFinished = 0, botPlays = 0, botFinished = 0;
     let gatePlays = 0, gateFinished = 0;
     for (const r of rows.results || []) {
@@ -231,7 +235,7 @@ export async function onRequest({ request, env, params }) {
         if (r.completed) botFinished++;
         continue;
       }
-      if (r.by_owner) {
+      if (r.by_owner || r.by_dev) {
         ownerPlays++;
         if (r.completed) ownerFinished++;
         continue;
@@ -420,7 +424,7 @@ export async function onRequest({ request, env, params }) {
               SUM(total) AS answers,
               AVG(elapsed_secs) AS avg_secs
          FROM plays
-        WHERE by_owner = 0 AND by_bot = 0 AND utm_campaign IS NOT ?
+        WHERE by_owner = 0 AND by_bot = 0 AND by_dev = 0 AND utm_campaign IS NOT ?
           AND (? IS NULL OR game = ?)
         GROUP BY source, campaign, community
         ORDER BY started DESC
@@ -516,7 +520,7 @@ export async function onRequest({ request, env, params }) {
          floating to the top; they fall back to the old figure. */
         `SELECT srv_score AS score,
                 COALESCE(srv_elapsed_secs, elapsed_secs) AS secs, started_at,
-                solved, total, completed, by_owner, by_bot, utm_campaign,
+                solved, total, completed, by_owner, by_bot, by_dev, utm_campaign,
                 srv_checks, srv_check_alls,
                 srv_reveal_letters, srv_reveal_answers
            FROM plays
@@ -528,7 +532,7 @@ export async function onRequest({ request, env, params }) {
          standings are about who played it, and a synthetic finish at a fixed
          clock would sit in the middle of a real median. */
       const all = (rows.results || [])
-        .filter((r) => !r.by_bot && r.utm_campaign !== GATE_CAMPAIGN);
+        .filter((r) => !r.by_bot && !r.by_dev && r.utm_campaign !== GATE_CAMPAIGN);
       const done = all.filter((r) => r.completed && !r.by_owner);
       return json({
         theme, no,
@@ -636,13 +640,13 @@ export async function onRequest({ request, env, params }) {
                  which is the conservative reading. */
               COALESCE(srv_reveal_letters, reveals, 0) AS reveal_letters,
               COALESCE(srv_reveal_answers, 0) AS reveal_answers,
-              by_owner, by_bot, utm_source, utm_medium, utm_campaign, utm_content,
+              by_owner, by_bot, by_dev, utm_source, utm_medium, utm_campaign, utm_content,
               utm_term, referrer
          FROM plays WHERE (? IS NULL OR game = ?) ORDER BY started_at DESC LIMIT 20000`).bind(game, game).all();
     const esc = (v) => '"' + String(v == null ? "" : v).replace(/"/g, '""') + '"';
     const head = ["Started", "Ended", "Game", "Board key", "Mode", "Board", "Reference", "Solved",
                   "Of", "Finished", "Seconds", "Checks",
-                  "Reveal letters", "Reveal answers", "Owner test", "Bot", "Render gate",
+                  "Reveal letters", "Reveal answers", "Owner test", "Bot", "Owner device", "Render gate",
                   "Source", "Medium", "Campaign", "Content", "Term", "Referrer"];
     const lines = [head.map(esc).join(",")];
     for (const r of rows.results || []) {
@@ -655,6 +659,7 @@ export async function onRequest({ request, env, params }) {
         r.elapsed_secs, r.checks, r.reveal_letters, r.reveal_answers,
         r.by_owner ? "yes" : "",
         r.by_bot ? "yes" : "",
+        r.by_dev ? "yes" : "",
         r.utm_campaign === GATE_CAMPAIGN ? "yes" : "",
         r.utm_source || "", r.utm_medium || "", r.utm_campaign || "",
         r.utm_content || "", r.utm_term || "", r.referrer || "",

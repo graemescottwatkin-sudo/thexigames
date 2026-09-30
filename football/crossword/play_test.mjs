@@ -254,6 +254,29 @@ console.log("\nOwner attempts are siloed");
     /botPlays/.test(admin) && /botFinished/.test(admin));
   t("a bot flag cannot be set by the browser",
     /isBot\(request, env\)/.test(src) && !/body\.(isBot|bot|byBot)/.test(src));
+  /* THE OWNER'S OWN DEVICES, which by_owner cannot see because it reads the
+     session and most testing is signed out. Over 27-30 Sep that put roughly
+     37 of 59 "genuine" plays in the visitor column — sweeps of all ten games
+     inside an hour, and rows for an unadvertised theme only somebody holding
+     the address could reach. */
+  t("a device the owner marked is kept out of the figures",
+    /if \(r\.by_owner \|\| r\.by_dev\) \{[\s\S]{0,140}continue;/.test(admin));
+  t("and out of the sources report and the per-board standings",
+    /by_dev = 0/.test(admin) && /!r\.by_dev/.test(admin));
+  /* THE ONE CLIENT-SET FLAG, and it is sound only because of what it cannot
+     do. It excludes the SENDER and nobody else: a stranger who sets it drops
+     their own rows, which gains them nothing and makes the figures more
+     conservative. It must stay a flag — coerced to 0/1, never stored as sent
+     — or it stops being a flag and becomes somewhere to put data. */
+  t("the device flag is coerced rather than trusted as sent",
+    /body\.dev === true \|\| body\.dev === 1 \? 1 : 0/.test(src));
+  t("and it survives signing out, so it lives in localStorage not the session",
+    (() => {
+      const plays = fs.readFileSync(
+        path.join(DIR, "../../shared/xi-plays.js"), "utf8");
+      return /localStorage/.test(plays) && /DEV_KEY/.test(plays) &&
+             /dev: devFlag\(\)/.test(plays);
+    })());
   /* THE RENDER GATE, which is the third kind of non-visitor and the one that
      proves a tag alone is not enough. render_test.mjs has appended ?r=gate
      since the run that "landed as 49 daily plays with zero completions", and
@@ -266,9 +289,14 @@ console.log("\nOwner attempts are siloed");
      entirely left the suite green. Proved by breaking it. */
   t("the render gate is excluded from the funnel",
     /if \(r\.utm_campaign === GATE_CAMPAIGN\) \{[\s\S]{0,140}continue;/.test(admin));
+  /* Each clause checked on its own, not as one conjunction. The first draft
+     matched the whole filter expression verbatim and broke the day a third
+     exclusion was added beside it — a test failing because the thing it guards
+     grew stricter. Twice now in this file. */
   t("and from the sources report and the per-board standings",
     /utm_campaign IS NOT \?/.test(admin) &&
-    /!r\.by_bot && r\.utm_campaign !== GATE_CAMPAIGN/.test(admin));
+    /!r\.by_bot/.test(admin) &&
+    /r\.utm_campaign !== GATE_CAMPAIGN/.test(admin));
   t("and is reported rather than silently dropped",
     /gatePlays/.test(admin) && /gateFinished/.test(admin));
   /* One string, both sides. A literal in the writer and another in the reader
@@ -340,7 +368,16 @@ console.log("\nAttribution");
     /* sessionStorage dies with the tab. localStorage here would be a tracking
        identifier and a consent decision, which is deliberately not being taken
        yet. */
-    const code = client.slice(client.indexOf("var ATTR_KEY"), client.indexOf("function post"));
+    /* Sliced at the attribution function rather than at ATTR_KEY. The wider
+       slice also covered the owner's device marker, which is deliberately in
+       localStorage BECAUSE it must survive signing out — and that tripped this
+       check, which is about attribution and not about every value the file
+       keeps. The rule being guarded is unchanged and still enforced on the
+       code that carries it: a visit's campaign tags die with the tab, because
+       persisting them would be a tracking identifier and a consent decision
+       nobody has taken. The device flag is neither — it names no visit, and it
+       can only remove the sender from a count. */
+    const code = client.slice(client.indexOf("function attribution"), client.indexOf("function post"));
     return /sessionStorage\.setItem\(ATTR_KEY/.test(code) &&
       !/localStorage/.test(code);
   })());
