@@ -35,8 +35,8 @@ const has = (p) => fs.existsSync(path.join(ROOT, p));
    derives them from the live page rather than trusting anyone's memory.
    v000z is the day before the first release: not v000, which aligned_test
    refuses as a sentinel, and below v001 so the first ship moves past it. */
-const LAST_SHIPPED = "v002u";
-const LAST_SHIPPED_ASSETS = "cfe0b2cf83c4ed4a";
+const LAST_SHIPPED = "v002v";
+const LAST_SHIPPED_ASSETS = "c42fc79010fb2ab3";
 
 let pass = 0, fail = 0;
 function t(name, ok, note) {
