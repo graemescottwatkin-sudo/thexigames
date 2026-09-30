@@ -226,8 +226,8 @@ and diagnose before anything ships. Never push past a red gate.
 - `results`/`plays` sanity via wrangler if relevant:
   `npx wrangler d1 execute crosswordxi --remote --command="..."`.
   **Never run a migration that is already applied** — `ALTER TABLE` is not
-  idempotent. Migration state: **001–047 and 049 applied; 048 NOT applied**
-  (as of 29 Sep 2026 — check production; 024 only since 29 Sep, see below) — 035 (QuickFire text
+  idempotent. Migration state: **001–049 all applied** (as of 30 Sep 2026 —
+  check production; 024 only since 29 Sep, 048 since 30 Sep, see below) — 035 (QuickFire text
   ids), 036 and 038 (Codeword and its rounds), 037 and 039 (QuickFire rounds
   and the wrong-pick penalty), 040 and 041 (Who Am I and its score) all landed
   between 13 and 15 Sep 2026 and this line still read "001–034" afterwards.
@@ -280,8 +280,12 @@ and diagnose before anything ships. Never push past a red gate.
   Lightning session at launch. A second session verified all eight objects from
   production the same day, with 2,829 questions in `fr_lr_question`. It is only
   `CREATE ... IF NOT EXISTS`, so it is safe to re-run. 048 (Friends word
-  search) is written, lives on the `wordsearch` branch with the game, and is
-  NOT applied.
+  search: `fr_ws_puzzles`, `fr_ws_schedule`, `fr_ws_round`, `fr_ws_find`,
+  `fr_ws_foul` and `idx_fr_ws_schedule_puzzle`) was applied 30 Sep 2026 on the
+  owner's go to launch the game, and verified from `sqlite_master` the same
+  minute: all six objects present, the tables empty until the game's boards
+  are imported. It is only `CREATE ... IF NOT EXISTS`, so it is safe to
+  re-run. The game itself lives on the `wordsearch` branch until it lands.
   049 (`fr_wa_source`: where each Friends Who Am I clue came from, shown after
   the card by the owner's ruling of 29 Sep 2026, "Yes show the source after the
   round") was applied 29 Sep 2026, AHEAD of 048, as 022 was ahead of 023. It

@@ -27,6 +27,16 @@
  * for, and the gate asserts it.
  */
 
+/* A DOUBLE TAP IS PLAY, NOT A ZOOM (the owner, 30 Sep 2026, on Scrambled in
+   the app: "if I double click in the app it zooms in"). Two quick taps are
+   ordinary on every board -- a tile, then the same tile, a key twice -- and
+   iOS read them as zoom. `manipulation` turns off only the double-tap zoom:
+   pinch still zooms, for anyone who needs it, and an element that handles its
+   own touches (the crossword's frame, the word search grid, Ballpark's track)
+   keeps its stricter touch-action:none, which still wins there. The crossword
+   had this alone; every page loads this file. */
+body { touch-action: manipulation; }
+
 /* ---- the bar ---------------------------------------------------------- */
 
 .xic-bar {

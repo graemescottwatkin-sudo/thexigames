@@ -328,11 +328,17 @@ const guess = async (p, name) => {
   await p.click(p.$("guessGo"));
   await p.settle();
 };
-const clueTexts = (p) => [...p.w.document.querySelectorAll("#clueStack .fclue .fc-text")]
+/* The clues BOUGHT: the cards still to come are on the stack too, blurred. */
+const clueTexts = (p) => [...p.w.document.querySelectorAll("#clueStack .fclue:not(.locked) .fc-text")]
   .map((e) => e.textContent.trim());
+const lockedSteps = (p) => [...p.w.document.querySelectorAll("#clueStack .fclue.locked")]
+  .map((e) => e.getAttribute("data-locked")).join(",");
 const kicker = (p) => p.text(p.w.document.querySelector(".pf-kicker"));
 const nextClue = async (p) => { await p.click(p.w.document.querySelector("#ladder .rung-next")); await p.settle(); };
 const start = async (p) => { await p.click(p.$("waToday")); await p.click(p.$("playChoice")); await p.settle(); };
+/* The day's cards across the top of the round: class and text per chip. */
+const strip = (p) => [...p.w.document.querySelectorAll("#frStrip .frs")]
+  .map((e) => e.className.replace("frs", "").trim() + ":" + p.text(e.querySelector(".frs-a")));
 const flat = (s) => String(s || "").split(" ").join("");
 
 /* ------------------------------------------------------------------------- */
@@ -364,9 +370,21 @@ await start(p);
   t("labelled as clue 1 of 3, the hardest",
     p.text(p.w.document.querySelector("#clueStack .fclue .fc-n")).includes("Clue 1 of 3 · the hardest"));
   t("and marked on record, because its vs is ep", !!p.w.document.querySelector("#clueStack .fclue .fc-src"));
+  /* CLUES 2 AND 3 ARE ON THE CARD, BLURRED (the owner, 30 Sep 2026), and
+     what is blurred is a stand-in: the page has not been sent them. */
+  t("clues 2 and 3 are on the card already, after clue 1, blurred",
+    lockedSteps(p) === "2,3" &&
+      [...p.w.document.querySelectorAll("#clueStack .fclue.locked .fc-text")].every((e) => e.classList.contains("fc-hid")) &&
+      p.w.document.querySelector("#clueStack").lastElementChild.getAttribute("data-locked") === "3", lockedSteps(p) || "none");
+  t("and what is blurred is not the clue: neither later clue's text is anywhere in the page",
+    !p.w.document.documentElement.outerHTML.includes(CLUE_TEXT[1].slice(0, 30)) &&
+      !p.w.document.documentElement.outerHTML.includes(CLUE_TEXT[2].slice(0, 30)));
   t("it is the VERIFIED clue, not the unverified one at the same full-card letter",
     !p.readable().includes(UNVERIFIED));
   t("the card is named as the first of five", kicker(p) === "Card 1 of 5 · Loves & Exes", kicker(p));
+  /* THE DAY'S CARDS ACROSS THE TOP (the owner, 30 Sep 2026). */
+  t("five cards across the top, the first ringed as the one in play and the rest to come",
+    strip(p).join(" | ") === "now:Playing | :? | :? | :? | :?", strip(p).join(" | "));
   t("worth now is eighteen, a card's ceiling", p.text(p.$("worthNow")) === "18", p.text(p.$("worthNow")));
   t("and there is no match clock", !p.readable().includes("Match clock") && !p.readable().includes("90'"));
   const ladder = p.text(p.$("ladder"));
@@ -383,6 +401,8 @@ await nextClue(p);
   const shown = clueTexts(p);
   t("buying adds the SECOND clue's text, beneath the first",
     shown.length === 2 && shown[1].includes(CLUE_TEXT[1].slice(0, 30)), shown.join(" | "));
+  t("and clue 2's blurred card has become the clue: only clue 3 is still blurred",
+    lockedSteps(p) === "3", lockedSteps(p) || "none");
   t("which is NOT marked on record: a trait is not evidence",
     p.w.document.querySelectorAll("#clueStack .fc-src").length === 1);
   t("and the card is now worth thirteen", p.text(p.$("worthNow")) === "13", p.text(p.$("worthNow")));
@@ -458,6 +478,8 @@ console.log("\n=== Solving card one moves to card two ===");
   await guess(p, "Rachel Green");
   await p.settle();
   t("the next card comes up by itself", kicker(p) === "Card 2 of 5 · Family & Relatives", kicker(p));
+  t("card one stays named in the strip, got, and card two is the one ringed",
+    strip(p).slice(0, 3).join(" | ") === "got:Rachel Green | now:Playing | :?", strip(p).join(" | "));
   t("with its own first clue, and worth eighteen again",
     clueTexts(p).length === 1 && p.text(p.$("worthNow")) === "18", clueTexts(p).length + " | " + p.text(p.$("worthNow")));
 }
@@ -476,6 +498,8 @@ console.log("\n=== Cards two to five ===");
     kicker(p) === "Card 5 of 5 · The Main Six" || p.text(p.$("feedback")).includes("It was Janice"),
     kicker(p) + " | " + p.text(p.$("feedback")));
   t("then the fifth card comes up", kicker(p) === "Card 5 of 5 · The Main Six", kicker(p));
+  t("and the lost card is in the strip too, named, in the danger colour's class",
+    strip(p)[3] === "lost:Janice" && strip(p)[4] === "now:Playing", strip(p).join(" | "));
   await guess(p, "Phoebe Buffay");                      // 18
   await p.settle();
 }
@@ -520,13 +544,18 @@ console.log("\n=== The day's Full Time ===");
   const s1 = r1[0].querySelector(".frs-src");
   t("a script line reads as its episode and line, with the words",
     p.text(s1).startsWith("Season 1, episode 1, line 12") && p.text(s1).includes("I just had to get out of there"), p.text(s1));
-  t("and with no link: the transcripts' host is not on the family's list", !s1.querySelector("a"));
+  /* Linked since 30 Sep 2026, by the owner's go on these hosts. */
+  const s1a = s1.querySelector("a");
+  t("and it links to that episode's transcript, apart from the game",
+    !!s1a && /^https:\/\/fangj\.github\.io\/friends\/season\/[0-9]{4}\.html$/.test(s1a.getAttribute("href")) &&
+      s1a.getAttribute("target") === "_blank", s1a ? s1a.outerHTML : "no link");
   const a2 = r1[1].querySelector(".frs-src a");
   t("a Wikipedia page is a link that opens apart from the game",
     !!a2 && a2.getAttribute("href") === "https://en.wikipedia.org/wiki/Rachel_Green" &&
       a2.getAttribute("target") === "_blank" && /noopener/.test(a2.getAttribute("rel") || ""), a2 ? a2.outerHTML : "no link");
-  t("a named article nobody has approved keeps its name and loses the link",
-    p.text(r1[2].querySelector(".frs-src")) === "Digital Spy: the ranking" && !r1[2].querySelector(".frs-src a"));
+  t("a named article from an approved host keeps its name and links to it",
+    p.text(r1[2].querySelector(".frs-src")) === "Digital Spy: the ranking" &&
+      (r1[2].querySelector(".frs-src a") || {}).getAttribute?.("href") === "https://www.digitalspy.com/tv/x/");
   const r2 = blocks[1] ? [...blocks[1].querySelectorAll(".frs-clues > li")] : [];
   t("card two was solved on its first clue, so it lists only that one",
     r2.length === 1 && p.text(r2[0].querySelector(".frs-clue")) === "Clue 1 about card main-01.", String(r2.length));

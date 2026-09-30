@@ -29,8 +29,8 @@ const DIR = "friends/vowels";
 const NAME = "Vowels XI: Friends";
 const PREFIX = "xifv.";
 const CYPHER = "?cy=1";                  // the vowels page asks for the other cypher
-const LAST_SHIPPED = "v001a";
-const LAST_SHIPPED_ASSETS = null;         // nothing has shipped yet
+const LAST_SHIPPED = "v001b";
+const LAST_SHIPPED_ASSETS = "df1af3b862eb5f7d";
 
 let pass = 0, fail = 0;
 function t(name, ok, note) {

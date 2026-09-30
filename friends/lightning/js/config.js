@@ -32,7 +32,10 @@
     /* Questions dealt per run. Far more than anyone answers in sixty seconds
        (a question a second and a half is forty); a run that uses them all
        ends early rather than wrapping. */
-    RUN_LENGTH: 80,
+    /* FORTY (the owner, 30 Sep 2026; it was 80): ninety seconds over forty
+       questions is 2.25 s each, faster than anyone plays -- real runs reach
+       about 12 -- so no player meets the end of the deal. */
+    RUN_LENGTH: 40,
     /* No subject (the bank's pgk) twice within this many questions, where the
        pool allows it. */
     SUBJECT_GAP: 4,

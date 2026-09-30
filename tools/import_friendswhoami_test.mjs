@@ -100,7 +100,7 @@ t("the importer accepts the synthetic deck", imp.status === 0,
 const sql = fs.existsSync(deckSql) ? fs.readFileSync(deckSql, "utf8") : "";
 t("and writes where it was told, not into data/", sql.length > 0);
 
-const daily = [...sql.matchAll(/INSERT INTO fr_wa_daily_clue \(card_id, round_letter, step, n\) VALUES \('([^']*)', '([A-Z])', (\d+), (\d+)\);/g)]
+const daily = [...sql.matchAll(/INSERT INTO fr_wa_daily_clue \(card_id, round_letter, step, n\) VALUES \('([^']*)', '([A-Z])', (\d+), (\d+)\)[^;\n]*;/g)]
   .map((m) => ({ card: m[1], letter: m[2], step: Number(m[3]), n: Number(m[4]) }));
 const roundOf = (id, L) => daily.filter((d) => d.card === id && d.letter === L)
   .sort((a, b) => a.step - b.step).map((d) => d.n);
@@ -138,11 +138,11 @@ t("and no transaction statement: D1 refuses them", !/BEGIN TRANSACTION|COMMIT;/.
 
 /* WHERE THE CLUES CAME FROM (the owner, 29 Sep 2026: "Yes show the source
    after the round"). The rows are the deck's citations in the deck app's own
-   order, cleared and rewritten every run like the rest of the deck. */
+   order, written like the rest of the deck: only where they changed. */
 const cites = sql.split("\n").filter((l) => l.startsWith("INSERT INTO fr_wa_source "));
 const citeOf = (n) => cites.filter((l) => l.includes("VALUES ('3', " + n + ", "));
-t("the sources table is cleared before it is written", sql.indexOf("DELETE FROM fr_wa_source;") > -1 &&
-  sql.indexOf("DELETE FROM fr_wa_source;") < sql.indexOf("INSERT INTO fr_wa_source"));
+t("no table is emptied wholesale: every delete names the keys it keeps",
+  !/DELETE FROM fr_wa_\w+;/.test(sql) && (sql.match(/^DELETE FROM fr_wa_\w+ WHERE .+ NOT IN \(/gm) || []).length === 5);
 t("a hand-checked clue cites its episode, its line and the words",
   citeOf(1).length === 1 && citeOf(1)[0].includes("1, 'script', '0118', 7, NULL, NULL, 'Ross: It''s a line.'"), citeOf(1)[0]);
 t("a web-checked clue cites the page and the sentence on it",
@@ -152,6 +152,31 @@ t("a phrase cites the episode it was found in, then the named article after it",
     citeOf(3)[1].includes("2, 'article', NULL, NULL, 'https://en.wikipedia.org/wiki/List', 'Wikipedia: a list', NULL"),
   citeOf(3).join(" | "));
 t("and a clue with no citation writes no row", cites.length === 4, cites.length + " row(s)");
+
+/* ONLY WHAT CHANGED IS WRITTEN (29 Sep 2026), proved by EXECUTION on SQLite
+   with the real migrations: D1 bills rows written, and the whole-table reload
+   this replaced wrote every row of the deck every time -- about 17,000 rows,
+   which is how the account passed the free tier's daily limit that day. */
+{
+  const { DatabaseSync } = await import("node:sqlite");
+  const db = new DatabaseSync(":memory:");
+  for (const m of ["044-friends-whoami.sql", "045-friends-whoami-daily.sql", "049-friends-whoami-sources.sql"]) {
+    db.exec(fs.readFileSync(path.join(ROOT, "data", "migrations", m), "utf8"));
+  }
+  const total = () => db.prepare("SELECT total_changes() AS n").get().n;
+  const run = () => { const t0 = total(); db.exec(sql); return total() - t0; };
+  const rowsIn = () => ["fr_wa_card", "fr_wa_clue", "fr_wa_source", "fr_wa_daily_clue", "fr_wa_answer"]
+    .reduce((a, tb) => a + db.prepare(`SELECT COUNT(*) AS n FROM ${tb}`).get().n, 0);
+  const first = run();
+  t("the first import writes every row of the deck", first > 0 && first === rowsIn(), `${first} written, ${rowsIn()} held`);
+  t("importing the same deck again writes nothing at all", run() === 0);
+  db.prepare("UPDATE fr_wa_clue SET text = ? WHERE card_id = ? AND n = ?").run("an old wording", "1", 2);
+  t("a clue reworded since the last import is the one row rewritten", run() === 1 &&
+    db.prepare("SELECT text FROM fr_wa_clue WHERE card_id = ? AND n = ?").get("1", 2).text === GOOD[0].clues[1].t);
+  db.prepare("INSERT INTO fr_wa_answer (card_id, answer, kind) VALUES (?, ?, ?)").run("1", "NOLONGERANANSWER", "accept");
+  t("a row the deck no longer has is deleted, and nothing else is touched", run() === 1 &&
+    !db.prepare("SELECT 1 FROM fr_wa_answer WHERE answer = ?").get("NOLONGERANANSWER"));
+}
 
 /* ---- what the importer refuses ----------------------------------------- */
 
@@ -197,7 +222,7 @@ const cal = node(CALENDAR, ["--from", "2026-10-01", "--deck", deckSql, "--out", 
 t("the calendar deals from the synthetic import", cal.status === 0,
   cal.status === 0 ? "" : (cal.stdout.match(/REFUSED.*$/m) || [cal.stderr.slice(0, 120)])[0]);
 const doors = fs.existsSync(calSql) ? [...fs.readFileSync(calSql, "utf8")
-  .matchAll(/INSERT INTO fr_wa_door \(play_date, slot, card_id, round_letter\) VALUES \('([^']*)', (\d+), '([^']*)', '([A-Z])'\);/g)]
+  .matchAll(/INSERT INTO fr_wa_door \(play_date, slot, card_id, round_letter\) VALUES \('([^']*)', (\d+), '([^']*)', '([A-Z])'\)[^;\n]*;/g)]
   .map((m) => ({ day: m[1], slot: Number(m[2]), card: m[3], letter: m[4] })) : [];
 /* HOW MANY A DAY IS THE DEALER'S NUMBER, read from it rather than written
    here: five since 28 Sep 2026, three before. */

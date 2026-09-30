@@ -134,7 +134,7 @@ body{margin:0;font-family:var(--body)}
 .gd-slots{display:flex; flex-wrap:wrap; gap:5px; justify-content:center;
   padding:12px; background:var(--card); border:1px solid var(--line);
   border-radius:var(--radius); margin-bottom:6px; min-height:66px; align-items:center}
-.gd-slot{width:34px; text-align:center; font-family:var(--disp); font-weight:700;
+.gd-slot{width:34px; height:34px; text-align:center; font-family:var(--disp); font-weight:700;
   font-size:25px; line-height:34px; border-bottom:3px solid var(--ink-faint);
   color:var(--ink); border-radius:2px 2px 0 0}
 .gd-slot.empty{color:var(--ink-faint)}
@@ -150,7 +150,7 @@ body{margin:0;font-family:var(--body)}
    single answer and starts reading as two. */
 @media (max-width:430px){
   .gd-slots{gap:3px; padding:10px 6px}
-  .gd-slot{width:28px; font-size:21px; line-height:30px}
+  .gd-slot{width:28px; height:30px; font-size:21px; line-height:30px}
 }
 
 /* the hidden field exists only to raise a keyboard on touch */
@@ -189,6 +189,8 @@ button:focus-visible,.gd-cell.on:focus-visible,.gd-chip:focus-visible{outline:2p
 .gd-lbl{font-family:var(--disp); font-size:13px; letter-spacing:.14em; text-transform:uppercase;
   color:var(--ink-faint); margin:0 0 6px}
 .gd-hist{margin-bottom:14px}
+.gd-hlbl{font-family:var(--disp); font-size:13px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--ink-faint); margin:0 0 6px}
 
 /* ---------- the keyboard, one per entry ----------
    Evidence is scoped to the answer it was gathered against. A letter that is
@@ -202,6 +204,15 @@ button:focus-visible,.gd-cell.on:focus-visible,.gd-chip:focus-visible{outline:2p
 .gd-kbd .osk-key.p{background:var(--present); border-color:var(--present); color:#fff}
 .gd-kbd .osk-key.a{background:var(--dead); border-color:var(--dead); color:#fff; opacity:.75}
 .gd-kbd .osk-key:disabled{opacity:.4; cursor:default}
+/* NO PADDING ON A KEY. This page's own button rule above gives every button
+   16px either side, and the family's keys never say otherwise because no
+   other game styles bare buttons. At 31px wide the padding outgrew the key:
+   the letters overlapped their neighbours and ENTER read ENT (the owner's
+   iPad, 30 Sep 2026). */
+.gd-kbd .osk-key{padding:0}
+/* A letter proved absent cannot be pressed (game.js); it stays grey, not faded
+   to nothing, so the evidence is still on the keys. */
+.gd-kbd .osk-key.a:disabled{opacity:.55}
 .gd-kbd{display:flex; flex-direction:column; gap:6px; margin-bottom:16px}
 .gd-krow{display:flex; gap:5px; justify-content:center}
 .gd-k{flex:1 1 0; min-width:0; height:50px; border-radius:6px;
@@ -264,15 +275,36 @@ body.locked .gd-boardwrap{flex:1 1 auto;min-height:0;overflow:hidden;display:fle
 /* The square's border inside its size, so sixteen squares of --cs are sixteen
    times --cs wide and the board is exactly what game.js sized it to. */
 body.locked .gd-cell{box-sizing:border-box}
-body.locked .gd-lbl,body.locked .gd-entries,body.locked .gd-hist,body.locked .how{display:none}
+body.locked .gd-lbl,body.locked .gd-entries,body.locked .how{display:none}
+/* EVERY ATTEMPT AT THE ENTRY IN HAND, on every screen (the owner, 30 Sep
+   2026). In one column it sits between the answer row and the keys, a few
+   rows tall and scrolling in itself, so it costs the board a fixed strip and
+   never pushes the keys off the screen. It is empty until a guess is made. */
+body.locked .gd-hist{display:flex;flex-direction:column;align-items:center;max-height:15vh;overflow:auto;margin-bottom:6px}
+body.locked .gd-hist:empty{display:none}
+body.locked .gd-wrap>.gd-entries,body.locked .gd-wrap>.gd-hist{order:1}
+body.locked .gd-wrap>.gd-kbd,body.locked .gd-wrap>.gd-msg{order:2}
 body.locked .gd-slots{min-height:0;padding:8px 6px}
 body.locked .gd-kbd{margin-bottom:4px}
 body.locked .gd-k{height:clamp(40px,5.2vh,56px)}
 body.locked .gd-msg{margin-bottom:0;min-height:18px}
+/* Full Time is the family's sheet over the board (data-xft-host); the keys
+   and the answer row go while it is up, so the finished board has the room. */
 body.locked .gd-wrap:has(#gdFullTime:not([hidden])) :is(.gd-slots,.gd-kbd,.gd-msg){display:none}
-body.locked #gdFullTime:not([hidden]){flex:0 1 auto;min-height:0;max-height:40%;overflow:auto;margin:0}
 
-@media (min-width:900px){
+/* A TABLET UPRIGHT IS ONE COLUMN, NOT TWO. The two-column layout below was
+   chosen by width alone, so a 13-inch iPad upright (1024 wide) got a board in
+   a 606px column floating in the middle of the screen and a 380px column of
+   keys that ran off the right edge (the owner, 30 Sep 2026: "Grid layout is
+   not fit for purpose"). Upright, the board takes the full width and the
+   entries come back above the keys: there is height enough for them. */
+@media (min-width:700px) and (orientation:portrait){
+  body.locked .gd-wrap>.gd-entries{display:flex;justify-content:center}
+  body.locked .gd-hist{max-height:18vh}
+  body.locked .gd-hist .g b{width:30px;height:30px;font-size:17px}
+}
+
+@media (min-width:900px) and (orientation:landscape){
   body.locked>main.gd-wrap{display:grid;grid-template-columns:minmax(0,1fr) 380px;
     grid-template-rows:repeat(11,auto) minmax(0,1fr);column-gap:18px}
   body.locked .gd-boardwrap{grid-column:1;grid-row:2 / -1;margin:0}
@@ -281,7 +313,24 @@ body.locked #gdFullTime:not([hidden]){flex:0 1 auto;min-height:0;max-height:40%;
   body.locked .gd-wrap>#xiBar{grid-column:1 / -1;grid-row:1}
   body.locked .gd-entries{display:flex}
   body.locked .gd-hist{display:block;max-height:30vh;overflow:auto}
-  body.locked #gdFullTime:not([hidden]){max-height:none}
+}
+/* A TABLET ON ITS SIDE: THE CROSSWORD'S SHAPE. The board on the left with the
+   answer row under it, the title, the entries and the attempts on the right,
+   and the family's keyboard across the whole foot of the screen at tablet
+   size -- the owner's rulings on the crossword's keys (26 Sep 2026, "far too
+   small on iPad") applied here too. It was a 380px column, which made keys
+   31px wide on a 13-inch screen. A phone on its side is not a tablet (under
+   700 tall) and keeps the column above, which leaves the board the height,
+   and so does a desk (a fine pointer): it has a real keyboard, and a drawn
+   one across the foot would take the board's height for keys it never uses. */
+@media (min-width:900px) and (min-height:700px) and (orientation:landscape) and (pointer:coarse){
+  body.locked>main.gd-wrap{max-width:1400px;grid-template-columns:minmax(0,1fr) clamp(300px,28vw,420px);
+    grid-template-rows:auto repeat(6,auto) minmax(0,1fr) auto auto}
+  body.locked .gd-boardwrap{grid-row:2 / 9;margin:0}
+  body.locked .gd-wrap>.gd-slots{grid-column:1;grid-row:9}
+  body.locked .gd-wrap>.gd-kbd{grid-column:1 / -1;grid-row:10;margin:4px 0 0}
+  body.locked .gd-hist{align-items:flex-start;max-height:34vh}
+  body.locked .gd-hist .g b{width:30px;height:30px;font-size:17px}
 }
 /* HOW TO PLAY OVER A LOCKED BOARD, as in every locked game: the bar's link
    opens it as a panel the height of the screen, "Back to the game" closes it. */

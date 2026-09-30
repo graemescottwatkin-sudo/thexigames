@@ -29,8 +29,8 @@ const DIR = "friends/scrambled";
 const NAME = "Scrambled XI: Friends";
 const PREFIX = "xifs.";
 const CYPHER = "";                       // "?cy=1" for the vowels page
-const LAST_SHIPPED = "v001a";
-const LAST_SHIPPED_ASSETS = null;         // nothing has shipped yet
+const LAST_SHIPPED = "v001b";
+const LAST_SHIPPED_ASSETS = "17f5908ac3b66a14";
 
 let pass = 0, fail = 0;
 function t(name, ok, note) {

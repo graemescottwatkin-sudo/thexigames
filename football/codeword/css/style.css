@@ -133,7 +133,12 @@ body.locked .keys.osk{--osk-h:clamp(28px,4.6vh,52px);--osk-gap:3px}
 /* ABOVE THE KEYBOARD: the family's keys sit at 20 (shared/xi-keys.css) and
    the clue sheet at 30, and at 10 the Pencil/Clear row painted over Full Time
    (seen in the app, 26 Sep 2026). */
-.ft{position:fixed;inset:0;background:rgba(18,34,25,.55);display:none;align-items:center;justify-content:center;padding:18px;z-index:100}
+/* FULL TIME IS THE FAMILY'S SHEET (the owner, 30 Sep 2026: the same card
+   over the board in every game). The card inside is data-xft-host, drawn and
+   veiled by shared/xi-fulltime.css; this box stays only as what the game
+   shows and hides, and neither paints nor catches a tap -- put away, the
+   board and the "Full time" button under it must both be reachable. */
+.ft{position:fixed;inset:0;background:none;pointer-events:none;display:none;align-items:center;justify-content:center;padding:18px;z-index:100}
 .ft.on{display:flex}
 /* A SOLID COLUMN over the dimmed board; the rest of Full Time is the
    family's panel (shared/xi-fulltime.css). */
@@ -279,7 +284,14 @@ body.locked .keys{margin-top:6px}
 .gridbox{position:relative}
 .gridbox>.cw-pitch{position:static}
 .cw-pitch .grid{position:relative;z-index:1;gap:0;padding:0;background:transparent;border-radius:2px}
-.cw-pitch .cell{background:var(--grid-cell)}
+/* THE HAIRLINE BETWEEN SQUARES, the crossword's (shared/xi-board.css). The
+   `border:0` in .cell above -- there to clear a button's own border -- also
+   wiped the shared hairline, so a word read as one white bar with no squares
+   in it (the owner, 30 Sep 2026: "you should be able to see where a box ends
+   similar to the word break but more feint"). The word break stays the bold
+   3px bar; this is the faint line the crossword draws. */
+.cw-pitch .cell{background:var(--grid-cell);
+  border-right:1px solid var(--grid-line);border-bottom:1px solid var(--grid-line)}
 .cw-pitch .cell.block{background:transparent;border-color:transparent}
 .cw-pitch .cell.same{background:var(--sel-word)}
 .cw-pitch .cell.sel{background:var(--sel)}

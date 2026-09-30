@@ -19,7 +19,7 @@
  * one especially, because deciding it here would need the club's whole roster
  * and a roster is a candidate list for the door.
  */
-var BUILD = "v001x";
+var BUILD = "v001z";
 
 (function bootstrap() {
   'use strict';
@@ -264,8 +264,18 @@ function start() {
     el.guessGo.disabled = !el.guessInput.value.trim();
   }
 
+  /* THE VERDICT IS A CALLOUT, NOT A CAPTION (the owner, 30 Sep 2026: "Can we
+     have some sort of notification about the answer being right or wrong,
+     it's hard to see clearly right now"). It was a line of small grey
+     capitals, and a miss was grey on grey. Now each verdict is a coloured
+     box with its own mark (style.css), and it is PLAYED AGAIN every time:
+     the class comes off, the box is measured, and the class goes back on, so
+     a second "Not him" in a row arrives as a second verdict rather than
+     leaving the first one sitting there looking unchanged. */
   function setFeedback(text, kind) {
     el.feedback.textContent = text || '';
+    el.feedback.className = 'feedback';
+    if (text) void el.feedback.offsetWidth;
     el.feedback.className = 'feedback' + (kind ? ' ' + kind : '');
   }
 
@@ -295,8 +305,15 @@ function start() {
   window.addEventListener('resize', queueRoom);
 
   function show(id) {
+    if (id === 'screenPlay' && el.screenPlay) el.screenPlay.setAttribute('data-played', '');
+    /* FULL TIME OVER THE ROUND (the owner, 30 Sep 2026: "Card over the
+       board, every game"). The end is the family's sheet (data-xft-host), so
+       the round just played stays on screen under it rather than being
+       swapped out -- but only a round played in this visit: an end opened
+       later has no round behind it. */
+    var under = id === 'screenDone' && el.screenPlay && el.screenPlay.hasAttribute('data-played');
     ['screenDoors', 'screenPlay', 'screenDone'].forEach(function (s) {
-      if (el[s]) el[s].hidden = (s !== id);
+      if (el[s]) el[s].hidden = !(s === id || (under && s === 'screenPlay'));
     });
     queueRoom();
   }

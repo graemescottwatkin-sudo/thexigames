@@ -183,8 +183,18 @@ h1,h2,h3{font-family:var(--disp);letter-spacing:.01em;margin:0}
 .action.quiet{border-color:transparent;color:var(--ink-soft)}
 .overlay{position:fixed;inset:0;background:color-mix(in srgb,var(--paper) 80%,transparent);backdrop-filter:blur(8px);z-index:100;display:grid;place-items:center;padding:18px;opacity:0;pointer-events:none;transition:opacity .18s}
 .overlay.show{opacity:1;pointer-events:auto}
-/* FULL TIME is the family's panel (shared/xi-fulltime.css); the overlay only
-   holds it, as a column that scrolls in itself when the screen is short. */
+/* FULL TIME is the family's panel (shared/xi-fulltime.css), and since 30 Sep
+   2026 the family's SHEET over the board, the same card as every game's (the
+   owner: "crossword has an obvious box it fits in but word search doesn't").
+   The .modal is data-xft-host, framed and veiled there; this overlay is only
+   what the page shows and hides. Two things change for that:
+   - OUT OF THE PAGE WHEN NOT SHOWN, not faded to nothing. Faded, the sheet
+     would still be laid out -- a card nobody can see, catching taps, and a
+     "Full time" button offered for it.
+   - NEITHER PAINTS NOR CATCHES A TAP, so once the sheet is put away the board
+     and the button to bring it back are both reachable. */
+#result{background:none;-webkit-backdrop-filter:none;backdrop-filter:none;pointer-events:none!important}
+#result:not(.show){display:none}
 .modal{max-width:560px;width:100%;max-height:100%;overflow:auto;display:flex;flex-direction:column;gap:6px;align-items:stretch}
 .modal>.action.quiet{align-self:center}
 .penaltyPop{position:fixed;left:50%;top:26%;transform:translateX(-50%);background:var(--danger);color:#fff;font-family:var(--disp);font-weight:700;border-radius:999px;padding:7px 16px;opacity:0;pointer-events:none;z-index:90}

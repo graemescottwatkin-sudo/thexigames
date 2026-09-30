@@ -38,7 +38,7 @@ const CHECK = process.argv.includes("--check");
 const read = (p) => readText(path.join(ROOT, p));
 
 /* THE TAG LIVES HERE, written into both generated pages. Bump, regenerate. */
-const TAG = "v001a";
+const TAG = "v001b";
 
 /* Football Scrambled's own tag, read from its page: config.js and scoring.js
    are the engine's, loaded from football's folder at football's tag, the way

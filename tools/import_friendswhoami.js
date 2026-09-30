@@ -323,11 +323,17 @@ lines.push("-- carries every clue and every answer.");
    DB will return to its original state"), which is the property the wrapper
    was reaching for. No other importer in tools/ carries one; these two were
    written without looking. */
-lines.push("DELETE FROM fr_wa_source;");
-lines.push("DELETE FROM fr_wa_daily_clue;");
-lines.push("DELETE FROM fr_wa_clue;");
-lines.push("DELETE FROM fr_wa_answer;");
-lines.push("DELETE FROM fr_wa_card;");
+/* ONLY WHAT CHANGED IS WRITTEN (29 Sep 2026). This file used to DELETE every
+   deck table and INSERT it whole: about 17,000 rows written for a deck of
+   1,797 clues, every reload, whatever had changed -- and D1 bills rows
+   written. On 29 Sep the account passed the free tier's 100,000 a day and
+   every write on the site failed until the owner moved to the paid plan.
+   So each row is an UPSERT that updates only when a value differs (an
+   unchanged row writes nothing), and a row the deck no longer has is deleted
+   by its key at the end. Re-running the same deck writes nothing at all;
+   rewording one clue writes that clue. tools/import_friendswhoami_test.mjs
+   runs the file against SQLite to prove both. */
+const keep = { card: [], clue: [], source: [], daily: [], answer: [] };
 
 let clueCount = 0, answerCount = 0, sourceCount = 0, uncited = 0;
 let dailyRounds = 0, dailyCards = 0, dailyRows = 0;
@@ -340,6 +346,7 @@ for (const c of cards) {
     `INSERT INTO fr_wa_card (id, name, deck, section, card_no, depth, rounds, status) VALUES (` +
     `${q(c.id)}, ${q(c.name)}, ${q(deckName)}, ${q(c.section)}, ` +
     `${Number(c.id) || "NULL"}, ${depth}, ${rounds}, 'published');`);
+  keep.card.push(String(c.id));
 
   for (let i = 0; i < depth; i++) {
     const cl = c.clues[i];
@@ -348,6 +355,7 @@ for (const c of cards) {
       `INSERT INTO fr_wa_clue (card_id, n, round_letter, step, text, vs, ep) VALUES (` +
       `${q(c.id)}, ${i + 1}, ${q(p.letter)}, ${p.step}, ${q(cl.t)}, ` +
       `${cl.vs ? q(cl.vs) : "NULL"}, ${cl.ep ? q(cl.ep) : "NULL"});`);
+    keep.clue.push(`${c.id}:${i + 1}`);
     clueCount++;
     const cites = citationsOf(cl, deck.sources);
     if (!cites.length) uncited++;
@@ -357,6 +365,7 @@ for (const c of cards) {
         `INSERT INTO fr_wa_source (card_id, n, seq, kind, ep, line, url, name, quote) VALUES (` +
         `${q(c.id)}, ${i + 1}, ${r.seq}, ${q(r.kind)}, ${v(r.ep)}, ${r.line == null ? "NULL" : Number(r.line)}, ` +
         `${v(r.url)}, ${v(r.name)}, ${v(r.quote)});`);
+      keep.source.push(`${c.id}:${i + 1}:${r.seq}`);
       sourceCount++;
     }
   }
@@ -385,6 +394,7 @@ for (const c of cards) {
         lines.push(
           `INSERT INTO fr_wa_daily_clue (card_id, round_letter, step, n) VALUES (` +
           `${q(c.id)}, ${q(LETTERS[k])}, ${s + 1}, ${verified[k + s * r]});`);
+        keep.daily.push(`${c.id}:${LETTERS[k]}:${s + 1}`);
         dailyRows++;
       }
     }
@@ -403,10 +413,42 @@ for (const c of cards) {
       seen.add(a);
       lines.push(
         `INSERT INTO fr_wa_answer (card_id, answer, kind) VALUES (${q(c.id)}, ${q(a)}, ${q(kind)});`);
+      keep.answer.push(`${a}:${c.id}`);
       answerCount++;
     }
   }
 }
+/* THE UPSERT, per table: its key, and the columns that may change. A row is
+   updated only where one of them differs, so an unchanged row writes nothing. */
+const UPSERT = {
+  fr_wa_card: ["id", ["name", "deck", "section", "card_no", "depth", "rounds", "status"]],
+  fr_wa_clue: ["card_id, n", ["round_letter", "step", "text", "vs", "ep"]],
+  fr_wa_source: ["card_id, n, seq", ["kind", "ep", "line", "url", "name", "quote"]],
+  fr_wa_daily_clue: ["card_id, round_letter, step", ["n"]],
+  fr_wa_answer: ["answer, card_id", ["kind"]],
+};
+for (let i = 0; i < lines.length; i++) {
+  const m = /^INSERT INTO (fr_wa_\w+) \(/.exec(lines[i]);
+  if (!m || !UPSERT[m[1]] || !lines[i].endsWith(");")) continue;
+  const [key, cols] = UPSERT[m[1]];
+  lines[i] = lines[i].slice(0, -1) + ` ON CONFLICT(${key}) DO UPDATE SET ` +
+    cols.map((c) => `${c} = excluded.${c}`).join(", ") +
+    " WHERE " + cols.map((c) => `${m[1]}.${c} IS NOT excluded.${c}`).join(" OR ") + ";";
+}
+/* AND WHAT THE DECK NO LONGER HAS, by key. Never an empty list: a deck with
+   no rows of a kind would delete them all, which is a refusal, not an import. */
+const STALE = [
+  ["fr_wa_source", "card_id || ':' || n || ':' || seq", keep.source],
+  ["fr_wa_daily_clue", "card_id || ':' || round_letter || ':' || step", keep.daily],
+  ["fr_wa_answer", "answer || ':' || card_id", keep.answer],
+  ["fr_wa_clue", "card_id || ':' || n", keep.clue],
+  ["fr_wa_card", "id", keep.card],
+];
+for (const [table, key, list] of STALE) {
+  if (!list.length) { console.log(`REFUSED: the deck has no ${table} rows at all. Nothing written.`); process.exit(1); }
+  lines.push(`DELETE FROM ${table} WHERE ${key} NOT IN (${list.map(q).join(", ")});`);
+}
+
 /* --out exists for tools/import_friendswhoami_test.mjs, which imports a
    synthetic deck and must never overwrite the real file. */
 const OUT_ARG = process.argv.indexOf("--out");

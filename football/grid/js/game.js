@@ -32,7 +32,7 @@
 
   var R = window.XIGR_RULES;
   var $ = function (id) { return document.getElementById(id); };
-  var BUILD = "v002s";
+  var BUILD = "v002u";
 
   var S = {
     board: null,          // the PUBLIC board: shape, lengths, crossings. No letters.
@@ -132,6 +132,13 @@
     if (!e || S.solved[e.n]) return;
     var i = cursorAt();
     if (i < 0) return;
+    /* A GREY LETTER CANNOT BE TYPED (the owner, 30 Sep 2026: "I can still
+       select greyed out letters, this should not be possible"). Grey on this
+       entry's keyboard means every copy of the letter in every guess here came
+       back absent -- green and amber outrank it in keyState() -- and marking
+       is two-pass, so that is proof the name does not hold it. The same rule
+       for a physical keyboard as for the keys, which are disabled below. */
+    if (keyState(e)[ch] === "absent") { msg(ch + " is not in this name.", true); return; }
     S.typed[i] = ch;
     render();
   }
@@ -420,12 +427,19 @@
       var L = k.getAttribute("data-key");
       k.classList.remove("c", "p", "a");
       if (L.length === 1 && SHORT[ks[L]]) k.classList.add(SHORT[ks[L]]);
-      k.disabled = !!dead;
+      k.disabled = !!dead || (L.length === 1 && ks[L] === "absent");
     });
 
-    var h = e ? (S.hist[e.n] || []) : [];
-    $("gdHist").innerHTML = h.length > 1
-      ? '<p class="gd-lbl">Earlier attempts here</p>' + h.slice(1).map(function (x) {
+    /* EVERY ATTEMPT AT THIS ENTRY, THE LATEST INCLUDED, OLDEST FIRST (the
+       owner, 30 Sep 2026: "I want to be able to see all prior attempts for
+       the active word"). It left out the latest -- that one is on the board --
+       and was hidden on a locked phone, so on most screens the evidence behind
+       the keyboard's colours could not be read back at all. Read top down, in
+       the order they were made. */
+    var h = e ? (S.hist[e.n] || []).slice().reverse() : [];
+    $("gdHist").innerHTML = h.length
+      ? '<p class="gd-hlbl">Your attempts at ' + e.n + (e.dir === "across" ? "A" : "D") +
+        " &middot; " + h.length + "</p>" + h.map(function (x) {
           return '<div class="g">' + x.guess.split("").map(function (ch2, i) {
             return '<b class="' + SHORT[x.marks[i]] + '">' + ch2 + "</b>";
           }).join("") + "</div>";

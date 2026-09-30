@@ -1087,6 +1087,13 @@ button.cl-src{background:none;border:0;padding:0;font-family:inherit;cursor:poin
   display:none;align-items:center;justify-content:center;padding:20px;
 }
 .overlay.show{display:flex}
+/* FULL TIME IS THE FAMILY'S SHEET (the owner, 30 Sep 2026: the crossword's
+   card, over the board, in every game -- and a close at its top right). The
+   .result inside is data-xft-host, framed and veiled by
+   shared/xi-fulltime.css; this overlay is only what the page shows and
+   hides, and neither paints nor catches a tap, so the grid and the "Full
+   time" button are reachable once the sheet is put away. */
+#doneOverlay{background:none;pointer-events:none}
 .result{
   background:var(--card);border-radius:var(--r-lg);max-width:400px;width:100%;
   padding:26px 26px 24px;text-align:center;border-top:6px solid var(--pitch);

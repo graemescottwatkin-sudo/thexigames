@@ -26,16 +26,16 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/shared/xi-tokens.css?v=v88">
-<link rel="stylesheet" href="/shared/xi-landing.css?v=v88">
-<link rel="stylesheet" href="/shared/xi-chrome.css?v=v88">
-<link rel="stylesheet" href="/shared/xi-board.css?v=v88">
-<link rel="stylesheet" href="/shared/xi-keys.css?v=v88">
-<link rel="stylesheet" href="/shared/xi-matchbar.css?v=v88">
-<link rel="stylesheet" href="/shared/xi-share.css?v=v88">
-<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v88">
-<script src="/shared/xi-theme.js?v=v88"></script>
-<link rel="stylesheet" href="css/style.css?v=v002s">
+<link rel="stylesheet" href="/shared/xi-tokens.css?v=v90">
+<link rel="stylesheet" href="/shared/xi-landing.css?v=v90">
+<link rel="stylesheet" href="/shared/xi-chrome.css?v=v90">
+<link rel="stylesheet" href="/shared/xi-board.css?v=v90">
+<link rel="stylesheet" href="/shared/xi-keys.css?v=v90">
+<link rel="stylesheet" href="/shared/xi-matchbar.css?v=v90">
+<link rel="stylesheet" href="/shared/xi-share.css?v=v90">
+<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v90">
+<script src="/shared/xi-theme.js?v=v90"></script>
+<link rel="stylesheet" href="css/style.css?v=v002u">
 </head>
 <body>
 
@@ -95,8 +95,10 @@
 
   <div class="gd-hist" id="gdHist"></div>
 
-  <!-- Full time. Written by the page when the server says the round is over. -->
-  <section class="gd-ft" id="gdFullTime" hidden></section>
+  <!-- Full time. Written by the page when the server says the round is over,
+       and drawn by the family as a sheet over the finished board
+       (data-xft-host: shared/xi-fulltime.js sheet()). -->
+  <section class="gd-ft" id="gdFullTime" data-xft-host hidden></section>
 
 
   <!-- HOW TO PLAY, THIS GAME'S OWN. The button beside the wordmark had no
@@ -135,17 +137,17 @@
 <!-- THE SHARED FOOTER, AT TOP LEVEL. It carries the family disclaimer. -->
 <footer class="xic-foot"></footer>
 
-<script src="/shared/xi-chrome.js?v=v88"></script>
-<script src="/shared/xi-board.js?v=v88"></script>
-<script src="/shared/xi-keys.js?v=v88"></script>
-<script src="/shared/xi-matchbar.js?v=v88"></script>
-<script src="/shared/xi-share.js?v=v88"></script>
+<script src="/shared/xi-chrome.js?v=v90"></script>
+<script src="/shared/xi-board.js?v=v90"></script>
+<script src="/shared/xi-keys.js?v=v90"></script>
+<script src="/shared/xi-matchbar.js?v=v90"></script>
+<script src="/shared/xi-share.js?v=v90"></script>
 <!-- xi-played.js first: xi-fulltime.js asks it what has been played today. -->
-<script src="/shared/xi-played.js?v=v88"></script>
-<script src="/shared/xi-fulltime.js?v=v88"></script>
-<script src="js/rules.js?v=v002s"></script>
-<script src="/shared/xi-season.js?v=v88"></script>
-<script src="/shared/xi-plays.js?v=v88"></script>
-<script src="js/game.js?v=v002s"></script>
+<script src="/shared/xi-played.js?v=v90"></script>
+<script src="/shared/xi-fulltime.js?v=v90"></script>
+<script src="js/rules.js?v=v002u"></script>
+<script src="/shared/xi-season.js?v=v90"></script>
+<script src="/shared/xi-plays.js?v=v90"></script>
+<script src="js/game.js?v=v002u"></script>
 </body>
 </html>
