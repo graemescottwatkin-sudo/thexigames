@@ -28,7 +28,7 @@
  * is precisely the row nobody can identify later. No code, no run.
  */
 import {
-  solveWordsearch, aFoul, hiloCalls, slotsToReveal, sessionPlan,
+  solveWordsearch, aFoul, hiloCalls, slotsToReveal, sessionPlan, describeFailure,
 } from "./bot_solve.mjs";
 
 const BASE = (process.env.BASE || "https://www.thexigames.com").replace(/\/+$/, "");
@@ -63,9 +63,13 @@ async function call(path, opts = {}) {
   });
   const setter = res.headers.get("set-cookie");
   if (setter) cookie = setter.split(";")[0];
+  /* READ ONCE, AS TEXT, so a refusal can say what it was: an edge's error page
+     is not JSON, and parsing it straight from the response threw it away. */
+  const text = await res.text().catch(() => "");
   let body = null;
-  try { body = await res.json(); } catch (e) { /* not every route answers JSON */ }
-  return { status: res.status, body };
+  try { body = JSON.parse(text); } catch (e) { /* not every route answers JSON */ }
+  const why = res.ok ? String(res.status) : describeFailure(res.status, text, res.headers.get("cf-ray"));
+  return { status: res.status, body, why };
 }
 
 const post = (path, data) => call(path, { method: "POST", body: JSON.stringify(data) });
@@ -95,7 +99,7 @@ const endPlay = (game, playId, completed, solved) =>
    the shared scoring module says it should be. */
 async function playWordsearch(kind) {
   const daily = await get("/api/wordsearch/daily");
-  if (!daily.body || !daily.body.puzzle) return note("wordsearch", "no daily to play");
+  if (!daily.body || !daily.body.puzzle) return note("wordsearch", `no daily to play (${daily.why})`);
   const puzzle = daily.body.puzzle;
   const playId = newPlayId();
   await startPlay("wordsearch", "ws:" + (daily.body.day || "today"), playId);
@@ -112,7 +116,7 @@ async function playWordsearch(kind) {
   }
 
   const round = await post("/api/wordsearch/round", { playId });
-  if (!round.body) return note("wordsearch", "the round would not start");
+  if (!round.body) return note("wordsearch", `the round would not start (${round.why})`);
 
   /* Three fouls, which is the escalation this session exists to exercise. */
   const foul = aFoul(puzzle, []);
@@ -131,14 +135,14 @@ async function playWordsearch(kind) {
   for (const f of solved.found) {
     const r = await post("/api/wordsearch/find", { playId, from: f.from, to: f.to });
     if (r.body && r.body.hit) got++;
-    else note("wordsearch", "the server refused a word the solver located");
+    else note("wordsearch", `the server refused a word the solver located (${r.why})`);
   }
 
   const fin = await post("/api/wordsearch/finish", { playId });
   await endPlay("wordsearch", playId, got === solved.found.length, got);
 
   if (!fin.body || fin.body.verified !== true) {
-    return note("wordsearch", "the round finished but the server verified no score");
+    return note("wordsearch", `the round finished but the server verified no score (${fin.why})`);
   }
   console.log(`    finished ${got}/${solved.found.length}, verified ${fin.body.score}`);
   /* THE SECRET IS ONLY EVER REVEALED AT THE END. A bonus word handed over
@@ -158,7 +162,7 @@ async function playHilo(kind) {
      the root found nothing and reported "no daily to play" on a day the
      preflight had already confirmed had one. */
   const board = daily.body && daily.body.board;
-  if (!board || !board.token) return note("hilo", "no daily to play");
+  if (!board || !board.token) return note("hilo", `no daily to play (${daily.why})`);
   const token = board.token;
   const day = daily.body.day;
   const rows = Array.isArray(board.chain) ? board.chain.length - 1 : 11;
@@ -170,7 +174,7 @@ async function playHilo(kind) {
   for (let i = 0; i < calls.length; i++) {
     const r = await post("/api/hilo/call", { playId, token, index: i + 1, call: calls[i] });
     if (r.status === 200 && r.body && typeof r.body.right === "boolean") settled++;
-    else note("hilo", `row ${i + 1} would not settle (${r.status})`);
+    else note("hilo", `row ${i + 1} would not settle (${r.why})`);
   }
   if (kind === "abandon") return endPlay("hilo", playId, false, settled);
 
@@ -186,7 +190,7 @@ async function playHilo(kind) {
 async function playCypher(game, kind) {
   const cy = game === "vowels" ? "?cy=1" : "";
   const daily = await get("/api/scrambled/daily" + cy);
-  if (!daily.body || !daily.body.token) return note(game, "no daily to play");
+  if (!daily.body || !daily.body.token) return note(game, `no daily to play (${daily.why})`);
   const { token, no } = daily.body;
   const playId = newPlayId();
   await startPlay(game, "sc:" + (no == null ? "today" : no), playId);
@@ -199,7 +203,7 @@ async function playCypher(game, kind) {
     const r = await post("/api/scrambled/reveal",
       { playId, token, kind: "name", slotId: slots[i] });
     if (r.status === 200) opened++;
-    else note(game, `a reveal was refused (${r.status})`);
+    else note(game, `a reveal was refused (${r.why})`);
   }
   if (kind === "abandon") return endPlay(game, playId, false, opened);
 
@@ -212,13 +216,13 @@ async function playCypher(game, kind) {
 /* THE CROSSWORD is played through reveal, one entry at a time. */
 async function playCrossword(kind) {
   const daily = await get("/api/daily");
-  if (!daily.body || !daily.body.puzzle) return note("crossword", "no daily to play");
+  if (!daily.body || !daily.body.puzzle) return note("crossword", `no daily to play (${daily.why})`);
   const entries = daily.body.puzzle.entries || [];
   const token = daily.body.token;
   const playId = newPlayId();
   await startPlay("crossword", "daily:" + daily.body.dailyNo, playId);
   const wanted = kind === "abandon" ? Math.min(2, entries.length) : entries.length;
-  let opened = 0;
+  let opened = 0, refused = "";
   for (let i = 0; i < wanted; i++) {
     /* THE ENTRY IS AN INDEX AND THE BOARD IS A TOKEN. This sent
        { dailyNo, num, dir, kind } — four fields the endpoint does not read —
@@ -227,8 +231,9 @@ async function playCrossword(kind) {
        back, which is what a bot wants: one call per entry. */
     const r = await post("/api/reveal", { playId, token, entry: i });
     if (r.status === 200 && r.body && r.body.answer) opened++;
+    else refused = r.why;
   }
-  if (opened === 0 && wanted > 0) note("crossword", "no entry could be revealed");
+  if (opened === 0 && wanted > 0) note("crossword", `no entry could be revealed (${refused})`);
   await endPlay("crossword", playId, kind !== "abandon" && opened === entries.length, opened);
   console.log(`    opened ${opened}/${wanted}`);
 }
@@ -251,7 +256,7 @@ console.log(`Play bot: ${BASE}`);
    ever separate from a player's. */
 const signin = await post("/api/account/code", { code: CODE });
 if (signin.status !== 200 || !signin.body || !signin.body.user) {
-  console.error(`Could not sign in with the bot's code (${signin.status}).\n` +
+  console.error(`Could not sign in with the bot's code (${signin.why}).\n` +
     "Refusing to play anonymously: those rows could never be excluded.");
   process.exit(1);
 }
