@@ -31,7 +31,7 @@ const DIR = "friends/quickfire";
 const NAME = "QuickFire XI: Friends";
 const PREFIX = "xifq.";
 const LAST_SHIPPED = "v001a";
-const LAST_SHIPPED_ASSETS = null;
+const LAST_SHIPPED_ASSETS = "56aa0f3ff7bcc76d";
 
 let pass = 0, fail = 0;
 function t(name, ok, note) {
