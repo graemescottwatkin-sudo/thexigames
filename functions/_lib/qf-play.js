@@ -12,12 +12,16 @@
  */
 import { PER_DAILY, SUBS, MATCH_MINUTES, WRONG_PICK_MINUTES, minuteOf, pointsFor, judge, totalFor, allCorrect, isLegacy, maxFor, BONUS } from "./qf-round.js";
 
+import { FOOTBALL, qfTable } from "./qf-sets.js";
 const now = () => Date.now();
+/* The set's two round tables (qf-sets.js). */
+const ROUND = (set) => qfTable(set, "round");
+const ANSWER = (set) => qfTable(set, "answer");
 const id = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
 
-export async function getRound(env, playId) {
+export async function getRound(env, playId, set = FOOTBALL) {
   if (!env || !env.DB || !playId) return null;
-  return await env.DB.prepare("SELECT * FROM qf_round WHERE play_id = ?").bind(playId).first();
+  return await env.DB.prepare("SELECT * FROM " + ROUND(set) + " WHERE play_id = ?").bind(playId).first();
 }
 
 /* KICK OFF. The clock starts HERE and is never sent up.
@@ -25,11 +29,11 @@ export async function getRound(env, playId) {
  * `started_ms` is the SITTING's clock and is not what anything scores off —
  * it is here for reporting and for a round that has not served a question yet.
  * The clock that decides points is stamped per question by serveQuestion(). */
-export async function startRound(env, playDate) {
+export async function startRound(env, playDate, set = FOOTBALL) {
   const playId = id();
   const started = now();
   await env.DB.prepare(
-    "INSERT INTO qf_round (play_id, play_date, started_ms, subs_used, question_idx, question_ms, penalty_minutes) " +
+    "INSERT INTO " + ROUND(set) + " (play_id, play_date, started_ms, subs_used, question_idx, question_ms, penalty_minutes) " +
     "VALUES (?, ?, ?, 0, 0, 0, 0)"
   ).bind(playId, playDate, started).run();
   return { playId, startedMs: started, subsLeft: SUBS, questions: PER_DAILY };
@@ -53,7 +57,7 @@ export async function startRound(env, playDate) {
  * that is either a page out of step or somebody shopping for a fresh clock on a
  * question they have already seen. Re-serving the CURRENT one is the reload
  * case and is answered with the existing stamp, which is why it is separate. */
-export async function serveQuestion(env, round, idx) {
+export async function serveQuestion(env, round, idx, set = FOOTBALL) {
   const at = Number(round.question_idx) || 0;
   if (idx === at) {
     return { idx, startedMs: Number(round.question_ms), minute: minuteOf(round, now()), restamped: false };
@@ -68,13 +72,13 @@ export async function serveQuestion(env, round, idx) {
   if (idx < at) return { error: "that question has already been played", at };
 
   const answered = await env.DB
-    .prepare("SELECT idx FROM qf_answer WHERE play_id = ? AND idx = ?")
+    .prepare("SELECT idx FROM " + ANSWER(set) + " WHERE play_id = ? AND idx = ?")
     .bind(round.play_id, idx).first();
   if (answered) return { error: "that question has already been answered" };
 
   const stamp = now();
   await env.DB.prepare(
-    "UPDATE qf_round SET question_idx = ?, question_ms = ?, penalty_minutes = 0 WHERE play_id = ?"
+    "UPDATE " + ROUND(set) + " SET question_idx = ?, question_ms = ?, penalty_minutes = 0 WHERE play_id = ?"
   ).bind(idx, stamp, round.play_id).run();
   return { idx, startedMs: stamp, minute: 0, restamped: true };
 }
@@ -91,9 +95,9 @@ export async function serveQuestion(env, round, idx) {
  * come from the page, and recording it would put a guess in the record that
  * nobody made.
  */
-export async function answerRound(env, round, question, idx, pick) {
+export async function answerRound(env, round, question, idx, pick, set = FOOTBALL) {
   const already = await env.DB
-    .prepare("SELECT idx, correct, points, minute FROM qf_answer WHERE play_id = ? AND idx = ?")
+    .prepare("SELECT idx, correct, points, minute FROM " + ANSWER(set) + " WHERE play_id = ? AND idx = ?")
     .bind(round.play_id, idx).first();
   if (already) {
     return {
@@ -135,7 +139,7 @@ export async function answerRound(env, round, question, idx, pick) {
   if (ranOut) {
     if (minute < MATCH_MINUTES) return { error: "there is still time on the clock" };
     await env.DB.prepare(
-      "INSERT INTO qf_answer (play_id, idx, question_id, pick, correct, points, minute, at_ms) " +
+      "INSERT INTO " + ANSWER(set) + " (play_id, idx, question_id, pick, correct, points, minute, at_ms) " +
       "VALUES (?, ?, ?, NULL, 0, 0, ?, ?)"
     ).bind(round.play_id, idx, question.id, minute, at).run();
     /* A CLOCK THAT RAN OUT IS STILL A QUESTION THEY DID NOT GET, so it is told
@@ -158,14 +162,14 @@ export async function answerRound(env, round, question, idx, pick) {
   const points = verdict.correct ? pointsFor(minute) : 0;
 
   await env.DB.prepare(
-    "INSERT INTO qf_answer (play_id, idx, question_id, pick, correct, points, minute, at_ms) " +
+    "INSERT INTO " + ANSWER(set) + " (play_id, idx, question_id, pick, correct, points, minute, at_ms) " +
     "VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
   ).bind(round.play_id, idx, question.id, String(pick), verdict.correct ? 1 : 0,
     points, minute, at).run();
 
   if (!verdict.correct) {
     await env.DB.prepare(
-      "UPDATE qf_round SET penalty_minutes = penalty_minutes + ? WHERE play_id = ?"
+      "UPDATE " + ROUND(set) + " SET penalty_minutes = penalty_minutes + ? WHERE play_id = ?"
     ).bind(WRONG_PICK_MINUTES, round.play_id).run();
   }
 
@@ -202,21 +206,47 @@ export async function answerRound(env, round, question, idx, pick) {
  * against a question that is no longer on the board, and charging them to a
  * question the player has not read yet would be charging for somebody else's
  * mistake. */
-export async function spendSub(env, round) {
+/* THE QUESTION IN A SLOT, AFTER ITS SUBS. sub_slots lists, in order, the slot
+   each sub was spent on; the k-th sub brought on the k-th bench question. So a
+   slot's question is the bench question of the LAST sub spent on it, or the
+   board's own question where none was. A pure function of what the round
+   recorded, so the page cannot choose which question it is judged on. */
+export function questionInSlot(board, round, idx) {
+  const list = String((round && round.sub_slots) || "").split(",").filter(Boolean).map(Number);
+  let k = -1;
+  list.forEach((slot, i) => { if (slot === idx) k = i; });
+  if (k >= 0) return ((board && board.bench) || [])[k] || null;
+  return ((board && board.questions) || [])[idx - 1] || null;
+}
+
+export async function spendSub(env, round, set = FOOTBALL) {
   if (Number(round.subs_used) >= SUBS) return { error: "no substitutions left" };
+  /* A SUB IS SPENT ON THE QUESTION IN PLAY, and which one is RECORDED
+     (sub_slots, migration 052 for football, 051's own table for Friends), so
+     the answer is judged against the question the sub put on screen. Until
+     30 Sep 2026 it was not: the page swapped in the bench question and
+     /answer judged the pick against the question it replaced, so every pick
+     after a sub was "not one of the options". No live round had ever spent a
+     sub (0 of 43), which is the only reason nobody met it. */
+  const at = Number(round.question_idx) || 0;
+  if (at < 1) return { error: "there is no question in play" };
+  const answered = await env.DB
+    .prepare("SELECT idx FROM " + ANSWER(set) + " WHERE play_id = ? AND idx = ?")
+    .bind(round.play_id, at).first();
+  if (answered) return { error: "that question has already been answered" };
   await env.DB.prepare(
-    "UPDATE qf_round SET subs_used = subs_used + 1, question_ms = ?, penalty_minutes = 0 " +
-    "WHERE play_id = ?"
-  ).bind(now(), round.play_id).run();
+    "UPDATE " + ROUND(set) + " SET subs_used = subs_used + 1, question_ms = ?, penalty_minutes = 0, " +
+    "sub_slots = COALESCE(sub_slots, '') || ? WHERE play_id = ?"
+  ).bind(now(), (round.sub_slots ? "," : "") + at, round.play_id).run();
   return { subsLeft: SUBS - Number(round.subs_used) - 1, startedMs: now(), minute: 0 };
 }
 
 /* THE WHISTLE. The server computes the total, because the page posting its own
    is the forgery hole that moving the marking here was meant to close — the
    front door locked and the back door open. */
-export async function finishRound(env, round) {
+export async function finishRound(env, round, set = FOOTBALL) {
   const { results } = await env.DB
-    .prepare("SELECT idx, correct, points FROM qf_answer WHERE play_id = ? ORDER BY idx")
+    .prepare("SELECT idx, correct, points FROM " + ANSWER(set) + " WHERE play_id = ? ORDER BY idx")
     .bind(round.play_id).all();
   const answers = results || [];
   const score = totalFor(answers, round.subs_used);

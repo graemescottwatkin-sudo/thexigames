@@ -20,7 +20,7 @@
 /* THE SHARED LAYER'S TAG, as every page carries it in its ?v=. One more
    place the tag is written; tools/aligned_test.mjs asserts it agrees with the
    pages, so it cannot fall behind them quietly. */
-export const SHARED_TAG = "v91";
+export const SHARED_TAG = "v92";
 
 /* What each game's masthead says and where its tabs go. The current tab is
    marked by path; a page with no game (a hub-level page) gets no masthead. */
@@ -147,6 +147,13 @@ const MAST = {
     name: "Wordsearch", home: "/friends/wordsearch/",
     nav: [["Today", "/friends/wordsearch/"], ["Archive", "/friends/wordsearch/archive/"],
           ["How to play", "/friends/wordsearch/#how"]],
+  },
+  /* QuickFire, Friends: the same shape, no Answers tab -- a wrong pick shows
+     its answer as it is made, and every answer is at the end of the round. */
+  quickfire_fr: {
+    name: "QuickFire", home: "/friends/quickfire/",
+    nav: [["Today", "/friends/quickfire/"], ["Archive", "/friends/quickfire/archive/"],
+          ["How to play", "/friends/quickfire/#how"]],
   },
   crossword_fr: {
     name: "Crossword", home: "/friends/crossword/",

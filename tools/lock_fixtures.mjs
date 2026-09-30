@@ -55,19 +55,21 @@ const OPTIONS = ["Wolverhampton Wanderers", "Brighton & Hove Albion", "Nottingha
 
 /* `days` is one day or a list of them: each is published with the same
    fixture questions, so a suite can open a past board as well as today's. */
-export async function quickfireEnv(days) {
+/* `pre` is the set's table prefix (functions/_lib/qf-sets.js): "qf_" for
+   football, "fr_qf_" for QuickFire XI: Friends, whose routes read only theirs. */
+export async function quickfireEnv(days, pre = "qf_") {
   const list = Array.isArray(days) ? days : [days];
   const { db, d1 } = await sqliteD1();
-  const ins = db.prepare(`INSERT INTO qf_question (id, answer, answer_norm, answer_type, clue, status,
+  const ins = db.prepare(`INSERT INTO ${pre}question (id, answer, answer_norm, answer_type, clue, status,
       option_1, option_2, option_3, option_4) VALUES (?, ?, ?, 'club', ?, 'verified', ?, ?, ?, ?)`);
-  const slot = db.prepare("INSERT INTO qf_daily_slot (play_date, slot, question_id, role) VALUES (?, ?, ?, ?)");
+  const slot = db.prepare(`INSERT INTO ${pre}daily_slot (play_date, slot, question_id, role) VALUES (?, ?, ?, ?)`);
   LENGTHS.forEach((n, i) => {
     const id = "FX" + String(i + 1).padStart(3, "0");
     const answer = OPTIONS[i % 4];
     ins.run(id, answer, answer.toLowerCase(), clueOf(i + 1, n), ...OPTIONS);
     for (const day of list) slot.run(day, i < 11 ? i + 1 : i - 10, id, i < 11 ? "xi" : "bench");
   });
-  for (const day of list) db.prepare("INSERT INTO qf_daily (play_date, status) VALUES (?, 'published')").run(day);
+  for (const day of list) db.prepare(`INSERT INTO ${pre}daily (play_date, status) VALUES (?, 'published')`).run(day);
   return { DB: d1 };
 }
 

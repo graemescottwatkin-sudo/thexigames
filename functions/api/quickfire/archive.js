@@ -14,16 +14,17 @@
  */
 import { hasDB, noStore, today } from "../../_lib/qfdata.js";
 import { archive, lastPlayableDay } from "../../_lib/qf-board.js";
+import { FOOTBALL } from "../../_lib/qf-sets.js";
 
-export async function onRequestGet({ env }) {
+export const archiveFor = (set) => async function ({ env }) {
   if (!hasDB(env)) {
     return noStore({ error: "no database binding", source: "none" }, 503);
   }
 
   let boards = [], last = null;
   try {
-    boards = await archive(env);
-    last = await lastPlayableDay(env);
+    boards = await archive(env, 400, set);
+    last = await lastPlayableDay(env, set);
   } catch (err) {
     return noStore({ error: "query failed", detail: String(err), source: "d1" }, 500);
   }
@@ -35,6 +36,9 @@ export async function onRequestGet({ env }) {
     count: boards.length,
     boards,
   });
-}
+};
 
+/* FOOTBALL'S ROUTE. QuickFire XI: Friends serves the same handler for its own
+   set from functions/api/quickfire_fr/ (functions/_lib/qf-sets.js). */
+export const onRequestGet = archiveFor(FOOTBALL);
 export const onRequestHead = onRequestGet;

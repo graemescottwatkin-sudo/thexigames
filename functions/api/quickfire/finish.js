@@ -13,6 +13,7 @@
 
 import { hasDB } from "../../_lib/qfdata.js";
 import { getRound, finishRound } from "../../_lib/qf-play.js";
+import { FOOTBALL } from "../../_lib/qf-sets.js";
 
 /* One refusal, saying nothing about which. */
 const NO = (msg = "no") => new Response(JSON.stringify({ error: msg }), {
@@ -24,19 +25,23 @@ const NO = (msg = "no") => new Response(JSON.stringify({ error: msg }), {
   },
 });
 
-export async function onRequestPost({ request, env }) {
+export const finishFor = (set) => async function ({ request, env }) {
   if (!hasDB(env)) return NO();
   let body = {};
   try { body = await request.json(); } catch (e) { body = {}; }
 
-  const round = await getRound(env, body.playId);
+  const round = await getRound(env, body.playId, set);
   if (!round) return NO("no round");
 
   /* COMPUTED HERE, NOT POSTED. Moving the marking to this side to stop a forged
      score and then accepting the score from the page would be the front door
      locked and the back door open. */
-  const out = await finishRound(env, round);
+  const out = await finishRound(env, round, set);
   return new Response(JSON.stringify(out), {
     headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
   });
-}
+};
+
+/* FOOTBALL'S ROUTE. QuickFire XI: Friends serves the same handler for its own
+   set from functions/api/quickfire_fr/ (functions/_lib/qf-sets.js). */
+export const onRequestPost = finishFor(FOOTBALL);

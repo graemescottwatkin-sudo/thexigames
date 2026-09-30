@@ -19,8 +19,9 @@
  */
 import { hasDB, getDaily, getWeek, noStore, today } from "../../_lib/qfdata.js";
 import { boardNoOf, boardByFamilyNo, playableDay, lastPlayableDay } from "../../_lib/qf-board.js";
+import { FOOTBALL } from "../../_lib/qf-sets.js";
 
-export async function onRequestGet({ request, env }) {
+export const dailyFor = (set) => async function ({ request, env }) {
   if (!hasDB(env)) {
     return noStore({ error: "no database binding", source: "none" }, 503);
   }
@@ -37,21 +38,22 @@ export async function onRequestGet({ request, env }) {
          rather than a coerced one: Number("") is 0 and Number("3x") is NaN, and
          both would otherwise walk into the lookup as something. */
       const no = /^\d+$/.test(askedNo) ? Number(askedNo) : -1;
-      daily = await boardByFamilyNo(env, no, today());
+      daily = await boardByFamilyNo(env, no, today(), set);
       if (daily) day = daily.date;
     } else if (askedDay !== null) {
       /* A BOARD BY DATE, checked against the table rather than parsed. A date
          that is not a published day at or before today is not a board, and the
          bound is what stops /api/quickfire/daily?date=2026-12-11 handing over
          the eleven questions somebody will be asked in December. */
-      if (/^\d{4}-\d{2}-\d{2}$/.test(askedDay) && await playableDay(env, askedDay)) {
-        daily = await getDaily(env, askedDay);
+      if (/^\d{4}-\d{2}-\d{2}$/.test(askedDay) && await playableDay(env, askedDay, set)) {
+        daily = await getDaily(env, askedDay, set);
         if (daily) day = askedDay;
       }
     } else {
-      daily = await getDaily(env);
+      daily = await getDaily(env, null, set);
     }
-    week = await getWeek(env);
+    /* The weekly round is football's alone: a set without weekly tables has none. */
+    week = set.weeks ? await getWeek(env) : null;
   } catch (err) {
     return noStore({ error: "query failed", detail: String(err), source: "d1" }, 500);
   }
@@ -64,7 +66,7 @@ export async function onRequestGet({ request, env }) {
   }
 
   const no = boardNoOf(day);
-  const last = await lastPlayableDay(env);
+  const last = await lastPlayableDay(env, set);
 
   return noStore({
     source: "d1",
@@ -76,6 +78,9 @@ export async function onRequestGet({ request, env }) {
     daily: { ...daily, no, day },
     week,
   });
-}
+};
 
+/* FOOTBALL'S ROUTE. QuickFire XI: Friends serves the same handler for its own
+   set from functions/api/quickfire_fr/ (functions/_lib/qf-sets.js). */
+export const onRequestGet = dailyFor(FOOTBALL);
 export const onRequestHead = onRequestGet;

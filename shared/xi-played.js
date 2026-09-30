@@ -114,6 +114,11 @@
     { id: "wordsearch_fr", key: "xifws.results", theme: "friends", dir: "wordsearch", api: "/api/wordsearch_fr/daily",
       today: function (d) { return d.day; },
       done: function (r, t) { return r.day === t; } },
+    /* QuickFire, Friends: football QuickFire's probe over its own route and
+       its own storage prefix, keyed on the day the same way. */
+    { id: "quickfire_fr", key: "xifq.results.v1", theme: "friends", dir: "quickfire", api: "/api/quickfire_fr/daily",
+      today: function (d) { return d.day; },
+      done: function (r, t) { return r.day === t; } },
   ];
 
   var byId = {};

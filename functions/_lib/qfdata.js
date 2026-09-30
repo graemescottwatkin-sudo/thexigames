@@ -131,15 +131,19 @@ function split(rows) {
  * entirely, so the one function that calls today() was never run. A module that
  * fails on import-time linkage passes every check that never imports it. */
 import { utcDay } from "./daily.js";
+import { FOOTBALL, qfTable } from "./qf-sets.js";
 export const today = utcDay;
 
-export async function getDaily(env, date) {
+/* THE SET IS THE GAME (qf-sets.js): football's tables unless a Friends route
+   says otherwise. The table names come from that constant file, never from a
+   request. */
+export async function getDaily(env, date, set = FOOTBALL) {
   const play = date || today();
   const { results } = await env.DB.prepare(`
     SELECT ${QUESTION_COLUMNS}, s.role, s.slot, d.play_date
-    FROM qf_daily d
-    JOIN qf_daily_slot s ON s.play_date = d.play_date
-    JOIN qf_question   q ON q.id = s.question_id
+    FROM ${qfTable(set, "daily")} d
+    JOIN ${qfTable(set, "daily_slot")} s ON s.play_date = d.play_date
+    JOIN ${qfTable(set, "question")}   q ON q.id = s.question_id
     WHERE d.play_date = ?1
       AND d.status = 'published'
       AND q.status  = 'verified'

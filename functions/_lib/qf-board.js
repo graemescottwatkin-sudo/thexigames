@@ -24,6 +24,7 @@
  */
 import { dailyDayKey, dailyNoForDay } from "./daily.js";
 import { hasDB, getDaily, today } from "./qfdata.js";
+import { FOOTBALL, qfTable } from "./qf-sets.js";
 
 /* The family number for a day, and the day for a family number. Thin on
    purpose — they exist so that nothing else in QuickFire is tempted to do the
@@ -41,22 +42,22 @@ export function dayOfBoardNo(no) {
  * The bound is the whole point. Without it /football/quickfire/daily/200 serves
  * a board from November to anybody who types it, and the eleven questions on it
  * are the eleven questions somebody will be asked in November. */
-export async function boardByFamilyNo(env, familyNo, now) {
+export async function boardByFamilyNo(env, familyNo, now, set = FOOTBALL) {
   if (!hasDB(env) || !Number.isInteger(familyNo) || familyNo < 1) return null;
   const day = dayOfBoardNo(familyNo);
   if (!day) return null;
   const cutoff = now || today();
   if (day > String(cutoff)) return null;
-  return await getDaily(env, day);
+  return await getDaily(env, day, set);
 }
 
 /* Is this day one a player is allowed to open? Asked of the table rather than
    computed from a launch date, because "published" is a status a row carries
    and a date cannot answer. */
-export async function playableDay(env, day) {
+export async function playableDay(env, day, set = FOOTBALL) {
   if (!hasDB(env) || !day) return false;
   const row = await env.DB.prepare(
-    "SELECT play_date FROM qf_daily WHERE play_date = ? AND status = 'published' AND play_date <= ?"
+    "SELECT play_date FROM " + qfTable(set, "daily") + " WHERE play_date = ? AND status = 'published' AND play_date <= ?"
   ).bind(String(day), today()).first();
   return !!row;
 }
@@ -70,10 +71,10 @@ export async function playableDay(env, day) {
  *
  * `limit` is a courtesy, not a security boundary: the bound that matters is
  * play_date <= today. */
-export async function archive(env, limit = 400) {
+export async function archive(env, limit = 400, set = FOOTBALL) {
   if (!hasDB(env)) return [];
   const { results } = await env.DB.prepare(
-    "SELECT play_date FROM qf_daily WHERE status = 'published' AND play_date <= ? " +
+    "SELECT play_date FROM " + qfTable(set, "daily") + " WHERE status = 'published' AND play_date <= ? " +
     "ORDER BY play_date DESC LIMIT ?"
   ).bind(today(), Math.max(1, Math.min(1000, Number(limit) || 400))).all();
   return (results || []).map((r) => ({ day: r.play_date, no: boardNoOf(r.play_date) }));
@@ -82,10 +83,10 @@ export async function archive(env, limit = 400) {
 /* The most recent published day at or before today — which is today's board
    when there is one, and the last one there was when there is not. A game that
    runs out of boards should show the last one rather than a 404. */
-export async function lastPlayableDay(env) {
+export async function lastPlayableDay(env, set = FOOTBALL) {
   if (!hasDB(env)) return null;
   const row = await env.DB.prepare(
-    "SELECT MAX(play_date) AS d FROM qf_daily WHERE status = 'published' AND play_date <= ?"
+    "SELECT MAX(play_date) AS d FROM " + qfTable(set, "daily") + " WHERE status = 'published' AND play_date <= ?"
   ).bind(today()).first();
   return row && row.d ? String(row.d) : null;
 }

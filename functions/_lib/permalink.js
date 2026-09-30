@@ -94,6 +94,9 @@ export const PERMA_GAMES = {
      like football's word search: fr_ws_schedule names one board per day and
      there is no ring behind it. */
   wordsearch_fr: { name: "Wordsearch XI: Friends", schedule: "day" },
+  /* QuickFire XI: Friends. By DAY, like football's: its boards are rows keyed
+     on play_date in its own table (fr_qf_daily). */
+  quickfire_fr: { name: "QuickFire XI: Friends", schedule: "day" },
   wordsearch: { name: "Wordsearch XI", schedule: "day" },
   scrambled: { name: "Scrambled XI", schedule: "ring" },
   hilo: { name: "HiLo XI", schedule: "day" },
@@ -238,6 +241,7 @@ const SCHEDULE_TABLE = {
   /* Football's word search's shape (a `day` column, every row a scheduled
      board), over the Friends tables. */
   wordsearch_fr: "fr_ws_schedule",
+  quickfire_fr: "fr_qf_daily",
 };
 
 /* WHICH COLUMN HOLDS THE DAY, and which rows count as real.
@@ -260,6 +264,8 @@ const SCHEDULE_SHAPE = {
      board table keyed on play_date with a status that decides whether a row is
      ever served -- not a schedule beside one. */
   whoami_fr: { day: "play_date", where: "status = 'published'" },
+  /* Football QuickFire's shape, for its own table. */
+  quickfire_fr: { day: "play_date", where: "status = 'published'" },
 };
 const shapeOf = (game) => SCHEDULE_SHAPE[game] || { day: "day", where: null };
 
@@ -392,6 +398,7 @@ export const THEME_OF = {
   scrambled_fr: "friends",
   vowels_fr: "friends",
   wordsearch_fr: "friends",
+  quickfire_fr: "friends",
 };
 export const themeOf = (game) => THEME_OF[game] || "football";
 
@@ -465,6 +472,7 @@ export const SLUG_OF = {
   vowels_fr: "vowels",
   /* /friends/wordsearch/: football's word, the theme in front telling them apart. */
   wordsearch_fr: "wordsearch",
+  quickfire_fr: "quickfire",
 };
 export const slugOf = (game) => SLUG_OF[game] || game;
 

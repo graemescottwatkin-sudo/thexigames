@@ -14,6 +14,7 @@
 import { hasDB, today } from "../../_lib/qfdata.js";
 import { playableDay } from "../../_lib/qf-board.js";
 import { startRound } from "../../_lib/qf-play.js";
+import { FOOTBALL } from "../../_lib/qf-sets.js";
 
 /* One refusal, saying nothing about which. */
 const NO = (msg = "no") => new Response(JSON.stringify({ error: msg }), {
@@ -25,7 +26,7 @@ const NO = (msg = "no") => new Response(JSON.stringify({ error: msg }), {
   },
 });
 
-export async function onRequestPost({ request, env }) {
+export const playFor = (set) => async function ({ request, env }) {
   if (!hasDB(env)) return NO();
 
   /* WHICH BOARD THIS SITTING IS AGAINST. Today's unless a day is named, and a
@@ -47,8 +48,8 @@ export async function onRequestPost({ request, env }) {
   const asked = body.date;
   if (asked !== undefined && asked !== null) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(String(asked))) return NO("no such board");
-    if (!(await playableDay(env, String(asked)))) return NO("no such board");
-    const r = await startRound(env, String(asked));
+    if (!(await playableDay(env, String(asked), set))) return NO("no such board");
+    const r = await startRound(env, String(asked), set);
     return new Response(JSON.stringify(r), {
       headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
     });
@@ -56,8 +57,12 @@ export async function onRequestPost({ request, env }) {
   /* THE DAY IS THIS SERVER'S. A date sent up is not read: the board a round
      belongs to is decided here, so a client cannot open yesterday's round and
      answer today's questions into it. */
-  const r = await startRound(env, today());
+  const r = await startRound(env, today(), set);
   return new Response(JSON.stringify(r), {
     headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
   });
-}
+};
+
+/* FOOTBALL'S ROUTE. QuickFire XI: Friends serves the same handler for its own
+   set from functions/api/quickfire_fr/ (functions/_lib/qf-sets.js). */
+export const onRequestPost = playFor(FOOTBALL);

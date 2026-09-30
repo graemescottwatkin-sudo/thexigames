@@ -194,6 +194,9 @@
       /* WORDSEARCH, FRIENDS, launched 30 September 2026 on the owner's go:
          the next free number. */
       { n: 6,  name: "Wordsearch XI: Friends", href: "/friends/wordsearch/" },
+      /* QuickFire XI: Friends, the owner's "yes and yes" of 30 Sep 2026:
+         the next free number after Wordsearch XI: Friends' 6. */
+      { n: 7,  name: "QuickFire XI: Friends", href: "/friends/quickfire/" },
     ],
   };
 
@@ -1526,7 +1529,7 @@
                             is why aligned_test walks GAMES and fails when one of
                             them is missing here, rather than trusting anyone to
                             remember. */
-                         "xifc.", "xifw.", "xifl.", "xifs.", "xifv.", "xifws.", "xi."];
+                         "xifc.", "xifw.", "xifl.", "xifs.", "xifv.", "xifws.", "xifq.", "xi."];
   var RECORD_KEEP = [
     /* Identity. Wiping this would cut the player off from results already
        synced to their account, which clearing local history has no business

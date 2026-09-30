@@ -349,6 +349,14 @@ jobs:
           # it writes data/qf-production.sql relative to its CWD and a passing
           # case run from the repo root would overwrite the real one.
           node tools/import_quickfire_test.mjs
+          # ONE QUICKFIRE ENGINE, TWO GAMES (functions/_lib/qf-sets.js), and a
+          # sub answered as the question it brought on. The real routes over a
+          # real SQLite from every migration, the two games seeded with the
+          # SAME ids: each serves, opens, answers and finishes in its own
+          # tables only, and after a sub the pick is judged against the bench
+          # question -- which until 30 Sep 2026 was refused as "not one of the
+          # options" on every sub, unseen because every fixture shared its four.
+          node tools/quickfire_sets_test.mjs
           # And Who Am I's importer, which is the only thing standing between a
           # bank of 3,146 careers and a player being told the right answer is
           # wrong. Fixtures in a temp directory, never the real bank: a runner
@@ -584,6 +592,15 @@ jobs:
           # the DEPLOYED site, and prove the boards are served from D1.
           #   ->  node friends/scrambled/live_check.mjs --expect v001a
           #   ->  node friends/vowels/live_check.mjs --expect v001a
+          # QUICKFIRE XI: FRIENDS, launched 30 Sep 2026: football QuickFire's
+          # page with the Friends rewrites (seconds, not a match clock; Skip,
+          # not subs), generated, and one round played through the real Friends
+          # routes over SQLite -- a skip, a wrong pick, Full Time, its own
+          # storage and no season.
+          node tools/build_friendsquickfire.js --check
+          node friends/quickfire/journey_test.mjs
+          # Named here and never run in CI: it reads the DEPLOYED site.
+          #   ->  node friends/quickfire/live_check.mjs --expect v001a
           # HiLo XI, released. Its gate on the board shape and the
           # judge, its API executed against the sample bank, its club pages,
           # and one round played from kick off to full time through the real
@@ -793,6 +810,10 @@ jobs:
           # outside fr_ws_*, and a copy of football's rules where the import
           # belongs: the drag geometry and the score are football's own files.
           node friends/wordsearch/deploy_check.mjs
+          # QUICKFIRE XI: FRIENDS'S GATE: the tag law, generated not written,
+          # seconds and skips, the launch's five things together, and its daily
+          # served from fr_qf_* with no answer field, proved by execution.
+          node friends/quickfire/deploy_check.mjs
 
   render:
     name: Sixteen viewports, real browser

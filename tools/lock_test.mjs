@@ -82,6 +82,9 @@ const LOCKED = {
   scrambled_fr: { kind: "pitch", path: "/friends/scrambled/", api: "/api/scrambled_fr/daily", boards: FRSC_BOARDS, tiles: 5 },
   vowels_fr: { kind: "pitch", path: "/friends/vowels/", api: "/api/scrambled_fr/daily", boards: FRSC_BOARDS, tiles: 5 },
   quickfire: { kind: "quiz", path: "/football/quickfire/" },
+  /* QuickFire XI: Friends: football's page and screen, its own routes and
+     tables (the fixture below seeds fr_qf_*). */
+  quickfire_fr: { kind: "quiz", path: "/friends/quickfire/" },
   ballpark: { kind: "slider", path: "/football/ballpark/" },
   hilo: { kind: "duel", path: "/football/hilo/" },
   codeword: { kind: "codeword", path: "/football/codeword/" },
@@ -145,6 +148,7 @@ const { utcDay } = await import(pathToFileURL(path.join(ROOT, "functions", "_lib
 /* One reading of the day, handed to the fixture and (through the real
    functions) to the page, so the two cannot disagree across midnight. */
 const QF_ENV = await quickfireEnv(utcDay());
+const QF_FR_ENV = await quickfireEnv(utcDay(), "fr_qf_");
 /* LIGHTNING ROUND through its REAL routes over the real migration, seeded with
    a fixture pool (tools/lock_fixtures.mjs): the deal, the clock and the marking
    are the server's, so a stub would be testing a game that does not exist. */
@@ -164,6 +168,7 @@ const FR_ENV = { DB: { prepare: (sql) => ({ bind: () => ({
   all: async () => ({ results: [] }), run: async () => ({}),
 }) }) } };
 const envFor = (p) => (p.startsWith("/api/quickfire/") ? QF_ENV
+  : p.startsWith("/api/quickfire_fr/") ? QF_FR_ENV
   : p.startsWith("/api/crossword/crossword_fr/") ? FR_ENV
   : p.startsWith("/api/lightning_fr/") ? LR_ENV
   : p.startsWith("/api/wordsearch_fr/") ? WSF_ENV : {});
@@ -378,6 +383,7 @@ const FT_SAMPLE = (game, name) => ({
    every game at its Full Time, so a game missing here fails there, by name. */
 const FT_BOX = {
   scrambled: "#screenResults", vowels: "#screenResults", quickfire: "#screenResults", hilo: "#screenResults",
+  quickfire_fr: "#screenResults",
   lightning_fr: "#screenResults", scrambled_fr: "#screenResults", vowels_fr: "#screenResults",
   ballpark: "#ft", codeword: "#ft", grid: "#gdFullTime",
   whoami: "#screenDone", whoami_fr: "#screenDone", wordsearch: "#result", wordsearch_fr: "#result", crossword: "#doneOverlay",
@@ -2441,6 +2447,7 @@ const PERMA = {
     ...(PERMA_N >= LAUNCHED_NO.scrambled_fr ? { label: "#startKicker" } : {}) },
   "friends/vowels":     { asks: `/api/scrambled_fr/daily?no=${PERMA_N}&cy=1`,
     ...(PERMA_N >= LAUNCHED_NO.scrambled_fr ? { label: "#startKicker" } : {}) },
+  "friends/quickfire":  { asks: `/api/quickfire_fr/daily?no=${PERMA_N}` },
 };
 if (!ONLY || ONLY === "perma") {
   console.log(`\na board's own address, every game (board ${PERMA_N})`);

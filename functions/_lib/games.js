@@ -25,7 +25,7 @@ import { dailyKey, dailyDayKey, dailyNoForDay } from "./daily.js";
    because football holds that one and an id maps to exactly one theme; the
    SLUG is `whoami`, so the address still reads /friends/whoami/. Both are
    UNLISTED: live, banked, streaked, and advertised nowhere. */
-export const GAMES = ["crossword", "wordsearch", "scrambled", "hilo", "vowels", "grid", "quickfire", "codeword", "whoami", "ballpark", "crossword_fr", "whoami_fr", "lightning_fr", "scrambled_fr", "vowels_fr", "wordsearch_fr"];
+export const GAMES = ["crossword", "wordsearch", "scrambled", "hilo", "vowels", "grid", "quickfire", "codeword", "whoami", "ballpark", "crossword_fr", "whoami_fr", "lightning_fr", "scrambled_fr", "vowels_fr", "wordsearch_fr", "quickfire_fr"];
 
 export const DEFAULT_GAME = "crossword";
 
@@ -136,6 +136,12 @@ export const LAUNCHED = {
      search: fr_ws_schedule hands one board to one day, dealt from this day, so
      board one is the launch day and nothing counts from before it. */
   wordsearch_fr: "2026-09-30",
+  /* QuickFire XI: Friends (the owner, 30 Sep 2026: "yes and yes" to adding it
+     with the six main names exempt, and of its first daily, "yesterday"). The
+     football engine over the Friends bank, one set per game
+     (functions/_lib/qf-sets.js). Its calendar starts on this day, so 29 Sep is
+     its first board and every day since is playable from launch. */
+  quickfire_fr: "2026-09-29",
 };
 
 /* ---- WHICH LAUNCHED GAMES ARE NOT ADVERTISED ------------------------------
@@ -200,6 +206,9 @@ export const NO_SEASON = {
   /* And Wordsearch's: friends/wordsearch/index.html loads no xi-season.js.
      Its streaks are xi-played's, as every Friends game's are. */
   wordsearch_fr: true,
+  /* And QuickFire's, whose generator (tools/build_friendsquickfire.js) drops
+     the season script the same way. */
+  quickfire_fr: true,
 };
 
 export const inSeason = (game) => !NO_SEASON[game];
@@ -251,6 +260,8 @@ export const ENGINE_GAMES = {
   hilo: ["hilo"],
   grid: ["grid"],
   quickfire: ["quickfire"],
+  /* Its own, never football's: a Friends round must land on a Friends play. */
+  quickfire_fr: ["quickfire_fr"],
   whoami: ["whoami"],
   ballpark: ["ballpark"],
 };
@@ -418,6 +429,7 @@ export const LABELS = {
      title has it: two "Wordsearch XI" links would be two a reader cannot tell
      apart. */
   wordsearch_fr: "Wordsearch XI: Friends",
+  quickfire_fr: "QuickFire XI: Friends",
   wordsearch: "Wordsearch XI",
   scrambled: "Scrambled XI",
   vowels: "Vowels XI",
@@ -575,6 +587,15 @@ export function entryKey(game, row) {
        avoid, and this pair would hit it on day one rather than eventually. */
     const d = String((row && (row.day || row.date || row.play_date)) || "");
     return /^\d{4}-\d{2}-\d{2}$/.test(d) ? "frwa:" + d : null;
+  }
+  if (game === "quickfire_fr") {
+    /* QuickFire's key, with a prefix of its own: both games run on the same
+       days, and sharing "qf:" would file a Friends result and a football
+       result for one day under one key, where first-banked-wins would throw
+       the second away -- the collision every Friends game has its own prefix
+       to avoid. */
+    const d = String((row && (row.day || row.date || row.play_date)) || "");
+    return /^\d{4}-\d{2}-\d{2}$/.test(d) ? "frqf:" + d : null;
   }
   if (game === "lightning_fr") {
     /* THE DAY'S RUN, keyed on its day with a prefix of its own. One result a
@@ -799,7 +820,7 @@ export function detailOf(game, row) {
       minute: n(row.minute),
     });
   }
-  if (game === "quickfire") {
+  if (game === "quickfire" || game === "quickfire_fr") {
     /* The same, and it arrived the same way: the page has always sent right,
        wrong and the board id, and all three were discarded here.
        `subs` is NOT in this object. It has a column — substitutions — and a

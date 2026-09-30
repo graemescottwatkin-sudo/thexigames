@@ -6,7 +6,7 @@
  *
  * WHAT IT DOES
  *   - After a finished game, once per device: "Want a nudge when tomorrow's
- *     puzzles are out?" A yes asks Android for permission and registers the
+ *     puzzles are out?" A yes asks the phone for permission and registers the
  *     phone. A "not now" is remembered, and the offer is not made again.
  *   - Adds Reminders rows to the Settings menu: on or off, the morning time,
  *     the streak nudge and challenge results.
@@ -95,7 +95,7 @@
     }, function (e) {
       redraw();
       var code = e && (e.code || e.message);
-      if (code === "denied") say("Notifications are turned off for The XI Games in Android settings.");
+      if (code === "denied") say("Notifications are turned off for The XI Games in your phone's settings.");
       else say("Reminders could not be turned on just now.");
     });
   }

@@ -1,0 +1,195 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover,interactive-widget=resizes-content">
+<meta name="theme-color" content="#F4F5F2">
+<title>QuickFire XI: Friends — the daily Friends quiz | The XI Games</title>
+<meta name="description" content="Eleven Friends questions, four answers each, thirty seconds a question: the faster you answer, the more it is worth. A new quiz every day.">
+<link rel="canonical" href="https://www.thexigames.com/friends/quickfire/">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://www.thexigames.com/friends/quickfire/">
+<meta property="og:title" content="QuickFire XI: Friends — the daily Friends quiz">
+<meta property="og:description" content="Eleven Friends questions, four answers each, thirty seconds a question. Answer quickly, score more.">
+<meta property="og:site_name" content="The XI Games">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="QuickFire XI: Friends — the daily Friends quiz">
+<meta name="twitter:description" content="Eleven Friends questions, four answers each, thirty seconds a question. Answer quickly, score more.">
+<script type="application/ld+json">
+{"@context":"https://schema.org","@type":"WebApplication",
+ "name":"QuickFire XI: Friends","applicationCategory":"Game",
+ "url":"https://www.thexigames.com/friends/quickfire/",
+ "operatingSystem":"Any","offers":{"@type":"Offer","price":"0","priceCurrency":"GBP"},
+ "publisher":{"@type":"Organization","name":"The XI Games","url":"https://www.thexigames.com/"}}
+</script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="/shared/xi-tokens.css?v=v92">
+<link rel="stylesheet" href="/shared/xi-chrome.css?v=v92">
+<link rel="stylesheet" href="/shared/xi-matchbar.css?v=v92">
+<link rel="stylesheet" href="/shared/xi-share.css?v=v92">
+<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v92">
+<!-- The family's pre-match card, which every other game's landing screen is
+     built from. QuickFire drew its own until it launched; a game that looks
+     like itself on the front door and like nothing else once you are inside is
+     the fault the shared layer exists to stop. -->
+<link rel="stylesheet" href="/shared/xi-landing.css?v=v92">
+<script src="/shared/xi-theme.js?v=v92"></script>
+<link rel="stylesheet" href="css/style.css?v=v001a">
+</head>
+<body>
+
+<!-- The shared bar. The burger and the wordmark are inserted by
+     shared/xi-chrome.js; only this game's own control is written here. -->
+<header class="xic-bar">
+  <div class="xic-right">
+    <a class="xic-ghost" href="#how" data-optional>How to play</a>
+  </div>
+</header>
+
+<main class="app">
+
+  <!-- The clock and the score live together, the way they do in both existing
+       games. The H1 says what the page IS and sits on the pre-match card; the
+       daily date changes, the game does not. -->
+
+  <section class="screen prematch" id="screenLoading">
+    <div class="pmCard">
+      <div class="eyebrow">Warming up</div>
+      <p class="pmDate">QuickFire XI: Friends</p>
+      <p class="pmLede">Fetching today's eleven.</p>
+    </div>
+  </section>
+
+  <!-- The H1 says what the page IS and lives on the pre-match card, the same
+       place the word search keeps its own. The date changes daily; the game
+       does not, so the date is an h2. -->
+  <section class="screen prematch" id="screenStart" hidden>
+    <div class="pmCard">
+      <div class="eyebrow" id="startKicker">Today's Daily</div>
+      <h1>QuickFire XI: Friends</h1>
+      <h2 class="pmDate" id="startDate">—</h2>
+      <p class="challengeNote" id="challengeNote" hidden></p>
+      <p class="pmLede" id="startBlurb">Eleven Friends questions, four
+        answers each, thirty seconds a question. The quicker you answer, the
+        more the right one is worth.</p>
+      <button class="kick" id="kickOff">Start</button>
+      <button class="mode" id="playWeekly" hidden>
+        <strong id="weeklyLabel">The Last 7 Days</strong>
+        <span id="weeklyState">New</span>
+      </button>
+
+      <!-- BOARDS THAT HAVE GONE. The list is days and numbers only; opening one
+           fetches it like any other board and plays it under the same rules. -->
+      <button class="mode" id="showArchive" hidden>
+        <strong>Boards that have been</strong>
+        <span id="archiveCount"></span>
+      </button>
+
+      <p class="tiny">One question lasts 30 seconds of real time.</p>
+    </div>
+  </section>
+
+  <section class="screen prematch" id="screenArchive" hidden>
+    <div class="pmCard">
+      <div class="eyebrow">QuickFire XI: Friends</div>
+      <h2 class="pmDate">Boards that have been</h2>
+      <p class="pmLede">Every board that has already been a Daily. They are
+        scored exactly as today's is.</p>
+      <div class="archiveList" id="archiveList"></div>
+      <button class="btn quiet" id="archiveBack">Back</button>
+    </div>
+  </section>
+
+  <section class="screen" id="screenGame" hidden>
+
+    <!-- THE FAMILY'S TOP BAR (shared/xi-matchbar.js), by the owner's ruling
+         of 25 Sep 2026: the same five slots in the same places on every game,
+         the score among them rather than at the foot of the screen. The strip,
+         the question count, the clock and the score boxes below are kept for
+         what the page still writes, and not drawn. -->
+    <div id="xiBar"></div>
+
+    <div class="strip" aria-hidden="true">
+      <div class="stripFill" id="stripFill"></div>
+      <span class="notch" style="left:16.6%"></span>
+      <span class="notch" style="left:33.3%"></span>
+      <span class="notch half" style="left:50%"></span>
+      <span class="notch" style="left:66.6%"></span>
+      <span class="notch" style="left:83.3%"></span>
+    </div>
+
+    <div class="matchHead">
+      <span class="progress">Question <span id="progress">1 / 11</span></span>
+      <span class="clock"><span id="clockValue">30</span><span class="prime">s</span></span>
+    </div>
+
+    <p class="clue" id="clue">—</p>
+
+    <!-- The four. Built by the script from what the server sent, which is the
+         options and no answer among them. -->
+    <div class="options" id="options" role="group" aria-label="Choose an answer"></div>
+
+    <p class="feedback" id="feedback" role="status" aria-live="polite"></p>
+
+    <button class="subBtn" id="passQuestion">
+      <span>Skip</span>
+      <span class="subCost" id="subCost"></span>
+    </button>
+
+    <div class="scoreCluster">
+      <div class="scoreBox">
+        <span class="label">Score</span>
+        <span class="scoreVal" id="runningScore">0</span>
+      </div>
+      <div class="worthBox">
+        <span class="label">Worth now</span>
+        <span class="worthVal" id="worthNow">10</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="screen" id="screenResults" data-xft-host hidden>
+    <!-- THE FAMILY'S FULL TIME (shared/xi-fulltime.js, XIFullTime.panel): the
+         result, keep it, share, challenge, then the next game -- the same four
+         blocks on every game, the owner's approved mockup of 26 Sep 2026. -->
+    <div id="ftPanel"></div>
+    <button class="btn quiet" id="playAgain">Clear today's Daily and replay</button>
+  </section>
+
+  <!-- HOW TO PLAY. The bar's "How to play" was a button with nothing behind it
+       from the day the game launched: no handler and no rules on the page.
+       Written 24 Sep 2026 in the owner's words -- "11 fast Qs" -- and kept that
+       short. The numbers are the rule's own (js/config.js): a 30-second
+       question plays 90 minutes; 10 points inside 12 seconds, 7 inside 20, 4
+       before the whistle; 4 more for all eleven right; a wrong pick scores
+       nothing and moves on; a sub is free. The owner's bands, 26 Sep 2026. On
+       a locked play screen it opens over the game from the bar, with the way
+       back at the top. -->
+  <section class="how" id="how">
+    <a class="how-back" href="#play">&lsaquo; Back</a>
+    <h2>How to play</h2>
+    <p><b>Eleven quick questions about Friends.</b> Pick one of the four answers.</p>
+    <p><b>Beat the countdown.</b> Each question has thirty seconds. Right with more than 18 seconds left is 10 points, with more than 10 left 7, any time before it runs out 4.</p>
+    <p><b>Get all eleven right</b> for 4 more: 114 in all.</p>
+    <p><b>Wrong answer?</b> No points, and you see the right one.</p>
+    <p><b>Three skips.</b> Don't fancy a question? Skip it for another, free.</p>
+  </section>
+
+</main>
+
+<!-- THE SHARED FOOTER, AT TOP LEVEL. It carries the family disclaimer. -->
+<footer class="xic-foot"></footer>
+
+<script src="/shared/xi-chrome.js?v=v92"></script>
+<script src="/shared/xi-matchbar.js?v=v92"></script>
+<script src="/shared/xi-share.js?v=v92"></script>
+<!-- xi-played.js first: xi-fulltime.js asks it what has been played today. -->
+<script src="/shared/xi-played.js?v=v92"></script>
+<script src="/shared/xi-fulltime.js?v=v92"></script>
+<script src="js/config.js?v=v001a"></script>
+<script src="/shared/xi-plays.js?v=v92"></script>
+<script src="js/game.js?v=v001a"></script>
+</body>
+</html>

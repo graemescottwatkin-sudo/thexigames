@@ -263,6 +263,11 @@ const good = (s, extra = {}) => ({ token: TOK(s), platform: "android", tz: "Euro
   t("a bad time zone: 400, and nothing stored", r.status === 400 && !row(TOK("badtz")));
   r = await device.onRequestPost({ request: req("POST", good("badplat", { platform: "blackberry" })), env });
   t("an unknown platform: 400, and nothing stored", r.status === 400 && !row(TOK("badplat")));
+  /* AN IPHONE IS A PLATFORM since 30 Sep 2026: the iOS app's FCM token. */
+  r = await device.onRequestPost({ request: req("POST", good("iphone", { platform: "ios" })), env });
+  t("an iPhone registers, as ios", r.status === 200 && !!row(TOK("iphone")) && row(TOK("iphone")).platform === "ios", String(r.status));
+  /* And gone again, so the phones the sender's checks count are theirs. */
+  await env.DB.prepare("DELETE FROM push_device WHERE token = ?").bind(TOK("iphone")).run();
   r = await device.onRequestPost({ request: req("POST", good("badmin", { morningMinute: 1500 })), env });
   t("an impossible minute: 400, and nothing stored", r.status === 400 && !row(TOK("badmin")));
   r = await device.onRequestPost({ request: req("POST", { ...good("x"), token: "short" }), env });
@@ -542,6 +547,8 @@ const good = (s, extra = {}) => ({ token: TOK(s), platform: "android", tz: "Euro
   t("on the app's channel, with the address as data",
     body.message && body.message.android.notification.channel_id === "reminders" &&
     body.message.data.url === push.SITE + "/football/" && body.message.token === TOK("key"));
+  t("and asks an iPhone to chime, through APNs",
+    !!body.message && !!body.message.apns && body.message.apns.payload.aps.sound === "default");
   await send(TOK("key"), msg);
   t("the access token is reused, not fetched per message",
     calls.filter((c) => c.url.startsWith("https://oauth2")).length === 1);

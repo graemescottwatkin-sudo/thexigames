@@ -144,6 +144,10 @@ export function fcmSender(serviceAccount, fetchFn = fetch, clock = Date.now) {
                switches each channel off in Android's settings, which is why
                there are two rather than one. */
             android: { notification: { channel_id: message.channel } },
+            /* An iPhone takes the notification through APNs, which ignores the
+               android block; the sound is asked for here so it chimes the way
+               an Android phone does (30 Sep 2026). */
+            apns: { payload: { aps: { sound: "default" } } },
             data: { url: message.address },
           },
         }),

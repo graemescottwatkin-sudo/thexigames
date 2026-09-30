@@ -226,8 +226,9 @@ and diagnose before anything ships. Never push past a red gate.
 - `results`/`plays` sanity via wrangler if relevant:
   `npx wrangler d1 execute crosswordxi --remote --command="..."`.
   **Never run a migration that is already applied** — `ALTER TABLE` is not
-  idempotent. Migration state: **001–049 all applied** (as of 30 Sep 2026 —
-  check production; 024 only since 29 Sep, 048 since 30 Sep, see below) — 035 (QuickFire text
+  idempotent. Migration state: **001–052 all applied** (as of 30 Sep 2026 —
+  check production; 024 only since 29 Sep, 048, 051 and 052 since 30 Sep, see
+  below; 050 `fr_sc_board` verified present 30 Sep) — 035 (QuickFire text
   ids), 036 and 038 (Codeword and its rounds), 037 and 039 (QuickFire rounds
   and the wrong-pick penalty), 040 and 041 (Who Am I and its score) all landed
   between 13 and 15 Sep 2026 and this line still read "001–034" afterwards.
@@ -305,6 +306,17 @@ and diagnose before anything ships. Never push past a red gate.
   SELECT and INSERT compiled against it with `EXPLAIN`, which writes nothing.
   It is a bare `ALTER TABLE ... ADD COLUMN`: DO NOT RE-RUN IT. A range is a
   claim about every number inside it, and nobody had checked this one.
+  051 (QuickFire XI: Friends: `fr_qf_question`, `fr_qf_daily`,
+  `fr_qf_daily_slot`, `fr_qf_answer`, `fr_qf_round` and three indexes) applied
+  30 Sep 2026 on the owner's go to add the game, verified from `sqlite_master`
+  the same minute: all eight present. Only `CREATE ... IF NOT EXISTS`, so it is
+  safe to re-run. The bank followed and was checked: 2,058 questions, 147
+  published days 2026-09-29 to 2027-02-22, 0 slots without their question.
+  052 (`qf_round.sub_slots`, which slot each QuickFire substitution was spent
+  on, so a sub's pick is judged against the question it brought on) applied 30
+  Sep 2026 and verified from `pragma_table_info`: the column present, '' on all
+  43 existing rounds. It is a bare `ALTER TABLE ... ADD COLUMN`: DO NOT RE-RUN
+  IT. It went in BEFORE the code that names it, as it must.
   A STALE MIGRATION NUMBER IS THE MOST DANGEROUS FIGURE IN THIS FILE, because
   the sentence immediately before it tells you never to re-run an applied one
   and `ALTER TABLE` is not idempotent — so a reader trusting "034" could

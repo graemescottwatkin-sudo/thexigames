@@ -12,6 +12,7 @@
  */
 import { hasDB } from "../../_lib/qfdata.js";
 import { getRound, spendSub } from "../../_lib/qf-play.js";
+import { FOOTBALL } from "../../_lib/qf-sets.js";
 
 const NO = (msg = "no") => new Response(JSON.stringify({ error: msg }), {
   status: 400,
@@ -22,19 +23,23 @@ const NO = (msg = "no") => new Response(JSON.stringify({ error: msg }), {
   },
 });
 
-export async function onRequestPost({ request, env }) {
+export const subFor = (set) => async function ({ request, env }) {
   if (!hasDB(env)) return NO();
 
   let body = {};
   try { body = await request.json(); } catch (e) { body = {}; }
 
-  const round = await getRound(env, body.playId);
+  const round = await getRound(env, body.playId, set);
   if (!round) return NO("no round");
 
-  const out = await spendSub(env, round);
+  const out = await spendSub(env, round, set);
   if (out.error) return NO(out.error);
 
   return new Response(JSON.stringify(out), {
     headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
   });
-}
+};
+
+/* FOOTBALL'S ROUTE. QuickFire XI: Friends serves the same handler for its own
+   set from functions/api/quickfire_fr/ (functions/_lib/qf-sets.js). */
+export const onRequestPost = subFor(FOOTBALL);

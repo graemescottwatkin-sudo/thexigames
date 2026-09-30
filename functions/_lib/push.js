@@ -19,7 +19,10 @@ import { isListed } from "./games.js";
 import { gamePath } from "./permalink.js";
 import XI_SEASON from "../../shared/xi-season.js";
 
-export const PLATFORMS = ["android"];
+/* iOS since 30 Sep 2026 (the owner: "test push on iPhone next"): the iOS app
+   registers an FCM token the same shape, and FCM delivers to it through APNs
+   (workers/push/fcm.js). */
+export const PLATFORMS = ["android", "ios"];
 export const DEFAULT_MORNING = 540;          // 09:00 local
 export const STALE_DAYS = 60;                // no re-register in this long: the token is gone
 /* Where a tapped notification may take the app. The app refuses anything

@@ -57,17 +57,21 @@ const bench = (from) => Array.from({ length: 3 }, (_, i) => qid(from + i));
 
 /* Run the importer against a bank, in its own directory, and give back what it
    said. A run that writes is a run that passed the gate. */
-function run(bank) {
+function run(bank, args = []) {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "qfimp-"));
   fs.mkdirSync(path.join(dir, "src"));
   fs.mkdirSync(path.join(dir, "data"));
   fs.writeFileSync(path.join(dir, "src", "bank.json"), JSON.stringify(bank));
-  const r = spawnSync(process.execPath, [SCRIPT, "--source", path.join(dir, "src")],
+  const r = spawnSync(process.execPath, [SCRIPT, "--source", path.join(dir, "src"), ...args],
     { cwd: dir, encoding: "utf8" });
   const out = String(r.stdout || "") + String(r.stderr || "");
+  /* What it wrote, by name, so a case can ask which file and which tables. */
+  const files = {};
+  for (const f of fs.readdirSync(path.join(dir, "data"))) files[f] = fs.readFileSync(path.join(dir, "data", f), "utf8");
   fs.rmSync(dir, { recursive: true, force: true });
-  return { status: r.status, out };
+  return { status: r.status, out, files };
 }
+const FRIENDS = ["--game", "quickfire_fr"];
 
 /* A bank whose dailies are built from disjoint question ranges: 14 questions a
    board, so nothing repeats unless a fixture makes it. */
@@ -163,6 +167,74 @@ console.log("\n=== The board rules it already had still hold ===");
   const r = run(bank);
   t("a short board is still refused",
     r.status !== 0 && /10 questions, expected 11/.test(r.out), "exit " + r.status);
+}
+
+
+console.log("\n=== QuickFire XI: Friends: its own tables, and six names exempt from two rules ===");
+{
+  /* THE OWNER'S RULING, 30 Sep 2026 ("yes and yes", to letting the six main
+     names repeat for Friends only): Rachel, Monica, Phoebe, Joey, Chandler and
+     Ross may be named in another question's clue, and may answer again inside
+     a week -- for Friends. Every case is run BOTH ways, so the exemption is
+     proved to be what lets it through, not a rule that stopped firing. */
+  const named = cleanBank(1, ["2026-10-01"]);
+  setAnswer(named, named.dailies[0].questionIds[0], "Rachel");
+  named.questions.find((q) => q.id === named.dailies[0].questionIds[1]).clue = "Who did Rachel take to the prom?";
+  const f1 = run(named), f2 = run(named, FRIENDS);
+  t("football refuses a clue that names another board answer, Rachel included",
+    f1.status !== 0 && /names another answer on the board \(Rachel\)/.test(f1.out), "exit " + f1.status);
+  t("and Friends accepts it, Rachel being one of the six",
+    f2.status === 0, "exit " + f2.status + " " + (f2.out.match(/- .*/) || [""])[0]);
+
+  const week = cleanBank(2, ["2026-10-01", "2026-10-04"]);
+  setAnswer(week, week.dailies[0].questionIds[0], "Joey");
+  setAnswer(week, week.dailies[1].questionIds[0], "Joey");
+  const w1 = run(week), w2 = run(week, FRIENDS);
+  t("football refuses Joey answering twice three days apart", w1.status !== 0 && /Joey was used 3 days ago/.test(w1.out), "exit " + w1.status);
+  t("and Friends accepts it", w2.status === 0, "exit " + w2.status + " " + (w2.out.match(/- .*/) || [""])[0]);
+
+  /* THE EXEMPTION IS SIX NAMES, NOT A RELAXED RULE. */
+  const full = cleanBank(1, ["2026-10-01"]);
+  setAnswer(full, full.dailies[0].questionIds[0], "Rachel Green");
+  full.questions.find((q) => q.id === full.dailies[0].questionIds[1]).clue = "Rachel Green's sister is called what?";
+  const g = run(full, FRIENDS);
+  t("Friends still refuses a clue naming a board answer that is not one of the six",
+    g.status !== 0 && /names another answer on the board \(Rachel Green\)/.test(g.out), "exit " + g.status);
+  const other = cleanBank(2, ["2026-10-01", "2026-10-04"]);
+  setAnswer(other, other.dailies[0].questionIds[0], "Gunther");
+  setAnswer(other, other.dailies[1].questionIds[0], "Gunther");
+  const o = run(other, FRIENDS);
+  t("and a name outside the six inside a week", o.status !== 0 && /Gunther was used 3 days ago/.test(o.out), "exit " + o.status);
+  const twice = cleanBank(1, ["2026-10-01"]);
+  setAnswer(twice, twice.dailies[0].questionIds[0], "Monica");
+  setAnswer(twice, twice.dailies[0].questionIds[1], "Monica");
+  const tw = run(twice, FRIENDS);
+  t("and one of the six twice on ONE board, which nobody relaxed",
+    tw.status !== 0 && /appears twice on the board/.test(tw.out), "exit " + tw.status);
+
+  /* ITS OWN TABLES AND ITS OWN RECORD: the two banks' ids collide, so a
+     Friends import writing football's tables would replace football's
+     questions, and one writing football's file would be compared against
+     football's served days. */
+  const ok = run(cleanBank(1, ["2026-10-01"]), FRIENDS);
+  const sql = ok.files["fr-qf-production.sql"] || "";
+  t("Friends writes data/fr-qf-production.sql and nothing else",
+    ok.status === 0 && Object.keys(ok.files).join(",") === "fr-qf-production.sql", Object.keys(ok.files).join(","));
+  t("into fr_qf_ tables only, and none of football's",
+    /INSERT INTO fr_qf_question /.test(sql) && /INSERT INTO fr_qf_daily_slot /.test(sql) &&
+      !/\b(INTO|FROM) qf_/.test(sql) && !/week/.test(sql), (sql.match(/(INTO|FROM) \w+/g) || []).slice(0, 4).join(" | "));
+  const foot = run(cleanBank(1, ["2026-10-01"]));
+  t("while football still writes data/qf-production.sql into qf_ tables",
+    Object.keys(foot.files).join(",") === "qf-production.sql" && /INSERT INTO qf_question /.test(foot.files["qf-production.sql"] || ""),
+    Object.keys(foot.files).join(","));
+  const weekly = cleanBank(1, ["2026-10-01"]);
+  weekly.weeks = [{ weekEnding: "2026-10-04", questionIds: slots(1), benchIds: bench(12) }];
+  const wk = run(weekly, FRIENDS);
+  t("a Friends bank carrying weekly rounds is refused, not dropped unwritten",
+    wk.status !== 0 && /has no weekly tables/.test(wk.out), "exit " + wk.status);
+  const unknown = run(cleanBank(1, ["2026-10-01"]), ["--game", "quickfire_xx"]);
+  t("and an unknown game is refused rather than read as football",
+    unknown.status !== 0 && Object.keys(unknown.files).length === 0, "exit " + unknown.status);
 }
 
 

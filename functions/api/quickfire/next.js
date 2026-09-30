@@ -16,6 +16,7 @@
 import { hasDB } from "../../_lib/qfdata.js";
 import { getRound, serveQuestion } from "../../_lib/qf-play.js";
 import { PER_DAILY } from "../../_lib/qf-round.js";
+import { FOOTBALL } from "../../_lib/qf-sets.js";
 
 const NO = (msg = "no", extra) => new Response(JSON.stringify({ error: msg, ...(extra || {}) }), {
   status: 400,
@@ -26,19 +27,19 @@ const NO = (msg = "no", extra) => new Response(JSON.stringify({ error: msg, ...(
   },
 });
 
-export async function onRequestPost({ request, env }) {
+export const nextFor = (set) => async function ({ request, env }) {
   if (!hasDB(env)) return NO();
 
   let body = {};
   try { body = await request.json(); } catch (e) { body = {}; }
 
-  const round = await getRound(env, body.playId);
+  const round = await getRound(env, body.playId, set);
   if (!round) return NO("no round");
 
   const idx = Number(body.idx);
   if (!Number.isInteger(idx) || idx < 1 || idx > PER_DAILY) return NO("no such question");
 
-  const out = await serveQuestion(env, round, idx);
+  const out = await serveQuestion(env, round, idx, set);
   /* `at` travels with a refusal to rewind, so the page can resume where the
      round actually is. See serveQuestion. */
   if (out.error) return NO(out.error, out.at ? { at: out.at } : null);
@@ -46,4 +47,8 @@ export async function onRequestPost({ request, env }) {
   return new Response(JSON.stringify(out), {
     headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
   });
-}
+};
+
+/* FOOTBALL'S ROUTE. QuickFire XI: Friends serves the same handler for its own
+   set from functions/api/quickfire_fr/ (functions/_lib/qf-sets.js). */
+export const onRequestPost = nextFor(FOOTBALL);

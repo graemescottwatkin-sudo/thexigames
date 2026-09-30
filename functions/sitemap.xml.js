@@ -98,6 +98,8 @@ const STATIC = [
   ["/friends/vowels/", "daily", "0.9"],
   /* Wordsearch, Friends, public from its launch on 30 Sep 2026. */
   ["/friends/wordsearch/", "daily", "0.9"],
+  /* QuickFire, Friends, public from its launch on 30 Sep 2026. */
+  ["/friends/quickfire/", "daily", "0.9"],
   ["/football/crossword/how-to-play", "monthly", "0.5"],
   ["/football/crossword/privacy", "yearly", "0.3"],
 ];
