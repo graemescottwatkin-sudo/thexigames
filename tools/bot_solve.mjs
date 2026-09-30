@@ -164,6 +164,34 @@ export function entriesToReveal(payload) {
  * which nothing else in the suite produces. */
 export const SESSIONS = ["complete", "abandon"];
 
+/* ---- what a refusal said ------------------------------------------------ */
+
+/* A REFUSED REQUEST IS REPORTED WITH WHAT IT SAID, not only its status. For
+   seven nights the bot logged "a reveal was refused (503)" and nothing else;
+   the cause -- Cloudflare's error 1102, a Worker over its CPU limit -- was in
+   the body it threw away, and was found only by querying the account's
+   analytics (29 Sep 2026). So a failure names, in this order of trust: our own
+   JSON `error`; Cloudflare's error code and its page title; or the start of
+   whatever came back. And the ray id, which is how Cloudflare finds the one
+   request in its logs. Text in, text out: the caller reads the body once. */
+export function describeFailure(status, text, ray) {
+  const body = String(text || "");
+  let said = "";
+  try {
+    const j = JSON.parse(body);
+    if (j && typeof j.error === "string") said = `"${j.error}"`;
+  } catch (e) { /* not JSON: an edge's page, or nothing */ }
+  if (!said) {
+    const code = /error code:?\s*(\d{3,4})\b/i.exec(body) || /\bError\s+(\d{4})\b/.exec(body);
+    const title = /<title[^>]*>([^<]*)<\/title>/i.exec(body);
+    const name = title ? title[1].split("|")[0].replace(/\s+/g, " ").trim() : "";
+    if (code) said = `Cloudflare error ${code[1]}` + (name && !name.includes(code[1]) ? `: ${name}` : "");
+    else if (name) said = name;
+    else said = body.replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, 120);
+  }
+  return `${status}${said ? " " + said : ""}${ray ? ` (ray ${ray})` : ""}`;
+}
+
 export function sessionPlan(games) {
   const out = [];
   for (const game of games) for (const kind of SESSIONS) out.push({ game, kind });

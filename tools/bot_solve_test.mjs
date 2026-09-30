@@ -17,7 +17,7 @@
  */
 import {
   findWord, solveWordsearch, aFoul, hiloCalls,
-  slotsToReveal, entriesToReveal, sessionPlan, SESSIONS,
+  slotsToReveal, entriesToReveal, sessionPlan, SESSIONS, describeFailure,
 } from "./bot_solve.mjs";
 import { publicPuzzle } from "../functions/_lib/ws-public.js";
 import { judge, selectionCells } from "../functions/_lib/ws-round.js";
@@ -191,6 +191,77 @@ console.log("\nTen sessions a night");
     SESSIONS.join(",") === "complete,abandon" &&
     plan.filter((p) => p.kind === "abandon").length === 5,
     "the abandon is the only thing that produces a LOSS in the season");
+}
+
+/* ---- a refusal says what it was ------------------------------------------
+   For seven nights the bot's report read "a reveal was refused (503)" and the
+   cause was in the body it discarded: Cloudflare's error 1102, a Worker over its
+   CPU limit (29 Sep 2026). The shapes below are the ones a refusal takes -- our
+   own JSON, Cloudflare's plain "error code: NNNN" (what it gives a client that
+   is not a browser), its HTML page, and anything else, which is quoted rather
+   than dropped. The last two are Cloudflare's documented forms, not bodies
+   captured from our own logs: the bot threw those away, which is the point. */
+console.log("\nA refusal says what it was");
+{
+  const cases = [
+    ["our own JSON error", describeFailure(403, JSON.stringify({ error: "That board is not playable." }), null),
+      `403 "That board is not playable."`],
+    ["Cloudflare's plain error code, with the ray", describeFailure(503, "error code: 1102", "a42a4f497829b11d-MAN"),
+      "503 Cloudflare error 1102 (ray a42a4f497829b11d-MAN)"],
+    ["Cloudflare's page: the code and its title", describeFailure(503,
+      "<!DOCTYPE html><html><head><title>Worker exceeded resource limits | www.thexigames.com | Cloudflare</title></head>" +
+      "<body><h1>Error 1102</h1><p>Ray ID: x</p></body></html>", "r1"),
+      "503 Cloudflare error 1102: Worker exceeded resource limits (ray r1)"],
+    ["anything else is quoted, not dropped", describeFailure(502, "<p>Bad   gateway</p>", null), "502 Bad gateway"],
+    ["and an empty body is just the status", describeFailure(500, "", null), "500"],
+  ];
+  for (const [name, got, want] of cases) t(name, got === want, got);
+}
+
+/* AND THE BOT SAYS IT, run for real against a stub that refuses the way
+   production did: Vowels' reveals answer Cloudflare's 1102, and HiLo's daily an
+   edge page. What is asserted is the bot's own report line, so a describer that
+   is right and never called -- or a body read twice and lost -- fails here. */
+{
+  const http = await import("node:http");
+  const { spawn } = await import("node:child_process");
+  const path = await import("node:path");
+  const { fileURLToPath } = await import("node:url");
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const server = http.createServer((req, res) => {
+    const u = new URL(req.url, "http://x");
+    const send = (status, body, type = "application/json", h = {}) => {
+      res.writeHead(status, { "Content-Type": type, ...h });
+      res.end(typeof body === "string" ? body : JSON.stringify(body));
+    };
+    req.resume();
+    req.on("end", () => {
+      if (u.pathname === "/api/account/code") return send(200, { user: { id: "bot-test" } });
+      if (u.pathname === "/api/scrambled/daily") return send(200, { no: 1, token: "sc:c:1", slots: [{ id: 1 }, { id: 2 }] });
+      if (u.pathname === "/api/scrambled/reveal") return send(503, "error code: 1102", "text/plain", { "cf-ray": "test-ray-1" });
+      if (u.pathname === "/api/hilo/daily") return send(503, "<html><head><title>Service unavailable | x</title></head><body>Error 1102</body></html>", "text/html");
+      return send(200, {});
+    });
+  });
+  await new Promise((r) => server.listen(0, "127.0.0.1", r));
+  const base = "http://127.0.0.1:" + server.address().port;
+  const run = (games) => new Promise((resolve) => {
+    const child = spawn(process.execPath, [path.join(here, "play_bot.mjs")],
+      { env: { ...process.env, BASE: base, XI_BOT_CODE: "test-code", GAMES: games } });
+    let out = "";
+    child.stdout.on("data", (d) => { out += d; });
+    child.stderr.on("data", (d) => { out += d; });
+    child.on("close", (code) => resolve({ code, out }));
+  });
+  const v = await run("vowels");
+  t("the bot's report names Cloudflare's error and the ray for a refused reveal",
+    v.code === 1 && v.out.includes("vowels: a reveal was refused (503 Cloudflare error 1102 (ray test-ray-1))"),
+    (v.out.split("\n").find((l) => /refused/.test(l)) || v.out.slice(-200)).trim());
+  const h = await run("hilo");
+  t("and for a daily that never came, what came instead",
+    h.code === 1 && h.out.includes("hilo: no daily to play (503 Cloudflare error 1102: Service unavailable)"),
+    (h.out.split("\n").find((l) => /no daily/.test(l)) || h.out.slice(-200)).trim());
+  server.close();
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);
