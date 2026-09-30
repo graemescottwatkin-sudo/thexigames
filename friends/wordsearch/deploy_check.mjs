@@ -42,7 +42,7 @@ const ROUTE_FILES = ["archive.js", "catalog.js", "daily.js", "find.js", "finish.
 
 /* WHAT IS LIVE. Bump both after a deploy with tools/post_deploy.mjs. */
 const LAST_SHIPPED = "v001a";      // the launch build, 30 Sep 2026
-const LAST_SHIPPED_ASSETS = null;  // recorded by tools/post_deploy.mjs once v001a is live
+const LAST_SHIPPED_ASSETS = "89a285644cc0173e";
 
 let pass = 0, fail = 0;
 function t(name, ok, note) {
