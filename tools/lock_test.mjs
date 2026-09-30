@@ -404,6 +404,46 @@ async function panelCheck(page, label, id) {
     return bad;
   });
   t(`${label}: and nothing paints over it`, covered.length === 0, covered.slice(0, 3).join("; "));
+  /* THE SHEET, IN EVERY GAME (the owner, 30 Sep 2026: "The end pop up aren't
+     uniform ... I also said I wanted a close button at the top right, maybe an
+     x to close", then "Card over the board, every game" and a "Full time"
+     button to bring it back). Asked of the browser, by pressing the buttons. */
+  const sh = await page.evaluate(() => {
+    const p = document.querySelector("#ftPanel");
+    const host = p && p.closest("[data-xft-host]");
+    if (!host) return { host: false };
+    const r = host.getBoundingClientRect(), cs = getComputedStyle(host);
+    const x = host.querySelector(".xft-card > .xft-x");
+    const xr = x ? x.getBoundingClientRect() : null;
+    return { host: true, sheet: host.classList.contains("xft-sheet"), fixed: cs.position === "fixed",
+      mid: Math.round(Math.abs((r.left + r.right) / 2 - innerWidth / 2)), inside: r.top >= -1 && r.bottom <= innerHeight + 1,
+      x: !!xr && xr.right >= r.right - 60 && xr.right <= r.right + 1 && xr.top <= r.top + 40 && xr.width >= 40 && xr.height >= 40 };
+  });
+  t(`${label}: Full Time is the family's sheet -- fixed in the middle of the screen, over the board, with a close at its top right`,
+    sh.host && sh.sheet && sh.fixed && sh.mid <= 2 && sh.inside && sh.x, JSON.stringify(sh));
+  if (sh.host) {
+    await page.click("#ftPanel .xft-x");
+    await wait(250);
+    const shut = await page.evaluate(() => {
+      const host = document.querySelector("#ftPanel").closest("[data-xft-host]");
+      const pill = document.querySelector(".xft-reopen");
+      const pr = pill && !pill.hidden ? pill.getBoundingClientRect() : null;
+      const hit = document.elementFromPoint(innerWidth / 2, innerHeight / 2);
+      return { gone: getComputedStyle(host).visibility === "hidden", pill: !!pr && pr.bottom <= innerHeight && pr.top >= 0 && /full time/i.test(pill.textContent),
+        pillTop: !!pr && document.elementFromPoint(pr.left + pr.width / 2, pr.top + pr.height / 2) === pill,
+        under: !!hit && !host.contains(hit) };
+    });
+    t(`${label}: the close puts it away -- the board is what is under a finger, and a "Full time" button is on screen, on top`,
+      shut.gone && shut.pill && shut.pillTop && shut.under, JSON.stringify(shut));
+    if (shut.pill) await page.click(".xft-reopen");
+    await wait(250);
+    const back = await page.evaluate(() => {
+      const host = document.querySelector("#ftPanel").closest("[data-xft-host]");
+      const pill = document.querySelector(".xft-reopen");
+      return { shown: getComputedStyle(host).visibility === "visible", pillGone: !pill || pill.hidden };
+    });
+    t(`${label}: and "Full time" brings it back, the button gone again`, back.shown && back.pillGone, JSON.stringify(back));
+  }
   t(`${label}: this game's Full Time box is named for the reach check below`, !!FT_BOX[id], id);
   if (FT_BOX[id]) await reachCheck(page, label, FT_BOX[id], "Full Time", "#ftPanel");
   /* AND ON A PHONE, SHARE IS ON SCREEN WITHOUT SCROLLING. Under a board that
@@ -1956,7 +1996,10 @@ function measureProfile() {
   const rect = (e) => e.getBoundingClientRect();
   const vis = (e) => !!e && !e.hidden && getComputedStyle(e).display !== "none";
   const play = document.getElementById("screenPlay"), done = document.getElementById("screenDone");
-  const sec = vis(play) ? play : vis(done) ? done : null;
+  /* THE END FIRST: since 30 Sep 2026 the round stays on screen under Full
+     Time's sheet, so both can be showing, and then it is the end that is
+     being asked about. */
+  const sec = vis(done) ? done : vis(play) ? play : null;
   /* Where the bought clues are: football's panel under the buttons, or the
      Friends list written into the profile (#clueStack). */
   const clues = document.getElementById("clueStack") || document.getElementById("clues");

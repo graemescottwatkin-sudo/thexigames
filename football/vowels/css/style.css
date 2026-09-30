@@ -767,53 +767,16 @@ body.locked .slot .clubs { font-size: clamp(10px, min(2.6cqw, 2.2cqh), 16px); }
 
 /* Room beside the pitch: the table comes back, in a column of its own, and
    scrolls inside that column if the season is longer than the screen. */
-/* FULL TIME, LOCKED. The board keeps its place and the result is a panel of
-   its own that scrolls inside itself -- the crossword's shape, where the
-   result opens beside the grid and the grid stays. On a phone the panel takes
-   the lower half and the board the upper; beside the board where there is
-   room. The table goes at Full Time: the result card says where the club
-   finished. */
+/* FULL TIME, LOCKED: THE FAMILY'S SHEET OVER THE BOARD (the owner, 30 Sep
+   2026: "Scrambled also not over the game" -- it was a column beside the
+   pitch on a tablet and took the whole screen on a phone). #screenResults is
+   data-xft-host, so shared/xi-fulltime.css draws it as the card in the middle
+   of the screen; the finished XI stays exactly where it was played, under it,
+   at every size, and is what shows when the sheet is put away. */
 body.locked.fulltime #screenGame { padding-bottom: 4px; }
-body.locked.fulltime #tablePanel { display: none; }
-body.locked.fulltime .app > #screenResults {
-  flex: 0 1 auto;
-  min-height: 0;
-  max-height: 52%;
-  overflow: auto;
-  width: 100%;
-  max-width: 720px;
-  margin: 0 auto;
-  padding: 8px 4px 12px;
-  border-top: 1px solid var(--line);
-}
-/* ON A PHONE THE PANEL TAKES THE SCREEN. Under the pitch it had half the
-   height, so at 412 the score sat on the bottom edge and Sign in, Share and
-   Challenge were below it (the app's live re-shoot of the new Full Time, 26
-   Sep 2026). A wide screen keeps the finished XI beside the panel, below. */
-@media (max-width: 959px) {
-  body.locked.fulltime .app > #screenGame { display: none; }
-  body.locked.fulltime .app > #screenResults { flex: 1 1 auto; max-height: none; border-top: 0; }
-}
-@media (min-width: 960px) {
-  body.locked.fulltime > .app {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 400px;
-    grid-template-rows: minmax(0, 1fr);
-    column-gap: 16px;
-  }
-  body.locked.fulltime .app > #screenGame { grid-column: 1; grid-row: 1; }
-  body.locked.fulltime .app > #screenResults {
-    grid-column: 2; grid-row: 1;
-    max-height: none;
-    height: 100%;
-    border-top: 0;
-    border-left: 1px solid var(--line);
-    padding: 4px 4px 16px 16px;
-  }
-}
 
 @media (min-width: 960px) {
-  body.locked:not(.fulltime) #screenGame {
+  body.locked #screenGame {
     grid-template-columns: minmax(0, 1fr) auto 300px;
     grid-template-areas:
       "head score table"
@@ -823,7 +786,7 @@ body.locked.fulltime .app > #screenResults {
       "entry entry table"
       "bench bench table";
   }
-  body.locked:not(.fulltime) #tablePanel {
+  body.locked #tablePanel {
     display: block;
     grid-area: table;
     min-height: 0;

@@ -288,8 +288,13 @@ body{margin:0;font-family:var(--body)}
 
 /* ---- full time ---------------------------------------------------------- */
 
+/* FULL TIME IS THE FAMILY'S SHEET (the owner, 30 Sep 2026: the same card
+   over the board in every game). The card inside is data-xft-host, drawn and
+   veiled by shared/xi-fulltime.css; this box stays only as what the game
+   shows and hides, and neither paints nor catches a tap -- put away, the
+   board and the "Full time" button under it must both be reachable. */
 .ft{
-  position:fixed; inset:0; background:rgba(0,0,0,.45); display:flex;
+  position:fixed; inset:0; background:none; pointer-events:none; display:flex;
   align-items:center; justify-content:center; padding:20px; z-index:60;
 }
 /* A SOLID COLUMN over the dimmed game: the panel's own card is solid, but its

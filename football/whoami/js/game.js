@@ -19,7 +19,7 @@
  * one especially, because deciding it here would need the club's whole roster
  * and a roster is a candidate list for the door.
  */
-var BUILD = "v001y";
+var BUILD = "v001z";
 
 (function bootstrap() {
   'use strict';
@@ -305,8 +305,15 @@ function start() {
   window.addEventListener('resize', queueRoom);
 
   function show(id) {
+    if (id === 'screenPlay' && el.screenPlay) el.screenPlay.setAttribute('data-played', '');
+    /* FULL TIME OVER THE ROUND (the owner, 30 Sep 2026: "Card over the
+       board, every game"). The end is the family's sheet (data-xft-host), so
+       the round just played stays on screen under it rather than being
+       swapped out -- but only a round played in this visit: an end opened
+       later has no round behind it. */
+    var under = id === 'screenDone' && el.screenPlay && el.screenPlay.hasAttribute('data-played');
     ['screenDoors', 'screenPlay', 'screenDone'].forEach(function (s) {
-      if (el[s]) el[s].hidden = (s !== id);
+      if (el[s]) el[s].hidden = !(s === id || (under && s === 'screenPlay'));
     });
     queueRoom();
   }

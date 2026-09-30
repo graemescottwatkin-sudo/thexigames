@@ -426,7 +426,98 @@
     next.xiftDone = true;           // this panel announces it, not the watcher
     nextUp(next, { game: d.game });
 
+    sheet(target, card);
     return { share: share, challenge: ch, table: table };
+  }
+
+  /* ---- THE SHEET: FULL TIME OVER THE BOARD, IN EVERY GAME -----------------
+     The owner, 30 Sep 2026: "The end pop up aren't uniform, crossword as an
+     obvious box it fits in but word search doesn't / I also said I wanted a
+     close button at the top right, maybe an x to close" -- then "Card over
+     the board, every game" and a "Full time" button to bring it back. HiLo's
+     and Vowels' Full Time were "added to the bottom of the page", Grid's and
+     Scrambled's to the right.
+     So the box a game draws its Full Time in -- the one it marks
+     data-xft-host -- becomes ONE sheet here: a framed card in the middle of
+     the screen, over the finished board, scrolling in itself, with a close
+     at its top right. The game still decides WHEN it shows (its own hidden,
+     class or screen swap is untouched); this decides only how it looks and
+     how it is put away. Put away, a "Full time" button stays at the foot of
+     the screen to bring it back. A page with no data-xft-host keeps whatever
+     it had. */
+  var sheetHost = null, pill = null, wired = false;
+  function sheet(target, card) {
+    var host = target.closest ? target.closest("[data-xft-host]") : null;
+    if (!host) return;
+    sheetHost = host;
+    host.classList.add("xft-sheet");
+    host.classList.remove("xft-closed");
+    host.setAttribute("role", "dialog");
+    host.setAttribute("aria-label", "Full time");
+    /* IN THE CARD, FIRST: the panel's four blocks stay its four blocks. */
+    var x = el("button", "xft-x", "&times;");
+    x.type = "button";
+    x.setAttribute("aria-label", "Close full time");
+    x.addEventListener("click", closeSheet);
+    card.insertBefore(x, card.firstChild);
+    if (!pill) {
+      pill = el("button", "xft-reopen", "Full time");
+      pill.type = "button";
+      pill.hidden = true;
+      pill.addEventListener("click", openSheet);
+      document.body.appendChild(pill);
+    }
+    if (!wired) {
+      wired = true;
+      document.addEventListener("keydown", function (e) {
+        if (e.key === "Escape" && sheetShown()) closeSheet();
+      });
+      /* A TAP ON THE BOARD BEHIND IT PUTS IT AWAY, rather than playing a
+         square nobody can see through the veil. The family's own bar and
+         drawer (xic-) are left alone: they sit above the veil. */
+      document.addEventListener("click", function (e) {
+        var t = e.target;
+        if (!sheetShown() || !t || !t.closest) return;
+        if (sheetHost.contains(t) || t.closest(".xft-reopen, [class*='xic-']")) return;
+        e.preventDefault();
+        e.stopPropagation();
+        closeSheet();
+      }, true);
+      /* THE BUTTON FOLLOWS THE GAME: when the game itself takes its Full Time
+         away (a replay, a new round), the button to bring it back goes too. */
+      if (window.MutationObserver) {
+        var queued = false;
+        new MutationObserver(function () {
+          if (queued) return;
+          queued = true;
+          (window.requestAnimationFrame || setTimeout)(function () { queued = false; syncPill(); });
+        }).observe(document.body, { attributes: true, subtree: true, attributeFilter: ["class", "hidden", "style"] });
+      }
+    }
+    syncPill();
+  }
+  /* Laid out by the game: its box has a place on the page (closed is only
+     visibility, so a closed sheet still answers this). */
+  function laidOut(h) { return !!h && h.getClientRects().length > 0; }
+  function sheetShown() { return !!sheetHost && !sheetHost.classList.contains("xft-closed") && laidOut(sheetHost); }
+  function closeSheet() {
+    if (!sheetHost) return;
+    sheetHost.classList.add("xft-closed");
+    syncPill();
+    if (pill && !pill.hidden) pill.focus();
+  }
+  function openSheet() {
+    if (!sheetHost) return;
+    sheetHost.classList.remove("xft-closed");
+    syncPill();
+    var x = sheetHost.querySelector(".xft-x");
+    if (x) x.focus();
+  }
+  function syncPill() {
+    if (!pill) return;
+    var away = !!sheetHost && sheetHost.classList.contains("xft-closed") && laidOut(sheetHost);
+    if (pill.hidden === away) pill.hidden = !away;
+    document.body.classList.toggle("xft-away", away);
   }
 
   /* The phone's own share sheet where there is one; copy where there is not
@@ -474,5 +565,6 @@
     return DAYS[d.getUTCDay()] + " " + d.getUTCDate() + " " + MONTHS[d.getUTCMonth()];
   }
 
-  window.XIFullTime = { nextUp: nextUp, watch: watch, panel: panel, squares: squares, dayLabel: dayLabel, send: send };
+  window.XIFullTime = { nextUp: nextUp, watch: watch, panel: panel, squares: squares, dayLabel: dayLabel, send: send,
+    close: closeSheet, open: openSheet };
 })();

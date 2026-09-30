@@ -21,7 +21,7 @@
  * number; the front page is today's. The page asks /api/lightning_fr/daily
  * which day that is before anything starts, and the server bounds it.
  */
-var BUILD = "v001c";
+var BUILD = "v001d";
 
 (function () {
   'use strict';
@@ -155,7 +155,15 @@ var BUILD = "v001c";
   /* ----------------------------------------------------------- rendering */
 
   function show(id) {
-    ['screenStart', 'screenGame', 'screenResults'].forEach(function (s) { el[s].hidden = (s !== id); });
+    if (id === 'screenGame') el.screenGame.setAttribute('data-played', '');
+    /* FULL TIME OVER THE ROUND (the owner, 30 Sep 2026: "Card over the
+       board, every game"). The result is the family's sheet (data-xft-host),
+       so the round just played stays on screen under it rather than being
+       swapped out -- but only a round played in this visit: a result opened
+       later has no round behind it, and an empty frame under the sheet would
+       read as something broken. */
+    var under = id === 'screenResults' && el.screenGame.hasAttribute('data-played');
+    ['screenStart', 'screenGame', 'screenResults'].forEach(function (s) { el[s].hidden = !(s === id || (under && s === 'screenGame')); });
     document.body.classList.toggle('playing', id === 'screenGame');
     queueRoom();
   }

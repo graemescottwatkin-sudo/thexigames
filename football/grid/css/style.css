@@ -288,8 +288,9 @@ body.locked .gd-slots{min-height:0;padding:8px 6px}
 body.locked .gd-kbd{margin-bottom:4px}
 body.locked .gd-k{height:clamp(40px,5.2vh,56px)}
 body.locked .gd-msg{margin-bottom:0;min-height:18px}
+/* Full Time is the family's sheet over the board (data-xft-host); the keys
+   and the answer row go while it is up, so the finished board has the room. */
 body.locked .gd-wrap:has(#gdFullTime:not([hidden])) :is(.gd-slots,.gd-kbd,.gd-msg){display:none}
-body.locked #gdFullTime:not([hidden]){flex:0 1 auto;min-height:0;max-height:40%;overflow:auto;margin:0}
 
 /* A TABLET UPRIGHT IS ONE COLUMN, NOT TWO. The two-column layout below was
    chosen by width alone, so a 13-inch iPad upright (1024 wide) got a board in
@@ -312,7 +313,6 @@ body.locked #gdFullTime:not([hidden]){flex:0 1 auto;min-height:0;max-height:40%;
   body.locked .gd-wrap>#xiBar{grid-column:1 / -1;grid-row:1}
   body.locked .gd-entries{display:flex}
   body.locked .gd-hist{display:block;max-height:30vh;overflow:auto}
-  body.locked #gdFullTime:not([hidden]){max-height:none}
 }
 /* A TABLET ON ITS SIDE: THE CROSSWORD'S SHAPE. The board on the left with the
    answer row under it, the title, the entries and the attempts on the right,

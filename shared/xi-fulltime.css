@@ -143,3 +143,110 @@
 .xft-door-a { margin: 0; font-size: 16px; color: var(--ink); }
 .xft-door-c { margin: 0; font-size: 13px; line-height: 1.45; color: var(--ink-soft); }
 .xft-more { font-size: 13px; color: var(--pitch-ink); }
+
+/* ---- THE SHEET (xi-fulltime.js sheet()) ------------------------------------
+   Full Time over the finished board, the same card in every game (the owner,
+   30 Sep 2026: "Card over the board, every game"). The crossword's frame --
+   the card colour, the large radius, the pitch's six-pixel top -- because it
+   was the one the owner pointed at as right. The veil is the box's own
+   shadow, spread past every edge of the screen, so no second element has to
+   be kept in step with it.
+   WHY !important, and only here: the box is the game's own, and every game
+   placed it with rules of its own -- a column beside the board, the lower
+   half of a phone, a modal of its own -- most of them keyed on its id, which
+   outranks any class this file could name. The sheet has to win over all of
+   them, and it is the one place that says where Full Time goes. What the
+   game still owns is WHETHER it shows: display is never set here. */
+[data-xft-host].xft-sheet {
+  position: fixed !important;
+  z-index: 70 !important;
+  inset: auto !important;
+  left: 50% !important;
+  top: 50% !important;
+  transform: translate(-50%, -50%) !important;
+  width: min(560px, calc(100vw - 24px)) !important;
+  max-width: none !important;
+  height: auto !important;
+  min-height: 0 !important;
+  max-height: calc(100vh - 24px) !important;
+  max-height: calc(100dvh - 24px) !important;
+  flex: none !important;
+  margin: 0 !important;
+  padding: 14px 16px 18px !important;
+  box-sizing: border-box !important;
+  overflow-x: hidden !important;
+  overflow-y: auto !important;
+  overscroll-behavior: contain;
+  background: var(--card) !important;
+  border: 0 !important;
+  border-top: 6px solid var(--pitch) !important;
+  border-radius: var(--r-lg) !important;
+  box-shadow: 0 0 0 100vmax var(--scrim), var(--shadow-2) !important;
+  text-align: left;
+  animation: xftIn .22s ease-out;
+  /* Its own taps, stated: a game whose outer box lets taps through to the
+     board (Ballpark's and Codeword's #ft) would otherwise pass that on to the
+     card, which inherits it, and nothing on Full Time could be pressed. */
+  pointer-events: auto !important;
+}
+@keyframes xftIn { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { [data-xft-host].xft-sheet { animation: none; } }
+/* PUT AWAY: kept laid out, so the game's own showing and hiding still
+   decides whether the button to bring it back is offered. */
+[data-xft-host].xft-sheet.xft-closed {
+  visibility: hidden !important;
+  box-shadow: none !important;
+  pointer-events: none !important;
+  animation: none;
+}
+/* ONE FRAME: inside the sheet the result card is not boxed a second time. */
+.xft-sheet .xft { max-width: none; }
+.xft-sheet .xft-card { background: none; border: 0; border-radius: 0; padding: 0; position: relative; }
+/* THE CLOSE, TOP RIGHT, kept in reach while the sheet scrolls. It takes no
+   height of its own: the result's first line runs beside it. */
+.xft-x {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  align-self: flex-end;
+  width: 44px;
+  height: 44px;
+  margin: -10px -10px -44px 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: var(--card);
+  color: var(--ink-soft);
+  font: 400 30px/1 var(--body);
+  cursor: pointer;
+}
+.xft-x:hover, .xft-x:focus-visible { color: var(--ink); background: var(--tint); }
+.xft-sheet .xft-head { padding-right: 40px; }
+/* BRINGING IT BACK: a "Full time" button at the foot of the screen while the
+   sheet is put away. */
+.xft-reopen {
+  position: fixed;
+  z-index: 69;
+  left: 50%;
+  bottom: calc(14px + env(safe-area-inset-bottom));
+  transform: translateX(-50%);
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap, 44px);
+  padding: 0 22px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--pitch);
+  color: var(--on-pitch);
+  font-family: var(--disp);
+  font-weight: 700;
+  font-size: 16px;
+  letter-spacing: .1em;
+  text-transform: uppercase;
+  box-shadow: var(--shadow-2);
+  cursor: pointer;
+}
+.xft-reopen[hidden] { display: none; }
+/* A game's own way on from its Full Time (a replay, back to the board) sits
+   under the panel, centred, like the panel's own last line. */
+.xft-sheet > button:not([hidden]) { display: block; margin: 12px auto 0; }

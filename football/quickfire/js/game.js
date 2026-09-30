@@ -31,7 +31,7 @@
  * link so a friend could replay the exact eleven, and that is now a board
  * number in the fragment, which is shorter and does not describe the board.
  */
-var BUILD = "v001t";
+var BUILD = "v001u";
 
 (function bootstrap() {
   'use strict';
@@ -898,9 +898,17 @@ function start() {
   /* --------------------------------------------------------------- boot */
 
   function show(screenId) {
+    if (screenId === 'screenGame' && el.screenGame) el.screenGame.setAttribute('data-played', '');
+    /* FULL TIME OVER THE ROUND (the owner, 30 Sep 2026: "Card over the
+       board, every game"). The result is the family's sheet (data-xft-host),
+       so the round just played stays on screen under it rather than being
+       swapped out -- but only a round played in this visit: a result opened
+       later has no round behind it, and an empty frame under the sheet would
+       read as something broken. */
+    var under = screenId === 'screenResults' && el.screenGame && el.screenGame.hasAttribute('data-played');
     ['screenStart', 'screenLoading', 'screenGame', 'screenResults', 'screenArchive']
       .forEach(function (id) {
-        if (el[id]) el[id].hidden = (id !== screenId);
+        if (el[id]) el[id].hidden = !(id === screenId || (under && id === 'screenGame'));
       });
     /* The round and its result are locked to the screen; the landing and the
        archive are pages and scroll. See checkRoom(). */
