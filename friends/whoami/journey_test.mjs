@@ -544,13 +544,18 @@ console.log("\n=== The day's Full Time ===");
   const s1 = r1[0].querySelector(".frs-src");
   t("a script line reads as its episode and line, with the words",
     p.text(s1).startsWith("Season 1, episode 1, line 12") && p.text(s1).includes("I just had to get out of there"), p.text(s1));
-  t("and with no link: the transcripts' host is not on the family's list", !s1.querySelector("a"));
+  /* Linked since 30 Sep 2026, by the owner's go on these hosts. */
+  const s1a = s1.querySelector("a");
+  t("and it links to that episode's transcript, apart from the game",
+    !!s1a && /^https:\/\/fangj\.github\.io\/friends\/season\/[0-9]{4}\.html$/.test(s1a.getAttribute("href")) &&
+      s1a.getAttribute("target") === "_blank", s1a ? s1a.outerHTML : "no link");
   const a2 = r1[1].querySelector(".frs-src a");
   t("a Wikipedia page is a link that opens apart from the game",
     !!a2 && a2.getAttribute("href") === "https://en.wikipedia.org/wiki/Rachel_Green" &&
       a2.getAttribute("target") === "_blank" && /noopener/.test(a2.getAttribute("rel") || ""), a2 ? a2.outerHTML : "no link");
-  t("a named article nobody has approved keeps its name and loses the link",
-    p.text(r1[2].querySelector(".frs-src")) === "Digital Spy: the ranking" && !r1[2].querySelector(".frs-src a"));
+  t("a named article from an approved host keeps its name and links to it",
+    p.text(r1[2].querySelector(".frs-src")) === "Digital Spy: the ranking" &&
+      (r1[2].querySelector(".frs-src a") || {}).getAttribute?.("href") === "https://www.digitalspy.com/tv/x/");
   const r2 = blocks[1] ? [...blocks[1].querySelectorAll(".frs-clues > li")] : [];
   t("card two was solved on its first clue, so it lists only that one",
     r2.length === 1 && p.text(r2[0].querySelector(".frs-clue")) === "Clue 1 about card main-01.", String(r2.length));

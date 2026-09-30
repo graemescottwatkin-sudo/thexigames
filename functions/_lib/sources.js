@@ -58,6 +58,13 @@ export const SOURCE_HOSTS = [
   "reuters.com", "apnews.com", "theathletic.com", "si.com", "cbssports.com",
   "bbci.co.uk", "goal.com", "90min.com", "football365.com", "planetfootball.com",
   "teamtalk.com",
+  /* Friends: where Who Am I XI: Friends' clues came from (the owner, 30 Sep
+     2026, asked whether to link the transcript and article hosts: "please do
+     all 3"). The transcripts are ONE person's site on a shared host, so the
+     entry is that site alone -- "fangj.github.io" -- and never github.io,
+     which would approve every page anybody publishes there. */
+  "fangj.github.io",
+  "digitalspy.com", "cinemablend.com", "koimoi.com", "cbr.com",
 ];
 
 /* Explicitly refused, and why, so the next person does not have to guess:

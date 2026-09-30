@@ -308,13 +308,15 @@ console.log("\nThe sources, after the round");
   const one = done.clues[0].sources[0];
   t("a script line reads as its episode and line, with the words it rests on",
     one.label === "Season 2, episode 14, line 7" && /running low on resumes/.test(one.quote), one.label);
-  t("and carries no link, because the transcripts' host is not on the family's list",
-    one.url === null, String(one.url));
+  /* LINKED SINCE 30 SEP 2026, by the owner's go on the transcript and
+     article hosts; before that both assertions below were the refusals. */
+  t("and links to that episode's transcript",
+    one.url === "https://fangj.github.io/friends/season/0214.html", String(one.url));
   const two = done.clues[1].sources;
   t("a published page links where the family allows it: Wikipedia",
     two[0].label === "wikipedia.org" && two[0].url === "https://en.wikipedia.org/wiki/Rachel_Green", JSON.stringify(two[0]));
-  t("and a named article keeps its name but loses a link nobody has approved",
-    two[1].label === "Digital Spy: the ranking" && two[1].url === null, JSON.stringify(two[1]));
+  t("and a named article keeps its name and links to it, Digital Spy being approved",
+    two[1].label === "Digital Spy: the ranking" && two[1].url === "https://www.digitalspy.com/tv/x/", JSON.stringify(two[1]));
 
   /* A LOST CARD REACHED THE LAST CLUE, so it shows all three. */
   const { env: env2 } = makeEnv(true);
@@ -351,6 +353,12 @@ console.log("\nThe sources, after the round");
     episodeLabel("S2E14") === "Episode S2E14" && episodeLabel("0118") === "Season 1, episode 18", episodeLabel("S2E14"));
   t("and a host that only looks like an allowed one gets no link",
     sourceView({ kind: "web", url: "https://wikipedia.org.evil.com/x", quote: "q" }).url === null);
+  /* THE TRANSCRIPTS ARE ONE SITE ON A SHARED HOST: somebody else's pages on
+     github.io, or a host nobody approved, still get no link. */
+  t("the transcripts' site is approved, not the host it shares",
+    sourceView({ kind: "web", url: "https://someoneelse.github.io/friends/", quote: "q" }).url === null &&
+      sourceView({ kind: "web", url: "https://github.io/x", quote: "q" }).url === null &&
+      sourceView({ kind: "article", url: "https://friends.fandom.com/wiki/Rachel", name: "Fandom", quote: null }).url === null);
 }
 
 console.log("\nGiving up, which is not a substitution");
