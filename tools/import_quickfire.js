@@ -32,6 +32,7 @@
  * here is where a bad board can still be stopped.
  */
 import fs from "node:fs";
+import { sqlValues } from "./sql_values.js";
 import path from "node:path";
 /* THE GAME'S NUMBERS ARE THE GAME'S, and this file used to keep its own copies.
  * qf-round.js already says why, for the server: "every tunable in the game
@@ -466,49 +467,9 @@ let WOULD_CLASH = false;
  * order, are part of what was served, and a change to them is refused the same
  * way, with the same override.
  *
- * READ AS VALUES, NOT AS THE NTH QUOTED STRING: a NULL is written unquoted, and
- * counting quoted strings slides every later column one place left -- the
- * parsing fault that misreported 69 Who Am I players the same day. */
+ * The rows are read back by tools/sql_values.js, which the Friends Who Am I
+ * importer reads its own previous load with too. */
 const ROW_FIELDS = ["answer", "clue", "option_1", "option_2", "option_3", "option_4"];
-
-export function sqlValues(text) {
-  const out = [];
-  let i = 0;
-  while (i < text.length) {
-    while (text[i] === " " || text[i] === ",") i++;
-    if (i >= text.length) break;
-    if (text[i] === "'") {
-      let v = "";
-      i++;
-      for (;;) {
-        if (i >= text.length) throw new Error("an unterminated string in a question row");
-        if (text[i] === "'" && text[i + 1] === "'") { v += "'"; i += 2; }
-        else if (text[i] === "'") { i++; break; }
-        else v += text[i++];
-      }
-      out.push(v);
-    } else {
-      /* NULL, a number, or a call such as datetime('now'): up to the next comma
-         outside any brackets, a quoted argument copied whole. */
-      let v = "", depth = 0;
-      while (i < text.length && !(depth === 0 && text[i] === ",")) {
-        const c = text[i];
-        if (c === "'") {
-          v += c; i++;
-          while (i < text.length && text[i] !== "'") v += text[i++];
-          v += text[i++];
-          continue;
-        }
-        if (c === "(") depth++;
-        if (c === ")") depth--;
-        v += c; i++;
-      }
-      v = v.trim();
-      out.push(v === "NULL" ? null : v);
-    }
-  }
-  return out;
-}
 
 function servedRowsFromSql(sql) {
   const head = "INSERT INTO " + T("question") + " (";

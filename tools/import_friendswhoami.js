@@ -38,11 +38,14 @@
  *     correct answer mark a player wrong
  *   - a clue that names its own answer, which is a card that gives itself away
  *   - a card with no accepted answer at all, which is unwinnable
+ *   - a clue that keeps its words since the last load and loses its evidence
+ *     (below, "WHAT A CLUE STOOD ON"); --drop-citations lets it through
  */
 import fs from "node:fs";
 import path from "node:path";
 import { DOORS as FR_DOORS } from "../functions/_lib/frwa-data.js";
 import { fileURLToPath } from "node:url";
+import { sqlInsert } from "./sql_values.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(HERE, "..");
@@ -336,6 +339,7 @@ lines.push("-- carries every clue and every answer.");
 const keep = { card: [], clue: [], source: [], daily: [], answer: [] };
 
 let clueCount = 0, answerCount = 0, sourceCount = 0, uncited = 0;
+const nowClue = new Map();          // "card:n" -> { text, cites, name }, for the guard below
 let dailyRounds = 0, dailyCards = 0, dailyRows = 0;
 const noDaily = [];
 for (const c of cards) {
@@ -358,6 +362,7 @@ for (const c of cards) {
     keep.clue.push(`${c.id}:${i + 1}`);
     clueCount++;
     const cites = citationsOf(cl, deck.sources);
+    nowClue.set(`${c.id}:${i + 1}`, { text: cl.t, cites, name: c.name });
     if (!cites.length) uncited++;
     for (const r of cites) {
       const v = (x) => (x == null ? "NULL" : q(x));
@@ -456,6 +461,70 @@ const OUT = OUT_ARG > -1 && process.argv[OUT_ARG + 1]
   ? path.resolve(process.argv[OUT_ARG + 1])
   : path.join(ROOT, "data", "fr-whoami-production.sql");
 const sql = lines.join("\n") + "\n";
+
+/* ---- WHAT A CLUE STOOD ON -------------------------------------------------
+ *
+ * The owner, 2 Oct 2026: "yes add the citation guard". Four clues already
+ * played were reworded upstream (4c59729) and their Digital Spy articles,
+ * which no longer matched, were rightly dropped. Then, BECAUSE they had been
+ * played, their words were put back (5c65e34, 214676e) -- the served-day rule
+ * working -- and the script citations came back with them while the articles
+ * did not. Each row then read correctly and stood on less than it had, and
+ * nothing counted the difference: this file loaded it, and d5954f3 restored
+ * the four by hand. A guard that protects the past brought the fault in.
+ *
+ * So, against the LAST LOAD (the file this run would replace): a clue whose
+ * words are UNCHANGED may not come back less well evidenced -- its main
+ * citation weaker (a script line checked by hand, then a published page, then
+ * a phrase found in an episode, then nothing) or an article it cited gone. A
+ * REWORDED clue may change its citations freely; new words need new evidence,
+ * and dropping what no longer matches is correct, as it was in 4c59729.
+ * --drop-citations lets a loss through and names every one. */
+const RANK = { script: 3, web: 2, phrase: 1 };
+const RANK_NAME = ["no", "phrase", "web page", "script"];
+function evidence(cites) {
+  let rank = 0;
+  const articles = new Set();
+  for (const r of cites) {
+    if (r.kind === "article") articles.add(r.url);
+    else rank = Math.max(rank, RANK[r.kind] || 0);
+  }
+  return { rank, articles };
+}
+function lastLoad(text) {
+  const words = new Map(), cites = new Map();
+  for (const line of text.split(/\r?\n/)) {
+    if (!line.startsWith("INSERT INTO fr_wa_clue ") && !line.startsWith("INSERT INTO fr_wa_source ")) continue;
+    const { table, row } = sqlInsert(line);
+    const key = `${row.card_id}:${row.n}`;
+    if (table === "fr_wa_clue") words.set(key, row.text);
+    else (cites.get(key) || cites.set(key, []).get(key)).push(row);
+  }
+  return { words, cites };
+}
+const losses = [];
+if (fs.existsSync(OUT)) {
+  const was = lastLoad(fs.readFileSync(OUT, "utf8"));
+  for (const [key, now] of nowClue) {
+    if (!was.words.has(key) || was.words.get(key) !== now.text) continue;
+    const before = evidence(was.cites.get(key) || []), after = evidence(now.cites);
+    const lost = [];
+    if (after.rank < before.rank) lost.push(`its ${RANK_NAME[before.rank]} citation (now ${RANK_NAME[after.rank]})`);
+    for (const url of before.articles) if (!after.articles.has(url)) lost.push(`the article ${url}`);
+    if (lost.length) losses.push(`${key} "${now.name}": the same words, and it loses ${lost.join(" and ")}`);
+  }
+}
+if (losses.length) {
+  const allowed = process.argv.includes("--drop-citations");
+  console.log(`${allowed ? "DROPPING CITATIONS" : "REFUSED"}: ${losses.length} clue(s) keep their words since ` +
+    `the last load (${path.relative(ROOT, OUT) || OUT}) and lose evidence:`);
+  losses.slice(0, 12).forEach((l) => console.log("    " + l));
+  if (losses.length > 12) console.log(`    ... and ${losses.length - 12} more`);
+  if (!allowed) {
+    console.log("  Restore the citations upstream, or pass --drop-citations if losing them is intended.");
+    process.exit(1);
+  }
+}
 
 console.log(`  ${cards.length} cards, ${clueCount} clues, ${answerCount} answers`);
 const byDeck = {};

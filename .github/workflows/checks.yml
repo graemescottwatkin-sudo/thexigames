@@ -394,6 +394,11 @@ jobs:
           # deals daily letters. Regrouping the verified clues consecutively
           # instead of by stride keeps every count and turns this red.
           node tools/import_friendswhoami_test.mjs
+          # THE WEEKLY REPORT EXPORT (owner, 2 Oct 2026), its SELECT executed on
+          # node:sqlite from the real migrations: nothing that names a player
+          # reaches the file, a line per question and reason, and a second week
+          # sends only the second week even after triage empties the inbox.
+          node tools/export_reports_test.mjs
           # REMINDERS ON A PHONE, against REAL SQL: node:sqlite built from the
           # repo's own migrations, so a dropped COALESCE or a WHERE that selects
           # nobody turns this red where a stub would pass. The endpoint's

@@ -214,6 +214,62 @@ console.log("\n=== What the importer refuses ===");
     (r.stdout.match(/cites.*$/m) || ["exit " + r.status])[0]);
 }
 
+/* ---- what a clue stood on --------------------------------------------- */
+
+console.log("\n=== A clue that keeps its words keeps its evidence ===");
+{
+  /* The owner, 2 Oct 2026: "yes add the citation guard". Four played clues had
+     their words put back upstream and their articles did not come with them.
+     Each case starts from one LAST LOAD and changes one thing. Card 3's third
+     clue carries a quote and an unmatched ")" on purpose: the guard reads the
+     last load's rows back, and a reader that ended the row at a ")" inside a
+     string, or broke on "''", would not read that row at all. */
+  const base = () => {
+    const d = GOOD.map((c) => JSON.parse(JSON.stringify(c)));
+    d[2].clues[2].t = "It's a phrase :) isn't it?";
+    return d;
+  };
+  const last = path.join(TMP, "last.sql");
+  const seed = node(IMPORTER, ["--source", deckDir("cite-base", base()), "--out", last]);
+  t("PRECONDITION: a last load with a phrase and an article on card 3's third clue",
+    seed.status === 0 && /'3', 3, 2, 'article'/.test(fs.readFileSync(last, "utf8")));
+  const before = fs.statSync(last).mtimeMs;
+  const again = (name, deck, extra = []) => node(IMPORTER, ["--source", deckDir(name, deck), "--out", last, ...extra]);
+
+  const same = again("cite-same", base(), ["--check"]);
+  t("the same deck again is accepted", same.status === 0, (same.stdout.match(/REFUSED.*$/m) || [""])[0]);
+
+  const noArticle = base();
+  delete noArticle[2].clues[2].src;
+  const r1 = again("cite-lost", noArticle);
+  t("REFUSES the same words without the article they cited",
+    r1.status === 1 && /3:3 "Epsilon Four": the same words, and it loses the article https:[/][/]en.wikipedia.org[/]wiki[/]List/.test(r1.stdout),
+    (r1.stdout.match(/^ +3:3.*$/m) || r1.stdout.match(/REFUSED.*$/m) || ["exit " + r1.status])[0]);
+  t("  and writes nothing", fs.statSync(last).mtimeMs === before);
+
+  const weaker = base();
+  delete weaker[2].clues[0].hand;                 // the script line, no longer checked by hand
+  const r2 = again("cite-weaker", weaker, ["--check"]);
+  t("REFUSES the same words standing on a weaker citation",
+    r2.status === 1 && /3:1 "Epsilon Four": the same words, and it loses its script citation \(now no\)/.test(r2.stdout),
+    (r2.stdout.match(/^ +3:1.*$/m) || ["exit " + r2.status])[0]);
+
+  const reworded = base();
+  reworded[2].clues[2].t = "A clue in new words.";
+  delete reworded[2].clues[2].src;
+  const r3 = again("cite-reworded", reworded, ["--check"]);
+  t("but new words may drop what no longer matches them", r3.status === 0, (r3.stdout.match(/REFUSED.*$/m) || [""])[0]);
+
+  const stronger = base();
+  Object.assign(stronger[2].clues[2], { hand: true, ep: "0508", qline: 3, quote: "a phrase" });
+  const r4 = again("cite-stronger", stronger, ["--check"]);
+  t("and the same words on stronger evidence are accepted", r4.status === 0, (r4.stdout.match(/REFUSED.*$/m) || [""])[0]);
+
+  const r5 = again("cite-allowed", noArticle, ["--check", "--drop-citations"]);
+  t("--drop-citations lets the loss through and names it",
+    r5.status === 0 && /DROPPING CITATIONS: 1 clue/.test(r5.stdout) && /3:3 "Epsilon Four"/.test(r5.stdout));
+}
+
 /* ---- the calendar deals daily letters ---------------------------------- */
 
 console.log("\n=== The calendar deals the verified rounds ===");
