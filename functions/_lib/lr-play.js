@@ -285,7 +285,10 @@ export async function finishRun(env, run, now = Date.now()) {
        a right pick already is the answer. */
     /* With each question's id, so a player can report one by the id the bank
        knows it by (the family's /api/report-clue). */
-    answers: answers.map((r) => (r.correct ? { id: r.question_id, correct: true, clue: r.clue }
-      : { id: r.question_id, correct: false, clue: r.clue, pick: r.pick, answer: r.answer })),
+    /* And its place in the run, so its source can be asked for
+       (/api/lightning_fr/source names a question by run and place). */
+    runId: run.run_id,
+    answers: answers.map((r) => (r.correct ? { idx: r.idx, id: r.question_id, correct: true, clue: r.clue }
+      : { idx: r.idx, id: r.question_id, correct: false, clue: r.clue, pick: r.pick, answer: r.answer })),
   };
 }

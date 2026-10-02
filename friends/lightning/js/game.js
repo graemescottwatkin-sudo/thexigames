@@ -21,7 +21,7 @@
  * number; the front page is today's. The page asks /api/lightning_fr/daily
  * which day that is before anything starts, and the server bounds it.
  */
-var BUILD = "v001f";
+var BUILD = "v001g";
 
 (function () {
   'use strict';
@@ -541,14 +541,22 @@ var BUILD = "v001f";
         url: function () { return daily ? boardHref(r.no) : location.origin + '/friends/lightning/'; }
       });
     }
-    renderReport(r.answers || [], daily ? r.day : 'practice');
+    renderReport(r.answers || [], daily ? r.day : 'practice', r.runId);
     current = null;
     setStartButtons(false);
     show('screenResults');
     describeBoard();
   }
 
-  /* ---- reporting a question ---------------------------------------------
+  /* ---- sources, and reporting a question --------------------------------
+
+     SOURCES (the owner, 2 Oct 2026: "Show any source, whatever it is and the
+     part that is referenced"). Each answered question has a Source button:
+     the publisher, a link, and the line the fact rests on, asked for one at
+     a time from /api/lightning_fr/source, on an account and under the
+     family's fifty-a-day cap. A result that never reached the server (no run
+     id) has none to ask for.
+
 
      The answer is shown the moment a pick is marked, so a question that is
      wrong -- or a wrong option that is also right -- is seen at once, and this
@@ -558,7 +566,7 @@ var BUILD = "v001f";
   var REASON_RIGHT = 'I was right';
   var REASON_WRONG = 'The question is wrong';
 
-  function renderReport(answers, puzzle) {
+  function renderReport(answers, puzzle, runId) {
     var box = el.ftReport;
     if (!box) return;
     box.innerHTML = '';
@@ -567,11 +575,12 @@ var BUILD = "v001f";
     var det = document.createElement('details');
     det.className = 'lrReport';
     var sum = document.createElement('summary');
-    sum.textContent = 'Something wrong with a question?';
+    sum.textContent = runId ? 'Sources, or something wrong?' : 'Something wrong with a question?';
     det.appendChild(sum);
     var note = document.createElement('p');
     note.className = 'lrReportNote';
-    note.textContent = 'Tell us and we will check it against the episode.';
+    note.textContent = (runId ? 'See where each answer comes from, or tell us' : 'Tell us') +
+      ' if a question is wrong and we will check it against the episode.';
     det.appendChild(note);
     var ol = document.createElement('ol');
     list.forEach(function (a) {
@@ -585,6 +594,14 @@ var BUILD = "v001f";
       /* "I was right" only where the pick was marked wrong; a question can be
          wrong either way. */
       var reasons = a.correct ? [REASON_WRONG] : [REASON_RIGHT, REASON_WRONG];
+      if (runId && a.idx) {
+        var sb = document.createElement('button');
+        sb.type = 'button';
+        sb.className = 'btn lrSourceBtn';
+        sb.textContent = 'Source';
+        sb.addEventListener('click', function () { openSource(runId, a.idx, sb, li); });
+        row.appendChild(sb);
+      }
       var buttons = reasons.map(function (reason) {
         var b = document.createElement('button');
         b.type = 'button';
@@ -599,6 +616,48 @@ var BUILD = "v001f";
     });
     det.appendChild(ol);
     box.appendChild(det);
+  }
+
+  function openSource(runId, idx, btn, li) {
+    btn.disabled = true;
+    var box = li.querySelector('.lrSource') || li.appendChild(document.createElement('div'));
+    box.className = 'lrSource';
+    box.textContent = '';
+    call('/api/lightning_fr/source', { runId: runId, idx: idx })
+      .then(function (res) {
+        var s = res && res.source;
+        if (!s) { box.textContent = 'No source on file for this one.'; return; }
+        btn.hidden = true;
+        var who = document.createElement('p');
+        who.className = 'lrSourceName';
+        if (s.url) {
+          var link = document.createElement('a');
+          link.href = s.url;
+          link.target = '_blank';
+          link.rel = 'noopener noreferrer nofollow';
+          link.textContent = s.name || s.url;
+          who.appendChild(link);
+        } else {
+          who.textContent = s.name;
+        }
+        box.appendChild(who);
+        if (s.text) {
+          var q = document.createElement('blockquote');
+          q.className = 'lrSourceText';
+          q.textContent = s.text;
+          box.appendChild(q);
+        }
+      })
+      .catch(function (e) {
+        btn.disabled = false;
+        if (e.status === 401) {
+          box.textContent = 'Sources need an account. Registering is free.';
+          var A = window.XIChrome && XIChrome.account;
+          if (A && typeof A.open === 'function') A.open();
+        } else {
+          box.textContent = e.status === 429 ? e.message : 'That did not reach us. Try again.';
+        }
+      });
   }
 
   function report(id, reason, puzzle, buttons, li) {

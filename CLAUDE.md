@@ -226,7 +226,7 @@ and diagnose before anything ships. Never push past a red gate.
 - `results`/`plays` sanity via wrangler if relevant:
   `npx wrangler d1 execute crosswordxi --remote --command="..."`.
   **Never run a migration that is already applied** — `ALTER TABLE` is not
-  idempotent. Migration state: **001–053 all applied** (as of 2 Oct 2026 —
+  idempotent. Migration state: **001–054 all applied** (as of 2 Oct 2026 —
   check production; 024 only since 29 Sep, 048, 051, 052 and 053 since 30 Sep, see
   below; 050 `fr_sc_board` verified present 30 Sep) — 035 (QuickFire text
   ids), 036 and 038 (Codeword and its rounds), 037 and 039 (QuickFire rounds
@@ -322,6 +322,12 @@ and diagnose before anything ships. Never push past a red gate.
   wrote it, with commit c062f5f, and this line still read "001–052" for two
   days. Verified from production 2 Oct 2026: the column and the index present.
   It is a bare `ALTER TABLE ... ADD COLUMN`: DO NOT RE-RUN IT.
+  054 (`fr_lr_source`: each Lightning Round question's source, opened after
+  answering, by the owner's ruling of 2 Oct 2026, "Show any source, whatever it
+  is and the part that is referenced") was applied 2 Oct 2026 by the Lightning
+  session, ahead of the code that reads it. It was verified from `sqlite_master`
+  the same minute. The pool's 2,976 sources were loaded and counted straight
+  after. It is one `CREATE TABLE IF NOT EXISTS`, so it is safe to re-run.
   A STALE MIGRATION NUMBER IS THE MOST DANGEROUS FIGURE IN THIS FILE, because
   the sentence immediately before it tells you never to re-run an applied one
   and `ALTER TABLE` is not idempotent — so a reader trusting "034" could

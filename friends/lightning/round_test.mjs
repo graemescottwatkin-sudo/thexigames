@@ -23,6 +23,7 @@ import {
 import { startRun, answerRun, finishRun, resumeRun, getRun, dailySeq, cleanRecent, boardFor } from "../../functions/_lib/lr-play.js";
 import { onRequestPost as startRoute } from "../../functions/api/lightning_fr/start.js";
 import { onRequestPost as answerRoute } from "../../functions/api/lightning_fr/answer.js";
+import { onRequestPost as sourceRoute } from "../../functions/api/lightning_fr/source.js";
 import CONFIG from "./js/config.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -293,6 +294,67 @@ console.log("\n=== The routes ===");
     typeof verdict.answer === "string" && body.question.options.includes(verdict.answer) &&
       !(verdict.next && "answer" in verdict.next));
   t("the store keeps nothing cached", s.headers.get("Cache-Control") === "no-store");
+}
+
+console.log("\n=== Sources ===");
+{
+  /* EVERY MIGRATION, so the account tables and the press counter are the real
+     ones: a source is handed over on a session, and counted. */
+  const db = new DatabaseSync(":memory:");
+  const dir = path.join(ROOT, "data", "migrations");
+  for (const f of fs.readdirSync(dir).filter((f) => /^\d{3}-.*\.sql$/.test(f)).sort()) {
+    try { db.exec(fs.readFileSync(path.join(dir, f), "utf8")); } catch (e) { /* ALTERs the base already has */ }
+  }
+  const stmt = (sql, args = []) => ({
+    bind: (...a) => stmt(sql, a),
+    first: async () => db.prepare(sql).get(...args) ?? null,
+    all: async () => ({ results: db.prepare(sql).all(...args) }),
+    run: async () => db.prepare(sql).run(...args),
+  });
+  const env = { DB: { raw: db, prepare: (sql) => stmt(sql), batch: async (l) => { for (const x of l) await x.run(); } } };
+  load(env, synthetic());
+  for (const id of db.prepare("SELECT id FROM fr_lr_question").all().map((r) => r.id)) {
+    db.prepare("INSERT INTO fr_lr_source (id, name, url, text) VALUES (?, ?, ?, ?)")
+      .run(id, "Source for " + id, "https://example.org/" + id, "The line " + id + " rests on.");
+  }
+  for (const u of ["u1", "u2"]) {
+    db.prepare("INSERT INTO users (id, provider, provider_id, display_name) VALUES (?, 'email', ?, ?)").run(u, u, u);
+    db.prepare("INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, '2099-01-01T00:00:00Z')").run("s-" + u, u);
+  }
+  const post = (fn, body, who) => fn({
+    env, request: new Request("https://x/api/lightning_fr", {
+      method: "POST", body: JSON.stringify(body),
+      headers: { "X-XI-Games": "1", "Content-Type": "application/json", ...(who ? { Cookie: "cxi_session=s-" + who } : {}) },
+    }),
+  });
+  const s = await (await post(startRoute, { mode: "practice" }, "u1")).json();
+  await post(answerRoute, { runId: s.runId, idx: 1, pick: s.question.options[0] }, "u1");
+
+  const notYet = await post(sourceRoute, { runId: s.runId, idx: 2 }, "u1");
+  t("a question dealt but not answered keeps its source", notYet.status === 403 && !/example\.org/.test(await notYet.text()));
+  const out = await post(sourceRoute, { runId: s.runId, idx: 1 });
+  const outBody = await out.json();
+  t("signed out, an answered question's source asks for an account", out.status === 401 && outBody.needsAccount === true
+    && !/example\.org/.test(JSON.stringify(outBody)));
+  t("another account cannot open this run's sources", (await post(sourceRoute, { runId: s.runId, idx: 1 }, "u2")).status === 403);
+  const got = await post(sourceRoute, { runId: s.runId, idx: 1 }, "u1");
+  const g = await got.json();
+  const qid = db.prepare("SELECT question_id FROM fr_lr_answer WHERE run_id = ? AND idx = 1").get(s.runId).question_id;
+  t("signed in, it comes back: publisher, link and the quoted line", got.status === 200 && !!g.source
+    && g.source.name === "Source for " + qid && g.source.url === "https://example.org/" + qid
+    && g.source.text === "The line " + qid + " rests on.", JSON.stringify(g).slice(0, 120));
+  t("and it is counted", g.used === 1 && g.limit === 50);
+
+  db.prepare("UPDATE fr_lr_source SET url = 'javascript:alert(1)' WHERE id = ?").run(qid);
+  const js = await (await post(sourceRoute, { runId: s.runId, idx: 1 }, "u1")).json();
+  t("a link that is not http(s) is never handed over", !!js.source && js.source.url === null);
+  db.prepare("DELETE FROM fr_lr_source WHERE id = ?").run(qid);
+  const none = await (await post(sourceRoute, { runId: s.runId, idx: 1 }, "u1")).json();
+  const usedNow = db.prepare("SELECT presses FROM source_press WHERE user_id = 'u1'").get().presses;
+  t("no source on file is not a refusal, and spends nothing", none.source === null && usedNow === 2);
+  db.prepare("UPDATE source_press SET presses = 50 WHERE user_id = 'u1'").run();
+  db.prepare("INSERT INTO fr_lr_source (id, name, url, text) VALUES (?, 'Back', 'https://example.org/b', 'x')").run(qid);
+  t("past fifty a day, it is refused", (await post(sourceRoute, { runId: s.runId, idx: 1 }, "u1")).status === 429);
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

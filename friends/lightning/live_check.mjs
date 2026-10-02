@@ -37,7 +37,7 @@ const BASE = "https://www.thexigames.com";
 const GAME = "lightning_fr";
 const PATH = gamePath(GAME);
 /* Every assertion below runs on a healthy deploy; none skips by design. */
-const MIN_ASSERTIONS = 20;
+const MIN_ASSERTIONS = 22;
 
 const expectAt = process.argv.indexOf("--expect");
 const EXPECT = expectAt > -1 ? process.argv[expectAt + 1] : null;
@@ -133,6 +133,15 @@ if (q1) {
       !!verdict.json.next && !("answer" in verdict.json.next));
   t("and brings the next question with it",
     !!verdict.json && !!verdict.json.next && verdict.json.next.idx === 2 && verdict.json.next.options.length === 4);
+  /* SOURCES (v001g): the table is there and the endpoint keeps its rules
+     against the real database: an answered question's source is for an
+     account, and a question not answered has none to give. */
+  const srcOut = await post("/api/lightning_fr/source", { runId: start.json.runId, idx: 1 });
+  t("an answered question's source asks a signed-out player to register, and gives nothing",
+    srcOut.status === 401 && !!srcOut.json && srcOut.json.needsAccount === true && !/https?:/.test(srcOut.text),
+    String(srcOut.status));
+  const srcNot = await post("/api/lightning_fr/source", { runId: start.json.runId, idx: 2 });
+  t("and a question not answered has no source to give", srcNot.status === 403, String(srcNot.status));
   const early = await post("/api/lightning_fr/finish", { runId: start.json.runId });
   t("the run cannot be ended while the server's clock has time on it", early.status === 409, String(early.status));
 } else {

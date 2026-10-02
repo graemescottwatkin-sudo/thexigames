@@ -313,7 +313,7 @@ t("every call goes to this game's API, relatively, with the family's CSRF header
 t("every route the client calls exists", ["start", "answer", "finish"]
   .every((r) => has(`functions/api/lightning_fr/${r}.js`)));
 t("the routes load as ES modules and export their handlers", await (async () => {
-  for (const r of ["start", "answer", "finish"]) {
+  for (const r of ["start", "answer", "finish", "source"]) {
     const m = await import(pathToFileURL(path.join(ROOT, `functions/api/lightning_fr/${r}.js`)).href);
     if (typeof m.onRequestPost !== "function") return false;
   }
@@ -327,7 +327,7 @@ t("the played-today probe answers the server's day and nothing else", await (asy
 })());
 t("no helper sits in the route folder, where Pages would serve it as a route",
   fs.readdirSync(path.join(ROOT, "functions/api/lightning_fr"))
-    .every((f) => ["start.js", "answer.js", "finish.js", "daily.js"].includes(f)));
+    .every((f) => ["start.js", "answer.js", "finish.js", "daily.js", "source.js"].includes(f)));
 
 /* ---- the words ----------------------------------------------------------- */
 
