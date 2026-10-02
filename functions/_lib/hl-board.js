@@ -213,10 +213,32 @@ export function publicBoard(board, token) {
        the two are and never which is higher. Only daily boards from 1 Oct
        2026 carry it; a board without it sends null and shows no label. */
     tiers: tiersOf(board),
+    /* AND HOW FAR APART, "± 15 yellow cards" (the owner, 2 Oct 2026, relayed by
+       HiLo XI's session: on a board of counts every call felt hard whatever its
+       label, because nobody carries the numbers). The absolute gap per call,
+       in call order, with its unit, and ONLY where the bank says the gap is
+       worth showing (difficulty.showGap; the bank decides, and since the same
+       day that is year boards too). With the unit's singular for a gap of
+       one, "± 1 year", where the bank gives it. It never says which
+       way: 48 with a gap of 15 is 33 or 63, and the call is still the
+       player's. Null wherever it is absent or malformed. */
+    ...gapsOf(board),
     rows,
   };
 }
 const TIERS = ["easy", "medium", "hard"];
+function gapsOf(board) {
+  const d = board && board.difficulty;
+  const n = (board.chain || []).length - 1;
+  const ok = d && d.showGap === true && Array.isArray(d.gaps) && d.gaps.length === n &&
+    d.gaps.every((g) => typeof g === "number" && Number.isFinite(g) && g >= 0) &&
+    typeof d.gapUnit === "string" && d.gapUnit.trim().length > 0 && d.gapUnit.length <= 30;
+  if (!ok) return { gaps: null, gapUnit: null, gapUnitOne: null };
+  /* The singular is a nicety: a malformed one drops itself, not the gaps. */
+  const one = typeof d.gapUnitOne === "string" && d.gapUnitOne.trim().length > 0 && d.gapUnitOne.length <= 30
+    ? d.gapUnitOne.trim() : null;
+  return { gaps: d.gaps.slice(), gapUnit: d.gapUnit.trim(), gapUnitOne: one };
+}
 function tiersOf(board) {
   const calls = board && board.difficulty && board.difficulty.calls;
   if (!Array.isArray(calls) || calls.length !== (board.chain || []).length - 1) return null;

@@ -31,7 +31,7 @@
  * link so a friend could replay the exact eleven, and that is now a board
  * number in the fragment, which is shorter and does not describe the board.
  */
-var BUILD = "v001a";
+var BUILD = "v001b";
 
 (function bootstrap() {
   'use strict';
@@ -221,7 +221,7 @@ function start() {
   ['screenStart', 'screenGame', 'screenResults', 'screenArchive', 'kickOff',
     'startDate', 'startBlurb', 'stripFill', 'progress', 'clockValue', 'clue',
     'options', 'feedback', 'passQuestion', 'subCost', 'runningScore', 'worthNow',
-    'ftPanel',
+    'ftPanel', 'ftReport',
     'playAgain', 'startKicker', 'challengeNote', 'playWeekly', 'weeklyLabel',
     'weeklyState', 'screenLoading', 'showArchive', 'archiveCount', 'archiveList',
     'archiveBack'].forEach(function (id) {
@@ -532,6 +532,9 @@ function start() {
     state.results.push({
       idx: current.idx,
       questionId: current.question.id,
+      /* Its words, for the report list at Full Time: the page already showed
+         them, so nothing new leaves the server. */
+      clue: current.question.clue || '',
       pick: option === undefined ? null : option,
       correct: !!r.correct,
       minute: r.minute,
@@ -846,7 +849,77 @@ function start() {
         url: challengeLink,
       });
     }
+    renderReport(s.played);
     show('screenResults');
+  }
+
+  /* ---- reporting a question ---------------------------------------------
+     The owner, 2 Oct 2026: "yes add the report button". The answer is shown
+     the moment a pick is marked, so a question that is wrong -- or a wrong
+     option that is also right -- is seen at once, and this is where a player
+     says so: Lightning Round's list, the family's /api/report-clue (one report
+     per question per person, signed in), keyed on the bank's own question id
+     so it reaches the bank's owners. */
+  var REASON_RIGHT = 'I was right';
+  var REASON_WRONG = 'The question is wrong';
+  function renderReport(played) {
+    var box = el.ftReport;
+    if (!box) return;
+    box.innerHTML = '';
+    var list = (played || []).filter(function (x) { return x && x.questionId; });
+    if (!list.length) return;
+    var det = document.createElement('details');
+    det.className = 'qfReport';
+    var sum = document.createElement('summary');
+    sum.textContent = 'Something wrong with a question?';
+    det.appendChild(sum);
+    var ol = document.createElement('ol');
+    list.forEach(function (x) {
+      var li = document.createElement('li');
+      var q = document.createElement('p');
+      q.className = 'qfReportClue';
+      q.textContent = x.clue || '';
+      li.appendChild(q);
+      var row = document.createElement('div');
+      row.className = 'qfReportBtns';
+      /* "I was right" only where the pick was marked wrong; a question can be
+         wrong either way. */
+      var reasons = x.correct ? [REASON_WRONG] : [REASON_RIGHT, REASON_WRONG];
+      var buttons = reasons.map(function (reason) {
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'btn quiet';
+        b.textContent = reason;
+        b.addEventListener('click', function () { report(x.questionId, reason, buttons, li); });
+        row.appendChild(b);
+        return b;
+      });
+      li.appendChild(row);
+      ol.appendChild(li);
+    });
+    det.appendChild(ol);
+    box.appendChild(det);
+  }
+  function report(id, reason, buttons, li) {
+    buttons.forEach(function (b) { b.disabled = true; });
+    var said = li.querySelector('.qfReportSaid') || li.appendChild(document.createElement('p'));
+    said.className = 'qfReportSaid';
+    window.QFX_API('/api/report-clue', { game: 'quickfire_fr', itemId: id, reason: reason, puzzle: board ? board.day : null })
+      .then(function (r) {
+        if (r.ok) { said.textContent = 'Reported. Thank you.'; return; }
+        buttons.forEach(function (b) { b.disabled = false; });
+        if (r.status === 401) {
+          said.textContent = 'Sign in to report a question.';
+          var A = window.XIChrome && XIChrome.account;
+          if (A && typeof A.open === 'function') A.open();
+        } else {
+          said.textContent = r.status === 429 ? 'That is a lot of reports. Try again shortly.' : 'That did not reach us. Try again.';
+        }
+      })
+      .catch(function () {
+        buttons.forEach(function (b) { b.disabled = false; });
+        said.textContent = 'That did not reach us. Try again.';
+      });
   }
 
   function escapeHtml(v) {

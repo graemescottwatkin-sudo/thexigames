@@ -10,7 +10,7 @@
  * more, 114 the ceiling. This file is the page: the landing the family
  * shares, the ladder of two rows, the clock, the answers list, the share.
  */
-var BUILD = "v002v";
+var BUILD = "v002w";
 
 (function () {
   "use strict";
@@ -560,6 +560,15 @@ var BUILD = "v002v";
     $("ask").innerHTML = "";
     var bb = document.createElement("b"); bb.textContent = R.name; $("ask").appendChild(bb);
     $("ask").appendChild(document.createTextNode(" — " + f.lo.toLowerCase() + " or " + f.hi.toLowerCase() + " than " + ref + "?"));
+    /* On a narrow unlocked screen the V column, and the gap in it, is hidden;
+       the gap is part of how the call is made, so it rides here there. */
+    var askGap = gapText(round, round.step);
+    if (askGap) {
+      var ag = document.createElement("span");
+      ag.className = "askGap";
+      ag.textContent = " \u00b7 " + askGap;
+      $("ask").appendChild(ag);
+    }
     $("higher").innerHTML = ""; $("lower").innerHTML = "";
     var hb = document.createElement("b"); hb.textContent = "▲ " + f.hi; var hs = document.createElement("small"); hs.textContent = "than " + ref;
     var lb = document.createElement("b"); lb.textContent = "▼ " + f.lo; var ls = document.createElement("small"); ls.textContent = "than " + ref;
@@ -588,10 +597,27 @@ var BUILD = "v002v";
     c.textContent = t.charAt(0).toUpperCase() + t.slice(1);
     return c;
   }
+  /* THE SIZE OF THE DIFFERENCE, "± 15 yellow cards" (the owner, 2 Oct 2026):
+     sent only for boards of counts and heights, never which way. */
+  function gapText(round, call) {
+    var b = round.board || {};
+    var g = b.gaps ? b.gaps[call] : null;
+    if (g === null || g === undefined || !b.gapUnit) return "";
+    /* "± 1 year", not "± 1 years": the bank's singular where it gives one. */
+    var unit = g === 1 && b.gapUnitOne ? b.gapUnitOne : b.gapUnit;
+    return "\u00b1 " + Number(g).toLocaleString("en-GB") + " " + unit;
+  }
   function setVs(el, round, call) {
     el.textContent = "V";
     var chip = tierChip(round, call);
     if (chip) el.appendChild(chip);
+    var gt = gapText(round, call);
+    if (gt) {
+      var gs = document.createElement("span");
+      gs.className = "gap";
+      gs.textContent = gt;
+      el.appendChild(gs);
+    }
   }
   function paint(round) {
     Array.prototype.forEach.call($("ladder").children, function (d, i) {

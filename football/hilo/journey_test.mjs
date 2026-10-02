@@ -37,7 +37,9 @@ const truth = (i) => (board.chain[i].value > board.chain[i - 1].value ? "higher"
    so this one is given eleven, as every daily from 1 Oct 2026 carries them;
    the handlers read this same object, so the page is served them. */
 const LEVELS = ["easy", "medium", "hard", "easy", "medium", "hard", "easy", "medium", "hard", "easy", "medium"];
-board.difficulty = { calls: LEVELS };
+/* And the size of each call's difference, as a board of counts carries it. */
+const GAPS = [15, 3, 0, 22, 7, 1, 40, 9, 12, 5, 2];
+board.difficulty = { calls: LEVELS, gaps: GAPS, gapUnit: "yellow cards", gapUnitOne: "yellow card", showGap: true };
 
 const ORIGIN = "http://localhost";
 const plays = [];
@@ -239,6 +241,12 @@ console.log("\n=== The call's level ===");
   const chip = () => $("live").querySelector(".vs .tier");
   t("the first call's level is on the live pair, under the V", !!chip() && chip().textContent === "Easy" && chip().classList.contains("tier-easy"),
     chip() ? chip().outerHTML : "no label");
+  const gap = $("live").querySelector(".vs .gap");
+  t("and the size of its difference beside it, never which way", !!gap && gap.textContent === "\u00b1 15 yellow cards",
+    gap ? JSON.stringify(gap.textContent) : "no gap");
+  const askGap = $("ask").querySelector(".askGap");
+  t("and in the question line too, for the narrow screen where the V column is hidden",
+    !!askGap && askGap.textContent.includes("\u00b1 15 yellow cards"), askGap ? JSON.stringify(askGap.textContent) : "none");
 }
 
 console.log("\n=== The calls ===");
@@ -252,6 +260,10 @@ for (let i = 1; i <= 10; i++) {
   const settledChips = [...doc.querySelectorAll(".duel.settled .vs .tier")].map((c) => c.textContent);
   t("each settled row keeps its own call's level", settledChips.length === 10 &&
     settledChips.every((c, i) => c.toLowerCase() === LEVELS[i]), settledChips.join(","));
+  const settledGaps = [...doc.querySelectorAll(".duel.settled .vs .gap")].map((g) => g.textContent);
+  t("each settled row keeps its own call's gap", settledGaps.length === 10 &&
+    settledGaps.every((g, i) => g === "\u00b1 " + GAPS[i] + (GAPS[i] === 1 ? " yellow card" : " yellow cards")), settledGaps.slice(0, 3).join(" | "));
+  t("  a gap of one in the singular, \u00b1 1 yellow card", settledGaps[5] === "\u00b1 1 yellow card", JSON.stringify(settledGaps[5]));
   t("and the live pair shows the eleventh call's", ($("live").querySelector(".vs .tier") || {}).textContent === "Medium",
     ($("live").querySelector(".vs .tier") || {}).textContent);
 }

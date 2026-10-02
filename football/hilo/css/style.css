@@ -340,3 +340,10 @@ body.locked #how:target .how-back{display:inline-flex;align-items:center;min-hei
 .vs .tier-easy{color:var(--ok);background:color-mix(in srgb,var(--ok) 14%,transparent)}
 .vs .tier-medium{color:var(--xi-ink);background:color-mix(in srgb,var(--gold) 22%,transparent)}
 .vs .tier-hard{color:var(--danger);background:color-mix(in srgb,var(--danger) 12%,transparent)}
+/* THE GAP, under the level: the size of the difference, never its direction
+   (the owner, 2 Oct 2026). In the V column where it shows; in the question
+   line on a narrow unlocked screen, where the V column does not. */
+.vs .gap{display:block;margin:3px auto 0;width:max-content;max-width:9em;font-family:var(--body);font-weight:600;
+  font-size:11px;letter-spacing:0;text-transform:none;line-height:1.25;color:var(--ink-soft);white-space:normal;text-align:center}
+.ask .askGap{display:none;color:var(--ink-soft);font-weight:600}
+@media (max-width:520px){ body:not(.locked) .ask .askGap{display:inline} }

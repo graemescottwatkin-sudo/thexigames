@@ -42,12 +42,25 @@ const routes = {};
 for (const name of ["daily", "archive", "play", "next", "sub", "answer", "finish"]) {
   routes["/api/quickfire_fr/" + name] = await imp(`functions/api/quickfire_fr/${name}.js`);
 }
+/* The family's report endpoint, the real one: whether it takes this game's
+   reports is its question, not the page's. */
+routes["/api/report-clue"] = await imp("functions/api/report-clue.js");
+/* A signed-in player is a session cookie; set once the signed-out case has run. */
+let cookie = "";
 
 /* ---- the database, as production has it -------------------------------- */
 const db = new sqlite.DatabaseSync(":memory:");
 const mig = path.join(ROOT, "data", "migrations");
+/* STATEMENT BY STATEMENT, and only a duplicate column forgiven. This read the
+   whole file in one exec and swallowed any error, and an exec stops at its
+   first failure: 003 opens with an ALTER that 000-base already has, so its
+   clue_reports table was silently never made, and the first suite to ask for
+   it (the report button, 2 Oct 2026) found nothing there. */
 for (const f of fs.readdirSync(mig).filter((f) => /^\d{3}-.*\.sql$/.test(f)).sort()) {
-  try { db.exec(fs.readFileSync(path.join(mig, f), "utf8")); } catch (e) { /* ALTERs the base already has */ }
+  const text = fs.readFileSync(path.join(mig, f), "utf8").split(/\r?\n/).filter((l) => !/^\s*--/.test(l)).join("\n");
+  for (const st of text.split(/;\s*(?:\n|$)/).map((x) => x.trim()).filter(Boolean)) {
+    try { db.exec(st); } catch (e) { if (!/duplicate column/i.test(e.message)) throw new Error(`${f}: ${e.message}`); }
+  }
 }
 const env = { DB: { prepare(sql) {
   const make = (args) => ({
@@ -81,7 +94,9 @@ w.fetch = async (url, init) => {
   calls.push(u.pathname);
   const r = routes[u.pathname];
   if (!r) return { ok: false, status: 404, json: async () => ({ error: "not found" }) };
-  const request = new Request(u.href, init && init.body ? { method: "POST", body: init.body } : undefined);
+  const headers = new Headers((init && init.headers) || {});
+  if (cookie) headers.set("Cookie", cookie);
+  const request = new Request(u.href, init && init.body ? { method: "POST", body: init.body, headers } : { headers });
   const res = await (init && init.body ? r.onRequestPost : r.onRequestGet)({ request, env });
   const json = await res.json();
   return { ok: res.ok, status: res.status, json: async () => json };
@@ -170,5 +185,32 @@ const words = doc.body.textContent;
 t("no football word reaches the player: no GOAL, FULL TIME, sub or kick-off",
   !/\bGOAL\b|FULL TIME|SUBBED|substitution|Sub it off|Kick off|football/i.test(words.replace(/Full time/g, "")),
   (words.match(/\bGOAL\b|FULL TIME|SUBBED|substitution|Sub it off|Kick off|football/i) || ["none"])[0]);
+
+console.log("\nReporting a question");
+/* The owner, 2 Oct 2026: "yes add the report button". Through the family's
+   real /api/report-clue, over the same database. */
+const rows = [...doc.querySelectorAll("#ftReport .qfReport li")];
+t("Full Time offers a report row for every question played, in its own words",
+  rows.length === 11 && rows.every((li) => /^Friends question \d+$/.test(li.querySelector(".qfReportClue").textContent)),
+  rows.length + " rows");
+const wrongRow = rows.find((li) => li.querySelector(".qfReportClue").textContent === "Friends question 3");
+t("the question marked wrong offers 'I was right'", !!wrongRow && wrongRow.querySelector("button").textContent === "I was right");
+let opened = 0;
+w.XIChrome = { account: { open: () => { opened++; } } };
+click(wrongRow.querySelector("button"));
+await until(() => /Sign in/.test(wrongRow.textContent));
+t("signed out, the real endpoint refuses and the page asks for a sign-in", /Sign in to report a question/.test(wrongRow.textContent) && opened === 1,
+  wrongRow.textContent);
+db.prepare("INSERT INTO users (id, provider, provider_id, display_name) VALUES ('u1', 'email', 'u1', 'Tester')").run();
+db.prepare("INSERT INTO sessions (id, user_id, expires_at) VALUES ('s1', 'u1', '2999-01-01')").run();
+cookie = "cxi_session=s1";
+click(wrongRow.querySelector("button"));
+await until(() => /Reported/.test(wrongRow.textContent));
+const stored = db.prepare("SELECT game, clue_id, reason, puzzle FROM clue_reports").all();
+t("signed in, the report is stored under quickfire_fr, keyed on the bank's question id",
+  stored.length === 1 && stored[0].game === "quickfire_fr" && stored[0].clue_id === "EVT0003" &&
+    stored[0].reason === "I was right" && stored[0].puzzle === DAY,
+  JSON.stringify(stored));
+t("  and the player is thanked", /Reported\. Thank you\./.test(wrongRow.textContent), wrongRow.textContent);
 
 done();

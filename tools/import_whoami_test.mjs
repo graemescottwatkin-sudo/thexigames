@@ -84,11 +84,21 @@ function fixture() {
     doors.push(door(c, 1991, "ALAN SHEARER"));
   }
   const boards = [
-    { date: "2026-10-01", day: 1, doors: doors.map((d) => ({ ...d })) },
-    { date: "2026-10-02", day: 2, doors: doors.map((d) => ({ ...d })) },
+    { date: FROM, day: 1, doors: doors.map((d) => ({ ...d })) },
+    { date: NEXT, day: 2, doors: doors.map((d) => ({ ...d })) },
   ];
   return { bank: { players }, sched: { boards } };
 }
+
+/* THE CALENDAR STARTS TOMORROW, in UTC, which is the importer's clock. These
+   read 2026-10-01 and 2026-10-02, pinned, and at 00:00 UTC on 2 Oct 2026 the
+   first became the past: the importer then asked, rightly, why a day before
+   today had no previous calendar behind it, and ten assertions about a clean
+   import went red on a tree nobody had touched. A fixture that is meant to be
+   the future has to be computed as the future. Tomorrow rather than today, so
+   a run that crosses midnight still starts in the future. */
+const dayFromNow = (n) => new Date(Date.now() + n * 86400000).toISOString().slice(0, 10);
+const FROM = dayFromNow(1), NEXT = dayFromNow(2);
 
 function run(mutate, label, expect, shouldPass = false) {
   const { bank, sched } = fixture();
@@ -107,7 +117,7 @@ function run(mutate, label, expect, shouldPass = false) {
          data/wa-production.sql, and these two-board fixtures would then be
          asked why they do not cover the days the live game has served. A
          contract test should not depend on what production happens to hold. */
-      [path.join(ROOT, "tools", "import_whoami.mjs"), "--source", dir, "--from=2026-10-01",
+      [path.join(ROOT, "tools", "import_whoami.mjs"), "--source", dir, "--from=" + FROM,
        "--out=" + path.join(dir, "check.sql"), "--check"],
       { encoding: "utf8", stdio: "pipe", cwd: ROOT });
   } catch (e) {
@@ -182,7 +192,7 @@ console.log("\n=== The SQL it emits is SQL D1 will accept ===");
   try {
     execFileSync(process.execPath,
       [path.join(ROOT, "tools", "import_whoami.mjs"), "--source", dir,
-       "--from=2026-10-01", "--out=" + out],
+       "--from=" + FROM, "--out=" + out],
       { encoding: "utf8", stdio: "pipe", cwd: ROOT });
   } catch (e) { ok = false; }
   t("it writes a file when not in --check", ok && fs.existsSync(out));
@@ -244,7 +254,7 @@ console.log("\n=== The SQL it emits is SQL D1 will accept ===");
     try {
       execFileSync(process.execPath,
         [path.join(ROOT, "tools", "import_whoami.mjs"), "--source", d2,
-         "--from=2026-10-01", "--out=" + o2], { encoding: "utf8", stdio: "pipe", cwd: ROOT });
+         "--from=" + FROM, "--out=" + o2], { encoding: "utf8", stdio: "pipe", cwd: ROOT });
     } catch (e) { return false; }
     const got = fs.readFileSync(o2, "utf8");
     fs.rmSync(d2, { recursive: true, force: true });

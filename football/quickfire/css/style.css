@@ -246,3 +246,13 @@ body.locked #how:target{display:block!important;position:fixed;inset:0;z-index:6
 body.locked #how:target .how-back{display:inline-flex;align-items:center;min-height:var(--tap,44px);padding:0 16px;
   margin:0 0 10px;border:1px solid var(--line);border-radius:999px;background:var(--card);color:var(--ink);
   font-family:var(--disp);font-weight:700;letter-spacing:.08em;text-transform:uppercase;text-decoration:none}
+
+/* ---- reporting a question (the owner, 2 Oct 2026) ------------------------
+   Folded under Full Time, one row per question played. */
+.qfReport { margin: 12px 0 0; font-size: 14px; }
+.qfReport summary { cursor: pointer; color: var(--pitch-ink); font-size: 13px; min-height: 24px; text-align: center; }
+.qfReport ol { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
+.qfReportClue { margin: 0 0 4px; color: var(--ink); }
+.qfReportBtns { display: flex; flex-wrap: wrap; gap: 6px; }
+.qfReportBtns .btn { font-size: 13px; min-height: 36px; padding: 0 12px; }
+.qfReportSaid { margin: 4px 0 0; font-size: 13px; color: var(--ink-soft); }

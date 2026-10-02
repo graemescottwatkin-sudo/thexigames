@@ -152,6 +152,10 @@ function server(board, opts = {}) {
       return [200, { score, answered: round.answers.size, correct,
                      questions: PER_DAILY, subsUsed: round.subsUsed, minute: round.minute }];
     }
+    if (pathname === "/api/report-clue") {
+      /* The family's endpoint, which refuses a signed-out player with 401. */
+      return opts.reportStatus === 401 ? [401, { error: "Sign in to report a clue." }] : [200, { ok: true }];
+    }
     return [404, { error: "not found" }];
   }
 
@@ -348,6 +352,50 @@ console.log("\n=== A round, played end to end ===");
   t("the season was told which day was played", seasons.includes("2026-09-14"));
   t("and the run was counted, start and end",
     played.some(([k]) => k === "start") && played.some(([k, v]) => k === "end" && v === true));
+
+  /* REPORTING A QUESTION (the owner, 2 Oct 2026: "yes add the report button").
+     Under Full Time, one row per question played, each with its own words;
+     "I was right" only where the pick was marked wrong. */
+  const rows = [...doc.querySelectorAll("#ftReport .qfReport li")];
+  const btns = (li) => [...li.querySelectorAll("button")].map((b) => b.textContent);
+  t("Full Time offers a report row for every question played, in its own words",
+    rows.length === PER_DAILY && rows.every((li, i) => li.querySelector(".qfReportClue").textContent === "Question " + (i + 1)),
+    rows.map((li) => li.querySelector(".qfReportClue").textContent).slice(0, 3).join(" | "));
+  t("a question marked right can be called wrong, but not 'I was right'",
+    JSON.stringify(btns(rows[0])) === JSON.stringify(["The question is wrong"]), JSON.stringify(btns(rows[0])));
+  t("a question marked wrong offers both", JSON.stringify(btns(rows[1])) === JSON.stringify(["I was right", "The question is wrong"]),
+    JSON.stringify(btns(rows[1])));
+  rows[1].querySelector("button").dispatchEvent(new w.Event("click", { bubbles: true }));
+  await settle(w);
+  const sent = srv.calls.find((c) => c.pathname === "/api/report-clue");
+  t("a report names the game, the bank's question id, the reason and the day",
+    !!sent && sent.body.game === "quickfire" && sent.body.itemId === "q2" && sent.body.reason === "I was right" && sent.body.puzzle === "2026-09-14",
+    JSON.stringify(sent && sent.body));
+  t("  and the player is thanked, the row's buttons spent",
+    /Reported/.test(rows[1].textContent) && [...rows[1].querySelectorAll("button")].every((b) => b.disabled));
+}
+
+console.log("\n=== A report from a player who is not signed in ===");
+{
+  const { doc, w } = await open({ reportStatus: 401 });
+  const click = (el) => el.dispatchEvent(new w.Event("click", { bubbles: true }));
+  click(doc.getElementById("kickOff"));
+  await settle(w);
+  for (let i = 1; i <= PER_DAILY; i++) {
+    const btn = [...doc.querySelectorAll("#options .option")].find((b) => b.textContent === "Right" + i);
+    if (!btn) break;
+    click(btn);
+    await settle(w);
+    await settle(w, w.QFX_CONFIG.INTER_QUESTION_MS + 30);
+  }
+  let opened = 0;
+  w.XIChrome = { account: { open: () => { opened++; } } };
+  const li = doc.querySelector("#ftReport .qfReport li");
+  if (li) click(li.querySelector("button"));
+  await settle(w);
+  t("is asked to sign in, and the sign-in opens", !!li && /Sign in to report a question/.test(li.textContent) && opened === 1,
+    li ? li.textContent : "no report row");
+  t("  and can try again once signed in", !!li && [...li.querySelectorAll("button")].every((b) => !b.disabled));
 }
 
 console.log("\n=== A substitution ===");

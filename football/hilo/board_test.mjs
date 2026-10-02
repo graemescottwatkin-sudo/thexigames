@@ -80,6 +80,24 @@ t("the token rides with it", pub.token === "hl:2026-09-03");
   t("a board with levels sends all eleven, in call order", JSON.stringify(withLv.tiers) === JSON.stringify(levels), JSON.stringify(withLv.tiers));
   t("and nothing else of the difficulty object", !("difficulty" in withLv) && !/"sigma"/.test(JSON.stringify(withLv)));
   t("a board without them sends null", pub.tiers === null, String(pub.tiers));
+  /* THE GAP (the owner, 2 Oct 2026): sent only where the bank says to show it. */
+  const gapped = publicBoard({ ...daily, difficulty: { calls: levels, gaps: [15, 3, 0, 22, 7, 1, 40, 9, 12, 5, 2], gapUnit: "yellow cards", showGap: true } }, "x");
+  t("a board of counts sends its eleven gaps and their unit",
+    JSON.stringify(gapped.gaps) === JSON.stringify([15, 3, 0, 22, 7, 1, 40, 9, 12, 5, 2]) && gapped.gapUnit === "yellow cards", JSON.stringify([gapped.gaps, gapped.gapUnit]));
+  t("a year board (showGap false) sends no gaps",
+    publicBoard({ ...daily, difficulty: { calls: levels, gaps: [15, 3, 0, 22, 7, 1, 40, 9, 12, 5, 2], gapUnit: "years", showGap: false } }, "x").gaps === null);
+  t("and nor does one with the gaps malformed or no unit",
+    publicBoard({ ...daily, difficulty: { calls: levels, gaps: [1, 2], gapUnit: "cm", showGap: true } }, "x").gaps === null &&
+      publicBoard({ ...daily, difficulty: { calls: levels, gaps: [15, 3, 0, 22, 7, 1, 40, 9, 12, 5, 2], gapUnit: "", showGap: true } }, "x").gaps === null &&
+      publicBoard({ ...daily, difficulty: { calls: levels, gaps: [-1, ...[15, 3, 0, 22, 7, 1, 40, 9, 12, 5, 2].slice(1)], gapUnit: "cm", showGap: true } }, "x").gaps === null);
+  t("a board without gaps sends null for both", pub.gaps === null && pub.gapUnit === null);
+  const withOne = (one) => publicBoard({ ...daily, difficulty: { calls: levels, gaps: [15, 3, 0, 22, 7, 1, 40, 9, 12, 5, 2],
+    gapUnit: "years", gapUnitOne: one, showGap: true } }, "x");
+  t("the unit's singular is sent beside it", withOne("year").gapUnitOne === "year", JSON.stringify(withOne("year").gapUnitOne));
+  t("  and a missing or malformed singular drops itself, never the gaps",
+    gapped.gapUnitOne === null && withOne("").gapUnitOne === null && withOne(7).gapUnitOne === null &&
+      Array.isArray(withOne(7).gaps) && withOne(7).gapUnit === "years");
+  t("and nothing of the difficulty object beyond tiers and the gaps", !/"sigma"|"showGap"|"hardMax"/.test(JSON.stringify(gapped)));
   t("and so does one whose levels are the wrong length or an unknown word",
     publicBoard({ ...daily, difficulty: { calls: levels.slice(1) } }, "x").tiers === null &&
       publicBoard({ ...daily, difficulty: { calls: ["easy", ...levels.slice(1, 10), "trivial"] } }, "x").tiers === null);
