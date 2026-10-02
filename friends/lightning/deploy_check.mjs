@@ -41,8 +41,8 @@ const NAME = "Lightning Round";            // what must appear nowhere else whil
 const PREFIX = "xifl.";
 
 /* WHAT IS LIVE. Bump both after a deploy with tools/post_deploy.mjs. */
-const LAST_SHIPPED = "v001e";
-const LAST_SHIPPED_ASSETS = "efb34cf3f4e8b8e6";
+const LAST_SHIPPED = "v001g";
+const LAST_SHIPPED_ASSETS = "0e13ce4971c1ccd8";
 
 let pass = 0, fail = 0;
 function t(name, ok, note) {
