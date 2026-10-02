@@ -30,8 +30,8 @@ const GAME = "quickfire_fr";
 const DIR = "friends/quickfire";
 const NAME = "QuickFire XI: Friends";
 const PREFIX = "xifq.";
-const LAST_SHIPPED = "v001a";
-const LAST_SHIPPED_ASSETS = "56aa0f3ff7bcc76d";
+const LAST_SHIPPED = "v001b";
+const LAST_SHIPPED_ASSETS = "abc094c4f3a6297d";
 
 let pass = 0, fail = 0;
 function t(name, ok, note) {
