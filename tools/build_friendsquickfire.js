@@ -36,7 +36,7 @@ const CHECK = process.argv.includes("--check");
 const read = (p) => readText(path.join(ROOT, p));
 
 /* THE TAG LIVES HERE, written into every generated file. Bump, regenerate. */
-const TAG = "v001b";
+const TAG = "v001c";
 
 const SRC = "football/quickfire", OUT = "friends/quickfire";
 const ID = "quickfire_fr", NAME = "QuickFire XI: Friends";

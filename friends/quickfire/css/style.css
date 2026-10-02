@@ -248,11 +248,17 @@ body.locked #how:target .how-back{display:inline-flex;align-items:center;min-hei
   font-family:var(--disp);font-weight:700;letter-spacing:.08em;text-transform:uppercase;text-decoration:none}
 
 /* ---- reporting a question (the owner, 2 Oct 2026) ------------------------
-   Folded under Full Time, one row per question played. */
-.qfReport { margin: 12px 0 0; font-size: 14px; }
-.qfReport summary { cursor: pointer; color: var(--pitch-ink); font-size: 13px; min-height: 24px; text-align: center; }
-.qfReport ol { list-style: none; margin: 8px 0 0; padding: 0; display: flex; flex-direction: column; gap: 10px; }
-.qfReportClue { margin: 0 0 4px; color: var(--ink); }
+   Folded under Full Time, one row per question played, in Lightning Round's
+   card (friends/lightning: .lrReport) so the family reports one way. Every
+   control at the tap floor: as first shipped the summary was 24px and the
+   buttons bare text, seen in a browser the same night. */
+.qfReport { max-width: 460px; margin: 14px auto 0; width: 100%; text-align: left; font-size: 14px;
+  border: 1px solid var(--line); border-radius: 10px; background: var(--card); padding: 4px 14px; }
+.qfReport summary { cursor: pointer; font-family: var(--disp); font-weight: 600; letter-spacing: .04em;
+  text-transform: uppercase; font-size: 14px; color: var(--ink-soft); min-height: var(--tap);
+  display: flex; align-items: center; }
+.qfReport ol { list-style: none; margin: 4px 0 10px; padding: 0; display: flex; flex-direction: column; gap: 12px; }
+.qfReportClue { margin: 0 0 6px; color: var(--ink); line-height: 1.4; }
 .qfReportBtns { display: flex; flex-wrap: wrap; gap: 6px; }
-.qfReportBtns .btn { font-size: 13px; min-height: 36px; padding: 0 12px; }
-.qfReportSaid { margin: 4px 0 0; font-size: 13px; color: var(--ink-soft); }
+.qfReportBtns .btn { font-size: 13px; min-height: var(--tap); padding: 6px 12px; }
+.qfReportSaid { margin: 6px 0 0; font-size: 13px; color: var(--ink-soft); }

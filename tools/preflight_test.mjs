@@ -85,10 +85,21 @@ function memDB(over = {}) {
      the server that decides what day it is, which is the rule, and a fixture
      that only covered its own idea of today made the endpoint's own check go
      red for a board that was never missing. */
-  const wsDays = over.wsDays === undefined ? 800 : over.wsDays;
-  const hlDays = over.hlDays === undefined ? 800 : over.hlDays;
-  const wsFrom = over.wsDays === undefined ? NOW - 400 * DAY_MS : NOW;
-  const hlFrom = over.hlDays === undefined ? NOW - 400 * DAY_MS : NOW;
+  /* ...AND FROM THE REAL CLOCK, for the same reason. These started 400 days
+     before NOW, the fixture's pinned 6 Sep 2026, so they ran out 400 days
+     after it, and from late September 2027 the endpoint's fortnight would walk
+     off the end and call a sound bank broken. Found 2 Oct 2026 by running every
+     suite with the clock wound a year forward. Starting them from the real
+     clock instead broke the other half at two years: the checks called with
+     NOW then fell before the schedule began. So a default schedule spans BOTH
+     days, from 400 before the earlier to 400 after the later. */
+  const REAL = Date.now();
+  const lo = Math.min(NOW, REAL) - 400 * DAY_MS;
+  const span = Math.ceil((Math.max(NOW, REAL) - Math.min(NOW, REAL)) / DAY_MS) + 800;
+  const wsDays = over.wsDays === undefined ? span : over.wsDays;
+  const hlDays = over.hlDays === undefined ? span : over.hlDays;
+  const wsFrom = over.wsDays === undefined ? lo : NOW;
+  const hlFrom = over.hlDays === undefined ? lo : NOW;
 
   const schedule = {};
   for (let k = 0; k < hlDays; k++) schedule[utcDay(hlFrom + k * DAY_MS)] = "hl1";

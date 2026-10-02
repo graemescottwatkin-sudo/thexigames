@@ -43,7 +43,7 @@ body{margin:0;font-family:var(--body)}
 /* Eleven shirts across the top, one filled per call. */
 .ladder{display:grid;grid-template-columns:repeat(11,1fr);gap:5px;margin:12px 0 18px;max-width:440px}
 .ladder i{aspect-ratio:1/1.12;border-radius:4px;border:2px solid var(--line);display:flex;align-items:center;justify-content:center;font-family:var(--disp);font-weight:700;font-size:13px;color:var(--ink-faint);font-style:normal}
-.ladder i.cur{border-color:var(--hl-kit);color:var(--hl-kit)}
+.ladder i.cur{border-color:var(--accent-ink,var(--hl-kit));color:var(--accent-ink,var(--hl-kit))}
 .ladder i.ok{background:var(--correct);border-color:var(--correct);color:var(--correct-ink,#fff)}
 .ladder i.bad{background:var(--wrong);border-color:var(--wrong);color:var(--wrong-ink,#fff)}
 
@@ -58,7 +58,7 @@ body{margin:0;font-family:var(--body)}
   transition:border-color var(--t-base) var(--ease),background var(--t-base) var(--ease)}
 .player .who{font-family:var(--disp);font-weight:700;font-size:clamp(22px,4vw,30px);letter-spacing:.04em;text-transform:uppercase;line-height:1.05;color:var(--ink)}
 .player .sub{font-size:13px;color:var(--ink-soft)}
-.player .val{font-family:var(--disp);font-weight:700;font-size:clamp(40px,8vw,56px);line-height:1;font-variant-numeric:tabular-nums;color:var(--hl-kit)}
+.player .val{font-family:var(--disp);font-weight:700;font-size:clamp(40px,8vw,56px);line-height:1;font-variant-numeric:tabular-nums;color:var(--accent-ink,var(--hl-kit))}
 .player .val.q{color:var(--ink-faint)}
 .player.known{background:var(--tint)}
 .player.ok{border-color:var(--correct);background:var(--correct-bg,var(--tint))}

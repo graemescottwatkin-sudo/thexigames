@@ -31,7 +31,7 @@
  * link so a friend could replay the exact eleven, and that is now a board
  * number in the fragment, which is shorter and does not describe the board.
  */
-var BUILD = "v001v";
+var BUILD = "v001w";
 
 (function bootstrap() {
   'use strict';
@@ -879,7 +879,7 @@ function start() {
       var buttons = reasons.map(function (reason) {
         var b = document.createElement('button');
         b.type = 'button';
-        b.className = 'btn quiet';
+        b.className = 'btn';
         b.textContent = reason;
         b.addEventListener('click', function () { report(x.questionId, reason, buttons, li); });
         row.appendChild(b);
