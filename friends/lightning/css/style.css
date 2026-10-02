@@ -131,7 +131,7 @@ a.mode{text-decoration:none;box-sizing:border-box}
 .lrReport li{margin:0 0 12px}
 .lrReportClue{margin:0 0 6px;font-size:14px;line-height:1.4}
 .lrReportBtns{display:flex;flex-wrap:wrap;gap:6px}
-.lrReportBtns .btn{min-height:36px;padding:6px 10px;font-size:13px}
+.lrReportBtns .btn{min-height:var(--tap);padding:6px 10px;font-size:13px}  /* the family's tap floor (was 36px) */
 .lrReportSaid{margin:6px 0 0;font-size:13px;color:var(--ink-soft)}
 
 .ftActions{display:flex;flex-direction:column;max-width:460px;margin:0 auto;width:100%}
