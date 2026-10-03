@@ -210,6 +210,10 @@
   function selectionFresh() { return !!lastSelection && RealDate.now() - lastSelectedAt < FRESH_MS; }
   function forgetSelection() { lastSelection = ""; lastContext = { questionId: null, clue: null }; lastSelectedAt = 0; }
   var tidy = function (s, n) { return String(s || "").replace(/\s+/g, " ").trim().slice(0, n); };
+  /* An element's words AS SHOWN: innerText keeps the break between a question
+     and its detail line, where textContent ran them together ("Leeds
+     United?His first...", the first real flags, 3 Oct 2026). */
+  var shown = function (el) { return el ? (typeof el.innerText === "string" && el.innerText ? el.innerText : el.textContent) : ""; };
   function contextOf(sel) {
     var node = sel && sel.anchorNode;
     return contextOfEl(node && (node.nodeType === 1 ? node : node.parentElement));
@@ -222,12 +226,18 @@
       while (!marked && block.parentElement && block !== document.body &&
              /^inline/.test(window.getComputedStyle(block).display || "")) block = block.parentElement;
       return { questionId: marked ? tidy(marked.getAttribute("data-xi-item"), 80) || null : null,
-               clue: tidy(block.textContent, 1000) || null };
+               clue: tidy(shown(block), 1000) || null };
     } catch (e) { return { questionId: null, clue: null }; }
   }
   document.addEventListener("selectionchange", function () {
     try {
       var sel = window.getSelection ? window.getSelection() : null;
+      /* NOT A SELECTION IN THE PREVIEW'S OWN BANNER, BOX OR HINT: the first
+         real flag (3 Oct 2026) took the box's own words, "Dislike Cancel
+         Save", as its clue. */
+      var at = sel && sel.anchorNode;
+      at = at && (at.nodeType === 1 ? at : at.parentElement);
+      if (ours(at)) return;
       var s = tidy(sel ? String(sel) : "", 500);
       if (s) { lastSelection = s; lastContext = contextOf(sel); lastSelectedAt = RealDate.now(); }
     } catch (e) {}
@@ -251,7 +261,7 @@
     var el = e.target && (e.target.nodeType === 1 ? e.target : e.target.parentElement);
     var verdict = picking;
     stopPicking();
-    lastSelection = el ? tidy(el.textContent, 500) : "";
+    lastSelection = el ? tidy(shown(el), 500) : "";
     lastContext = contextOfEl(el);
     openFlag(verdict);
   }
@@ -273,7 +283,7 @@
       var id = tidy(els[i].getAttribute("data-xi-item"), 80);
       if (!id || seen[id]) continue;
       seen[id] = true;
-      out.push({ id: id, text: tidy(els[i].textContent, 1000), el: els[i] });
+      out.push({ id: id, text: tidy(shown(els[i]), 1000), el: els[i] });
     }
     return out;
   }

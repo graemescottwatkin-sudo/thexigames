@@ -418,6 +418,27 @@ function open(conf) {
     q.remove();
   }
 
+  /* A SELECTION IN THE PREVIEW'S OWN UI IS NOT A CLUE: the first real flag
+     took the box's own words as its clue. On a page that marks nothing --
+     where no dropdown overrides the words -- select inside an open box, then
+     press dislike: it must ask for a tap, not reuse the box's words. */
+  {
+    press('#xiPreviewBar button[data-verdict="note"]');
+    const title = d.getElementById("xiPreviewFlagBox").querySelector("strong");
+    const r = d.createRange(); r.selectNodeContents(title);
+    d.getSelection().removeAllRanges(); d.getSelection().addRange(r);
+    d.dispatchEvent(new w.Event("selectionchange"));
+    d.getSelection().removeAllRanges();
+    press('#xiPreviewBar button[data-verdict="dislike"]');
+    const box = d.getElementById("xiPreviewFlagBox");
+    t("words selected inside the flag box are never taken for a clue",
+      !!d.getElementById("xiPreviewHint") && !(box && /Note/.test(box.querySelector('textarea[name="item"]').value)),
+      box ? box.querySelector('textarea[name="item"]').value : "asked for a tap");
+    const h = d.getElementById("xiPreviewHint");
+    if (h) [...h.querySelectorAll("button")].find((x) => x.textContent === "Cancel").dispatchEvent(new w.Event("click", { bubbles: true }));
+    if (d.getElementById("xiPreviewFlagBox")) cancelBox();
+  }
+
   /* TAP TO PICK, where nothing is marked (the owner, on a phone: "it says to
      select the clue on the page. How to do that"): the next tap is the
      flag's, not the game's; Cancel gives taps back to the game. */
