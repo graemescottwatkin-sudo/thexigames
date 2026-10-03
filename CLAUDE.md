@@ -545,9 +545,12 @@ Where facts live — extend these, never copy them:
   exempt). Enforced by `chrome_test`, `aligned_test` and both live_checks.
   Unbuilt games appear only as shirt numbers + status.
 - **The banks are secret.** `bank.json`, `ws-production.sql`, daily SQL files
-  are gitignored and live OUTSIDE the repo
-  (`..\crosswordxi-source`, `..\wordsearchxi-source`). Never commit them,
-  never print answers into anything that ships. The D1 database is the only
+  are gitignored and live OUTSIDE the repo (`..\crosswordxi-source`; the word
+  search's in the owner's OneDrive, `Documents\GitHub\wordsearchxi-source`,
+  by the owner's choice of 3 Oct 2026). Never commit them, never print answers
+  into anything that ships. `..\wordsearchxi-source` was written here and as
+  the importer's default for weeks and has never existed; the importer now
+  refuses to run without `--source` rather than guess. The D1 database is the only
   authoritative copy of the crossword bank — treat it accordingly.
 - Answers pages: sealed until `ANSWERS_AFTER_DAYS` past a board's first day
   AS THE DAILY — which is not its first row in a schedule table. The word

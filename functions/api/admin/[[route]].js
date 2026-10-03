@@ -771,14 +771,18 @@ export async function onRequest({ request, env, params }) {
     const verdict = String(body.verdict || "");
     if (!game) return bad("Unknown game.");
     if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return bad("No day.");
-    if (!["like", "dislike", "note"].includes(verdict)) return bad("Like, dislike or note.");
+    /* A WHOLE BOARD MARKED GOOD (the owner, 3 Oct 2026: "mark a board as good
+       so it turns green on the selector view"), or the mark taken back: the
+       latest of the two for a game and day is its state. Neither needs words. */
+    const BOARD = ["approved", "unapproved"];
+    if (!["like", "dislike", "note", ...BOARD].includes(verdict)) return bad("Like, dislike, note, approved or unapproved.");
     const item = String(body.item || "").replace(/\s+/g, " ").trim().slice(0, 500) || null;
     const note = String(body.note || "").trim().slice(0, 1000) || null;
     /* THE ADDRESS (055's header): the bank's id where the page marks one, and
        the whole clue as shown, so a flag still finds its row after a reword. */
     const questionId = String(body.questionId || "").trim().slice(0, 80) || null;
     const clue = String(body.clue || "").replace(/\s+/g, " ").trim().slice(0, 1000) || null;
-    if (!item && !note) return bad("Select some words or write a note.");
+    if (!item && !note && !BOARD.includes(verdict)) return bad("Select some words or write a note.");
     const id = newId();
     await env.DB.prepare(
       "INSERT INTO review_flags (id, game, day, verdict, question_id, clue, item, note, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
@@ -786,8 +790,13 @@ export async function onRequest({ request, env, params }) {
     return json({ ok: true, id });
   }
   if (route === "review-flags" && request.method === "GET") {
-    const { results } = await env.DB.prepare(
-      "SELECT id, game, day, verdict, question_id, clue, item, note, created_at FROM review_flags ORDER BY created_at DESC LIMIT 500").all();
+    /* One board's, when the preview asks what it has already said about it. */
+    const u = new URL(request.url);
+    const g = u.searchParams.get("game"), d = u.searchParams.get("day");
+    const one = g && d && /^\d{4}-\d{2}-\d{2}$/.test(d);
+    const { results } = await (one
+      ? env.DB.prepare("SELECT id, game, day, verdict, question_id, clue, item, note, created_at FROM review_flags WHERE game = ? AND day = ? ORDER BY created_at DESC, rowid DESC LIMIT 500").bind(String(g), d)
+      : env.DB.prepare("SELECT id, game, day, verdict, question_id, clue, item, note, created_at FROM review_flags ORDER BY created_at DESC, rowid DESC LIMIT 500")).all();
     return json({ flags: results || [] });
   }
 

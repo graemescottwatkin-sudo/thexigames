@@ -286,6 +286,32 @@ console.log("\n=== The owner's verdicts ===");
     (await flag("owner", { game: "quickfire", day: AHEAD, verdict: "like", item: "  ", note: "" })).status === 400 &&
     (await flag("owner", { game: "quickfire", day: AHEAD, verdict: "meh", item: "x" })).status === 400);
   t("  only one flag was kept", db.prepare("SELECT COUNT(*) AS n FROM review_flags").get().n === 1);
+
+  /* A WHOLE BOARD MARKED GOOD (the owner, 3 Oct 2026: "mark a board as good
+     so it turns green on the selector view"): no words needed, the latest of
+     approved and unapproved wins, and the list shows it. */
+  const cell = async () => {
+    const html = await (await page("owner", [])).text();
+    const m = html.match(new RegExp(`<td[^>]*>[^<]*<a href="/admin/football/crossword/${TODAY}"[\\s\\S]*?</td>`));
+    return m ? m[0] : "";
+  };
+  t("a board not yet marked is a plain Play", /^<td><a [^>]*>Play<\/a><\/td>$/.test(await cell()), await cell());
+  const good = await flag("owner", { game: "crossword", day: TODAY, verdict: "approved" });
+  t("marking a board good needs no words", good.status === 200, JSON.stringify(good.j));
+  t("  and its day turns green on the list", /^<td class="ok"><a [^>]*>\u2713 Good<\/a>/.test(await cell()), await cell());
+  await flag("owner", { game: "crossword", day: TODAY, verdict: "dislike", item: "a clue" });
+  t("  with a count of the flags it carries", /<small class="n">1 flag<\/small><\/td>$/.test(await cell()), await cell());
+  await flag("owner", { game: "crossword", day: TODAY, verdict: "unapproved" });
+  t("and taking the mark back makes it a plain Play again, flags still counted",
+    /^<td><a [^>]*>Play<\/a><small class="n">1 flag<\/small><\/td>$/.test(await cell()), await cell());
+  t("a player still cannot mark a board", (await flag("player", { game: "crossword", day: TODAY, verdict: "approved" })).status === 404);
+  const st = admin.reviewState([
+    { game: "g", day: "d", verdict: "approved" }, { game: "g", day: "d", verdict: "like" },
+    { game: "g", day: "d", verdict: "unapproved" }, { game: "g", day: "d", verdict: "approved" },
+    { game: "h", day: "d", verdict: "note" },
+  ]);
+  t("the latest mark wins, and every other verdict is a flag",
+    st.get("g|d").approved === true && st.get("g|d").flags === 1 && st.get("h|d").approved === false && st.get("h|d").flags === 1);
 }
 
 /* ---- 7. the page layer ----------------------------------------------------------- */
@@ -365,6 +391,69 @@ function open(conf) {
       (() => { const b = JSON.parse(post.body); return b.game === "quickfire" && b.day === AHEAD && b.verdict === "dislike" &&
         b.item === "Liverpool striker who won 73 caps for Wales" && b.note === "Three Englishmen" &&
         b.questionId === "V30500" && b.clue === "Liverpool striker who won 73 caps for Wales, last appearing in 1996"; })(), post ? post.body : "nothing sent");
+  }
+  /* THE DROPDOWN (the owner, 3 Oct 2026: "just give me a dropdown if I click
+     up or down or default to the current selection"): where the page marks
+     its questions, like and dislike open at once with every one listed. */
+  const d = w.document;
+  const tap = (el) => { for (const type of ["pointerdown", "mousedown", "pointerup", "mouseup", "click"]) el.dispatchEvent(new w.Event(type, { bubbles: true, cancelable: true })); };
+  const press = (sel) => d.querySelector(sel).dispatchEvent(new w.Event("click", { bubbles: true }));
+  const cancelBox = () => [...d.getElementById("xiPreviewFlagBox").querySelectorAll("button")].find((x) => x.textContent === "Cancel").dispatchEvent(new w.Event("click", { bubbles: true }));
+  d.querySelectorAll("[data-xi-item]").forEach((n) => n.remove());
+  {
+    const q = d.createElement("div");
+    q.innerHTML = '<p data-xi-item="Q1">Which club plays at Molineux?</p><ol><li data-xi-item="Q2">Nickname of Everton</li></ol>';
+    d.body.appendChild(q);
+    press('#xiPreviewBar button[data-verdict="dislike"]');
+    const box = d.getElementById("xiPreviewFlagBox");
+    const sel = box && box.querySelector('select[name="which"]');
+    t("with questions marked, dislike opens at once with every one in a dropdown",
+      !!sel && !d.getElementById("xiPreviewHint") && sel.options.length === 2 && /Molineux/.test(sel.options[0].textContent));
+    t("  set to the first, its words in the box and its id shown",
+      sel.value === "0" && box.querySelector('textarea[name="item"]').value === "Which club plays at Molineux?" && /Question Q1/.test(box.textContent));
+    sel.value = "1"; sel.dispatchEvent(new w.Event("change", { bubbles: true }));
+    t("  choosing another takes its words and its id",
+      box.querySelector('textarea[name="item"]').value === "Nickname of Everton" && /Question Q2/.test(box.textContent));
+    cancelBox();
+    q.remove();
+  }
+
+  /* TAP TO PICK, where nothing is marked (the owner, on a phone: "it says to
+     select the clue on the page. How to do that"): the next tap is the
+     flag's, not the game's; Cancel gives taps back to the game. */
+  {
+    const card = d.createElement("div");
+    card.innerHTML = '<p>Find the eleven</p><button type="button" class="opt">GERRARD</button>';
+    d.body.appendChild(card);
+    const opt = card.querySelector(".opt");
+    let played = 0;
+    opt.addEventListener("click", () => { played++; });
+    opt.addEventListener("pointerdown", () => { played++; });
+    press('#xiPreviewBar button[data-verdict="like"]');
+    t("with nothing marked or selected, like asks for a tap",
+      !!d.getElementById("xiPreviewHint") && /Tap the clue or answer/.test(d.getElementById("xiPreviewHint").textContent));
+    tap(opt);
+    const box = d.getElementById("xiPreviewFlagBox");
+    t("  the tap is the flag's: the game never sees it", played === 0, played + " game event(s)");
+    t("  and the box holds the words tapped", !!box && box.querySelector('textarea[name="item"]').value === "GERRARD" && !d.getElementById("xiPreviewHint"));
+    cancelBox();
+    press('#xiPreviewBar button[data-verdict="dislike"]');
+    [...d.getElementById("xiPreviewHint").querySelectorAll("button")].find((x) => x.textContent === "Cancel").dispatchEvent(new w.Event("click", { bubbles: true }));
+    tap(opt);
+    t("Cancel gives taps back to the game", played === 2 && !d.getElementById("xiPreviewFlagBox") && !d.getElementById("xiPreviewHint"), played + " game event(s)");
+    card.remove();
+  }
+  /* ✓ GOOD IN THE BANNER: off until the board is marked, a tap marks it. */
+  {
+    const btn = w.document.getElementById("xiPreviewGood");
+    t("the banner offers to mark the board good, unmarked to begin with", !!btn && btn.getAttribute("aria-pressed") === "false");
+    const n0 = sent.length;
+    btn.dispatchEvent(new w.Event("click", { bubbles: true }));
+    await new Promise((r) => setTimeout(r, 20));
+    const post = sent.slice(n0).find((x) => /\/api\/admin\/review-flag$/.test(x.url));
+    t("  a tap marks it, and says so",
+      !!post && JSON.parse(post.body).verdict === "approved" && JSON.parse(post.body).day === AHEAD && btn.getAttribute("aria-pressed") === "true",
+      post ? post.body : "nothing sent");
   }
   t("the banner says it is a preview and that nothing is saved",
     /PREVIEW/.test(w.document.getElementById("xiPreviewBar").textContent) && /nothing is saved/.test(w.document.getElementById("xiPreviewBar").textContent));

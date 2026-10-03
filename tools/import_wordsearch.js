@@ -1,4 +1,12 @@
-/* node tools/import_wordsearch.js --source ../wordsearchxi-source
+/* node tools/import_wordsearch.js --source <the folder holding bank.json>
+ *
+ * --source IS REQUIRED, and there is no default. The default was
+ * ../wordsearchxi-source, a folder that has never existed: the bank's real
+ * home is the owner's OneDrive (Documents\GitHub\wordsearchxi-source, see
+ * CLAUDE.md), and that dead default cost two days on Word Search and a morning
+ * on QuickFire, because a path that lives only in a tool's default is a path
+ * nobody can find. The owner, 3 Oct 2026: leave the bank in OneDrive. So this
+ * asks rather than guesses.
  *
  * Reads bank.json (the 374 boards and the schedule, which live OUTSIDE the
  * repository — same rule as the crossword's clue bank: not ignored, absent)
@@ -14,7 +22,12 @@ import fs from "node:fs";
 import path from "node:path";
 
 const argIdx = process.argv.indexOf("--source");
-const SRC = argIdx > -1 ? process.argv[argIdx + 1] : "../wordsearchxi-source";
+const SRC = argIdx > -1 ? process.argv[argIdx + 1] : null;
+if (!SRC) {
+  console.error("REFUSED: --source <folder> is required. The word search bank is not in this repository;\n" +
+    "on the owner's machine it is OneDrive\\Documents\\GitHub\\wordsearchxi-source (CLAUDE.md, The banks are secret).");
+  process.exit(1);
+}
 const bankPath = path.join(SRC, "bank.json");
 if (!fs.existsSync(bankPath)) {
   console.error(`No bank at ${bankPath}. The source folder is deliberately not in this repository.`);

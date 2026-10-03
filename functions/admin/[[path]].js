@@ -24,6 +24,22 @@ import { SHARED_TAG } from "../_lib/site-page.js";
 const DAY_MS = 86400000;
 const HUB_DAYS = 14;
 
+/* WHAT THE OWNER HAS SAID ABOUT EACH BOARD, from review_flags (055): whether
+   it is marked good -- the latest of "approved" and "unapproved" wins -- and
+   how many flags it carries. Rows oldest first. Pure, so the suite tests it. */
+export function reviewState(rows) {
+  const out = new Map();
+  for (const r of rows || []) {
+    const k = `${r.game}|${r.day}`;
+    const s = out.get(k) || { approved: false, flags: 0 };
+    if (r.verdict === "approved") s.approved = true;
+    else if (r.verdict === "unapproved") s.approved = false;
+    else s.flags++;
+    out.set(k, s);
+  }
+  return out;
+}
+
 /* THE SITE'S OWN 404, the one a mistyped address gets: asked of the static
    handler for an address that is no page, and passed on as it came. Until 3
    Oct 2026 this was a plain-text "Not found", which a mistyped address never
@@ -104,6 +120,13 @@ async function hub(env, url) {
   for (let k = 0; k < HUB_DAYS; k++) days.push(utcDay(now + k * DAY_MS));
   const games = Object.keys(LAUNCHED).filter((g) => LAUNCHED[g] && PERMA_GAMES[g])
     .sort((a, b) => (THEME_OF[a] || "").localeCompare(THEME_OF[b] || "") || a.localeCompare(b));
+  let state = new Map();
+  try {
+    const { results } = await env.DB.prepare(
+      "SELECT game, day, verdict FROM review_flags WHERE day >= ? AND day <= ? ORDER BY created_at, rowid")
+      .bind(days[0], days[days.length - 1]).all();
+    state = reviewState(results);
+  } catch (e) { state = new Map(); }       // 055 not applied: no marks to show
 
   const rows = [];
   for (const g of games) {
@@ -113,9 +136,13 @@ async function hub(env, url) {
          archive and its permalinks ask -- a ring game always has one. */
       const has = await ranOn(env, g, dailyNumber(Date.parse(d + "T12:00:00Z")));
       const href = `/admin${gamePath(g)}${d}`;
-      cells.push(has
-        ? `<td><a href="${esc(href)}">Play</a></td>`
-        : `<td class="none" title="No board scheduled">none</td>`);
+      const st = state.get(`${g}|${d}`) || { approved: false, flags: 0 };
+      const n = st.flags ? `<small class="n">${st.flags} flag${st.flags === 1 ? "" : "s"}</small>` : "";
+      cells.push(!has
+        ? `<td class="none" title="No board scheduled">none</td>`
+        : st.approved
+          ? `<td class="ok"><a href="${esc(href)}" title="Marked good">\u2713 Good</a>${n}</td>`
+          : `<td><a href="${esc(href)}">Play</a>${n}</td>`);
     }
     rows.push(`<tr><th scope="row">${esc(PERMA_GAMES[g].name || g)}<small>${esc(gamePath(g))}</small></th>${cells.join("")}</tr>`);
   }
@@ -142,9 +169,12 @@ tbody th{text-align:left;position:sticky;left:0;background:var(--card)}
 tbody th small{display:block;color:var(--soft);font-weight:400}
 td a{display:inline-block;min-width:44px;min-height:32px;line-height:32px;border-radius:8px;color:var(--go);font-weight:600;text-decoration:none;border:1px solid var(--line)}
 td.none{color:var(--warn)}
+td.ok a{background:var(--go);color:var(--card);border-color:var(--go)}
+td small.n{display:block;color:var(--warn);font-size:11px}
 </style></head><body><main>
 <h1>Previews</h1>
 <p>The next ${HUB_DAYS} days of every game, played as players will get them. Nothing you do in a preview is saved.
+Green is a board you have marked good.
 ${purged ? `Cleared ${purged} scratch row(s) from earlier previews.` : ""}</p>
 <div class="wrap"><table><thead><tr><th scope="col">Game</th>${head}</tr></thead><tbody>
 ${rows.join("\n")}

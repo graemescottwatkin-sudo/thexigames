@@ -157,9 +157,44 @@
       b.setAttribute("aria-label", v[0] === "note" ? "Write a note" : (v[0] === "like" ? "Like the selected words" : "Dislike the selected words"));
       b.textContent = v[1];
       b.style.cssText = "min-width:32px;min-height:24px;border:0;border-radius:999px;background:rgba(255,255,255,.18);color:#fff;font:inherit;cursor:pointer";
-      b.addEventListener("click", function () { openFlag(v[0]); });
+      b.addEventListener("click", function () { startFlag(v[0]); });
       bar.appendChild(b);
     });
+    /* THE WHOLE BOARD, MARKED GOOD (the owner, 3 Oct 2026: "mark a board as
+       good so it turns green on the selector view"). Reads what was last said
+       about this board, and toggles it. */
+    var good = document.createElement("button");
+    good.type = "button";
+    good.id = "xiPreviewGood";
+    good.setAttribute("aria-pressed", "false");
+    good.textContent = "\u2713 Good";
+    good.style.cssText = "min-height:24px;padding:0 10px;border:1px solid rgba(255,255,255,.6);border-radius:999px;" +
+      "background:transparent;color:#fff;font:inherit;cursor:pointer";
+    function showGood(on) {
+      good.setAttribute("aria-pressed", on ? "true" : "false");
+      good.textContent = on ? "\u2713 Marked good" : "\u2713 Good";
+      good.style.background = on ? "#1d6b35" : "transparent";
+    }
+    good.addEventListener("click", function () {
+      var on = good.getAttribute("aria-pressed") !== "true";
+      good.disabled = true;
+      window.fetch("/api/admin/review-flag", {
+        method: "POST", credentials: "same-origin",
+        headers: { "Content-Type": "application/json", "X-XI-Games": "1" },
+        body: JSON.stringify({ game: P.game, day: DAY, verdict: on ? "approved" : "unapproved" }),
+      }).then(function (r) { good.disabled = false; if (r.ok) showGood(on); })
+        .catch(function () { good.disabled = false; });
+    });
+    bar.appendChild(good);
+    window.fetch("/api/admin/review-flags?game=" + encodeURIComponent(P.game || "") + "&day=" + DAY, { credentials: "same-origin" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (j) {
+        var rows = (j && j.flags) || [];                 // newest first
+        for (var i = 0; i < rows.length; i++) {
+          if (rows[i].verdict === "approved") { showGood(true); return; }
+          if (rows[i].verdict === "unapproved") { showGood(false); return; }
+        }
+      }).catch(function () {});
     document.body.insertBefore(bar, document.body.firstChild);
   }
 
@@ -168,12 +203,19 @@
      reworded). The bank's id from the nearest element a game marks with
      data-xi-item, and the whole clue as shown: that element's text, or else
      the nearest block around the selection. */
-  var lastSelection = "", lastContext = { questionId: null, clue: null };
+  var lastSelection = "", lastContext = { questionId: null, clue: null }, lastSelectedAt = 0;
+  /* A selection counts for a short while after it is made -- long enough for
+     the tap that clears it -- and not for the next question's flag. */
+  var FRESH_MS = 20000;
+  function selectionFresh() { return !!lastSelection && RealDate.now() - lastSelectedAt < FRESH_MS; }
+  function forgetSelection() { lastSelection = ""; lastContext = { questionId: null, clue: null }; lastSelectedAt = 0; }
   var tidy = function (s, n) { return String(s || "").replace(/\s+/g, " ").trim().slice(0, n); };
   function contextOf(sel) {
+    var node = sel && sel.anchorNode;
+    return contextOfEl(node && (node.nodeType === 1 ? node : node.parentElement));
+  }
+  function contextOfEl(el) {
     try {
-      var node = sel.anchorNode;
-      var el = node && (node.nodeType === 1 ? node : node.parentElement);
       if (!el) return { questionId: null, clue: null };
       var marked = el.closest ? el.closest("[data-xi-item]") : null;
       var block = marked || el;
@@ -187,9 +229,81 @@
     try {
       var sel = window.getSelection ? window.getSelection() : null;
       var s = tidy(sel ? String(sel) : "", 500);
-      if (s) { lastSelection = s; lastContext = contextOf(sel); }
+      if (s) { lastSelection = s; lastContext = contextOf(sel); lastSelectedAt = RealDate.now(); }
     } catch (e) {}
   });
+
+  /* TAP TO PICK (the owner, 3 Oct 2026, on a phone: "it says to select the
+     clue on the page. How to do that"). Selecting text on a phone is a long
+     press and two handles, and an answer drawn as a button cannot be
+     selected at all. So with nothing selected, like and dislike ask for a
+     tap instead: the next tap on the page is caught before the game sees it
+     -- no move is made -- and the words tapped, with the clue they belong
+     to, become the flag. A tap on the banner or the box is left alone. */
+  var picking = null;
+  var PICK_EVENTS = ["pointerdown", "mousedown", "touchstart", "pointerup", "mouseup", "touchend", "click"];
+  function ours(t) { return !!(t && t.closest && t.closest("#xiPreviewBar, #xiPreviewFlagBox, #xiPreviewHint")); }
+  function onPick(e) {
+    if (!picking || ours(e.target)) return;
+    e.preventDefault();
+    e.stopImmediatePropagation();
+    if (e.type !== "click") return;
+    var el = e.target && (e.target.nodeType === 1 ? e.target : e.target.parentElement);
+    var verdict = picking;
+    stopPicking();
+    lastSelection = el ? tidy(el.textContent, 500) : "";
+    lastContext = contextOfEl(el);
+    openFlag(verdict);
+  }
+  function stopPicking() {
+    picking = null;
+    PICK_EVENTS.forEach(function (t) { window.removeEventListener(t, onPick, true); });
+    var h = document.getElementById("xiPreviewHint");
+    if (h) h.remove();
+  }
+  /* THE CLUES AND QUESTIONS THIS PAGE MARKS (data-xi-item), one each, for
+     the box's dropdown -- the owner, 3 Oct 2026: "just give me a dropdown if
+     I click up or down or default to the current selection". QuickFire,
+     Ballpark and both crosswords mark theirs; a page that marks nothing
+     falls back to a tap. */
+  function markedItems() {
+    var seen = {}, out = [];
+    var els = document.querySelectorAll("[data-xi-item]");
+    for (var i = 0; i < els.length; i++) {
+      var id = tidy(els[i].getAttribute("data-xi-item"), 80);
+      if (!id || seen[id]) continue;
+      seen[id] = true;
+      out.push({ id: id, text: tidy(els[i].textContent, 1000), el: els[i] });
+    }
+    return out;
+  }
+  function onScreen(el) {
+    try {
+      var r = el.getBoundingClientRect();
+      return r.height > 0 && r.bottom > 0 && r.top < (window.innerHeight || 0);
+    } catch (e) { return false; }
+  }
+  function startFlag(verdict) {
+    if (verdict === "note" || selectionFresh() || markedItems().length) { stopPicking(); openFlag(verdict); return; }
+    forgetSelection();
+    stopPicking();
+    picking = verdict;
+    PICK_EVENTS.forEach(function (t) { window.addEventListener(t, onPick, true); });
+    var hint = document.createElement("div");
+    hint.id = "xiPreviewHint";
+    hint.setAttribute("role", "status");
+    hint.style.cssText = "position:fixed;left:50%;bottom:12px;transform:translateX(-50%);z-index:2147483001;" +
+      "display:flex;gap:10px;align-items:center;padding:8px 12px;border-radius:12px;background:#7a2e00;color:#fff;" +
+      "font:600 14px/1.3 system-ui,sans-serif;box-shadow:0 2px 10px rgba(0,0,0,.35);max-width:calc(100vw - 24px)";
+    var t = document.createElement("span");
+    t.textContent = (verdict === "like" ? "👍" : "👎") + " Tap the clue or answer";
+    var x = document.createElement("button");
+    x.type = "button"; x.textContent = "Cancel";
+    x.style.cssText = "min-height:32px;padding:0 10px;border:1px solid rgba(255,255,255,.6);border-radius:8px;background:transparent;color:#fff;font:inherit";
+    x.addEventListener("click", stopPicking);
+    hint.appendChild(t); hint.appendChild(x);
+    document.body.appendChild(hint);
+  }
 
   function openFlag(verdict) {
     var old = document.getElementById("xiPreviewFlagBox");
@@ -204,10 +318,41 @@
     var context = lastContext;
     var where = document.createElement("small");
     where.style.cssText = "color:#5A675D";
-    where.textContent = context.questionId ? "Question " + context.questionId : (context.clue ? "From: " + context.clue.slice(0, 80) : "");
+    function showWhere() {
+      where.textContent = context.questionId ? "Question " + context.questionId : (context.clue ? "From: " + context.clue.slice(0, 80) : "");
+    }
     var item = document.createElement("textarea");
     item.name = "item"; item.rows = 2; item.value = lastSelection;
-    item.placeholder = "The clue or answer (select it on the page first)";
+    item.placeholder = "The clue or answer";
+    /* The dropdown: every marked clue, set to the one selected or tapped, or
+       else the one on screen. Choosing one fills the words box with it,
+       which stays editable for a single answer or word. */
+    var items = markedItems(), pick = null;
+    if (items.length) {
+      pick = document.createElement("select");
+      pick.name = "which";
+      pick.style.cssText = "width:100%;min-height:44px;font:inherit;padding:6px;border:1px solid #ccc;border-radius:8px;background:#fff;color:#182219";
+      var at = -1;
+      for (var i = 0; i < items.length; i++) {
+        var o = document.createElement("option");
+        o.value = String(i);
+        o.textContent = items[i].text.slice(0, 90) || items[i].id;
+        pick.appendChild(o);
+        if (at < 0 && context.questionId && items[i].id === context.questionId) at = i;
+      }
+      if (at < 0) for (var j = 0; j < items.length; j++) if (onScreen(items[j].el)) { at = j; break; }
+      if (at < 0) at = 0;
+      pick.value = String(at);
+      var choose = function (k, keepWords) {
+        context = { questionId: items[k].id, clue: items[k].text };
+        if (!keepWords) item.value = items[k].text.slice(0, 500);
+        showWhere();
+      };
+      /* Words already selected or tapped are kept; otherwise the clue's own. */
+      choose(at, !!item.value && context.questionId === items[at].id);
+      pick.addEventListener("change", function () { choose(Number(pick.value), false); });
+    }
+    showWhere();
     var note = document.createElement("textarea");
     note.name = "note"; note.rows = 3; note.placeholder = "Why? (optional)";
     [item, note].forEach(function (x) { x.style.cssText = "width:100%;box-sizing:border-box;font:inherit;padding:6px;border:1px solid #ccc;border-radius:8px"; });
@@ -220,9 +365,9 @@
     var save = document.createElement("button");
     save.type = "submit"; save.textContent = "Save";
     [cancel, save].forEach(function (x) { x.style.cssText = "min-height:44px;padding:0 16px;border-radius:10px;border:1px solid #ccc;background:#fff;font:inherit;cursor:pointer"; });
-    cancel.addEventListener("click", function () { box.remove(); });
+    cancel.addEventListener("click", function () { box.remove(); forgetSelection(); });
     row.appendChild(cancel); row.appendChild(save);
-    [title, where, item, note, said, row].forEach(function (x) { box.appendChild(x); });
+    [title, pick, where, item, note, said, row].forEach(function (x) { if (x) box.appendChild(x); });
     box.addEventListener("submit", function (e) {
       e.preventDefault();
       save.disabled = true;
@@ -234,7 +379,7 @@
           questionId: context.questionId, clue: context.clue }),
       }).then(function (r) {
         if (r.ok) {
-          said.textContent = "Saved."; lastSelection = ""; lastContext = { questionId: null, clue: null };
+          said.textContent = "Saved."; forgetSelection();
           setTimeout(function () { box.remove(); }, 700); return;
         }
         save.disabled = false;
