@@ -1862,9 +1862,12 @@ async function openGrid(game, [name, viewport, touch], storage) {
   await wait(600);
   return { page, context };
 }
+/* Two more desks for Grid, either side of where it changes shape: a laptop,
+   which keeps the two columns, and the owner's monitor, which stacks. */
+const GRID_DESKS = [["laptop", { width: 1366, height: 768 }, false], ["tall-desk", { width: 1700, height: 1300 }, false]];
 for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "grid" && (!ONLY || k === ONLY))) {
   console.log(`\n${id}: in play`);
-  for (const vp of VIEWPORTS) {
+  for (const vp of [...VIEWPORTS, ...GRID_DESKS]) {
     const { page, context } = await openGrid(game, vp);
     const m = await page.evaluate(measureGrid);
     if (vp[0] === "phone-360") {
@@ -1877,18 +1880,26 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "g
       t(`${vp[0]}: a 16x16 board -- locked, no scroll, the whole board in its box at hittable squares, the answer row and keys on screen`,
         gridOk(m) && m.keys, gridSay(m));
     }
-    if (vp[1].width >= 900) t(`${vp[0]}: the entries come back in the column beside the board`, m.entries, gridSay(m));
-    /* LEVEL WITH THE COLUMN BESIDE IT (the owner, 3 Oct 2026: "Grid is still
-       not fixed visually"): on a desk the board's wrap spans every row of the
-       grid and centred the board in all of them, leaving a hundred pixels of
-       nothing above it and its top well below the title opposite. */
+    if (vp[1].width >= 900) t(`${vp[0]}: the entries are back on screen`, m.entries, gridSay(m));
+    /* ON A DESK THE CLUES AND KEYS GO UNDER THE BOARD (the owner, 3 Oct 2026:
+       "the clues and buttons to the right, it should be under the board"),
+       where the screen is tall enough for the board to stay a good size --
+       960px. Shorter, the two columns stay, with the board's top level with
+       the title beside it rather than floating in the middle of its column. */
     if (!vp[2] && vp[1].width >= 900) {
       const lv = await page.evaluate(() => {
-        const top = (s) => { const e = document.querySelector(s); return e ? Math.round(e.getBoundingClientRect().top) : null; };
-        return { pitch: top(".gd-pitch"), title: top("#gdIdent") };
+        const r = (s) => { const e = document.querySelector(s); if (!e) return null; const b = e.getBoundingClientRect(); return { top: Math.round(b.top), bottom: Math.round(b.bottom), mid: Math.round((b.left + b.right) / 2) }; };
+        return { pitch: r(".gd-pitch"), title: r("#gdIdent"), slots: r("#gdSlots"), keys: r("#gdKbd"), entries: r("#gdEntries") };
       });
-      t(`${vp[0]}: the board's top is level with the title in the column beside it`,
-        lv.pitch !== null && lv.title !== null && Math.abs(lv.pitch - lv.title) <= 2, `pitch ${lv.pitch}, title ${lv.title}`);
+      const all = lv.pitch && lv.title && lv.slots && lv.keys && lv.entries;
+      if (vp[1].height >= 960) {
+        t(`${vp[0]}: one column -- the title, then the board, then the answer row, the keys and the entries under it, all centred on the board`,
+          all && lv.title.bottom <= lv.pitch.top + 1 && lv.pitch.bottom <= lv.slots.top + 1 && lv.pitch.bottom <= lv.keys.top + 1 && lv.pitch.bottom <= lv.entries.top + 1
+            && Math.abs(lv.keys.mid - lv.pitch.mid) <= 20 && Math.abs(lv.slots.mid - lv.pitch.mid) <= 20, JSON.stringify(lv));
+      } else {
+        t(`${vp[0]}: two columns -- the board's top level with the title in the column beside it`,
+          all && Math.abs(lv.pitch.top - lv.title.top) <= 2 && lv.keys.top < lv.pitch.bottom, JSON.stringify(lv));
+      }
     }
     t(`${vp[0]}: every key holds its letter -- none spills out of its key`, m.keys && m.spill === "", m.spill || "none");
     /* THE CROSSWORD'S BOARD. The owner, 25 Sep 2026: Grid should "look more

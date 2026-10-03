@@ -304,7 +304,24 @@ body.locked .gd-wrap:has(#gdFullTime:not([hidden])) :is(.gd-slots,.gd-kbd,.gd-ms
   body.locked .gd-hist .g b{width:30px;height:30px;font-size:17px}
 }
 
-@media (min-width:900px) and (orientation:landscape){
+/* A DESK IS ONE COLUMN TOO: the board, and under it the answer row, the
+   entries and the keys (the owner, 3 Oct 2026: "the clues and buttons to the
+   right, it should be under the board"). The two-column layout below is for a
+   phone on its side, which has width and no height. Narrower than the page,
+   so a monitor's keys are a keyboard's size rather than a banner.
+   ONLY WHERE THERE IS THE HEIGHT FOR IT: stacked, the title, answer row,
+   keys and entries take about 560px, and the board gets what is left. At
+   960px tall that is 24px squares; at 900 it was 20px against 36px in two
+   columns, and at 768 it was 14px and the page had to scroll. Below 960 a
+   desk keeps the two columns, and the play screen stays still. */
+@media (min-width:900px) and (orientation:landscape) and (pointer:fine) and (min-height:960px){
+  body.locked>main.gd-wrap{max-width:900px}
+  body.locked .gd-wrap>.gd-entries{display:flex;justify-content:center;flex-wrap:wrap}
+  body.locked .gd-hist{max-height:14vh}
+}
+
+@media (min-width:900px) and (orientation:landscape) and (pointer:coarse),
+       (min-width:900px) and (orientation:landscape) and (pointer:fine) and (max-height:959.98px){
   body.locked>main.gd-wrap{display:grid;grid-template-columns:minmax(0,1fr) 380px;
     grid-template-rows:repeat(11,auto) minmax(0,1fr);column-gap:18px}
   /* THE BOARD LEVEL WITH THE COLUMN BESIDE IT, not floated down its middle:
