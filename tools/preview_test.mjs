@@ -159,9 +159,13 @@ const missing = await page(null, ["football", "quickfire", AHEAD]);
 const stranger = await page("player", []);
 const bodyOf = async (r) => (r ? await r.text() : "");
 const missingBody = await bodyOf(missing), strangerBody = await bodyOf(stranger);
-t("a stranger gets the site's ordinary 404, for the list and for a preview",
-  missing.status === 404 && stranger.status === 404 && missingBody === "Not found" && strangerBody === "Not found");
-t("  marked noindex, and kept out of caches", /noindex/.test(missing.headers.get("X-Robots-Tag") || "") && /no-store/.test(missing.headers.get("Cache-Control") || ""));
+/* THE SITE'S OWN 404: what the static handler gives an address that is no
+   page, byte for byte, so /admin/ cannot be told from a mistyped address. */
+const ordinary = await env.ASSETS.fetch(new URL("https://www.thexigames.com/some-mistyped-address"));
+const ordinaryBody = await ordinary.text();
+t("a stranger gets exactly what a mistyped address gets, for the list and for a preview",
+  missing.status === 404 && stranger.status === 404 && ordinary.status === 404 &&
+  missingBody === ordinaryBody && strangerBody === ordinaryBody, JSON.stringify(strangerBody.slice(0, 40)));
 const hub = await page("owner", []);
 const hubHtml = await bodyOf(hub);
 t("the owner gets the list: every game against the next fortnight",

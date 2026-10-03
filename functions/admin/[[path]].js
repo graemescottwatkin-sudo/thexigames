@@ -24,11 +24,23 @@ import { SHARED_TAG } from "../_lib/site-page.js";
 const DAY_MS = 86400000;
 const HUB_DAYS = 14;
 
-function notFound() {
-  return new Response("Not found", {
-    status: 404,
-    headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex" },
-  });
+/* THE SITE'S OWN 404, the one a mistyped address gets: asked of the static
+   handler for an address that is no page, and passed on as it came. Until 3
+   Oct 2026 this was a plain-text "Not found", which a mistyped address never
+   gets, so a probe could tell that /admin/ exists (seen on the live site the
+   hour it shipped). The plain one stays as the fallback for a deployment
+   with no static handler. */
+const NO_SUCH_PAGE = "/__xi-no-such-page__";
+async function notFound(env, url) {
+  try {
+    const miss = await env.ASSETS.fetch(new URL(NO_SUCH_PAGE, url.origin));
+    return new Response(miss.body, { status: 404, headers: miss.headers });
+  } catch (e) {
+    return new Response("Not found", {
+      status: 404,
+      headers: { "Content-Type": "text/plain; charset=utf-8", "Cache-Control": "no-store", "X-Robots-Tag": "noindex" },
+    });
+  }
 }
 
 const PRIVATE = {
@@ -64,19 +76,19 @@ export function previewHtml(html, { game, day }) {
 
 export async function onRequestGet(context) {
   const { request, env, params } = context;
-  if (!(await isAdmin(request, env))) return notFound();
-  const parts = [].concat(params && params.path ? params.path : []).filter(Boolean);
   const url = new URL(request.url);
+  if (!(await isAdmin(request, env))) return notFound(env, url);
+  const parts = [].concat(params && params.path ? params.path : []).filter(Boolean);
 
   if (parts.length === 0) return hub(env, url);
-  if (parts.length !== 3) return notFound();
+  if (parts.length !== 3) return notFound(env, url);
 
   const game = gameAt(parts[0], parts[1]);
   const day = askedDay(parts[2]);
-  if (!game || !day) return notFound();
+  if (!game || !day) return notFound(env, url);
 
   const shell = await env.ASSETS.fetch(new URL(gamePath(game), url.origin));
-  if (!shell.ok) return notFound();
+  if (!shell.ok) return notFound(env, url);
   return new Response(previewHtml(await shell.text(), { game, day }), { status: 200, headers: PRIVATE });
 }
 
