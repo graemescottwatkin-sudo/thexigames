@@ -11,8 +11,10 @@
 import { json, bad } from "../../_lib/sc-board.js";
 import { csrfOk } from "../../_lib/auth.js";
 import { startRound, hasDB } from "../../_lib/sc-round.js";
+import { clockFor, isPreviewId } from "../../_lib/preview.js";
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost(context) {
+  const { request, env } = context;
   if (!csrfOk(request)) return bad("Refused.", 403);
   let body;
   try { body = await request.json(); } catch (e) { return bad("Expected a JSON body."); }
@@ -22,6 +24,11 @@ export async function onRequestPost({ request, env }) {
   /* Nowhere to keep a clock, and that is not an error: the board plays and
      scores itself, as it did before any of this existed. */
   if (!hasDB(env)) return json({ verified: false });
+  /* AN ADMIN PREVIEW'S ROUND IS SCRATCH (functions/_lib/preview.js). Its id
+     comes from XIPlays and starts pv- there, so its rows are purged with the
+     rest; an id without the mark is not written at all in a preview, so a
+     preview can never add a row to a real attempt. */
+  if ((await clockFor(context)).preview && !isPreviewId(playId)) return json({ verified: false });
 
   const at = await startRound(env, playId, token, Date.now());
   return json({ verified: at !== null });

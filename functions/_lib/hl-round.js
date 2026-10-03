@@ -94,8 +94,13 @@ export async function verifiedScore(env, playId) {
   const id = okPlay(playId);
   if (!hasDB(env) || !id) return null;
   try {
+    /* at_ms TOO: the round's length below is read from the last call's at_ms,
+       and until 3 Oct 2026 it was not selected -- NaN, so null, so not one
+       HiLo play in production carried srv_elapsed_secs (0 of 20 scored).
+       verified_test's stub returns every column whatever the SELECT names,
+       which is why it passed; preview_numbers_test runs this on real SQL. */
     const { results } = await env.DB.prepare(
-      "SELECT idx, was_right, elapsed_ms FROM hl_call WHERE play_id = ? ORDER BY idx")
+      "SELECT idx, was_right, elapsed_ms, at_ms FROM hl_call WHERE play_id = ? ORDER BY idx")
       .bind(id).all();
     const rows = results || [];
     if (rows.length !== HL_SCORING.CALLS) return null;

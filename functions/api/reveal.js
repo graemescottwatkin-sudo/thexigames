@@ -20,8 +20,10 @@ import { getPuzzleForToken, hasDB } from "../_lib/db.js";
 import { boardKeyForToken } from "../_lib/attempt.js";
 import { playableDailyNo } from "../_lib/daily.js";
 import { isAdmin } from "../_lib/auth.js";
+import { clockFor } from "../_lib/preview.js";
 
-export async function revealHandler({ request, env }, game) {
+export async function revealHandler(context, game) {
+  const { request, env } = context;
   /* AN UNKNOWN CROSSWORD IS REFUSED, NEVER DEFAULTED TO FOOTBALL'S. Serving one
      game's board under another game's address is the quietest failure these
      endpoints could have. */
@@ -63,8 +65,17 @@ export async function revealHandler({ request, env }, game) {
      Offline and with no database this is unchanged: nothing there can be
      verified, and /api/finish says so on its own. */
   const identity = { game, boardKey: boardKeyForToken(token, stored) };
+  /* AN ADMIN PREVIEW CHARGES NOTHING (functions/_lib/preview.js: the owner,
+     3 Oct 2026, "Record nothing"). A preview sends no play, so there is no
+     plays row for the help to land on, and refusing help that cannot be
+     charged would leave the previewed board unable to be checked or revealed.
+     So the help is served and nothing is written. Only for a request the
+     preview clock has vouched for -- a signed-in admin, read fresh -- so for
+     every player the charge below is exactly what it was. */
+  const preview = (await clockFor(context)).preview;
   const charge = async (column) => {
     if (!hasDB(env)) return true;
+    if (preview) return true;
     return tally(env, playId, column, identity);
   };
 

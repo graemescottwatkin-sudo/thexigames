@@ -20,6 +20,7 @@ import { csrfOk } from "../../_lib/auth.js";
 import { dailyBoard } from "../../_lib/wsdata.js";
 import { foundAnswer } from "../../_lib/ws-public.js";
 import { judge, recordFind, recordFoul, foundWords, hasDB } from "../../_lib/ws-round.js";
+import { clockFor } from "../../_lib/preview.js";
 
 const json = (body, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -27,7 +28,8 @@ const json = (body, status = 200) =>
     headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
   });
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost(context) {
+  const { request, env } = context;
   if (!csrfOk(request)) return json({ error: "Refused." }, 403);
   let body;
   try { body = await request.json(); } catch (e) { return json({ error: "Expected a JSON body." }, 400); }
@@ -37,8 +39,9 @@ export async function onRequestPost({ request, env }) {
   /* TODAY'S BOARD, FROM THE SERVER'S OWN CLOCK. Not a board id from the
      request: an id would let a player judge a selection against a board they
      are not playing, which is how you read a future board one drag at a
-     time. */
-  const { puzzle } = await dailyBoard(env);
+     time. The clock is the request's: the real one, or an admin's preview day,
+     so a preview round is judged against the board it was opened on. */
+  const { puzzle } = await dailyBoard(env, (await clockFor(context)).now);
   if (!puzzle) return json({ error: "No daily today." }, 404);
 
   /* Without a database there is nothing to record against and no round to

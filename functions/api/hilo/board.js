@@ -5,12 +5,15 @@
    a refusal that said "that is Tuesday's" would already have leaked. */
 import { json, bad } from "../../_lib/puzzle.js";
 import { loadBank, boardById, released, publicBoard, boardToken } from "../../_lib/hl-board.js";
+import { clockFor } from "../../_lib/preview.js";
 
-export async function onRequestGet({ request, env }) {
+export async function onRequestGet(context) {
+  const { request, env } = context;
   const id = new URL(request.url).searchParams.get("id") || "";
   if (!/^[A-Za-z0-9_-]{1,40}$/.test(id)) return bad("No such board.", 404);
   const bank = await loadBank(env);
   const board = boardById(bank, id);
-  if (!released(bank, board)) return bad("No such board.", 404);
+  /* Released as of the request's day: an admin preview's, or the real one. */
+  if (!released(bank, board, (await clockFor(context)).now)) return bad("No such board.", 404);
   return json({ board: publicBoard(board, boardToken(board.id)), source: bank.source });
 }

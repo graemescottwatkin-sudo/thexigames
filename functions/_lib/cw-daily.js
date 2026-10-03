@@ -20,8 +20,10 @@ import { dailyNumber, dailyDayKey, ANSWERS_AFTER_DAYS } from "./daily.js";
 import { mayOpenArchive, archiveRefusal, backForBoard, FREE_ARCHIVE_DAYS } from "./archive.js";
 import { crosswordOf } from "./cw-registry.js";
 import { launchNumber } from "./games.js";
+import { clockFor } from "./preview.js";
 
-export async function dailyHandler({ request, env }, game) {
+export async function dailyHandler(context, game) {
+  const { request, env } = context;
   const cw = crosswordOf(game);
   /* AN UNKNOWN CROSSWORD IS REFUSED, NEVER DEFAULTED. Falling back to football
      would serve one game's board under another game's address, which is the
@@ -53,7 +55,12 @@ export async function dailyHandler({ request, env }, game) {
      than one that ignores a parameter it cannot read. */
   try { asked = Number(new URL(request.url).searchParams.get("no")); } catch (e) {}
 
-  const today = dailyNumber();
+  /* TODAY IS THE REQUEST'S (functions/_lib/preview.js): the real day for
+     every player, and the day being previewed for the owner's preview alone.
+     So the clamp below still answers a future ask with today for everyone
+     else, and the owner's page, whose clock is on the previewed day, is
+     served that day's board. */
+  const today = dailyNumber((await clockFor(context)).now);
 
   /* THE FLOOR IS THE GAME'S LAUNCH, NOT 1. Football launched on board one so
      the two have always been the same number, which is exactly why this was

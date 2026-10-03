@@ -10,7 +10,8 @@
  */
 
 import { json } from "../../_lib/puzzle.js";
-import { hasDB, todayKey, boardByNo } from "../../_lib/cw-board.js";
+import { hasDB, boardByNo } from "../../_lib/cw-board.js";
+import { clockFor } from "../../_lib/preview.js";
 import { getRound, revealRound } from "../../_lib/cw-play.js";
 
 /* One refusal for every reason, saying nothing about which. */
@@ -23,7 +24,8 @@ const NO = (msg = "no") => new Response(JSON.stringify({ error: msg }), {
   },
 });
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost(context) {
+  const { request, env } = context;
   if (!hasDB(env)) return NO();
   let body = {};
   try { body = await request.json(); } catch (e) { body = {}; }
@@ -35,7 +37,9 @@ export async function onRequestPost({ request, env }) {
   const n = Number(body.n);
   if (!Number.isInteger(n) || n < 1 || n > 26) return NO("no such number");
 
-  const board = await boardByNo(env, Number(round.board_no), todayKey());
+  /* Bounded by the request's day: the real one, or an admin's preview day, so
+     a preview round can be played as well as opened. */
+  const board = await boardByNo(env, Number(round.board_no), (await clockFor(context)).day);
   if (!board) return NO("no board");
 
   const out = await revealRound(env, round, board, n);

@@ -19,6 +19,7 @@ import { ok, no, readPost } from "../../_lib/lr-http.js";
 import { currentUser } from "../../_lib/auth.js";
 import { utcDay } from "../../_lib/daily.js";
 import { takePress, SOURCE_PRESSES_A_DAY } from "../../_lib/sources.js";
+import { isPreviewId } from "../../_lib/preview.js";
 
 export async function onRequestPost({ request, env }) {
   if (!hasDB(env)) return no("unavailable", 503);
@@ -46,7 +47,10 @@ export async function onRequestPost({ request, env }) {
   if (!user) return no("Sources are for registered players. Registering is free.", 401, { needsAccount: true });
   if (run.user_id && String(run.user_id) !== String(user.id)) return no("not your run", 403);
 
-  const used = await takePress(env, user.id, utcDay());
+  /* AN ADMIN PREVIEW'S RUN SPENDS NO PRESS. source_press is the account's own
+     count, and a preview records nothing (functions/_lib/preview.js). Only an
+     admin's preview mints a pv- run, and its owner was checked just above. */
+  const used = isPreviewId(run.run_id) ? 0 : await takePress(env, user.id, utcDay());
   if (used === null) {
     return no(`That is ${SOURCE_PRESSES_A_DAY} sources today. The count resets at midnight UTC.`, 429,
       { capped: true, limit: SOURCE_PRESSES_A_DAY });

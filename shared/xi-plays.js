@@ -77,9 +77,19 @@
       .slice(0, 40);
     return x || null;
   }
+  /* AN ADMIN PREVIEW COUNTS NOTHING (the owner, 3 Oct 2026: "Record
+     nothing"). shared/xi-preview.js runs first on a preview page and says so;
+     then no play is sent, so no plays row, no season day, and the id a game
+     borrows for its scratch round carries the prefix that marks it for
+     deletion (functions/_lib/preview.js). */
+  function previewing() {
+    try { return !!(window.XIPreview && window.XIPreview.active); } catch (e) { return false; }
+  }
   function newId() {
-    try { if (window.crypto && crypto.randomUUID) return crypto.randomUUID(); } catch (e) {}
-    return String(Date.now()) + "-" + Math.random().toString(36).slice(2, 12);
+    var id;
+    try { if (window.crypto && crypto.randomUUID) id = crypto.randomUUID(); } catch (e) {}
+    if (!id) id = String(Date.now()) + "-" + Math.random().toString(36).slice(2, 12);
+    return previewing() ? "pv-" + id : id;
   }
 
   /* WHERE THE VISIT CAME FROM. Campaign tags on the URL start a new
@@ -115,6 +125,7 @@
   }
 
   function post(payload, beacon) {
+    if (previewing()) return null;
     var body = JSON.stringify(payload);
     if (beacon) {
       try {

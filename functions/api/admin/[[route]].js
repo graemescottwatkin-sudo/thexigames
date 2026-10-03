@@ -757,5 +757,39 @@ export async function onRequest({ request, env, params }) {
       note: "Applies to puzzles generated from now on. Puzzles already stored still contain it." });
   }
 
+  /* ---- The owner's verdicts, made while previewing a day (055) ----
+     The owner, 3 Oct 2026: flag "clues / answers I like and don't like so it
+     can be picked up by Claude for review". The words are what the owner
+     selected on the page, as shown; tools/export_reports.mjs takes them to
+     the banks. Admin-checked above, like every route here. */
+  if (route === "review-flag" && request.method === "POST") {
+    let body = {};
+    try { body = await request.json(); } catch (e) { return bad("Expected a JSON body."); }
+    /* Named or refused: validPlayGame reads an absent game as the crossword. */
+    const game = body.game ? validPlayGame(body.game) : null;
+    const day = String(body.day || "");
+    const verdict = String(body.verdict || "");
+    if (!game) return bad("Unknown game.");
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(day)) return bad("No day.");
+    if (!["like", "dislike", "note"].includes(verdict)) return bad("Like, dislike or note.");
+    const item = String(body.item || "").replace(/\s+/g, " ").trim().slice(0, 500) || null;
+    const note = String(body.note || "").trim().slice(0, 1000) || null;
+    /* THE ADDRESS (055's header): the bank's id where the page marks one, and
+       the whole clue as shown, so a flag still finds its row after a reword. */
+    const questionId = String(body.questionId || "").trim().slice(0, 80) || null;
+    const clue = String(body.clue || "").replace(/\s+/g, " ").trim().slice(0, 1000) || null;
+    if (!item && !note) return bad("Select some words or write a note.");
+    const id = newId();
+    await env.DB.prepare(
+      "INSERT INTO review_flags (id, game, day, verdict, question_id, clue, item, note, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+      .bind(id, game, day, verdict, questionId, clue, item, note, me.id).run();
+    return json({ ok: true, id });
+  }
+  if (route === "review-flags" && request.method === "GET") {
+    const { results } = await env.DB.prepare(
+      "SELECT id, game, day, verdict, question_id, clue, item, note, created_at FROM review_flags ORDER BY created_at DESC LIMIT 500").all();
+    return json({ flags: results || [] });
+  }
+
   return bad("Not found.", 404);
 }

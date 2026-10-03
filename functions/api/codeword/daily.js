@@ -24,8 +24,9 @@
 import { json } from "../../_lib/puzzle.js";
 import { dailyNoForDay } from "../../_lib/daily.js";
 import {
-  hasDB, todayKey, boardForDay, boardByFamilyNo, publicBoard, lastDay,
+  hasDB, boardForDay, boardByFamilyNo, publicBoard, lastDay,
 } from "../../_lib/cw-board.js";
+import { clockFor } from "../../_lib/preview.js";
 
 /* ONE 404 FOR EVERY REASON THERE IS NO BOARD, and the reason is not in it.
  * Contract 9.4: a 404 for a day past the end of the queue must not differ from
@@ -42,9 +43,12 @@ const NOTHING = () => new Response(JSON.stringify({ error: "no board" }), {
   },
 });
 
-export async function onRequestGet({ request, env }) {
+export async function onRequestGet(context) {
+  const { request, env } = context;
   if (!hasDB(env)) return NOTHING();
-  const day = todayKey();
+  /* Today is the request's day: the real one, or an admin's preview day
+     (functions/_lib/preview.js). */
+  const day = (await clockFor(context)).day;
 
   /* A number, or today. Anything that is not a plain positive integer is not a
      board and gets the same 404 as one that has not run — the malformed and

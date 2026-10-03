@@ -15,8 +15,10 @@ import { foundAnswer } from "../../_lib/frws-public.js";
 import { judge } from "../../_lib/ws-round.js";
 import { roundOn, recordFind, recordFoul, foundWords, hasDB } from "../../_lib/frws-round.js";
 import { json } from "../../_lib/frws-http.js";
+import { clockFor } from "../../_lib/preview.js";
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost(context) {
+  const { request, env } = context;
   if (!csrfOk(request)) return json({ error: "Refused." }, 403);
   let body;
   try { body = await request.json(); } catch (e) { return json({ error: "Expected a JSON body." }, 400); }
@@ -29,11 +31,17 @@ export async function onRequestPost({ request, env }) {
      re-imported under it) is void: judging against it would call every right
      drag on the board the player can see a foul. It is answered `stale`, and
      the page starts a fresh round. Found on a phone, 28 Sep 2026. */
-  const { day, puzzle: today } = await dailyBoard(env);
+  /* "Today" is the request's day: the real one, or an admin's preview day. */
+  const { day, puzzle: today } = await dailyBoard(env, (await clockFor(context)).now);
   const round = hasDB(env) && playId ? await roundOn(env, playId) : null;
   if (round && round.day === day && (!today || round.puzzle_id !== today.id)) {
     return json({ hit: null, stale: true });
   }
+  /* AND NOT A LATER DAY'S. The only round that can carry a day still to come
+     is an admin preview's scratch one (functions/_lib/preview.js), and asked
+     about without the preview's clock it would be judged against a board
+     nobody may see yet. "An earlier day's board" above means earlier. */
+  if (round && String(round.day) > day) return json({ hit: null, stale: true });
   const puzzle = round && round.day !== day ? await boardById(env, round.puzzle_id) : today;
   if (!puzzle) return json({ error: "No daily today." }, 404);
 

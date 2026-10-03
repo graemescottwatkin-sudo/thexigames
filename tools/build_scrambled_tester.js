@@ -118,6 +118,12 @@ if (fs.existsSync(bankDir)) {
 const libs = [
   "functions/_lib/sc-names.js",
   "functions/_lib/daily.js",
+  /* preview.js after daily.js, whose utcDay it reads. The handlers ask it what
+     time the request is (the owner's admin preview, functions/_lib/preview.js);
+     the tester's requests carry no preview header, so it answers with the
+     real time and never reaches auth.js -- the same unreachable-branch reason
+     archive.js's import of it is not a missing dependency. */
+  "functions/_lib/preview.js",
   /* games.js before archive.js, which now asks it when each game launched —
      a board from before a game's launch was never a daily and so is not a back
      issue, and backForBoard() reads LAUNCHED at call time. It also reads

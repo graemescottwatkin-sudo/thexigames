@@ -15,8 +15,10 @@
 import { json, bad } from "../../_lib/puzzle.js";
 import { csrfOk } from "../../_lib/auth.js";
 import { startClock, hasDB } from "../../_lib/hl-round.js";
+import { clockFor } from "../../_lib/preview.js";
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost(context) {
+  const { request, env } = context;
   if (!csrfOk(request)) return bad("Refused.", 403);
   let body;
   try { body = await request.json(); } catch (e) { return bad("Expected a JSON body."); }
@@ -27,6 +29,7 @@ export async function onRequestPost({ request, env }) {
      unverified, exactly as it did before any of this existed. */
   if (!hasDB(env)) return json({ verified: false });
 
-  const at = await startClock(env, playId, token, Date.now());
+  /* The request's clock, the one /call times against (functions/_lib/preview.js). */
+  const at = await startClock(env, playId, token, (await clockFor(context)).now);
   return json({ verified: at !== null });
 }

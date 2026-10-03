@@ -20,6 +20,7 @@
 import CONFIG from "../../football/whoami/js/config.js";
 import { fold, clueBody } from "./wadata.js";
 import { whoamiOf, LEGACY_GAME } from "./wa-registry.js";
+import { previewId } from "./preview.js";
 
 /* clueBody LIVES IN wadata.js NOW, because it shapes a FOOTBALL row and this
    file no longer knows which game it is running. It is re-exported here so the
@@ -158,7 +159,7 @@ export async function getRound(env, playId, game) {
 
 /* ONE DOOR, ONE SITTING. Opening a round is choosing a club, and the choice is
    recorded here because everything after it is measured against that door. */
-export async function openRound(env, playDate, slot, game) {
+export async function openRound(env, playDate, slot, game, { preview = false } = {}) {
   const w = of_(game);
   const t = T(game, "round");
   if (!w || !t) return { error: "no such game" };
@@ -167,7 +168,9 @@ export async function openRound(env, playDate, slot, game) {
      a slot of 7 is a real door in one game and nonsense in the other. */
   const doors = w.data.DOORS || DOORS;
   if (!Number.isInteger(n) || n < 1 || n > doors) return { error: "no such door" };
-  const playId = id();
+  /* An admin preview's round is scratch, and its id says so: it is deleted
+     when the owner next opens /admin/ (functions/_lib/preview.js). */
+  const playId = preview ? previewId() : id();
   const started = now();
   await env.DB.prepare(
     `INSERT INTO ${t} (play_id, play_date, slot, started_ms, subs_used, finished, solved) ` +

@@ -21,6 +21,8 @@
  * Headers are set only where absent, so a handler that says something more
  * specific (the answers pages' own Cache-Control) is never overruled.
  */
+import { PREVIEW_HEADER, clockFor, isPreviewId } from "./_lib/preview.js";
+
 export async function onRequest(context) {
   const { request, next } = context;
 
@@ -83,9 +85,42 @@ export async function onRequest(context) {
     return new Response(null, { status: got.status, headers: got.headers });
   }
 
+  /* A PREVIEW'S ROUNDS ARE SCRATCH, OR THEY ARE NOT STARTED. Every game that
+     takes its round id from the page gets a pv- id there (shared/xi-plays.js);
+     this is the server's half, so a page that slipped one through cannot leave
+     a round the purge would never find. Read from a clone: the handler still
+     gets the body. */
+  if (request.method === "POST" && request.headers.has(PREVIEW_HEADER) &&
+      new URL(request.url).pathname.startsWith("/api/")) {
+    const clock = await clockFor(context);
+    if (clock.preview) {
+      let body = null;
+      try { body = await request.clone().json(); } catch (e) { body = null; }
+      const ids = body && typeof body === "object" ? [body.playId, body.runId].filter((x) => x != null && x !== "") : [];
+      if (ids.some((x) => !isPreviewId(x))) {
+        return new Response(JSON.stringify({ error: "A preview's rounds are scratch: its ids start pv-." }), {
+          status: 400, headers: { "Content-Type": "application/json", "Cache-Control": "no-store", "X-Robots-Tag": "noindex" },
+        });
+      }
+    }
+  }
+
   const response = await next();
   const h = new Headers(response.headers);
   const url = new URL(request.url);
+
+  /* AN ADMIN'S PREVIEW OF ANOTHER DAY (functions/_lib/preview.js). Its
+     answers carry that day in the Date header too: the crossword sets its
+     clock from the header, and a real Date under a moved day would put it
+     back on today half way through a preview. Only for a request the
+     preview layer has already vouched for, so a header alone changes nothing. */
+  if (request.headers.has(PREVIEW_HEADER)) {
+    const clock = await clockFor(context);
+    if (clock.preview) {
+      h.set("Date", new Date(clock.now).toUTCString());
+      h.set("Cache-Control", "no-store, private");
+    }
+  }
 
   if (!h.has("X-Content-Type-Options")) h.set("X-Content-Type-Options", "nosniff");
   if (!h.has("Referrer-Policy")) h.set("Referrer-Policy", "strict-origin-when-cross-origin");

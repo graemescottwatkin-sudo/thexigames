@@ -9,9 +9,12 @@ import { loadBank, archive, todayKey } from "../../_lib/hl-board.js";
    is keyed by day, but the address of a board is its number now — so the row
    carries both and the page never has to know when day one was. */
 import { dailyNoForDay } from "../../_lib/daily.js";
+import { clockFor } from "../../_lib/preview.js";
 
-export async function onRequestGet({ env }) {
-  const now = Date.now();
+export async function onRequestGet(context) {
+  const { env } = context;
+  /* The request's day, moved only for an admin preview. */
+  const now = (await clockFor(context)).now;
   const bank = await loadBank(env);
   const days = archive(bank, now).map((d) => ({ ...d, no: dailyNoForDay(d.day) }));
   return json({ today: todayKey(now), todayNo: dailyNoForDay(todayKey(now)),

@@ -11,6 +11,7 @@
 import {
   SUBS, COST, SLOTS, minuteOf, outcome, confirmSlots, wrongNumbers, letterFor,
 } from "./cw-round.js";
+import { previewId } from "./preview.js";
 
 const now = () => Date.now();
 const id = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
@@ -26,8 +27,10 @@ export async function getRound(env, playId) {
    finished is a good thing to allow and a bad thing to record: refusing it
    would make showing somebody the grid indistinguishable from re-running the
    board with the answers you just learned. */
-export async function startRound(env, { boardNo, day, rate, replay }) {
-  const playId = id();
+export async function startRound(env, { boardNo, day, rate, replay, preview = false }) {
+  /* An admin preview's round is scratch, and its id says so: it is deleted
+     when the owner next opens /admin/ (functions/_lib/preview.js). */
+  const playId = preview ? previewId() : id();
   const started = now();
   /* WHOSE REPLAY IS IT? The rule used to read the BOARD's history:
        SELECT COUNT(*) FROM cw_round WHERE board_no = ? AND finished_ms IS NOT NULL

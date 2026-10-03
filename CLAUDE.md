@@ -226,7 +226,7 @@ and diagnose before anything ships. Never push past a red gate.
 - `results`/`plays` sanity via wrangler if relevant:
   `npx wrangler d1 execute crosswordxi --remote --command="..."`.
   **Never run a migration that is already applied** — `ALTER TABLE` is not
-  idempotent. Migration state: **001–054 all applied** (as of 2 Oct 2026 —
+  idempotent. Migration state: **001–055 all applied** (as of 3 Oct 2026 —
   check production; 024 only since 29 Sep, 048, 051, 052 and 053 since 30 Sep, see
   below; 050 `fr_sc_board` verified present 30 Sep) — 035 (QuickFire text
   ids), 036 and 038 (Codeword and its rounds), 037 and 039 (QuickFire rounds
@@ -328,6 +328,14 @@ and diagnose before anything ships. Never push past a red gate.
   session, ahead of the code that reads it. It was verified from `sqlite_master`
   the same minute. The pool's 2,976 sources were loaded and counted straight
   after. It is one `CREATE TABLE IF NOT EXISTS`, so it is safe to re-run.
+  055 (`review_flags` and `idx_review_flags_created`: the owner's like, dislike
+  and note flags made while previewing a day at /admin/, by the owner's request
+  of 3 Oct 2026 to flag "clues / answers I like and don't like so it can be
+  picked up by Claude for review") was applied 3 Oct 2026 on the owner's go
+  ("Yes apply 55"), before the code that writes it shipped. It was verified
+  from production the same minute: all ten columns and the index present. It
+  is one `CREATE TABLE IF NOT EXISTS` and one `CREATE INDEX IF NOT EXISTS`, so
+  it is safe to re-run.
   A STALE MIGRATION NUMBER IS THE MOST DANGEROUS FIGURE IN THIS FILE, because
   the sentence immediately before it tells you never to re-run an applied one
   and `ALTER TABLE` is not idempotent — so a reader trusting "034" could

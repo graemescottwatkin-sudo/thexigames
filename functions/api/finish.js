@@ -28,10 +28,12 @@ import { json, bad, normalise } from "../_lib/puzzle.js";
 import { getPuzzleForToken, hasDB } from "../_lib/db.js";
 import { playableDailyNo } from "../_lib/daily.js";
 import { isAdmin } from "../_lib/auth.js";
+import { clockFor } from "../_lib/preview.js";
 import { computeScore, gridIsComplete, SCORING } from "../_lib/scoring.js";
 import { attemptMatches, ATTEMPT_COLUMNS } from "../_lib/attempt.js";
 
-export async function finishHandler({ request, env }, game) {
+export async function finishHandler(context, game) {
+  const { request, env } = context;
   /* AN UNKNOWN CROSSWORD IS REFUSED, NEVER DEFAULTED TO FOOTBALL'S. Serving one
      game's board under another game's address is the quietest failure these
      endpoints could have. */
@@ -57,6 +59,13 @@ export async function finishHandler({ request, env }, game) {
   }
   const complete = gridIsComplete(stored.puzzle, typed);
   if (!complete) return json({ complete: false });
+
+  /* AN ADMIN PREVIEW IS MARKED AND NOT SCORED (functions/_lib/preview.js:
+     "Record nothing"). The grid is judged above by the same code a player
+     meets; what a preview has no business doing is writing a score onto a
+     plays row, and it sent no play to have one. Answered as an unverified
+     finish, which the page already draws as "this device's own count". */
+  if ((await clockFor(context)).preview) return json({ complete: true, verified: false, preview: true });
 
   if (!hasDB(env)) {
     /* No database, so no play row, so no trustworthy time or tally. Say so

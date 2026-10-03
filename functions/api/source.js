@@ -27,8 +27,10 @@ import { publicSource, takePress, pressesToday, SOURCE_PRESSES_A_DAY } from "../
 import { getPuzzleForToken } from "../_lib/db.js";
 import { playableDailyNo, utcDay } from "../_lib/daily.js";
 import { isAdmin, currentUser, csrfOk } from "../_lib/auth.js";
+import { clockFor } from "../_lib/preview.js";
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost(context) {
+  const { request, env } = context;
   if (!csrfOk(request)) return bad("Refused.", 403);
   let body;
   try { body = await request.json(); } catch (e) { return bad("Expected a JSON body."); }
@@ -66,6 +68,13 @@ export async function onRequestPost({ request, env }) {
   }
 
   const day = utcDay();
+  /* AN ADMIN PREVIEW SPENDS NO PRESS (functions/_lib/preview.js: "Record
+     nothing"). The link is still served, so the preview shows what a player
+     would get; the account's daily count is read, never written. */
+  if ((await clockFor(context)).preview) {
+    return json({ correct: true, source: src, used: await pressesToday(env, user.id, day),
+      limit: SOURCE_PRESSES_A_DAY, preview: true });
+  }
   const used = await takePress(env, user.id, day);
   if (used === null) {
     return json({ correct: true, capped: true, limit: SOURCE_PRESSES_A_DAY,

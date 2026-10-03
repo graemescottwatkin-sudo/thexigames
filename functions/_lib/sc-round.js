@@ -139,7 +139,10 @@ export async function recordHelp(env, playId, kind, set) {
  * the token it was started with, so the server can look the board up and count
  * its own slots — and a round is finished only when every one of them is done.
  * The page is not asked and cannot answer. */
-export async function verifiedScore(env, playId) {
+/* `now` is the request's time (functions/_lib/preview.js), so an admin's
+   preview round on a day still to come is scored against that day's board.
+   Defaulted: every other caller is unchanged. */
+export async function verifiedScore(env, playId, now = Date.now()) {
   const id = okPlay(playId);
   if (!hasDB(env) || !id) return null;
   try {
@@ -148,7 +151,7 @@ export async function verifiedScore(env, playId) {
     if (!round) return null;
     /* The round's own token says which board set it was played on. */
     const { boards } = await loadBoards(env, setOf(round.token));
-    const board = boardForToken(round.token, boards);
+    const board = boardForToken(round.token, boards, now);
     /* No board for the token this round was started with: nothing to measure
        a finish against, so nothing is scored. */
     if (!board || !Array.isArray(board.slots) || !board.slots.length) return null;

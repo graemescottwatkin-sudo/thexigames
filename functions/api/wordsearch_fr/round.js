@@ -9,8 +9,10 @@ import { dailyBoard } from "../../_lib/frws-data.js";
 import { foundAnswer } from "../../_lib/frws-public.js";
 import { startRound, roundOn, foundWords, hasDB } from "../../_lib/frws-round.js";
 import { json } from "../../_lib/frws-http.js";
+import { clockFor } from "../../_lib/preview.js";
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost(context) {
+  const { request, env } = context;
   if (!csrfOk(request)) return json({ error: "Refused." }, 403);
   let body;
   try { body = await request.json(); } catch (e) { return json({ error: "Expected a JSON body." }, 400); }
@@ -18,7 +20,9 @@ export async function onRequestPost({ request, env }) {
   if (!playId) return json({ error: "Which round?" }, 400);
   if (!hasDB(env)) return json({ verified: false });
 
-  const { day, puzzle } = await dailyBoard(env);
+  /* Today is the request's day: the real one, or an admin's preview day, whose
+     play id is already a scratch one (XIPlays hands out pv- ids in a preview). */
+  const { day, puzzle } = await dailyBoard(env, (await clockFor(context)).now);
   if (!puzzle) return json({ verified: false });
 
   /* An id already used on another board is not this round (see find.js):

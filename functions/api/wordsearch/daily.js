@@ -13,6 +13,7 @@ import { dailyBoard } from "../../_lib/wsdata.js";
 import { publicPuzzle } from "../../_lib/ws-public.js";
 import { FREE_ARCHIVE_DAYS } from "../../_lib/archive.js";
 import { dailyNoForDay } from "../../_lib/daily.js";
+import { clockFor } from "../../_lib/preview.js";
 
 const json = (body, status = 200) =>
   new Response(JSON.stringify(body), {
@@ -20,8 +21,12 @@ const json = (body, status = 200) =>
     headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },
   });
 
-export async function onRequestGet({ env }) {
-  const { day, puzzle, sample } = await dailyBoard(env);
+export async function onRequestGet(context) {
+  const { env } = context;
+  /* Today is the request's day: the real one, or an admin's preview day
+     (functions/_lib/preview.js). */
+  const clock = await clockFor(context);
+  const { day, puzzle, sample } = await dailyBoard(env, clock.now);
   /* How far back the archive is open without an account, so the archive
      list can mark the locked days. The rule LIVES on the server; the page
      only draws it, and a copy of the number in game.js would be a second

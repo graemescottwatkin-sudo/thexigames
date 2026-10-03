@@ -13,7 +13,7 @@ import os from "node:os";
 import path from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { fileURLToPath } from "node:url";
-import { exportQuery, reportLines, runExport, EXPORTS } from "./export_reports.mjs";
+import { exportQuery, reportLines, flagLines, runExport, EXPORTS } from "./export_reports.mjs";
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 let pass = 0, fail = 0;
@@ -105,6 +105,38 @@ try {
     third.written === path.join(inbox, "quickfire-2026-10-12-2.jsonl") && fs.readdirSync(inbox).length === 2, third.message);
 } finally {
   fs.rmSync(tmp, { recursive: true, force: true });
+}
+
+console.log("\n=== The owner's verdicts from a preview ===");
+{
+  /* 055-review-flags.sql, written by /api/admin/review-flag. One file for
+     every game; the bank master routes each line to its bank. */
+  const flag = db.prepare("INSERT INTO review_flags (id, game, day, verdict, question_id, clue, item, note, created_by, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'u1', ?)");
+  flag.run("f1", "quickfire", "2026-10-08", "dislike", "V30500", "Liverpool striker who won 73 caps for Wales, last appearing in 1996",
+    "Liverpool striker who won 73 caps for Wales", "Three Englishmen as options", "2026-10-03 09:00:00");
+  flag.run("f2", "whoami_fr", "2026-10-09", "like", null, "My dad calls me his little harmonica", "little harmonica", null, "2026-10-03 09:05:00");
+  const rows = query(exportQuery("review_flags", "1970-01-01 00:00:00"));
+  t("the flags query runs against the real table, oldest first", rows.length === 2 && rows[0].game === "quickfire", JSON.stringify(rows.map((r) => r.game)));
+  t("  and selects nobody", rows.every((r) => !("created_by" in r) && !("id" in r)));
+  const lines = flagLines(rows).map((l) => JSON.parse(l));
+  t("a line per flag, exactly the agreed fields",
+    lines.length === 2 && lines.every((l) => Object.keys(l).join(",") === "game,day,verdict,question_id,clue,item,note,flagged_at"),
+    Object.keys(lines[0] || {}).join(","));
+  t("  the words and the note as the owner gave them", lines[0].item.startsWith("Liverpool striker") && lines[0].note === "Three Englishmen as options" && lines[1].note === null);
+  t("  addressed by the bank's id where there is one, and the whole clue always",
+    lines[0].question_id === "V30500" && lines[0].clue.endsWith("in 1996") && lines[1].question_id === null && lines[1].clue === "My dad calls me his little harmonica");
+  const tmp = fs.mkdtempSync(path.join(os.tmpdir(), "flags-"));
+  try {
+    const inbox = path.join(tmp, "flags", "inbox");
+    fs.mkdirSync(inbox, { recursive: true });
+    const r1 = runExport({ game: "review_flags", query, today: "2026-10-05", inbox, write: true });
+    t("a run writes them under the flags name", r1.written === path.join(inbox, "flags-2026-10-05.jsonl") &&
+      fs.readFileSync(r1.written, "utf8").trim().split("\n").length === 2 && !/u1/.test(fs.readFileSync(r1.written, "utf8")), r1.message);
+    const r2 = runExport({ game: "review_flags", query, today: "2026-10-12", inbox, write: true });
+    t("  and the next week sends only what is new", r2.written === null, r2.message);
+  } finally {
+    fs.rmSync(tmp, { recursive: true, force: true });
+  }
 }
 
 console.log(`\n${pass} passed, ${fail} failed`);

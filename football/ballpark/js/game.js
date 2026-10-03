@@ -5,7 +5,7 @@
      it is yesterday's code. aligned_test asserts the two agree, and until
      this game launched it had no BUILD at all — three of its assets were on
      three different tags, which is the same fault with nobody checking. */
-  var BUILD = "v002c";
+  var BUILD = "v002d";
   if (window.XIPlays && document.documentElement) {
     document.documentElement.setAttribute("data-build", BUILD);
   }
@@ -202,6 +202,8 @@
       if (done) { answeredRows++; ptsSoFar += (points[j] || 0); }
       li.querySelector("span").textContent = !done ? ""
         : board.questions[j].question.replace(/\?$/, "");
+      if (done && board.questions[j].id) li.setAttribute("data-xi-item", board.questions[j].id);
+      else li.removeAttribute("data-xi-item");
       li.querySelector("em").textContent = !done ? ""
         : (answersSeen[j] === undefined ? "" : fmt(answersSeen[j], board.questions[j]) + " " + DOT + " ") +
           points[j];
@@ -284,6 +286,9 @@
     locked = false; touched = false; narrowedSecs = 0; clockLen = R.CLOCK;
     $("q").innerHTML = escapeHtml(q.question) +
       (q.detail ? "<small>" + escapeHtml(q.detail) + "</small>" : "");
+    /* The bank's id for the words on screen, for the owner's flags in a
+       preview (shared/xi-preview.js reads the nearest data-xi-item). */
+    if (q.id) $("q").setAttribute("data-xi-item", q.id); else $("q").removeAttribute("data-xi-item");
     setRange(Number(q.lo), Number(q.hi), Number(q.step) || 1);
     $("band").className = "band"; $("mark").className = "mark";
     /* THE RESULT STAYS, since 27 Sep 2026: it is the Last answer section, and

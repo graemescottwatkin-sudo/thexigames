@@ -11,7 +11,8 @@
  * fault only the player it happened to would ever see.
  */
 
-import { hasDB, today } from "../../_lib/qfdata.js";
+import { hasDB } from "../../_lib/qfdata.js";
+import { clockFor } from "../../_lib/preview.js";
 import { playableDay } from "../../_lib/qf-board.js";
 import { startRound } from "../../_lib/qf-play.js";
 import { FOOTBALL } from "../../_lib/qf-sets.js";
@@ -26,8 +27,11 @@ const NO = (msg = "no") => new Response(JSON.stringify({ error: msg }), {
   },
 });
 
-export const playFor = (set) => async function ({ request, env }) {
+export const playFor = (set) => async function (context) {
+  const { request, env } = context;
   if (!hasDB(env)) return NO();
+  /* The request's day, and whether this round is an admin's scratch one. */
+  const clock = await clockFor(context);
 
   /* WHICH BOARD THIS SITTING IS AGAINST. Today's unless a day is named, and a
      named day is checked against the table rather than believed — playableDay()
@@ -48,8 +52,8 @@ export const playFor = (set) => async function ({ request, env }) {
   const asked = body.date;
   if (asked !== undefined && asked !== null) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(String(asked))) return NO("no such board");
-    if (!(await playableDay(env, String(asked), set))) return NO("no such board");
-    const r = await startRound(env, String(asked), set);
+    if (!(await playableDay(env, String(asked), set, clock.day))) return NO("no such board");
+    const r = await startRound(env, String(asked), set, { preview: clock.preview });
     return new Response(JSON.stringify(r), {
       headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
     });
@@ -57,7 +61,7 @@ export const playFor = (set) => async function ({ request, env }) {
   /* THE DAY IS THIS SERVER'S. A date sent up is not read: the board a round
      belongs to is decided here, so a client cannot open yesterday's round and
      answer today's questions into it. */
-  const r = await startRound(env, today(), set);
+  const r = await startRound(env, clock.day, set, { preview: clock.preview });
   return new Response(JSON.stringify(r), {
     headers: { "Content-Type": "application/json; charset=utf-8", "Cache-Control": "no-store" },
   });

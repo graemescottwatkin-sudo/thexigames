@@ -10,12 +10,14 @@ import { archive, utcDayKey } from "../../_lib/wsdata.js";
    schedule is keyed by day and the address is a number, so the row says both
    and the page does no arithmetic about when day one was. */
 import { dailyNoForDay } from "../../_lib/daily.js";
+import { clockFor } from "../../_lib/preview.js";
 
-export async function onRequestGet({ env }) {
+export async function onRequestGet(context) {
+  const { env } = context;
   /* One clock reading for both the list and the day it is measured from, so
      a request straddling midnight cannot say "today" is a day the list has
-     already moved past. */
-  const now = Date.now();
+     already moved past. The request's clock: real, or an admin's preview day. */
+  const now = (await clockFor(context)).now;
   const days = (await archive(env, now)).map((d) => ({ ...d, no: dailyNoForDay(d.day) }));
   return new Response(JSON.stringify({ today: utcDayKey(now), todayNo: dailyNoForDay(utcDayKey(now)), days }), {
     headers: { "Content-Type": "application/json", "Cache-Control": "no-store" },

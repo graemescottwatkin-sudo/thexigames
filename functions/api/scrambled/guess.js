@@ -15,13 +15,22 @@
  * `solved` is the player's own claim about their progress and is not trusted
  * with anything. Lying about it can only re-solve a slot they already had.
  */
+import { clockFor, isPreviewId } from "../../_lib/preview.js";
 import { json, bad, boardForToken, boardForPreviewToken, setOf, loadBoards, revealName, topClubs } from "../../_lib/sc-board.js";
 import { matchesSlot } from "../../_lib/sc-names.js";
 import { recordSolve } from "../../_lib/sc-round.js";
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost(context) {
+  const { request, env } = context;
   let body;
   try { body = await request.json(); } catch { return bad("Expected a JSON body."); }
+  /* The request's time: the real one, or the owner's preview day. */
+  const clock = await clockFor(context);
+  /* AN ADMIN PREVIEW'S ROUND IS SCRATCH (functions/_lib/preview.js). Its id
+     comes from XIPlays and starts pv- there, so its rows are purged with the
+     rest; an id without the mark is not written at all in a preview, so a
+     preview can never add a row to a real attempt. */
+  if (clock.preview && body && !isPreviewId(body.playId)) body.playId = null;
   const { token, guess } = body || {};
   const already = new Set((Array.isArray(body.solved) ? body.solved : []).map(String));
 
@@ -32,7 +41,7 @@ export async function onRequestPost({ request, env }) {
   /* An owner previewing a board plays it like any other, so the play endpoints
      accept the preview token — but only after re-reading the admin flag from
      the database on THIS request. A token is not authority. */
-  let board = boardForToken(token, boards);
+  let board = boardForToken(token, boards, clock.now);
   if (!board && /^sc:preview:/.test(String(token || ""))) {
     const { isAdmin } = await import("../../_lib/auth.js");
     if (await isAdmin(request, env)) board = boardForPreviewToken(token, boards);

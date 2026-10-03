@@ -29,6 +29,7 @@ import { storedNo, lastPublicNo } from "../../_lib/fr-board.js";
 import {
   mayOpenArchive, archiveRefusal, daysBack, FREE_ARCHIVE_DAYS,
 } from "../../_lib/archive.js";
+import { clockFor } from "../../_lib/preview.js";
 
 const GAME = "crossword_fr";
 
@@ -56,9 +57,12 @@ function dayForNo(no) {
   return launchNumber(GAME) ? dailyDayKey(no) : null;
 }
 
-export async function onRequestGet({ request, env }) {
+export async function onRequestGet(context) {
+  const { request, env } = context;
   const url = new URL(request.url);
-  const now = Date.now();
+  /* The request's time: the real one, or the owner's preview day
+     (functions/_lib/preview.js). The future stays shut for everyone else. */
+  const now = (await clockFor(context)).now;
   const today = todayNo(now);
 
   const asked = url.searchParams.get("no");

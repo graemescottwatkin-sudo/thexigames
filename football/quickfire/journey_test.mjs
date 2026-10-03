@@ -272,6 +272,9 @@ console.log("\n=== A round, played end to end ===");
   const options = () => [...doc.querySelectorAll("#options .option")];
   t("four options are drawn", options().length === 4, String(options().length));
   t("the clue is the server's", doc.getElementById("clue").textContent === "Question 1");
+  /* For the owner's flags in a preview: the words on screen carry their question's id. */
+  t("  and carries its question's id, for a flag to address", doc.getElementById("clue").getAttribute("data-xi-item") === "q1" &&
+    doc.getElementById("options").getAttribute("data-xi-item") === "q1", doc.getElementById("clue").getAttribute("data-xi-item"));
   t("and no option is the answer field, because there is no answer field",
     options().every((b) => b.textContent && b.textContent.length > 0));
 

@@ -54,11 +54,14 @@ export async function boardByFamilyNo(env, familyNo, now, set = FOOTBALL) {
 /* Is this day one a player is allowed to open? Asked of the table rather than
    computed from a launch date, because "published" is a status a row carries
    and a date cannot answer. */
-export async function playableDay(env, day, set = FOOTBALL) {
+/* `todayKey` is the request's day (functions/_lib/preview.js clockFor): the
+   real day for every player, and the day an admin is previewing for an admin
+   preview. Defaulted, so a caller that never previews is unchanged. */
+export async function playableDay(env, day, set = FOOTBALL, todayKey = today()) {
   if (!hasDB(env) || !day) return false;
   const row = await env.DB.prepare(
     "SELECT play_date FROM " + qfTable(set, "daily") + " WHERE play_date = ? AND status = 'published' AND play_date <= ?"
-  ).bind(String(day), today()).first();
+  ).bind(String(day), String(todayKey)).first();
   return !!row;
 }
 
@@ -71,22 +74,22 @@ export async function playableDay(env, day, set = FOOTBALL) {
  *
  * `limit` is a courtesy, not a security boundary: the bound that matters is
  * play_date <= today. */
-export async function archive(env, limit = 400, set = FOOTBALL) {
+export async function archive(env, limit = 400, set = FOOTBALL, todayKey = today()) {
   if (!hasDB(env)) return [];
   const { results } = await env.DB.prepare(
     "SELECT play_date FROM " + qfTable(set, "daily") + " WHERE status = 'published' AND play_date <= ? " +
     "ORDER BY play_date DESC LIMIT ?"
-  ).bind(today(), Math.max(1, Math.min(1000, Number(limit) || 400))).all();
+  ).bind(String(todayKey), Math.max(1, Math.min(1000, Number(limit) || 400))).all();
   return (results || []).map((r) => ({ day: r.play_date, no: boardNoOf(r.play_date) }));
 }
 
 /* The most recent published day at or before today — which is today's board
    when there is one, and the last one there was when there is not. A game that
    runs out of boards should show the last one rather than a 404. */
-export async function lastPlayableDay(env, set = FOOTBALL) {
+export async function lastPlayableDay(env, set = FOOTBALL, todayKey = today()) {
   if (!hasDB(env)) return null;
   const row = await env.DB.prepare(
     "SELECT MAX(play_date) AS d FROM " + qfTable(set, "daily") + " WHERE status = 'published' AND play_date <= ?"
-  ).bind(today()).first();
+  ).bind(String(todayKey)).first();
   return row && row.d ? String(row.d) : null;
 }

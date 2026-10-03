@@ -16,6 +16,7 @@ import {
   RUN_MS, WRONG_PENALTY_MS, LATE_GRACE_MS, POINTS, RECENT_KEEP,
   deal, shape, msLeft, judge,
 } from "./lr-round.js";
+import { previewId, isPreviewId } from "./preview.js";
 
 const ID_RE = /^[A-Z]{3}\d{4}$/;
 const newId = () => (crypto.randomUUID ? crypto.randomUUID() : String(Date.now()) + Math.random());
@@ -50,12 +51,17 @@ async function loadPool(env) {
    so everyone that day gets the list the first player got even if the pool is
    rebuilt in between. INSERT OR IGNORE and read back: two first players at
    once both deal the same list, and whichever lands is the one kept. */
-export async function dailySeq(env, day, loaded) {
+/* AN ADMIN PREVIEW (functions/_lib/preview.js) DEALS AND DOES NOT STORE:
+   `store: false`. The deal is the same function of the date either way, so the
+   owner sees the run a player will get -- but a stored row FREEZES that day's
+   deal, and a row written from a preview a week early would hold the day to
+   whatever the pool was that week. A preview records nothing. */
+export async function dailySeq(env, day, loaded, { store = true } = {}) {
   const row = await env.DB.prepare("SELECT seq FROM fr_lr_daily WHERE play_date = ?").bind(day).first();
   if (row) return JSON.parse(row.seq);
   const { pool, pairs } = loaded || await loadPool(env);
   const seq = deal(pool, pairs, "daily:" + day);
-  if (!seq.length) return seq;
+  if (!seq.length || !store) return seq;
   await env.DB.prepare("INSERT OR IGNORE INTO fr_lr_daily (play_date, seq) VALUES (?, ?)")
     .bind(day, JSON.stringify(seq)).run();
   const kept = await env.DB.prepare("SELECT seq FROM fr_lr_daily WHERE play_date = ?").bind(day).first();
@@ -93,7 +99,9 @@ async function questionRow(env, id) {
 }
 
 /* KICK OFF. The clock starts when this row is written. */
-export async function startRun(env, { mode, no = null, userId = null, recent = [], now = Date.now() }) {
+/* `now` is the request's time (clockFor), and `preview` says this is an
+   admin's scratch run: a pv- id, no stored deal, nothing marked seen. */
+export async function startRun(env, { mode, no = null, userId = null, recent = [], now = Date.now(), preview = false }) {
   const board = mode === "daily" ? boardFor(no, now) : boardFor(null, now);
   if (!board) return { error: "no such board" };
   const day = board.day;
@@ -102,7 +110,7 @@ export async function startRun(env, { mode, no = null, userId = null, recent = [
 
   let seq, seed;
   if (mode === "daily") {
-    seq = await dailySeq(env, day, loaded);
+    seq = await dailySeq(env, day, loaded, { store: !preview });
     seed = "daily:" + day;
   } else {
     /* Practice avoids what this player has seen lately — the account's list
@@ -116,7 +124,7 @@ export async function startRun(env, { mode, no = null, userId = null, recent = [
       mine = (r.results || []).map((x) => x.question_id);
     }
     const merged = cleanRecent([...mine, ...cleanRecent(recent)]);
-    const avoid = await dailySeq(env, day, loaded);
+    const avoid = await dailySeq(env, day, loaded, { store: !preview });
     seed = "practice:" + newId();
     seq = deal(loaded.pool, loaded.pairs, seed, { recent: merged, avoid });
   }
@@ -125,12 +133,12 @@ export async function startRun(env, { mode, no = null, userId = null, recent = [
   const first = await questionRow(env, seq[0]);
   if (!first) return { error: "no questions" };
 
-  const runId = newId();
+  const runId = preview ? previewId() : newId();
   await env.DB.prepare(
     "INSERT INTO fr_lr_run (run_id, mode, play_date, user_id, seed, seq, started_ms, penalty_ms, served, score, wrong) " +
     "VALUES (?, ?, ?, ?, ?, ?, ?, 0, 1, 0, 0)"
   ).bind(runId, mode, day, userId, seed, JSON.stringify(seq), now).run();
-  await markSeen(env, userId, first.id, now);
+  if (!preview) await markSeen(env, userId, first.id, now);
 
   return { runId, mode, day, no: mode === "daily" ? board.no : null, isToday: board.isToday,
            msLeft: RUN_MS, score: 0, wrong: 0, question: shape(first, seed, 1) };
@@ -212,7 +220,8 @@ export async function answerRun(env, run, idx, pick, now = Date.now()) {
     const nrow = await questionRow(env, seq[idx]);
     if (nrow) {
       next = shape(nrow, run.seed, idx + 1);
-      await markSeen(env, run.user_id, nrow.id, now);
+      /* A preview run marks nothing seen: fr_lr_seen is the player's account. */
+      if (!isPreviewId(run.run_id)) await markSeen(env, run.user_id, nrow.id, now);
     }
   }
   return {

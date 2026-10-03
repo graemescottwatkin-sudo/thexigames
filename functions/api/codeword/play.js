@@ -10,7 +10,8 @@
  */
 
 import { json } from "../../_lib/puzzle.js";
-import { hasDB, todayKey, boardForDay, boardByFamilyNo } from "../../_lib/cw-board.js";
+import { hasDB, boardForDay, boardByFamilyNo } from "../../_lib/cw-board.js";
+import { clockFor } from "../../_lib/preview.js";
 import { validRate } from "../../_lib/cw-round.js";
 import { startRound } from "../../_lib/cw-play.js";
 
@@ -24,7 +25,8 @@ const NO = (msg = "no") => new Response(JSON.stringify({ error: msg }), {
   },
 });
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost(context) {
+  const { request, env } = context;
   if (!hasDB(env)) return NO();
   let body = {};
   try { body = await request.json(); } catch (e) { body = {}; }
@@ -38,7 +40,9 @@ export async function onRequestPost({ request, env }) {
   const rate = validRate(body.rate);
   if (rate === null) return NO("rate must be 3 or 20");
 
-  const day = todayKey();
+  /* The request's day, and whether this round is an admin's scratch one. */
+  const clock = await clockFor(context);
+  const day = clock.day;
   const raw = body.no;
   let board;
   try {
@@ -56,6 +60,6 @@ export async function onRequestPost({ request, env }) {
      sitting, so a page that does not send the field behaves as it always did. */
   const replay = body.replay === true;
 
-  const r = await startRound(env, { boardNo: board.no, day: board.day, rate, replay });
+  const r = await startRound(env, { boardNo: board.no, day: board.day, rate, replay, preview: clock.preview });
   return json(r);
 }

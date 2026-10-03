@@ -29,6 +29,7 @@ import {
   loadBank, boardById, playable, questionAt, dayOf, RULES,
 } from "../../_lib/bp-board.js";
 import { startRound, openQuestion, touchQuestion, roundRow, roundState } from "../../_lib/bp-round.js";
+import { clockFor } from "../../_lib/preview.js";
 
 function boardForToken(bank, token) {
   const s = String(token || "");
@@ -36,9 +37,11 @@ function boardForToken(bank, token) {
   return boardById(bank, s.slice(3));
 }
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost(context) {
+  const { request, env } = context;
   if (!csrfOk(request)) return bad("Refused.", 403);
-  const now = Date.now();
+  /* The request's clock: see answer.js. */
+  const now = (await clockFor(context)).now;
   let body;
   try { body = await request.json(); } catch (e) { return bad("Expected a JSON body."); }
 

@@ -25,6 +25,7 @@ import {
 import {
   startRound, recordGuess, roundState, confirmedCells,
 } from "../../_lib/gd-round.js";
+import { clockFor } from "../../_lib/preview.js";
 
 /* The token names the board: "gd:gx-0169". Parsed here rather than trusted as
    an id, so a body cannot ask for a row by name. */
@@ -34,11 +35,14 @@ function boardForToken(bank, token) {
   return boardById(bank, s.slice(3));
 }
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost(context) {
+  const { request, env } = context;
   if (!csrfOk(request)) return bad("Refused.", 403);
   /* One reading of the clock for the whole request: the guard below and the
-     round's own timestamps must not disagree about what day it is. */
-  const now0 = Date.now();
+     round's own timestamps must not disagree about what day it is. The
+     request's clock: real, or an admin's preview day, so a preview round can
+     be answered as well as opened. Its play id is XIPlays' scratch pv- one. */
+  const now0 = (await clockFor(context)).now;
   let body;
   try { body = await request.json(); } catch (e) { return bad("Expected a JSON body."); }
 

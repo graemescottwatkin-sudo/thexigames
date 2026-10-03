@@ -7,15 +7,19 @@
 import { boardById, released, lastScheduledDay, isTodaysDaily } from "../../_lib/frws-data.js";
 import { mayOpenArchive, archiveRefusal, daysBack } from "../../_lib/archive.js";
 import { json } from "../../_lib/frws-http.js";
+import { clockFor } from "../../_lib/preview.js";
 
-export async function onRequestGet({ request, env }) {
+export async function onRequestGet(context) {
+  const { request, env } = context;
+  /* The request's clock: real, or an admin's preview day. */
+  const clock = await clockFor(context);
   const id = new URL(request.url).searchParams.get("id") || "";
   const none = () => json({ error: "No such board." }, 404);
   if (!/^FRWS-\d{4}$/.test(id)) return none();
-  if (!(await released(env, id))) return none();
-  if (await isTodaysDaily(env, id)) return none();
+  if (!(await released(env, id, clock.now))) return none();
+  if (await isTodaysDaily(env, id, clock.now)) return none();
 
-  const ran = await lastScheduledDay(env, id);
+  const ran = await lastScheduledDay(env, id, clock.now);
   if (ran !== null) {
     const back = daysBack(ran);
     if (!(await mayOpenArchive(request, env, back))) return json(archiveRefusal(back), 401);

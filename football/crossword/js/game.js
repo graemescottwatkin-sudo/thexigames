@@ -297,7 +297,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v004w";
+  var BUILD = "v004x";
   /* WHAT THIS GAME IS CALLED on its Full Time panel and in the tab, and whether it has a league to show.
      One line, so tools/build_friendscrossword.js rewrites it in one place:
      the Friends board has its own name, its own word for the end, and no
@@ -2603,6 +2603,9 @@
       var e = puzzle.entries[i];
       var li = document.createElement("li");
       li.dataset.entry = i;
+      /* The bank's id for the clue, for the owner's flags in a preview
+         (shared/xi-preview.js reads the nearest data-xi-item). */
+      if (e.row && e.row.id) li.setAttribute("data-xi-item", e.row.id);
       li.innerHTML = '<span class="cl-num">' + e.num + '</span>' +
         '<span class="cl-text">' + escapeHtml(clueText(e.row)) +
         ' <span class="cl-enum">' + escapeHtml(e.row.enum) + '</span>' +
@@ -2693,6 +2696,7 @@
     var text = clueText(e.row);
     var el = $("ncText");
     el.textContent = text;
+    if (e.row && e.row.id) el.setAttribute("data-xi-item", e.row.id); else el.removeAttribute("data-xi-item");
     /* The citation on the card too, once this clue is solved. Appended after
        the text is set, because scaleClue below measures textContent and a
        link inside it would be measured as part of the clue. */
@@ -3279,10 +3283,14 @@
   }
 
   function newPlayId() {
+    var id;
     try {
-      if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+      if (window.crypto && crypto.randomUUID) id = crypto.randomUUID();
     } catch (e) {}
-    return String(Date.now()) + "-" + Math.random().toString(36).slice(2, 12);
+    if (!id) id = String(Date.now()) + "-" + Math.random().toString(36).slice(2, 12);
+    /* An admin preview's attempt is scratch (functions/_lib/preview.js): the
+       server refuses any other id from a preview, and the purge finds these. */
+    return window.XIPreview && window.XIPreview.active ? "pv-" + id : id;
   }
 
   /* What this attempt has reached, read by the helper at the end — by the

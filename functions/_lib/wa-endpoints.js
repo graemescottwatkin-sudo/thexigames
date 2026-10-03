@@ -20,7 +20,7 @@
  * doors under another game's address — the quietest failure these endpoints
  * could have, because every response would be well-formed.
  */
-import { hasDB, noStore, today } from "./wadata.js";
+import { hasDB, noStore } from "./wadata.js";
 import { CURVE, MAX_SCORE, FULL_TIME } from "./xi-score.js";
 import {
   MATCH_MINUTES, RATE_SECONDS, DOORS,
@@ -30,6 +30,7 @@ import {
   boardNoOf, boardByFamilyNo, playableDay, archive, lastPlayableDay,
 } from "./wa-board.js";
 import { whoamiOf } from "./wa-registry.js";
+import { clockFor } from "./preview.js";
 
 const NO = (msg = "no") => noStore({ error: msg }, 400);
 const NO_GAME = () => noStore({ error: "unknown game", source: "none" }, 404);
@@ -64,17 +65,20 @@ async function withRound(request, env, game) {
  * held two years of inventory — and it is easy because the index feels like
  * metadata right up until you notice the metadata IS the board.
  */
-export async function archiveHandler({ env }, game) {
+export async function archiveHandler(context, game) {
+  const { env } = context;
   if (!whoamiOf(game)) return NO_GAME();
   if (!hasDB(env)) return noStore({ error: "no database binding", source: "none" }, 503);
+  /* Today is the request's day: the real one, or an admin's preview day. */
+  const T = (await clockFor(context)).day;
   let boards = [], last = null;
   try {
-    boards = await archive(env, 400, game);
-    last = await lastPlayableDay(env, game);
+    boards = await archive(env, 400, game, T);
+    last = await lastPlayableDay(env, game, T);
   } catch (err) {
     return noStore({ error: "query failed", detail: String(err), source: "d1" }, 500);
   }
-  return noStore({ source: "d1", today: today(), lastDay: last,
+  return noStore({ source: "d1", today: T, lastDay: last,
                    count: boards.length, boards });
 }
 
@@ -90,31 +94,36 @@ export async function archiveHandler({ env }, game) {
  * everybody else, so a leak here spoils every other player's day rather than
  * this one player's answer.
  */
-export async function dailyHandler({ request, env }, game) {
+export async function dailyHandler(context, game) {
+  const { request, env } = context;
   const w = whoamiOf(game);
   if (!w) return NO_GAME();
   if (!hasDB(env)) return noStore({ error: "no database binding", source: "none" }, 503);
+  /* TODAY IS THE REQUEST'S DAY (functions/_lib/preview.js): the real one for
+     every player, and the day an admin is previewing for an admin preview.
+     Every bound below reads it, so a preview is served by the same code. */
+  const T = (await clockFor(context)).day;
 
   const url = new URL(request.url);
   const askedNo = url.searchParams.get("no");
   const askedDay = url.searchParams.get("date");
 
-  let board = null, day = today();
+  let board = null, day = T;
   try {
     if (askedNo !== null) {
       /* Anything that is not a positive integer is a 404 rather than a coerced
          one: Number("") is 0 and Number("3x") is NaN, and both would otherwise
          walk into the lookup as something. */
       const no = /^\d+$/.test(askedNo) ? Number(askedNo) : -1;
-      board = await boardByFamilyNo(env, no, today(), game);
+      board = await boardByFamilyNo(env, no, T, game);
       if (board) day = board.day || board.date;
     } else if (askedDay !== null) {
-      if (/^\d{4}-\d{2}-\d{2}$/.test(askedDay) && await playableDay(env, askedDay, game)) {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(askedDay) && await playableDay(env, askedDay, game, T)) {
         board = await w.data.getBoard(env, askedDay);
         if (board) day = askedDay;
       }
     } else {
-      board = await w.data.getBoard(env);
+      board = await w.data.getBoard(env, T);
     }
   } catch (err) {
     return noStore({ error: "query failed", detail: String(err), source: "d1" }, 500);
@@ -124,7 +133,7 @@ export async function dailyHandler({ request, env }, game) {
      distinguishable from one that does not exist, or the shape of the queue is
      readable by asking for numbers until the answer changes. */
   if (!board) {
-    return noStore({ error: "no board published for that day", date: today(), source: "d1" }, 404);
+    return noStore({ error: "no board published for that day", date: T, source: "d1" }, 404);
   }
 
   const no = boardNoOf(day);
@@ -133,8 +142,8 @@ export async function dailyHandler({ request, env }, game) {
     generatedAt: new Date().toISOString(),
     scoring: scoringOf(w),
     no, day,
-    lastDay: await lastPlayableDay(env, game),
-    isToday: day === today(),
+    lastDay: await lastPlayableDay(env, game, T),
+    isToday: day === T,
     board: { ...board, no, day },
   });
 }
@@ -215,22 +224,25 @@ export async function namesHandler({ env }, game) {
  * and played properly, and a second lesser code path for old boards would be a
  * second set of rules to keep in step.
  */
-export async function playHandler({ request, env }, game) {
+export async function playHandler(context, game) {
+  const { request, env } = context;
   const o = await open(request, env, game);
   if (o.stop) return o.stop;
+  /* The request's day, and whether this round is an admin's scratch one. */
+  const clock = await clockFor(context);
 
   /* WHICH DAY, checked against the table rather than believed. Without this a
      round could be opened against next July's board and its doors answered one
      at a time — the board-early leak from a different direction, since "was I
      right" is most of a door. */
-  let day = today();
+  let day = clock.day;
   if (o.body.date !== undefined && o.body.date !== null) {
     if (!/^\d{4}-\d{2}-\d{2}$/.test(String(o.body.date))) return NO("no such board");
-    if (!(await playableDay(env, String(o.body.date), game))) return NO("no such board");
+    if (!(await playableDay(env, String(o.body.date), game, clock.day))) return NO("no such board");
     day = String(o.body.date);
   }
 
-  const out = await openRound(env, day, o.body.slot, game);
+  const out = await openRound(env, day, o.body.slot, game, { preview: clock.preview });
   if (out.error) return NO(out.error);
   return noStore({ ...out, day });
 }

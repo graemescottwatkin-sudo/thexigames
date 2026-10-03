@@ -18,8 +18,10 @@ import { json, bad } from "../../_lib/sc-board.js";
 import { csrfOk } from "../../_lib/auth.js";
 import { verifiedScore, hasDB } from "../../_lib/sc-round.js";
 import { ENGINE_GAMES } from "../../_lib/games.js";
+import { clockFor, isPreviewId } from "../../_lib/preview.js";
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost(context) {
+  const { request, env } = context;
   if (!csrfOk(request)) return bad("Refused.", 403);
   let body;
   try { body = await request.json(); } catch (e) { return bad("Expected a JSON body."); }
@@ -32,8 +34,20 @@ export async function onRequestPost({ request, env }) {
      leaderboard through: solve three, say the board has three, and a fast
      unhelped score tops the table. The round knows which board it started on
      and the server counts the slots itself. */
-  const got = await verifiedScore(env, playId);
+  /* The request's time, so an admin's preview round is scored against the
+     previewed day's board (functions/_lib/preview.js). */
+  const clock = await clockFor(context);
+  if (clock.preview && !isPreviewId(playId)) return json({ verified: false });
+  const got = await verifiedScore(env, playId, clock.now);
   if (!got) return json({ verified: false });
+
+  /* A PREVIEW IS SCORED AND NOT RECORDED: the same score a player's round
+     would get, from the scratch round's own rows, and no plays row written
+     ("Record nothing"). */
+  if (clock.preview) {
+    return json({ verified: true, preview: true, score: got.score, solved: got.solved,
+      given: got.given, free: got.free, help: got.help, elapsedSecs: got.elapsedSecs });
+  }
 
   /* BOTH GAMES THIS ENGINE SERVES, and the list is games.js's. This read
      `AND game = 'scrambled'`, which matched nothing for a Vowels play — the

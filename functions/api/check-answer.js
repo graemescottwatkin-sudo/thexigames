@@ -21,8 +21,10 @@ import { getPuzzleForToken, hasDB } from "../_lib/db.js";
 import { boardKeyForToken } from "../_lib/attempt.js";
 import { playableDailyNo } from "../_lib/daily.js";
 import { isAdmin } from "../_lib/auth.js";
+import { clockFor } from "../_lib/preview.js";
 
-export async function checkAnswerHandler({ request, env }, game) {
+export async function checkAnswerHandler(context, game) {
+  const { request, env } = context;
   /* AN UNKNOWN CROSSWORD IS REFUSED, NEVER DEFAULTED TO FOOTBALL'S. Serving one
      game's board under another game's address is the quietest failure these
      endpoints could have. */
@@ -77,7 +79,15 @@ export async function checkAnswerHandler({ request, env }, game) {
   const identity = { game, boardKey: boardKeyForToken(token, stored) };
   /* Offline and with no database, help is served as it always was: nothing
      there can be verified, and /api/finish says so itself. */
-  const charge = async (column) => (hasDB(env) ? tally(env, playId, column, identity) : true);
+  /* AN ADMIN PREVIEW CHARGES NOTHING (functions/_lib/preview.js: the owner,
+     3 Oct 2026, "Record nothing"). A preview sends no play, so there is no
+     plays row for the help to land on, and refusing help that cannot be
+     charged would leave the previewed board unable to be checked or revealed.
+     So the help is served and nothing is written. Only for a request the
+     preview clock has vouched for -- a signed-in admin, read fresh -- so for
+     every player the charge below is exactly what it was. */
+  const preview = (await clockFor(context)).preview;
+  const charge = async (column) => (preview ? true : hasDB(env) ? tally(env, playId, column, identity) : true);
   const refused = () =>
     bad("That check could not be charged to this attempt. Start the board again.", 409);
 
@@ -128,7 +138,7 @@ export async function checkAnswerHandler({ request, env }, game) {
     const got = chars.map((c) => c || " ").join("");
     const complete = chars.every((c) => c !== null);
     const allRight = complete && chars.every((c, i) => c === want[i]);
-    await tally(env, playId, "srv_check_alls", identity);
+    if (!preview) await tally(env, playId, "srv_check_alls", identity);
     if (!detail) return json({ correct: allRight });
     /* The nudge ("six letters are wrong") is free information the game has
        always shown once the grid is full. It says how much, never where.
@@ -184,7 +194,7 @@ export async function checkAnswerHandler({ request, env }, game) {
      becomes `if (!(await charge(...))) return refused();` and the last way to
      take a paid check without paying for it closes. It is left lenient today
      only for the browsers already holding the old file. */
-  await tally(env, playId, checkGrid ? "srv_check_alls" : "srv_checks", identity);
+  if (!preview) await tally(env, playId, checkGrid ? "srv_check_alls" : "srv_checks", identity);
   if (!detail) return json({ correct, source });
 
   // Positions that are filled and wrong. A blank square is not "wrong" — it has

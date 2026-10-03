@@ -17,9 +17,12 @@ import { json } from "../../_lib/puzzle.js";
 import { dailyNumber, dailyDayKey } from "../../_lib/daily.js";
 import { loadBank, todayKey } from "../../_lib/bp-board.js";
 import { FREE_ARCHIVE_DAYS } from "../../_lib/archive.js";
+import { clockFor } from "../../_lib/preview.js";
 
-export async function onRequestGet({ env }) {
-  const now = Date.now();
+export async function onRequestGet(context) {
+  const { env } = context;
+  /* The request's day, moved only for an admin preview. */
+  const now = (await clockFor(context)).now;
   const today = todayKey(now);
   const todayNo = dailyNumber(now);
 

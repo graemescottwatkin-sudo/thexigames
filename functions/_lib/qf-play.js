@@ -13,6 +13,7 @@
 import { PER_DAILY, SUBS, MATCH_MINUTES, WRONG_PICK_MINUTES, minuteOf, pointsFor, judge, totalFor, allCorrect, isLegacy, maxFor, BONUS } from "./qf-round.js";
 
 import { FOOTBALL, qfTable } from "./qf-sets.js";
+import { previewId } from "./preview.js";
 const now = () => Date.now();
 /* The set's two round tables (qf-sets.js). */
 const ROUND = (set) => qfTable(set, "round");
@@ -29,8 +30,10 @@ export async function getRound(env, playId, set = FOOTBALL) {
  * `started_ms` is the SITTING's clock and is not what anything scores off —
  * it is here for reporting and for a round that has not served a question yet.
  * The clock that decides points is stamped per question by serveQuestion(). */
-export async function startRound(env, playDate, set = FOOTBALL) {
-  const playId = id();
+export async function startRound(env, playDate, set = FOOTBALL, { preview = false } = {}) {
+  /* An admin preview's round is scratch, and its id says so: it is deleted
+     when the owner next opens /admin/ (functions/_lib/preview.js). */
+  const playId = preview ? previewId() : id();
   const started = now();
   await env.DB.prepare(
     "INSERT INTO " + ROUND(set) + " (play_id, play_date, started_ms, subs_used, question_idx, question_ms, penalty_minutes) " +

@@ -18,10 +18,14 @@ import { loadBank, boardById, todayKey, publicBoard, dayToken } from "../../_lib
 import {
   mayOpenArchive, archiveRefusal, daysBack, FREE_ARCHIVE_DAYS,
 } from "../../_lib/archive.js";
+import { clockFor } from "../../_lib/preview.js";
 
-export async function onRequestGet({ request, env }) {
+export async function onRequestGet(context) {
+  const { request, env } = context;
   const url = new URL(request.url);
-  const today = todayKey();
+  /* Today is the request's day: the real one for every player, and the day
+     the owner is previewing for an admin preview (functions/_lib/preview.js). */
+  const today = todayKey((await clockFor(context)).now);
   /* A BOARD NUMBER OR A DAY, and the number is what the address uses now. Both
      are accepted: the archive list still works in days, because a schedule
      does, and a permalink works in numbers, because the family does. They

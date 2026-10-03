@@ -31,7 +31,7 @@
  * link so a friend could replay the exact eleven, and that is now a board
  * number in the fragment, which is shorter and does not describe the board.
  */
-var BUILD = "v001w";
+var BUILD = "v001x";
 
 (function bootstrap() {
   'use strict';
@@ -464,6 +464,7 @@ function start() {
     el.progress.textContent = idx + ' / ' + CONFIG.QUESTIONS_PER_DAILY;
     if (window.XIBar) XIBar.set({ progress: idx + '/' + CONFIG.QUESTIONS_PER_DAILY });
     el.clue.textContent = q.clue;
+    markItem(q);
     el.runningScore.textContent = state.totalScore; if (window.XIBar) XIBar.set({ score: state.totalScore });
     setFeedback('');
     renderOptions(q);
@@ -607,6 +608,7 @@ function start() {
         var q = questions[state.index - 1];
         current = { idx: state.index, question: q, finished: false };
         el.clue.textContent = q.clue;
+        markItem(q);
         el.runningScore.textContent = state.totalScore; if (window.XIBar) XIBar.set({ score: state.totalScore });
         renderOptions(q);
         renderSubButton();
@@ -851,6 +853,17 @@ function start() {
      says so: Lightning Round's list, the family's /api/report-clue (one report
      per question per person, signed in), keyed on the bank's own question id
      so it reaches the bank's owners. */
+  /* WHICH QUESTION THE WORDS ON SCREEN BELONG TO, for the owner's flags in
+     a preview (shared/xi-preview.js reads the nearest data-xi-item): the
+     bank's own id, which outlives a reworded clue. The id already travels in
+     every answer this page sends, so marking it gives nothing away. */
+  function markItem(q) {
+    var id = q && q.id ? String(q.id) : '';
+    [el.clue, el.options].forEach(function (n) {
+      if (!n) return;
+      if (id) n.setAttribute('data-xi-item', id); else n.removeAttribute('data-xi-item');
+    });
+  }
   var REASON_RIGHT = 'I was right';
   var REASON_WRONG = 'The question is wrong';
   function renderReport(played) {
@@ -869,6 +882,7 @@ function start() {
       var li = document.createElement('li');
       var q = document.createElement('p');
       q.className = 'qfReportClue';
+      li.setAttribute('data-xi-item', x.questionId);
       q.textContent = x.clue || '';
       li.appendChild(q);
       var row = document.createElement('div');

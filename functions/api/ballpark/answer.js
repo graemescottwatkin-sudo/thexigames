@@ -25,6 +25,7 @@ import {
 import {
   startRound, roundRow, roundState, recordAnswer, narrowFor,
 } from "../../_lib/bp-round.js";
+import { clockFor } from "../../_lib/preview.js";
 
 /* THE WIRE IS NOT THE PLAYER'S FAULT. A lock at 19.9 seconds already scores
    almost nothing, so the only thing the timeout line decides is whether a
@@ -39,11 +40,15 @@ function boardForToken(bank, token) {
   return boardById(bank, s.slice(3));
 }
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost(context) {
+  const { request, env } = context;
   if (!csrfOk(request)) return bad("Refused.", 403);
   /* One reading of the clock for the whole request: the guard below and the
      elapsed time must not disagree about what moment this is. */
-  const now = Date.now();
+  /* The request's clock (functions/_lib/preview.js): the real time for every
+     player, moved by whole days for an admin preview, so the board that
+     preview opened can be answered. /open stamped its clock the same way. */
+  const now = (await clockFor(context)).now;
   let body;
   try { body = await request.json(); } catch (e) { return bad("Expected a JSON body."); }
 

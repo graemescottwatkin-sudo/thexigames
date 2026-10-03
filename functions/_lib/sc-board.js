@@ -203,8 +203,11 @@ export function consonantsPublic() { return CONSONANTS_PUBLIC; }
    arriving in November must be able to catch up a missed day — and the future
    is shut, because opening it gives away everything. The SERVER decides what
    day it is; a number sent up from a browser is a number off a clock the
-   player controls. */
-export function playableTokenNo(token) {
+   player controls.
+   `now` is the request's time (functions/_lib/preview.js clockFor): the real
+   time for every player, moved to the previewed day for an admin's preview
+   alone. Defaulted, so a caller that never previews is unchanged. */
+export function playableTokenNo(token, now = Date.now()) {
   /* The optional c: says which cypher. It does not change WHICH DAY, and it
      must not change when a board becomes playable: one rule, one place. */
   const m = /^(frsc|sc):(?:c:)?(\d+)$/.exec(String(token || ""));
@@ -220,11 +223,11 @@ export function playableTokenNo(token) {
      board. No bound is invented here: this function is given a token, not the
      bank, and a limit it cannot check is a limit that lies. */
   if (OPEN_ARCHIVE) return asked;
-  return asked <= dailyNumber() ? asked : false;
+  return asked <= dailyNumber(now) ? asked : false;
 }
 
-export function boardForToken(token, boards) {
-  const no = playableTokenNo(token);
+export function boardForToken(token, boards, now = Date.now()) {
+  const no = playableTokenNo(token, now);
   /* WITH THE TOKEN'S OWN CYPHER. Without this a consonant token would mark a
      guess against the anagram's board for that day, which is a different
      eleven — the tile on screen and the answer being checked would not be

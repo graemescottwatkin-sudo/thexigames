@@ -15,13 +15,21 @@ import { json, bad } from "../../_lib/puzzle.js";
 import { csrfOk } from "../../_lib/auth.js";
 import { loadBank, boardForToken, judge } from "../../_lib/hl-board.js";
 import { recordCall } from "../../_lib/hl-round.js";
+import { clockFor } from "../../_lib/preview.js";
 
-export async function onRequestPost({ request, env }) {
+export async function onRequestPost(context) {
+  const { request, env } = context;
   if (!csrfOk(request)) return bad("Refused.", 403);
   let body;
   try { body = await request.json(); } catch (e) { return bad("Expected a JSON body."); }
   const bank = await loadBank(env);
-  const board = boardForToken(bank, body.token);
+  /* ONE READING of the request's clock, for the day the board must have come
+     by and for the call's time, read where the call was always timed: after
+     the bank, before the verdict. It is the real time for every player, and
+     moved by whole days for an admin preview (functions/_lib/preview.js);
+     /clock reads the same clock, so a preview's call is timed on one footing. */
+  const now = (await clockFor(context)).now;
+  const board = boardForToken(bank, body.token, now);
   if (!board) return bad("No such board.", 404);
   const verdict = judge(board, body.index, body.call);
   if (!verdict) return bad("Not a call.");
@@ -35,6 +43,6 @@ export async function onRequestPost({ request, env }) {
      there is no round, no database or no play id — an older page, a round that
      never kicked off, a suite — this answers null and the call is served
      exactly as it always was. The game does not depend on being scored. */
-  await recordCall(env, body.playId, body.index, body.call, verdict.right, Date.now());
+  await recordCall(env, body.playId, body.index, body.call, verdict.right, now);
   return json(verdict);
 }

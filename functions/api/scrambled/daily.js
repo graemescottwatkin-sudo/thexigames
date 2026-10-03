@@ -12,6 +12,7 @@ import {
 } from "../../_lib/sc-board.js";
 import { dailyNumber, dailyDayKey } from "../../_lib/daily.js";
 import { mayOpenArchive, archiveRefusal, backForBoard, FREE_ARCHIVE_DAYS } from "../../_lib/archive.js";
+import { clockFor } from "../../_lib/preview.js";
 
 /* ONE BODY, TWO BOARD SETS. Football's route is this file; Scrambled XI:
    Friends and Vowels XI: Friends answer at /api/scrambled_fr/daily, which
@@ -20,9 +21,14 @@ import { mayOpenArchive, archiveRefusal, backForBoard, FREE_ARCHIVE_DAYS } from 
    the cypher, the payload -- is the one rule for both. */
 export function onRequestGet(ctx) { return dailyFor(ctx, "sc", "scrambled"); }
 
-export async function dailyFor({ request, env }, set, game) {
+export async function dailyFor(context, set, game) {
+  const { request, env } = context;
   const url = new URL(request.url);
-  const today = dailyNumber();
+  /* TODAY IS THE REQUEST'S (functions/_lib/preview.js): the real day for every
+     player, and the previewed day for the owner's preview alone -- so the
+     future stays shut below for everyone else. */
+  const now = (await clockFor(context)).now;
+  const today = dailyNumber(now);
   const asked = url.searchParams.get("no");
   const no = asked === null ? today : Number(asked);
 
@@ -35,7 +41,7 @@ export async function dailyFor({ request, env }, set, game) {
      fault this codebase keeps paying for.
      Asked through the shared predicate now, so the mode governs every route or
      none of them. */
-  if (playableTokenNo(scKey(no, null, set)) === false) return bad("That board is not out yet.", 403);
+  if (playableTokenNo(scKey(no, null, set), now) === false) return bad("That board is not out yet.", 403);
 
   /* And how far back it is. A board number is a day here, the same as the
      crossword's, so the distance is subtraction. The finals are not asked

@@ -20,10 +20,14 @@ import {
 import {
   mayOpenArchive, archiveRefusal, daysBack, FREE_ARCHIVE_DAYS,
 } from "../../_lib/archive.js";
+import { clockFor } from "../../_lib/preview.js";
 
-export async function onRequestGet({ request, env }) {
+export async function onRequestGet(context) {
+  const { request, env } = context;
   const url = new URL(request.url);
-  const now = Date.now();
+  /* The request's time: the real one for every player, and the day the owner
+     is previewing for an admin preview (functions/_lib/preview.js). */
+  const now = (await clockFor(context)).now;
   const today = dailyNumber(now);
 
   /* A BOARD NUMBER, which is what every game in the family is addressed by

@@ -42,6 +42,15 @@ export const EXPORTS = {
     questions: qfTable(qfSet("quickfire_fr"), "question"),
     inbox: path.join(ROOT, "..", "Other", "QuickFireXI_Friends", "research", "reports", "inbox"),
   },
+  /* THE OWNER'S VERDICTS from a preview (055-review-flags.sql; the owner,
+     3 Oct 2026: flags "picked up by Claude for review"). Every game in one
+     file: the bank master routes each line to its bank, so this file does not
+     have to know where seventeen banks live. */
+  review_flags: {
+    prefix: "flags",
+    inbox: path.join(ROOT, "..", "Other", "ReviewFlags", "inbox"),
+    flags: true,
+  },
 };
 
 const STAMP = /^\d{4}-\d\d-\d\d \d\d:\d\d:\d\d$/;
@@ -53,6 +62,10 @@ export function exportQuery(game, after) {
   const ex = EXPORTS[game];
   if (!ex) throw new Error(`no export for game "${game}"`);
   if (!STAMP.test(after)) throw new Error(`a cursor that is not a timestamp: ${JSON.stringify(after)}`);
+  if (ex.flags) {
+    return `SELECT game, day, verdict, question_id, clue, item, note, created_at FROM review_flags ` +
+      `WHERE created_at > '${after}' ORDER BY created_at`;
+  }
   return `SELECT r.clue_id AS clue_id, r.reason AS reason, r.created_at AS created_at, q.clue AS text ` +
     `FROM clue_reports r LEFT JOIN ${ex.questions} q ON q.id = r.clue_id ` +
     `WHERE r.game = '${game}' AND r.created_at > '${after}' ORDER BY r.created_at`;
@@ -79,6 +92,15 @@ export function reportLines(rows) {
     .map((g) => JSON.stringify({ clue_id: g.clue_id, reported_at: g.reported_at, reason: g.reason, text: g.text, count: g.count }));
 }
 
+/* A line per flag, as the owner made it: the game, the day previewed, the
+   verdict, the bank's id where the page marked one and the whole clue as
+   shown (the address), the words selected and the note (the substance). */
+export function flagLines(rows) {
+  return rows.map((r) => JSON.stringify({ game: r.game, day: r.day, verdict: r.verdict,
+    question_id: r.question_id ?? null, clue: r.clue ?? null,
+    item: r.item ?? null, note: r.note ?? null, flagged_at: r.created_at }));
+}
+
 /* One run. `query` takes SQL and returns rows; the suite hands it SQLite. */
 export function runExport({ game, query, today, inbox, write }) {
   const ex = EXPORTS[game];
@@ -87,7 +109,7 @@ export function runExport({ game, query, today, inbox, write }) {
   const after = fs.existsSync(cursorFile) ? fs.readFileSync(cursorFile, "utf8").trim() : EPOCH;
   const rows = query(exportQuery(game, after));
   if (!rows.length) return { written: null, lines: 0, after, message: `no new ${game} reports since ${after}` };
-  const lines = reportLines(rows);
+  const lines = ex.flags ? flagLines(rows) : reportLines(rows);
   const newest = rows.reduce((m, r) => (r.created_at > m ? r.created_at : m), after);
   const file = path.join(dir, `${ex.prefix}-${today}.jsonl`);
   if (!write) return { written: null, lines: lines.length, after, file, message: `would write ${lines.length} line(s) from ${rows.length} report(s) to ${file}` };
@@ -103,9 +125,16 @@ export function runExport({ game, query, today, inbox, write }) {
 
 /* ------------------------------------------------------------ the wire --- */
 function d1(sql) {
-  const out = execFileSync(
-    `npx --yes wrangler d1 execute crosswordxi --remote --json --command "${sql}"`,
-    { encoding: "utf8", maxBuffer: 1 << 24, shell: true, cwd: ROOT });
+  let out;
+  try {
+    out = execFileSync(
+      `npx --yes wrangler d1 execute crosswordxi --remote --json --command "${sql}"`,
+      { encoding: "utf8", maxBuffer: 1 << 24, shell: true, cwd: ROOT, stdio: ["ignore", "pipe", "pipe"] });
+  } catch (e) {
+    /* What wrangler said, not just that it failed: "no such table" lives there. */
+    const said = (String(e.stdout || "") + " " + String(e.stderr || "")).replace(/\s+/g, " ").trim();
+    throw new Error(said || e.message);
+  }
   const start = out.indexOf("[");
   if (start < 0) throw new Error("no JSON in wrangler output:\n" + out.slice(0, 400));
   const parsed = JSON.parse(out.slice(start))[0];
@@ -122,6 +151,9 @@ if (isMain) {
     try {
       console.log(runExport({ game, query: d1, today, write }).message);
     } catch (e) {
+      /* A table this database does not have yet is an export not yet set up
+         (review_flags before 055 is applied), not a failure of this run. */
+      if (/no such table/i.test(e.message)) { console.log(`${game}: not set up yet, its table is not in the database`); continue; }
       console.log(`REFUSED ${game}: ${e.message}`);
       failed = true;
     }

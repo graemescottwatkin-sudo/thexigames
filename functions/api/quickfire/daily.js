@@ -17,11 +17,15 @@
  * the trap is not the same one — but the lesson is to send the number the page
  * will send back, which is what this does.
  */
-import { hasDB, getDaily, getWeek, noStore, today } from "../../_lib/qfdata.js";
+import { hasDB, getDaily, getWeek, noStore } from "../../_lib/qfdata.js";
 import { boardNoOf, boardByFamilyNo, playableDay, lastPlayableDay } from "../../_lib/qf-board.js";
 import { FOOTBALL } from "../../_lib/qf-sets.js";
+import { clockFor } from "../../_lib/preview.js";
 
-export const dailyFor = (set) => async function ({ request, env }) {
+export const dailyFor = (set) => async function (context) {
+  const { request, env } = context;
+  /* Today is the request's day: the real one, or an admin's preview day. */
+  const T = (await clockFor(context)).day;
   if (!hasDB(env)) {
     return noStore({ error: "no database binding", source: "none" }, 503);
   }
@@ -30,7 +34,7 @@ export const dailyFor = (set) => async function ({ request, env }) {
   const askedNo = url.searchParams.get("no");
   const askedDay = url.searchParams.get("date");
 
-  let daily = null, week = null, day = today();
+  let daily = null, week = null, day = T;
 
   try {
     if (askedNo !== null) {
@@ -38,19 +42,19 @@ export const dailyFor = (set) => async function ({ request, env }) {
          rather than a coerced one: Number("") is 0 and Number("3x") is NaN, and
          both would otherwise walk into the lookup as something. */
       const no = /^\d+$/.test(askedNo) ? Number(askedNo) : -1;
-      daily = await boardByFamilyNo(env, no, today(), set);
+      daily = await boardByFamilyNo(env, no, T, set);
       if (daily) day = daily.date;
     } else if (askedDay !== null) {
       /* A BOARD BY DATE, checked against the table rather than parsed. A date
          that is not a published day at or before today is not a board, and the
          bound is what stops /api/quickfire/daily?date=2026-12-11 handing over
          the eleven questions somebody will be asked in December. */
-      if (/^\d{4}-\d{2}-\d{2}$/.test(askedDay) && await playableDay(env, askedDay, set)) {
+      if (/^\d{4}-\d{2}-\d{2}$/.test(askedDay) && await playableDay(env, askedDay, set, T)) {
         daily = await getDaily(env, askedDay, set);
         if (daily) day = askedDay;
       }
     } else {
-      daily = await getDaily(env, null, set);
+      daily = await getDaily(env, T, set);
     }
     /* The weekly round is football's alone: a set without weekly tables has none. */
     week = set.weeks ? await getWeek(env) : null;
@@ -62,11 +66,11 @@ export const dailyFor = (set) => async function ({ request, env }) {
     /* THE SAME 404 FOR "not yet" AND "never was". A board that has not run must
        not be distinguishable from one that does not exist, or the shape of the
        queue is readable by asking for numbers until the answer changes. */
-    return noStore({ error: "no board published for that day", date: today(), source: "d1" }, 404);
+    return noStore({ error: "no board published for that day", date: T, source: "d1" }, 404);
   }
 
   const no = boardNoOf(day);
-  const last = await lastPlayableDay(env, set);
+  const last = await lastPlayableDay(env, set, T);
 
   return noStore({
     source: "d1",
@@ -74,7 +78,7 @@ export const dailyFor = (set) => async function ({ request, env }) {
     no,
     day,
     lastDay: last,
-    isToday: day === today(),
+    isToday: day === T,
     daily: { ...daily, no, day },
     week,
   });

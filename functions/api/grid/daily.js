@@ -18,10 +18,15 @@ import {
 import {
   mayOpenArchive, archiveRefusal, daysBack, FREE_ARCHIVE_DAYS,
 } from "../../_lib/archive.js";
+import { clockFor } from "../../_lib/preview.js";
 
-export async function onRequestGet({ request, env }) {
+export async function onRequestGet(context) {
+  const { request, env } = context;
   const url = new URL(request.url);
-  const now = Date.now();
+  /* The request's clock: the real one, or an admin's preview day
+     (functions/_lib/preview.js), which is what lets the owner open a board
+     whose day has not come. Nobody else's clock moves. */
+  const now = (await clockFor(context)).now;
   const today = todayNo(now);
 
   /* A BOARD NUMBER, which is what every game in the family is addressed by

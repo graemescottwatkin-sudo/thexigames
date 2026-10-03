@@ -399,6 +399,24 @@ jobs:
           # reaches the file, a line per question and reason, and a second week
           # sends only the second week even after triage empties the inbox.
           node tools/export_reports_test.mjs
+          # THE OWNER'S PREVIEW OF THE DAYS TO COME (owner, 3 Oct 2026: every
+          # game, "Record nothing"). Real handlers, middleware and admin route
+          # over node:sqlite from every migration, and the page layer in jsdom:
+          # who the future bound is NOT lifted for (no header, a player, a day
+          # out of range), the admin pages answering strangers with the site's
+          # 404, scratch rounds purged, every other table's count unchanged, and
+          # the owner's like/dislike flags.
+          node tools/preview_test.mjs
+          # And each game's own preview, the same shape: a day ahead served and
+          # judged for the owner, refused for everyone else, nothing written
+          # outside the scratch tables. HiLo and Ballpark; the Who Am I decks
+          # and Lightning.
+          node tools/preview_numbers_test.mjs
+          node tools/preview_people_test.mjs
+          # Both word searches, Grid and Codeword.
+          node tools/preview_grids_test.mjs
+          # Both crosswords, both Scrambleds and both Vowels.
+          node tools/preview_words_test.mjs
           # REMINDERS ON A PHONE, against REAL SQL: node:sqlite built from the
           # repo's own migrations, so a dropped COALESCE or a WHERE that selects
           # nobody turns this red where a stub would pass. The endpoint's
