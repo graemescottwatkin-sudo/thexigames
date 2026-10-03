@@ -25,7 +25,7 @@ import { onRequestPost as answer } from "../../functions/api/ballpark/answer.js"
 import { onRequestPost as narrow } from "../../functions/api/ballpark/narrow.js";
 import { onRequestGet as archive } from "../../functions/api/ballpark/archive.js";
 import {
-  loadBank, boardForDay, todayKey, boardToken, publicBoard, narrowWindow, RULES,
+  loadBank, boardForDay, todayKey, boardToken, publicBoard, narrowWindow, RULES, pastYearsOnly,
 } from "../../functions/_lib/bp-board.js";
 import { BP_SAMPLE_BOARDS } from "../../functions/_lib/bp-sample.js";
 import { dailyNumber } from "../../functions/_lib/daily.js";
@@ -645,6 +645,26 @@ async function run() {
     t("with no database the verdict is served and says it is unscored",
       r.status === 200 && b.scored === false && b.grade === "Bang on",
       `${b.grade} scored=${b.scored}`);
+  }
+
+  /* ---- 12. no future years on a question about the past ----------------
+     The owner, 3 Oct 2026: "no future days on questions that relate to the
+     past / so manager appointed when can go upto 2026". */
+  {
+    const farke = { id: "appointed-daniel-farke-leeds-united", family: "years", kind: "event-year",
+      question: "In which year did Daniel Farke take charge of Leeds United?", answer: 2023, lo: 2020, hi: 2037, tolerance: 1, step: 1 };
+    const cut = pastYearsOnly(farke, 2026);
+    t("a years question's slider stops at the current year", cut.hi === 2026 && cut.lo === 2020 && cut.answer === 2023 && cut.tolerance === 1,
+      `${cut.lo}..${cut.hi}`);
+    t("  and in a later year, at that year", pastYearsOnly(farke, 2029).hi === 2029);
+    t("one already inside the past is left exactly as it was", pastYearsOnly({ ...farke, hi: 2025 }, 2026).hi === 2025);
+    t("and a question of any other family is never touched",
+      pastYearsOnly({ ...farke, family: "pl-apps", hi: 2600 }, 2026).hi === 2600 &&
+      pastYearsOnly({ id: "x", lo: 0, hi: 500 }, 2026).hi === 500);
+    const year = new Date().getUTCFullYear();
+    const bank = await loadBank({});
+    const late = bank.boards.flatMap((b) => b.questions).filter((q) => q.family === "years" && Number(q.hi) > year);
+    t("no years question in the bank as read reaches past this year", late.length === 0, late.map((q) => q.id + " " + q.hi).join(", ") || "none");
   }
 
   console.log(`\n${pass} passed, ${fail} failed`);

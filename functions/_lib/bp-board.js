@@ -83,7 +83,27 @@ function sampleBank(now = Date.now()) {
     const day = utcDay(now + Number(off) * 86400000);
     if (day) schedule[day] = BP_SAMPLE_SCHEDULE[off];
   }
-  return { boards: BP_SAMPLE_BOARDS, schedule, source: "sample" };
+  const boards = BP_SAMPLE_BOARDS.map((b) => ({ ...b, questions: (b.questions || []).map((q) => pastYearsOnly(q)) }));
+  return { boards, schedule, source: "sample" };
+}
+
+/* NO FUTURE YEARS ON A QUESTION ABOUT THE PAST (the owner, 3 Oct 2026, from
+   a flag made in the admin preview: "no future days on questions that relate
+   to the past / so manager appointed when can go upto 2026"). The bank built
+   year sliders reaching past today -- 66 of them, out to 2045, Daniel Farke's
+   "In which year did he take charge" ran to 2037 -- and every answer is in the
+   past. A question in the "years" family (event-year, first-trophy-year,
+   ground-opened) has its top cut to the current year, here where the bank is
+   read, so the slider, the board served and the narrowed window all agree.
+   Done in code rather than in the rows because the owner chose to keep the
+   loaded boards as they are, and because a bank imported next year needs the
+   same rule. Nothing else moves: the answer, the tolerance and the bottom are
+   untouched, and no answer in the bank is later than the year it is cut to. */
+export function pastYearsOnly(q, year = new Date().getUTCFullYear()) {
+  if (!q || q.family !== "years") return q;
+  const hi = Number(q.hi), lo = Number(q.lo);
+  if (!Number.isFinite(hi) || hi <= year || !Number.isFinite(lo) || lo >= year) return q;
+  return { ...q, hi: year };
 }
 
 function rowToBoard(r) {
@@ -91,7 +111,7 @@ function rowToBoard(r) {
   try { payload = JSON.parse(r.payload); } catch (e) { return null; }
   return {
     id: String(r.id), ordinal: Number(r.ordinal),
-    questions: payload.questions || [],
+    questions: (payload.questions || []).map((q) => pastYearsOnly(q)),
   };
 }
 
