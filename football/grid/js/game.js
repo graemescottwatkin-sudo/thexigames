@@ -32,7 +32,7 @@
 
   var R = window.XIGR_RULES;
   var $ = function (id) { return document.getElementById(id); };
-  var BUILD = "v002w";
+  var BUILD = "v002x";
 
   var S = {
     board: null,          // the PUBLIC board: shape, lengths, crossings. No letters.
@@ -266,8 +266,7 @@
 
     /* Which cell belongs to which entry, and which entry starts there — all of
        it from the PUBLIC board, which carries no letters. */
-    var startsAt = {};
-    b.entries.forEach(function (x) { startsAt[x.cells[0]] = x.n; });
+    var startsAt = R.startNumbers(b.entries, e ? e.n : null);
     var inGrid = {};
     b.entries.forEach(function (x) {
       x.cells.forEach(function (cell) { inGrid[cell] = true; });
@@ -301,7 +300,13 @@
        break in one says nothing about the other. A crossing cell can carry both
        classes, each drawn on the edge belonging to its own direction, so
        neither is wrong.
-       HELD BACK UNTIL THE CELL HAS A LETTER. This drew on the empty grid, and
+       DRAWN FROM THE START, since 3 Oct 2026. The owner, flagging 1A as "8"
+       when it is "1,7": "i would like to see a word separator or something
+       that tells me letter 1 is an initial" -- and, asked whether that
+       reverses the ruling below, "Show splits from the start". So every
+       divider is on the empty grid, and the entries say "1,7" rather than 8.
+       What follows is the history it reverses.
+       IT WAS HELD BACK UNTIL THE CELL HAD A LETTER. This drew on the empty grid, and
        the comment here argued for that: the hint is wanted WHILE guessing
        rather than after. Owner's call, 20 Sep 2026, reversing it — an empty
        grid ruled into words tells you the shape of every answer before you
@@ -378,7 +383,7 @@
            does not. At full time the branch above fills every cell in, so the
            finished board shows every divider — which is right: the answer is
            on screen and the rule is part of reading it. */
-        if (ch && brk[cell]) cls.push(brk[cell].trim());
+        if (brk[cell]) cls.push(brk[cell].trim());
         html += '<div class="' + cls.join(" ") + '" data-cell="' + cell + '" tabindex="0">' +
           (startsAt[cell] ? '<span class="n num">' + startsAt[cell] + "</span>" : "") + ch + "</div>";
       }
@@ -387,10 +392,14 @@
 
     /* The slot row — the same state, bigger. */
     if (e) {
-      $("gdSlotCap").textContent = label(e) + " · " + e.len + " letters";
+      var en = R.enumeration(e.len, e.breaks);
+      $("gdSlotCap").textContent = label(e) + " · " + (en === String(e.len) ? e.len + " letters" : "(" + en + ")");
+      var wordAt = {};
+      (e.breaks || []).forEach(function (k) { wordAt[k] = true; });
       var m = S.marks[e.n];
       $("gdSlots").innerHTML = e.cells.map(function (cell, i) {
         var cls = ["gd-slot"], ch = "";
+        if (wordAt[i]) cls.push("brk");
         if (m) { cls.push(SHORT[m[i]]); ch = S.hist[e.n][0].guess[i]; }
         else if (S.confirmed[cell]) { cls.push("conf"); ch = S.confirmed[cell]; }
         else if (S.typed[i]) { cls.push("typed"); ch = S.typed[i]; }
@@ -402,7 +411,7 @@
     $("gdEntries").innerHTML = b.entries.map(function (x, i) {
       return '<button class="gd-chip' + (i === S.sel ? " sel" : "") +
         (S.solved[x.n] ? " done" : "") + '" data-i="' + i + '">' +
-        x.n + (x.dir === "across" ? "a" : "d") + " &middot; " + x.len + "</button>";
+        x.n + (x.dir === "across" ? "a" : "d") + " &middot; " + R.enumeration(x.len, x.breaks) + "</button>";
     }).join("");
 
     /* The keyboard for THIS entry. Derived from the history and the confirmed

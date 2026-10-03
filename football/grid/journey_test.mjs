@@ -200,19 +200,31 @@ server.listen(0, "127.0.0.1", async () => {
       expected.length > 0,
       expected.length + " break(s) across " +
         BOARD.entries.filter((e) => (e.breaks || []).length).length + " entries");
-    t("no break is drawn while the grid is empty",
+    /* REVERSED 3 OCT 2026, by the owner: "Show splits from the start". These
+       two asked for NO divider on the empty grid; they now ask for every one,
+       and for none anywhere else. */
+    t("every break is drawn on the empty grid",
       expected.every(({ cell, cls }) => {
         const el = d.querySelector('.gd-cell[data-cell="' + cell + '"]');
-        return el && !el.classList.contains(cls);
+        return el && el.classList.contains(cls) && (el.textContent || "").trim().replace(/^\d+/, "") === "";
       }),
       expected.map((x) => x.cell + ":" + x.cls).join(" "));
-    /* AND NOWHERE ELSE. A divider on a cell that does not start a word is a
-       lie about the answer's shape, and worse than none at all. */
-    /* NOT ONE ANYWHERE, which is the positive form of the new rule and the
-       thing that would catch a board still drawing them early. */
-    t("and the grid carries no divider at all yet",
-      d.querySelectorAll(".gd-cell.brk-l, .gd-cell.brk-t").length === 0,
-      d.querySelectorAll(".gd-cell.brk-l, .gd-cell.brk-t").length + " marked");
+    t("and only those -- the empty grid carries exactly one divider per break",
+      [...d.querySelectorAll(".gd-cell.brk-l, .gd-cell.brk-t")].reduce((n, el) =>
+        n + (el.classList.contains("brk-l") ? 1 : 0) + (el.classList.contains("brk-t") ? 1 : 0), 0) === expected.length,
+      d.querySelectorAll(".gd-cell.brk-l, .gd-cell.brk-t").length + " cells marked for " + expected.length + " break(s)");
+    /* AND THE ENTRIES SAY IT: "1,7" rather than 8, per entry, from the breaks. */
+    const chips = [...d.querySelectorAll("#gdEntries .gd-chip")].map((el) => el.textContent.replace(/\s+/g, " ").trim());
+    const wantChips = BOARD.entries.map((e) => {
+      let at = 0; const parts = [];
+      for (const k of e.breaks || []) { parts.push(k - at); at = k; }
+      parts.push(e.len - at);
+      return e.n + (e.dir === "across" ? "a" : "d") + " · " + parts.join(",");
+    });
+    t("each entry is labelled with its word lengths -- \"1,7\", not \"8\"",
+      chips.length === wantChips.length && chips.every((c, i) => c === wantChips[i])
+        && wantChips.some((c) => c.includes(",")),
+      chips.filter((c, i) => c !== wantChips[i]).join(" | ") || wantChips.filter((c) => c.includes(",")).join(" | "));
     /* THE STRAY CHECK AND THE DIRECTION CHECK MOVED to the solved board below.
        Both ask what the drawn classes are, and on an empty grid there are none
        to ask about — they passed here by finding nothing, which is the shape

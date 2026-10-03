@@ -166,8 +166,25 @@ export async function stepsInRound(env, cardId, letter) {
  * wadata.js's, shared with football, so "Ross's" and "ross" reach the same row
  * in both games rather than in two ways.
  */
+/* A CARD'S OWN NAME NAMES IT. The suggestion box offers display names, and
+   the accept list is the deck's -- written separately, and on 3 Oct 2026 the
+   owner picked "Charles Bing / \"Helena Handbasket\"" from the box at its own
+   door and was told it was wrong: the folded display name was not among that
+   card's answers. Five cards were like it, "Ross's apartment" the worst, since
+   typing it by hand failed too. So a guess that IS a card's display name --
+   under the guess's own key, or under the fold the box searches by -- names
+   that card, whatever the accept list says. */
+const nameKeys = (name) => [answerKey(name), fold(name)];
+async function cardNamed(env, key) {
+  const { results } = await env.DB.prepare(
+    `SELECT id, name FROM fr_wa_card WHERE status = 'published'`
+  ).bind().all();
+  return (results || []).find((r) => nameKeys(r.name).includes(key)) || null;
+}
+
 export async function judge(env, door, key) {
   if (!key) return { solved: false, verdict: "empty" };
+  if (door && door.name && nameKeys(door.name).includes(key)) return { solved: true, verdict: "right" };
 
   const { results } = await env.DB.prepare(`
     SELECT a.card_id, a.kind, c.name
@@ -177,7 +194,6 @@ export async function judge(env, door, key) {
   `).bind(key).all();
 
   const rows = results || [];
-  if (!rows.length) return { solved: false, verdict: "wrong" };
 
   const accepted = rows.filter((r) => r.kind === "accept");
   if (accepted.some((r) => String(r.card_id) === String(door.card_id))) {
@@ -194,6 +210,13 @@ export async function judge(env, door, key) {
      why the registry row names it as such rather than this file assuming the
      counting. */
   if (accepted.length) return { solved: false, verdict: "other" };
+
+  /* ANOTHER CARD'S FULL NAME is a guess at the wrong door, not a word that
+     surfaces several cards. Asked before the suggestions because a display
+     name can ALSO be a suggestion -- "Erica" surfaces two cards, and picking
+     "Erica" from the choice it offered came back with the same choice. */
+  if (await cardNamed(env, key)) return { solved: false, verdict: "other" };
+  if (!rows.length) return { solved: false, verdict: "wrong" };
 
   /* SUGGESTIONS ONLY. The string surfaces cards without being any of their
      answers -- "apartment". The caller offers the choice; this does not pick,

@@ -428,5 +428,67 @@ console.log("\nFootball, unchanged");
     !/wikipedia|S2E14|"q"/.test(JSON.stringify([web, ep])), JSON.stringify([web, ep]));
 }
 
+/* ---- a card's own name ---------------------------------------------------
+   The owner, 3 Oct 2026: picking a card's full name from the suggestion box at
+   its own door was marked wrong, on five cards whose folded display name was
+   not in their accept list. The names below are the deck's own, and the
+   answers table holds exactly what production held for them. */
+{
+  const { judge, answerKey } = await import("../../functions/_lib/frwa-data.js");
+  const CARDS = [
+    { id: "E2", name: 'Charles Bing / "Helena Handbasket"' },
+    { id: "8", name: "Janice Litman-Goralnik (n\u00e9e Hosenstein)" },
+    { id: "E1", name: "Nana (Althea Geller)" },
+    { id: "E18", name: "Erica (Joey's stalker)" },
+    { id: "54", name: "Erica" },
+    { id: "L26", name: "Ross's apartment" },
+    { id: "main-07", name: "Rachel Green" },
+  ];
+  const ANSWERS = {
+    CHARLESBING: [["E2", "accept"]], HELENA: [["E2", "accept"]],
+    ROSSAPARTMENT: [["L26", "accept"]],
+    ERICA: [["54", "suggest"], ["E18", "suggest"]],
+    BIRTHMOTHER: [["54", "accept"]],
+    APARTMENT: [["L26", "suggest"], ["main-07", "suggest"]],
+  };
+  const asked = [];
+  const env = { DB: { prepare(text) {
+    const q = text.replace(/\s+/g, " ").trim();
+    return { bind(...a) { return { all: async () => {
+      asked.push(q);
+      if (/FROM fr_wa_answer/.test(q)) return { results: (ANSWERS[a[0]] || []).map(([card_id, kind]) =>
+        ({ card_id, kind, name: CARDS.find((c) => c.id === card_id).name })) };
+      if (/FROM fr_wa_card WHERE status = 'published'/.test(q)) return { results: CARDS.map((c) => ({ ...c })) };
+      return { results: [] };
+    } }; } };
+  } } };
+  const door = (id) => ({ card_id: id, ...CARDS.find((c) => c.id === id) });
+  const typed = (s) => answerKey(s);
+
+  for (const c of CARDS.filter((x) => ["E2", "8", "E1", "E18", "L26"].includes(x.id))) {
+    const v = await judge(env, door(c.id), typed(c.name));
+    t(`its own display name is right at its own door: ${c.name}`, v.solved === true && v.verdict === "right", JSON.stringify(v));
+  }
+  const r1 = await judge(env, door("L26"), typed("Ross's apartment"));
+  t("\"Ross's apartment\" typed by hand is right", r1.solved === true, JSON.stringify(r1));
+  const r2 = await judge(env, door("54"), typed("Erica"));
+  t("\"Erica\" at Erica's door is right, though ERICA is only a suggestion", r2.solved === true, JSON.stringify(r2));
+  const r3 = await judge(env, door("E18"), typed("Erica"));
+  t("and at the stalker's door it names the other card, rather than offering the same choice again",
+    r3.solved === false && r3.verdict === "other", JSON.stringify(r3));
+  const r4 = await judge(env, door("E18"), typed("Ross's apartment"));
+  t("another card's display name at the wrong door is a near miss", r4.verdict === "other", JSON.stringify(r4));
+  /* AND WHAT IT MUST NOT CHANGE: the accept list still decides everything the
+     display name does not, and a word naming no card is still a choice. */
+  t("an accept still solves", (await judge(env, door("E2"), "HELENA")).solved === true);
+  const amb = await judge(env, door("E2"), "APARTMENT");
+  t("a suggestion-only word that is no card's name is still a choice",
+    amb.verdict === "ambiguous" && amb.options.length === 2, JSON.stringify(amb));
+  const nope = await judge(env, door("E2"), "NOBODYATALL");
+  t("and nothing is still wrong", nope.solved === false && nope.verdict === "wrong", JSON.stringify(nope));
+  t("the card names are asked only of published cards",
+    asked.some((q) => /FROM fr_wa_card WHERE status = 'published'/.test(q)));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

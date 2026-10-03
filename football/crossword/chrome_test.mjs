@@ -627,5 +627,30 @@ console.log("\nThe hub's assets resolve from BOTH of the addresses it is served 
   }
 }
 
+/* THE FRIENDS HUB IS WRITTEN BY HAND, so it is checked against the squad.
+   Found 3 Oct 2026: Wordsearch XI: Friends had been live and indexed for three
+   days with no card on the hub, which said "Five games" over six cards
+   numbered 1-5 and 7. Each Friends game's own gate asks for its own card, and
+   the word search's gate never did -- a per-game check is one a new game can
+   simply not carry. This asks from the squad's side: every named Friends slot
+   has a card wearing its number, there is no other card, they run in shirt
+   order, and the intro's count is the number of cards. */
+{
+  const NUM = ["zero", "one", "two", "three", "four", "five", "six", "seven", "eight", "nine", "ten", "eleven"];
+  const squad = (frh.chrome.squads.friends || []).filter((g) => g.name && g.href);
+  const cards = [...frh.querySelectorAll(".fr-games a.fr-card")].map((a) => ({
+    href: a.getAttribute("href"), k: (a.querySelector(".k") || {}).textContent || "" }));
+  t("the Friends squad has named games to check the hub against", squad.length >= 2, squad.length + " named");
+  const missing = squad.filter((g) => !cards.some((c) => c.href === g.href && c.k.startsWith(g.n + " \u00b7")));
+  t("every named Friends game has a card on the Friends hub, wearing its shirt number",
+    missing.length === 0, missing.map((g) => g.n + " " + g.href).join(", ") || squad.length + " cards");
+  t("and no card for anything else, in shirt order",
+    cards.length === squad.length && cards.every((c, i) => c.href === squad[i].href),
+    cards.map((c) => c.k.split(" ")[0] + " " + c.href).join(", "));
+  const intro = (frh.querySelector(".hub-intro") || {}).textContent || "";
+  const word = intro.trim().split(/\s+/)[0].toLowerCase();
+  t("and the intro counts them", word === NUM[cards.length], `"${intro.trim().slice(0, 30)}" over ${cards.length} cards`);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

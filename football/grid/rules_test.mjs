@@ -239,6 +239,40 @@ console.log("\nThe score, out of 114");
 }
 
 
+console.log("\nThe number on a square two entries start on");
+{
+  /* FROM A REAL BOARD'S ENTRIES, with one moved: no sample board has two
+     entries starting on one square, and the board the owner flagged did
+     (1a and 10d, 3 Oct 2026). 10's start is put on 1's square. */
+  const { GD_SAMPLE_BOARDS } = await import("../../functions/_lib/gd-sample.js");
+  const ents = GD_SAMPLE_BOARDS[0].entries.map((x) => ({ ...x, cells: x.cells.slice() }));
+  const one = ents.find((x) => x.n === 1), ten = ents.find((x) => x.n === 10);
+  ten.cells[0] = one.cells[0];
+  const sq = one.cells[0];
+  t("the fixture really has two entries starting on one square",
+    ents.filter((x) => x.cells[0] === sq).length === 2);
+  t("on 1, the square reads 1", R.startNumbers(ents, 1)[sq] === 1, String(R.startNumbers(ents, 1)[sq]));
+  t("on 10, the square reads 10", R.startNumbers(ents, 10)[sq] === 10, String(R.startNumbers(ents, 10)[sq]));
+  t("on neither, the lower number -- in either listing order",
+    R.startNumbers(ents, 4)[sq] === 1 && R.startNumbers(ents.slice().reverse(), 4)[sq] === 1
+      && R.startNumbers(ents.slice().reverse(), null)[sq] === 1);
+  t("and every entry's own start still carries a number when it is picked",
+    ents.every((x) => R.startNumbers(ents, x.n)[x.cells[0]] === x.n));
+}
+
+console.log("\nAn answer's word lengths");
+{
+  /* The owner's two flags of 3 Oct 2026: 1A "says 8 but its really 1,7" and
+     11A "says 5 but its really 1,4". */
+  t("an initial and a surname", R.enumeration(8, [1]) === "1,7" && R.enumeration(5, [1]) === "1,4",
+    R.enumeration(8, [1]) + " / " + R.enumeration(5, [1]));
+  t("one word is its length", R.enumeration(8, []) === "8" && R.enumeration(8, undefined) === "8");
+  t("three words", R.enumeration(14, [7, 9]) === "7,2,5", R.enumeration(14, [7, 9]));
+  t("and the parts always add up to the length",
+    [[16, [9]], [11, [2, 7]], [13, [6]], [8, [1]]].every(([n, br]) =>
+      R.enumeration(n, br).split(",").reduce((x, y) => x + Number(y), 0) === n));
+}
+
 console.log("\nThe client is given no way to mark anything");
 {
   /* mark() needs the ANSWER. The public board carries none, so a browser

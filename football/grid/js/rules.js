@@ -272,6 +272,35 @@
     };
   }
 
+  /* THE NUMBER ON A SQUARE WHERE AN ENTRY STARTS. Two entries can start on
+     one square, and the board showed whichever was listed last: on 3 Oct 2026
+     the owner was on 1A "but it is 10 across" -- 1a and 10d started on the
+     same square and it read 10. The entry you are on wins its square; on any
+     other square the lower number does. So the number on the board is always
+     the number on the entry you picked. Returns { cell: n }. */
+  function startNumbers(entries, selN) {
+    var at = {};
+    (entries || []).forEach(function (x) {
+      var c0 = x.cells && x.cells[0];
+      if (c0 == null) return;
+      if (x.n === selN) at[c0] = x.n;
+      else if (at[c0] !== selN && (at[c0] == null || x.n < at[c0])) at[c0] = x.n;
+    });
+    return at;
+  }
+
+  /* HOW AN ANSWER IS WRITTEN, crossword style: "1,7" for an initial and a
+     surname, "8" for one word. From the length and the breaks the server
+     sends (zero-based offsets at which a new word starts). The owner, 3 Oct
+     2026: "it says 8 but its really 1,7. i would like to see a word separator
+     or something that tells me letter 1 is an initial". */
+  function enumeration(len, breaks) {
+    var at = 0, parts = [];
+    (breaks || []).forEach(function (k) { if (k > at && k < len) { parts.push(k - at); at = k; } });
+    parts.push(len - at);
+    return parts.join(",");
+  }
+
   var api = {
     ENTRIES: ENTRIES, TURNS_START: TURNS_START, PTS_LETTER: PTS_LETTER,
     MISS_SCALE: MISS_SCALE, PTS_SOLVED: PTS_SOLVED,
@@ -281,6 +310,7 @@
     turnsAfter: turnsAfter, isOver: isOver,
     propagate: propagate, knownFor: knownFor,
     letterBank: letterBank, score: score,
+    startNumbers: startNumbers, enumeration: enumeration,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   root.XIGR_RULES = api;
