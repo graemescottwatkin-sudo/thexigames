@@ -654,9 +654,15 @@ async function run() {
     const farke = { id: "appointed-daniel-farke-leeds-united", family: "years", kind: "event-year",
       question: "In which year did Daniel Farke take charge of Leeds United?", answer: 2023, lo: 2020, hi: 2037, tolerance: 1, step: 1 };
     const cut = pastYearsOnly(farke, 2026);
-    t("a years question's slider stops at the current year", cut.hi === 2026 && cut.lo === 2020 && cut.answer === 2023 && cut.tolerance === 1,
-      `${cut.lo}..${cut.hi}`);
-    t("  and in a later year, at that year", pastYearsOnly(farke, 2029).hi === 2029);
+    t("a years question's slider stops at the current year, the window shifted down whole",
+      cut.hi === 2026 && cut.lo === 2009 && cut.answer === 2023 && cut.tolerance === 1, `${cut.lo}..${cut.hi}`);
+    t("  so the range keeps its width, and the band its share of it", cut.hi - cut.lo === farke.hi - farke.lo);
+    t("  and in a later year, at that year", pastYearsOnly(farke, 2029).hi === 2029 && pastYearsOnly(farke, 2029).lo === 2012);
+    const old = { ...farke, answer: 1890, lo: 1852, hi: 2030, tolerance: 5 };
+    const r2 = pastYearsOnly(old, 2026);
+    t("the bottom never goes below the calendar floor of 1850", r2.hi === 2026 && r2.lo === 1850, `${r2.lo}..${r2.hi}`);
+    t("a count of years from zero -- a trophy drought -- is not a calendar year and is never touched",
+      pastYearsOnly({ ...farke, kind: "trophy-drought", lo: 0, hi: 2100 }, 2026).hi === 2100);
     t("one already inside the past is left exactly as it was", pastYearsOnly({ ...farke, hi: 2025 }, 2026).hi === 2025);
     t("and a question of any other family is never touched",
       pastYearsOnly({ ...farke, family: "pl-apps", hi: 2600 }, 2026).hi === 2600 &&

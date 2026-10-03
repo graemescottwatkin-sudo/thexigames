@@ -307,7 +307,12 @@ body.locked .gd-wrap:has(#gdFullTime:not([hidden])) :is(.gd-slots,.gd-kbd,.gd-ms
 @media (min-width:900px) and (orientation:landscape){
   body.locked>main.gd-wrap{display:grid;grid-template-columns:minmax(0,1fr) 380px;
     grid-template-rows:repeat(11,auto) minmax(0,1fr);column-gap:18px}
-  body.locked .gd-boardwrap{grid-column:1;grid-row:2 / -1;margin:0}
+  /* THE BOARD LEVEL WITH THE COLUMN BESIDE IT, not floated down its middle:
+     the wrap spans every row of the grid and centred the board in all of
+     them, which on a desk monitor left a hundred pixels of nothing above the
+     board and its top well below the title opposite (the owner, 3 Oct 2026:
+     "Grid is still not fixed visually"). */
+  body.locked .gd-boardwrap{grid-column:1;grid-row:2 / -1;margin:0;align-items:flex-start}
   body.locked .gd-wrap>:not(.gd-boardwrap){grid-column:2}
   /* The family's top bar across the top of both columns, as on every game. */
   body.locked .gd-wrap>#xiBar{grid-column:1 / -1;grid-row:1}
@@ -326,7 +331,9 @@ body.locked .gd-wrap:has(#gdFullTime:not([hidden])) :is(.gd-slots,.gd-kbd,.gd-ms
 @media (min-width:900px) and (min-height:700px) and (orientation:landscape) and (pointer:coarse){
   body.locked>main.gd-wrap{max-width:1400px;grid-template-columns:minmax(0,1fr) clamp(300px,28vw,420px);
     grid-template-rows:auto repeat(6,auto) minmax(0,1fr) auto auto}
-  body.locked .gd-boardwrap{grid-row:2 / 9;margin:0}
+  /* A tablet keeps the board centred over its answer row, as approved: only
+     a desk's two columns needed the board brought up level. */
+  body.locked .gd-boardwrap{grid-row:2 / 9;margin:0;align-items:center}
   body.locked .gd-wrap>.gd-slots{grid-column:1;grid-row:9}
   body.locked .gd-wrap>.gd-kbd{grid-column:1 / -1;grid-row:10;margin:4px 0 0}
   body.locked .gd-hist{align-items:flex-start;max-height:34vh}

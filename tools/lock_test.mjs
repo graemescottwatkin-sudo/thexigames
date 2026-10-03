@@ -1878,6 +1878,18 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "g
         gridOk(m) && m.keys, gridSay(m));
     }
     if (vp[1].width >= 900) t(`${vp[0]}: the entries come back in the column beside the board`, m.entries, gridSay(m));
+    /* LEVEL WITH THE COLUMN BESIDE IT (the owner, 3 Oct 2026: "Grid is still
+       not fixed visually"): on a desk the board's wrap spans every row of the
+       grid and centred the board in all of them, leaving a hundred pixels of
+       nothing above it and its top well below the title opposite. */
+    if (!vp[2] && vp[1].width >= 900) {
+      const lv = await page.evaluate(() => {
+        const top = (s) => { const e = document.querySelector(s); return e ? Math.round(e.getBoundingClientRect().top) : null; };
+        return { pitch: top(".gd-pitch"), title: top("#gdIdent") };
+      });
+      t(`${vp[0]}: the board's top is level with the title in the column beside it`,
+        lv.pitch !== null && lv.title !== null && Math.abs(lv.pitch - lv.title) <= 2, `pitch ${lv.pitch}, title ${lv.title}`);
+    }
     t(`${vp[0]}: every key holds its letter -- none spills out of its key`, m.keys && m.spill === "", m.spill || "none");
     /* THE CROSSWORD'S BOARD. The owner, 25 Sep 2026: Grid should "look more
        like the crossword I.e. background, similar layout, boxes". The pitch

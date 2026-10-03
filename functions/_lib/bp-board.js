@@ -99,11 +99,24 @@ function sampleBank(now = Date.now()) {
    loaded boards as they are, and because a bank imported next year needs the
    same rule. Nothing else moves: the answer, the tolerance and the bottom are
    untouched, and no answer in the bank is later than the year it is cut to. */
+/* A SHIFT, NOT A CLAMP (the Ballpark session, which made the same cut at
+   source the same day): moving only the top narrows the slider, and two rules
+   keep it fair -- the ballpark band no more than a fifth of the range, the
+   answer a full ballpark inside both ends. So the whole window moves down by
+   the overshoot and keeps its width: Farke's 2020..2037 becomes 2009..2026,
+   not 2020..2026, where a three-year band was half the slider. Moving down
+   takes the bottom AWAY from the answer, so it can never crowd it; the one
+   limit is the calendar floor, which the bottom never goes below.
+   And only a CALENDAR year: a floor from 1850 on, the property every real
+   year kind declares. A trophy drought is in the same family and counts
+   years from zero; its top never reaches this year anyway, and the floor says
+   why it is not a year at all. */
+export const CALENDAR_FLOOR = 1850;
 export function pastYearsOnly(q, year = new Date().getUTCFullYear()) {
   if (!q || q.family !== "years") return q;
   const hi = Number(q.hi), lo = Number(q.lo);
-  if (!Number.isFinite(hi) || hi <= year || !Number.isFinite(lo) || lo >= year) return q;
-  return { ...q, hi: year };
+  if (!Number.isFinite(hi) || hi <= year || !Number.isFinite(lo) || lo < CALENDAR_FLOOR || lo >= year) return q;
+  return { ...q, lo: Math.max(CALENDAR_FLOOR, lo - (hi - year)), hi: year };
 }
 
 function rowToBoard(r) {
