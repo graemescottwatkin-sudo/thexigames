@@ -31,7 +31,7 @@
  * link so a friend could replay the exact eleven, and that is now a board
  * number in the fragment, which is shorter and does not describe the board.
  */
-var BUILD = "v001c";
+var BUILD = "v001d";
 
 (function bootstrap() {
   'use strict';
@@ -692,13 +692,13 @@ function start() {
 
   function pushResults() {
     if (!account) return Promise.resolve(null);
-    return apiAuth("/api/account/migrate", { game: "quickfire", results: readResults() })
+    return apiAuth("/api/account/migrate", { game: "quickfire_fr", results: readResults() })
       .catch(function (e) { accountNote("push", e); return null; });
   }
 
   function pullResults() {
     if (!account) return Promise.resolve(null);
-    return apiAuth("/api/account/results?game=quickfire").then(function (r) {
+    return apiAuth("/api/account/results?game=quickfire_fr").then(function (r) {
       var remote = (r && r.results) || [];
       if (!remote.length) return null;
       var byDay = {};
@@ -756,7 +756,7 @@ function start() {
   function bankResult(r) {
     var right = r ? r.correct : state.results.filter(function (x) { return x.correct; }).length;
     recordResult({
-      game: "quickfire",
+      game: "quickfire_fr",
       day: board.day,
       no: board.no,
       boardId: board.id,

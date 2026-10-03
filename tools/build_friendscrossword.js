@@ -57,7 +57,7 @@ const OUT = "friends/crossword";
 
 /* THE TAG LIVES HERE, because it is written into three generated files and a
    number kept in three places disagrees with itself. Bump here, regenerate. */
-const TAG = "v003";
+const TAG = "v003a";
 
 /* THE SHARED LAYER'S TAG, read from the source page rather than restated. It
    has its own plain vN lifecycle and moves without this game's tag moving, so a
@@ -367,6 +367,15 @@ function script() {
   let s = read(`${SRC}/js/game.js`);
   /* The family's top bar names the game in its first line. */
   s = once(s, 'XIBar.set({ name: "Crossword XI",', `XIBar.set({ name: "${NAME}",`, "the top bar's name");
+  /* ITS OWN RESULTS IN THE ACCOUNT. Football's page names no game when it
+     pushes and pulls, because "crossword" is the server's default; copied
+     as it was, this page pushed Friends results as football's (keyed
+     daily:N, not fr:N, where first-banked-wins throws one away) and pulled
+     football's results into its own history. Found 3 Oct 2026, before any
+     signed-in account had played it. */
+  s = once(s, "return { club: club || null, results: loadResults() };",
+    "return { game: \"crossword_fr\", club: club || null, results: loadResults() };", "the account push");
+  s = once(s, 'apiAuth("/api/account/results")', 'apiAuth("/api/account/results?game=crossword_fr")', "the account pull");
   /* NO BOARD OF THE WEEK: /api/themes is football's, and it ANSWERS -- so
      this is not a call that fails loudly, it is one that quietly fills a
      Friends page with a football board. Removed, with its card above. */
@@ -610,7 +619,10 @@ export function leftovers(text, what) {
   const raw = text.split("\n");
   for (let i = 0; i < lines.length; i++) {
     const l = lines[i];
-    if (!/football|Football|\bfcw\./.test(l)) continue;
+    /* And an account call that names no game, which the server files as
+       football's crossword. */
+    const accountLeak = /apiAuth\("\/api\/account\/results"\)|\{ club: club \|\| null, results:/.test(l);
+    if (!accountLeak && !/football|Football|\bfcw\./.test(l)) continue;
     if (ALLOWED.some((a) => l.includes(a))) continue;
     hits.push(`    ${what}:${i + 1}  ${raw[i].trim().slice(0, 100)}`);
   }

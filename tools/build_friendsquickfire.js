@@ -36,7 +36,7 @@ const CHECK = process.argv.includes("--check");
 const read = (p) => readText(path.join(ROOT, p));
 
 /* THE TAG LIVES HERE, written into every generated file. Bump, regenerate. */
-const TAG = "v001c";
+const TAG = "v001d";
 
 const SRC = "football/quickfire", OUT = "friends/quickfire";
 const ID = "quickfire_fr", NAME = "QuickFire XI: Friends";
@@ -135,6 +135,13 @@ function script() {
   s = once(s, 'var PREFIX = "qfx.";', 'var PREFIX = "xifq.";', "the storage prefix");
   s = once(s, "boardKey: 'qf:' + board.day", "boardKey: 'frqf:' + board.day", "the result key");
   s = all(s, "game: 'quickfire'", `game: '${ID}'`, "the game id");
+  /* AND IN DOUBLE QUOTES, where the account sync writes it. Only the single-
+     quoted form was rewritten from 30 Sep 2026, so the Friends page pushed
+     its results, and pulled them back, as football's "quickfire": keyed
+     qf:<day> rather than frqf:<day>, on the same day as football's, where
+     first-banked-wins threw one of the two away. Found 3 Oct 2026. */
+  s = all(s, 'game: "quickfire"', `game: "${ID}"`, "the account game id");
+  s = once(s, '"/api/account/results?game=quickfire"', `"/api/account/results?game=${ID}"`, "the account pull");
   s = all(s, "'QuickFire XI'", `'${NAME}'`, "the name");
   s = once(s, "'QuickFire XI · No. '", `'${NAME} · No. '`, "the share line");
 
@@ -196,7 +203,7 @@ function codeOnly(text) {
     .replace(/\/\*[\s\S]*?\*\//g, (m) => m.replace(/[^\n]/g, " "))
     .replace(/(^|[^:])\/\/[^\n]*/g, (m) => m.replace(/[^\n]/g, " "));
 }
-const FOOTBALL_WORDS = /football|Football|GOAL —|FULL TIME|SUBBED|substitution|Sub it off|Kick off|0' to 90'|\/api\/quickfire\/|"qfx\."|'qf:'|minutes gone|xi-season/;
+const FOOTBALL_WORDS = /football|Football|GOAL —|FULL TIME|SUBBED|substitution|Sub it off|Kick off|0' to 90'|\/api\/quickfire\/|"qfx\."|'qf:'|minutes gone|xi-season|game: ["']quickfire["']|game=quickfire\b/;
 export function leftovers(text, what) {
   const hits = [];
   const lines = codeOnly(text).split("\n"), raw = text.split("\n");

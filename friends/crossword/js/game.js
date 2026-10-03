@@ -297,7 +297,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v003";
+  var BUILD = "v003a";
   /* WHAT THIS GAME IS CALLED on its Full Time panel and in the tab, and whether it has a league to show.
      One line, so tools/build_friendscrossword.js rewrites it in one place:
      the Friends board has its own name, its own word for the end, and no
@@ -3153,7 +3153,7 @@
     /* Through loadResults, not the raw key: it is what sets aside a row from
        before the numbering restarted, and posting the raw list is how one of
        those reached an account and stood in for a board never played. */
-    return { club: club || null, results: loadResults() };
+    return { game: "crossword_fr", club: club || null, results: loadResults() };
   }
 
   function refreshAdmin() {
@@ -4709,7 +4709,7 @@
   function pullAccountResults() {
     /* apiAuth with no body is a GET, and it carries the session cookie and the
        CSRF header the endpoint checks. */
-    return apiAuth("/api/account/results").then(function (d) {
+    return apiAuth("/api/account/results?game=crossword_fr").then(function (d) {
       if (!d || !Array.isArray(d.results)) return;
       var before = loadResults();
       var merged = mergeResults(before, d.results);
