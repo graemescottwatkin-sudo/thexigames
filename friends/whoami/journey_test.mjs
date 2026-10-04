@@ -179,6 +179,11 @@ function makeDB() {
     if (/^SELECT a\.card_id, a\.kind, c\.name FROM fr_wa_answer/.test(sql)) {
       return ANSWERS.filter((x) => x.answer === a[0]).map((x) => ({ ...x, name: card(x.card_id).name }));
     }
+    /* EVERY CARD'S DISPLAY NAME, which judge() asks since 3 Oct 2026: a guess
+       that IS a card's name names that card, whatever its accept list says. */
+    if (/^SELECT id, name FROM fr_wa_card WHERE status = 'published'$/.test(sql)) {
+      return CARDS.map((c) => ({ id: c.id, name: c.name }));
+    }
     if (/^SELECT name FROM fr_wa_card WHERE status = 'published' ORDER BY name/.test(sql)) {
       return CARDS.map((c) => ({ name: c.name })).sort((x, y) => x.name.localeCompare(y.name));
     }
