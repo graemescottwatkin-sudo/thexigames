@@ -305,5 +305,32 @@ console.log("\n=== And refuses an import from before the ruling ===");
     (r.stdout.match(/REFUSED.*$/m) || ["exit " + r.status])[0]);
 }
 
+/* ONE CLUE ON TWO CARDS (3 Oct 2026): refused, compared as words, except the
+   one pair the owner kept by name. */
+{
+  const bad = GOOD.map((c) => JSON.parse(JSON.stringify(c)));
+  bad[0].clues[1].t = "My son is Joey.";
+  bad[5].clues[2].t = "my son is JOEY";
+  const r = node(IMPORTER, ["--source", deckDir("dup-clue", bad), "--check", "--out", path.join(TMP, "dup-clue.sql")]);
+  t("the same clue on two cards, however it is cased and punctuated",
+    r.status !== 0 && /the same clue is on 2 cards \(1:2, 4:3\)/.test(r.stdout),
+    (r.stdout.match(/the same clue.*$/m) || ["exit " + r.status])[0]);
+}
+{
+  const kept = GOOD.map((c) => JSON.parse(JSON.stringify(c)))
+    .concat([card("31", "Kappa Seven", "Loves & Exes", 15, range(1, 15)),
+             card("32", "Lambda Eight", "Loves & Exes", 15, range(1, 15))]);
+  kept[7].clues[12].t = "I dated Monica in season one.";
+  kept[8].clues[12].t = "I dated Monica in season one.";
+  const r = node(IMPORTER, ["--source", deckDir("dup-kept", kept), "--check", "--out", path.join(TMP, "dup-kept.sql")]);
+  t("but Alan 31:13 and Ethan 32:13, the pair the owner kept, pass",
+    r.status === 0, r.status === 0 ? "" : r.stdout.split("\n").filter((l) => /REFUSED|^    /.test(l)).slice(0, 3).join(" | "));
+  kept[0].clues[1].t = "I dated Monica in season one.";
+  const r2 = node(IMPORTER, ["--source", deckDir("dup-kept-third", kept), "--check", "--out", path.join(TMP, "dup-kept-third.sql")]);
+  t("and the same words on a third card are refused, kept pair or not",
+    r2.status !== 0 && /the same clue is on 3 cards/.test(r2.stdout),
+    (r2.stdout.match(/the same clue.*$/m) || ["exit " + r2.status])[0]);
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

@@ -304,6 +304,34 @@ for (const [answer, owners] of acceptOwners) {
   }
 }
 
+/* NO CLUE IS WORD FOR WORD ANOTHER CARD'S. A clue that fits two answers is
+   a coin toss for whoever is guessing, and on 3 Oct 2026 the deck had four:
+   "I worked at Ralph Lauren." on Tag and on Gavin, "My son is Chandler." on
+   Nora and on Charles, "My son is Joey." on Joey Sr. and on Gloria, and "I
+   dated Monica in season one." on Alan and on Ethan -- found by the deck's
+   session, not by this importer. Compared as WORDS (case, accents and
+   punctuation folded), so "My son is Joey." and "my son is joey" are one clue.
+   ONE PAIR IS KEPT, BY NAME. Alan 31:13 and Ethan 32:13 were served together
+   on 3 Oct 2026, and the owner chose to leave them as played (3 Oct 2026,
+   asked whether this check should exempt that pair: "Exempt that pair"),
+   to be revisited before the deck loops after 23 Dec 2026. Any other pair,
+   including either of these clues on a third card, is refused. */
+const DUPLICATE_CLUES_KEPT = new Set(["31:13|32:13"]);
+const clueAt = new Map();           // folded clue text -> ["card:clue", ...]
+for (const c of cards) {
+  (c.clues || []).forEach((cl, i) => {
+    const k = words(cl.t);
+    if (!k) return;
+    if (!clueAt.has(k)) clueAt.set(k, []);
+    clueAt.get(k).push(`${c.id}:${i + 1}`);
+  });
+}
+for (const [text, at] of clueAt) {
+  if (new Set(at.map((x) => x.split(":")[0])).size < 2) continue;
+  if (DUPLICATE_CLUES_KEPT.has(at.slice().sort().join("|"))) continue;
+  faults.push(`the same clue is on ${at.length} cards (${at.join(", ")}): "${text.slice(0, 60)}"`);
+}
+
 if (faults.length) {
   console.log(`REFUSED: ${faults.length} fault(s) in the deck:`);
   faults.slice(0, 12).forEach((f) => console.log("    " + f));
