@@ -20,7 +20,7 @@
  * and a roster is a candidate list for the door.
  */
 var DECK_WORD = { main: 'Everyday', expert: 'Deep cut' };
-var BUILD = "v001q";
+var BUILD = "v001r";
 
 (function bootstrap() {
   'use strict';
@@ -432,7 +432,7 @@ function renderDoors() {
     }
     if (el.mechanism) {
       el.mechanism.textContent = n
-        ? 'Each card hides one character, with three clues. A wrong name costs a point, and three in a row bring out the next clue.'
+        ? 'Each card hides one character, who speaks its three clues: “I” is the one you’re guessing. A wrong name costs a point, and three in a row bring out the next clue.'
         : '';
     }
   }

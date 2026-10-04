@@ -43,7 +43,7 @@ const SRC = "football/whoami";
 const OUT = "friends/whoami";
 
 /* THE TAG LIVES HERE, written into every generated file. Bump, regenerate. */
-const TAG = "v001q";
+const TAG = "v001r";
 
 const NAME = "Who Am I XI: Friends";
 /* THREE, NOT ELEVEN. This said eleven -- copied from football's shape before
@@ -154,8 +154,13 @@ function page() {
      `<span class="sc-title">Five cards, one sitting</span>`, "how to play, the title"],
     [`<li>Pick one of the eleven clubs. <b>One door a day</b> &mdash; choose
             carefully, because the other ten stay shut.</li>`,
+     /* WHOSE VOICE (the owner, 4 Oct 2026, after two players on Reddit could
+        not tell whether "I" or "her" was the answer): every clue is the
+        character speaking. */
      `<li>Five cards a day, <b>played in order</b>. Each one hides a
-            Friends character.</li>`, "how to play, step 1"],
+            Friends character. Every clue is spoken by that character:
+            <b>&ldquo;I&rdquo; is always the answer</b>, and &ldquo;he&rdquo; or
+            &ldquo;she&rdquo; is someone in their life.</li>`, "how to play, step 1"],
     [`<li>You get one spell of that player&rsquo;s career free: the club, the
             years, the games and the goals.</li>`,
      `<li>You get the first of that card&rsquo;s three clues free. They run
@@ -1068,7 +1073,7 @@ var BUILD = `, "the deck words");
     }
     if (el.mechanism) {
       el.mechanism.textContent = n
-        ? 'Each card hides one character, with three clues. A wrong name costs a point, and three in a row bring out the next clue.'
+        ? 'Each card hides one character, who speaks its three clues: “I” is the one you’re guessing. A wrong name costs a point, and three in a row bring out the next clue.'
         : '';
     }
   }
