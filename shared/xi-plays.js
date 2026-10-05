@@ -201,6 +201,16 @@
       solved: p.solved || 0, completed: !!completed, elapsed: p.elapsed || 0,
       checks: p.checks || 0, reveals: p.reveals || 0,
       detail: p.detail && typeof p.detail === "object" ? p.detail : null,
+      /* THE DENOMINATOR, CORRECTED AT THE END IF THE GAME KNOWS BETTER.
+         start() takes a total because most games know theirs before a board
+         opens — eleven answers, five doors. A game that deals from a pool does
+         not: Lightning sends 40, which is the QUEUE it draws from so that a
+         player who skips everything still reaches the end, and not a target
+         anybody is measured against. Every average it appeared in was computed
+         over a buffer — "6.1 of 40" when the best score in 89 plays was 19.
+         Optional on purpose. A game that says nothing here keeps the total it
+         opened with, so this changes no existing game until it asks to. */
+      total: typeof p.total === "number" && p.total > 0 ? p.total : null,
     };
     var r = post(body, !!leaving);
     /* Only a FINISH is worth waiting for a reply to. An abandon is the absence

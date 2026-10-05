@@ -143,6 +143,22 @@ console.log("\n=== Share and challenge ===");
     p4.shared.length === 1 && p4.shared[0].text.endsWith("#b=9"), JSON.stringify([p3.shared[0], p4.shared[0]]));
 }
 
+console.log("\n=== The ask ===");
+{
+  /* The owner, 5 Oct 2026: "use the second wording, all games". Every game
+     draws its ending through this panel, so this is every game. */
+  const { w, doc } = page();
+  const r = w.XIFullTime.panel(doc.getElementById("p"), DATA);
+  const act = doc.querySelector(".xft-act");
+  const ask = act && act.querySelector(".xft-ask");
+  t("the ask is on the ending, in the owner's words",
+    !!ask && ask.textContent === "Enjoyed it? Share it with a friend — that’s how the XI grows.", ask ? ask.textContent : "none");
+  t("and it sits over the share button, first in the actions",
+    !!ask && act.firstElementChild === ask && ask.nextElementSibling === r.share,
+    act ? [...act.children].map((e) => e.className).join(",") : "no actions");
+  t("once", doc.querySelectorAll(".xft-ask").length === 1);
+}
+
 console.log("\n=== The other shapes ===");
 {
   const { w, doc } = page();

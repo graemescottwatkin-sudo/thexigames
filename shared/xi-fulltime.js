@@ -384,6 +384,15 @@
 
     /* 3. SHARE and 4. CHALLENGE: two intents, two buttons, never a toggle. */
     var act = el("div", "xft-act");
+    /* THE ASK, one line over the buttons, on every game's ending and nowhere
+       else (the owner, 5 Oct 2026, choosing the wording and "all games"). At
+       full time, because that is when a player has a score worth sending;
+       one line, because a pop-up asking for help is a small site asking for
+       favours. Text, not markup, so the apostrophe and the dash are just
+       characters. */
+    var ask = el("p", "xft-ask");
+    ask.textContent = "Enjoyed it? Share it with a friend — that’s how the XI grows.";
+    act.appendChild(ask);
     var share = el("button", "xft-btn xft-primary", "Share result");
     share.type = "button";
     share.addEventListener("click", function () {

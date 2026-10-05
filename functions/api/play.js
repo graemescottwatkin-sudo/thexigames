@@ -207,10 +207,26 @@ export async function onRequestPost({ request, env }) {
           SET solved = CASE WHEN srv_score IS NULL THEN ? ELSE solved END,
               completed = CASE WHEN srv_score IS NULL THEN ? ELSE completed END,
               elapsed_secs = ?,
+              /* THE DENOMINATOR, IF THE GAME CORRECTED IT. Most know their
+                 total before the board opens and say nothing here, so COALESCE
+                 keeps what the start wrote. A game that deals from a pool only
+                 learns its real total at the end: Lightning opened with 40,
+                 which is the queue it draws from rather than a target, and
+                 every average computed over it was measured against a buffer.
+                 NULL means "no better answer", not "zero" — hence COALESCE
+                 rather than an assignment, so this is inert for every game
+                 that does not opt in. */
+              total = COALESCE(?, total),
               checks = ?, reveals = ?, detail = ?, ended_at = datetime('now')
         WHERE play_id = ?`)
       .bind(int(body.solved, 50), body.completed ? 1 : 0,
-            int(body.elapsed, 86400), int(body.checks, 500),
+            int(body.elapsed, 86400),
+            /* Validated like every other number here rather than trusted: a
+               total is a small positive count, and anything else is no answer
+               at all, which COALESCE then reads as "leave it alone". */
+            typeof body.total === "number" && body.total > 0
+              ? int(body.total, 1000) : null,
+            int(body.checks, 500),
             int(body.reveals, 500), detailOf(body.detail), playId).run();
     /* AND FINISHED, only if it was. An attempt that ends unfinished leaves
        finished_at null, which IS the loss condition — the season reads the

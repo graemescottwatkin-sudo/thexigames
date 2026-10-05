@@ -62,7 +62,13 @@ function makeEnv() {
             const held = /srv_score IS NULL/.test(sql) && r.srv_score != null;
             if (!held) { r.solved = b[0]; r.completed = b[1]; }
             r.elapsed_secs = b[2];
-            r.checks = b[3]; r.reveals = b[4]; r.detail = b[5]; r.ended_at = "now";
+            /* COALESCE modelled rather than assigned. A null here means the
+               game offered no better total, so the start's stands — writing
+               b[3] unconditionally would make the stub disagree with the SQL
+               it is standing in for, and the check that a quiet game keeps
+               its total would pass for the wrong reason. */
+            if (b[3] != null) r.total = b[3];
+            r.checks = b[4]; r.reveals = b[5]; r.detail = b[6]; r.ended_at = "now";
           }
         }
         return { success: true };
@@ -462,6 +468,46 @@ console.log("\nEvery game counts through the same route");
   await post({ event: "start", playId: id(7), game: "wordsearch", mode: "free", boardKey: "XIWS-0025", total: 11 }, e);
   t("free play is a mode of its own, not folded into daily",
     e._rows[e._rows.length - 1].mode === "free" && e._rows[e._rows.length - 1].board_key === "XIWS-0025");
+  /* THE DENOMINATOR A POOL GAME ONLY LEARNS AT THE END.
+     Lightning opens with total 40, which is the QUEUE it deals from so a
+     player who skips everything still reaches the end — not a target. Every
+     average it appeared in was computed over that buffer: "6.1 of 40" when
+     the best score in 89 plays was 19. end() may now correct it, and the
+     server COALESCEs, so a game that says nothing keeps what it opened with
+     and nothing changes for the other seventeen. */
+  await post({ event: "start", playId: id(8), game: "scrambled", mode: "daily",
+    boardKey: "sc:9", total: 40 }, e);
+  const beforeTotal = e._rows[e._rows.length - 1].total;
+  await post({ event: "end", playId: id(8), game: "scrambled", solved: 6,
+    completed: true, elapsed: 90, total: 12 }, e);
+  const afterRow = e._rows.find((r) => r.play_id === id(8)) ||
+    e._rows[e._rows.length - 1];
+  t("the end may correct a total the start could not know",
+    beforeTotal === 40 && afterRow.total === 12);
+  await post({ event: "start", playId: id(9), game: "crossword", mode: "daily",
+    boardKey: "daily:9", total: 11 }, e);
+  await post({ event: "end", playId: id(9), game: "crossword", solved: 11,
+    completed: true, elapsed: 300 }, e);
+  const keptRow = e._rows.find((r) => r.play_id === id(9)) ||
+    e._rows[e._rows.length - 1];
+  t("and a game that says nothing keeps the total it opened with",
+    keptRow.total === 11);
+  const route = fs.readFileSync(path.join(DIR, "../../functions/api/play.js"), "utf8");
+  t("a total is validated, not trusted — the column is a count, not a store",
+    /typeof body\.total === "number" && body\.total > 0/.test(route) &&
+    /COALESCE\(\?, total\)/.test(route));
+  /* AND THE CLIENT HALF, which the three checks above cannot see: they post to
+     the endpoint directly, so deleting the field from xi-plays.js left them all
+     green. A server that accepts a correction no game can send is half a fix. */
+  t("and the helper offers it from progress(), optionally",
+    (() => {
+      const helper = fs.readFileSync(
+        path.join(DIR, "../../shared/xi-plays.js"), "utf8");
+      const endBody = helper.slice(helper.indexOf('event: "end"'),
+                                   helper.indexOf("var r = post(body"));
+      return /total:\s*typeof p\.total === "number" && p\.total > 0 \? p\.total : null/
+        .test(endBody);
+    })());
   const mig = fs.readFileSync(path.join(DIR, "../../data/migrations/026-plays-game.sql"), "utf8");
   t("the columns are added by a migration, one game column beside the board key",
     /ALTER TABLE plays ADD COLUMN game TEXT NOT NULL DEFAULT 'crossword'/.test(mig) &&
