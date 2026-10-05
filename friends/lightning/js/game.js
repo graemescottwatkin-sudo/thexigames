@@ -21,7 +21,7 @@
  * number; the front page is today's. The page asks /api/lightning_fr/daily
  * which day that is before anything starts, and the server bounds it.
  */
-var BUILD = "v001h";
+var BUILD = "v001i";
 
 (function () {
   'use strict';
@@ -508,7 +508,12 @@ var BUILD = "v001h";
       var lost = Number(run.lostMs) || 0;
       var left = run.endLeft != null ? run.endLeft : leftNow();
       var answered = run.answered != null ? run.answered : (run.marks || []).length;
-      return { solved: run.score, elapsed: Math.round(Math.max(0, CONFIG.RUN_MS - left - lost) / 1000),
+      /* TOTAL IS WHAT WAS PLAYED (v001i; shared v97 lets a game correct it at
+         the end): the questions answered, not the 40 dealt -- the deal is a
+         buffer so a run never runs dry, not a target. None answered says
+         nothing, and the start's figure stands. */
+      return { solved: run.score, total: answered > 0 ? answered : null,
+               elapsed: Math.round(Math.max(0, CONFIG.RUN_MS - left - lost) / 1000),
                detail: { score: run.score, wrong: run.wrong, answered: answered,
                          lostSecs: Math.round(lost / 1000), leftSecs: Math.round(left / 1000) } };
     });

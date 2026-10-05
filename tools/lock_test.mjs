@@ -1156,11 +1156,11 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "l
     t(`${vp[0]}: and now, after the whistle, every miss is listed with its answer`,
       end.missed === end.marks - 1 && end.named, JSON.stringify(end));
     const told = playEnds.find((x) => x.completed);
-    t(`${vp[0]}: the play count is told the seconds played, what the misses cost and how many were answered`,
-      !!told && told.elapsed > 0 && told.elapsed <= 90 && !!told.detail
+    t(`${vp[0]}: the play count is told the seconds played, what the misses cost and how many were answered, as its total`,
+      !!told && told.elapsed > 0 && told.elapsed <= 90 && told.total === end.marks && !!told.detail
         && told.detail.answered === end.marks && told.detail.lostSecs > 0
         && Math.abs(told.elapsed + told.detail.lostSecs + told.detail.leftSecs - 90) <= 2,
-      JSON.stringify(told && { elapsed: told.elapsed, detail: told.detail, marks: end.marks }));
+      JSON.stringify(told && { elapsed: told.elapsed, total: told.total, detail: told.detail, marks: end.marks }));
     await reachCheck(page, vp[0], FT_BOX[id], "the result", "#ftPanel");
     await context.close();
   }
