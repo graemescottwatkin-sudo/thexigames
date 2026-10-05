@@ -21,7 +21,7 @@
  * number; the front page is today's. The page asks /api/lightning_fr/daily
  * which day that is before anything starts, and the server bounds it.
  */
-var BUILD = "v001g";
+var BUILD = "v001h";
 
 (function () {
   'use strict';
@@ -393,6 +393,12 @@ var BUILD = "v001g";
       .then(function (r) {
         forgetRun();
         if (r.mode === 'daily') bankDaily(r);
+        /* The server's own sums, for the play count: what the misses cost and
+           how much clock was left when the run ended (a run that uses every
+           question it was dealt ends early). */
+        run.lostMs = Number(r.lostMs) || 0;
+        run.answered = r.answered;
+        run.endLeft = leftNow();
         playsEnd(true);
         showResults(r);
       })
@@ -493,8 +499,18 @@ var BUILD = "v001g";
       dailyNo: mode === 'daily' ? no : null,
       total: CONFIG.RUN_LENGTH
     }, function () {
-      return { solved: run ? run.score : 0, elapsed: 0,
-               detail: { score: run ? run.score : 0, wrong: run ? run.wrong : 0 } };
+      /* THE CLOCK, AS PLAYED (elapsed was a constant 0 until v001h, so every
+         Lightning row in plays said nothing about time -- the one number the
+         game is about; found from the analytics, 5 Oct 2026). Real seconds
+         played are the run's length less the clock left and less what the
+         misses took off it: the server charges a miss to the same clock. */
+      if (!run) return { solved: 0, elapsed: 0 };
+      var lost = Number(run.lostMs) || 0;
+      var left = run.endLeft != null ? run.endLeft : leftNow();
+      var answered = run.answered != null ? run.answered : (run.marks || []).length;
+      return { solved: run.score, elapsed: Math.round(Math.max(0, CONFIG.RUN_MS - left - lost) / 1000),
+               detail: { score: run.score, wrong: run.wrong, answered: answered,
+                         lostSecs: Math.round(lost / 1000), leftSecs: Math.round(left / 1000) } };
     });
   }
   function playsEnd(completed) {

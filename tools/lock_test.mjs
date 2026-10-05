@@ -1102,6 +1102,13 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "l
   console.log(`\n${id}: the end of the run`);
   for (const vp of [VIEWPORTS[1], VIEWPORTS[3]]) {
     const { page, context } = await openLightning(game, vp);
+    /* WHAT THE PLAY COUNT IS TOLD (v001h): elapsed was a constant 0 on every
+       Lightning row until 5 Oct 2026. Read off the wire, as it is sent. */
+    const playEnds = [];
+    page.on("request", (rq) => {
+      if (!rq.url().includes("/api/play") || rq.method() !== "POST") return;
+      try { const b = JSON.parse(rq.postData() || "{}"); if (b.event === "end") playEnds.push(b); } catch (e) {}
+    });
     await lightningPick(page, true);
     /* A MISS SHOWS THE ANSWER AT ONCE (the owner, 29 Sep 2026, reversing the
        28 Sep hold): the pick red, the right option green, and what it cost
@@ -1148,6 +1155,12 @@ for (const [id, game] of Object.entries(LOCKED).filter(([k, g]) => g.kind === "l
       !end.locked && end.scrollX <= 1 && end.score === "1" && end.marks >= 10 && end.marks <= 46, JSON.stringify(end));
     t(`${vp[0]}: and now, after the whistle, every miss is listed with its answer`,
       end.missed === end.marks - 1 && end.named, JSON.stringify(end));
+    const told = playEnds.find((x) => x.completed);
+    t(`${vp[0]}: the play count is told the seconds played, what the misses cost and how many were answered`,
+      !!told && told.elapsed > 0 && told.elapsed <= 90 && !!told.detail
+        && told.detail.answered === end.marks && told.detail.lostSecs > 0
+        && Math.abs(told.elapsed + told.detail.lostSecs + told.detail.leftSecs - 90) <= 2,
+      JSON.stringify(told && { elapsed: told.elapsed, detail: told.detail, marks: end.marks }));
     await reachCheck(page, vp[0], FT_BOX[id], "the result", "#ftPanel");
     await context.close();
   }
