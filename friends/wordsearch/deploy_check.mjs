@@ -41,8 +41,8 @@ const API = "/api/wordsearch_fr/";
 const ROUTE_FILES = ["archive.js", "catalog.js", "daily.js", "find.js", "finish.js", "puzzle.js", "round.js", "secret.js"];
 
 /* WHAT IS LIVE. Bump both after a deploy with tools/post_deploy.mjs. */
-const LAST_SHIPPED = "v001a";      // the launch build, 30 Sep 2026
-const LAST_SHIPPED_ASSETS = "89a285644cc0173e";
+const LAST_SHIPPED = "v001b";      // the launch build, 30 Sep 2026
+const LAST_SHIPPED_ASSETS = "565b24d942149a76";
 
 let pass = 0, fail = 0;
 function t(name, ok, note) {
