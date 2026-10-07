@@ -43,7 +43,7 @@ const SRC = "football/whoami";
 const OUT = "friends/whoami";
 
 /* THE TAG LIVES HERE, written into every generated file. Bump, regenerate. */
-const TAG = "v001r";
+const TAG = "v001s";
 
 const NAME = "Who Am I XI: Friends";
 /* THREE, NOT ELEVEN. This said eleven -- copied from football's shape before
@@ -434,7 +434,7 @@ body.locked .wa-ed .profile{grid-template-columns:minmax(0,1fr)}
 .wa-ed .fw-pips{display:flex;gap:6px;margin:4px 0 14px}
 .wa-ed .fw-pip{width:28px;height:8px;border-radius:4px;background:var(--wa-line, var(--line))}
 .wa-ed .fw-pip.on{background:var(--wa-gold, var(--gold))}
-.wa-ed .fw-pip.won{background:var(--pitch)}
+.wa-ed .fw-pip.won{background:var(--got)}
 
 /* The ambiguous verdict's choices, which reuse the suggestion list. */
 .wa-ed .suggest .sugg{margin:4px 6px 0 0}

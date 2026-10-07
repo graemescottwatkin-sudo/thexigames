@@ -3173,6 +3173,51 @@ if (!ONLY || ONLY === "keys") {
     `${typing} of ${expected}`);
 }
 
+/* ---- MONICA'S DOOR ON EVERY FRIENDS PAGE ---------------------------------
+   The owner, 6 Oct 2026: "Anywhere with football themed colours like the
+   green can be replaced with this new colour theme", and "Correct stay green".
+   Asked of the browser, light and dark, on every Friends page and on a
+   football one: the pitch family is purple there and green here, the frame is
+   yellow there, and a right answer -- a Full Time box, drawn here as the panel
+   draws it -- is football green on both. */
+if (!ONLY || ONLY === "theme") {
+  console.log(`\nthe Friends colours`);
+  const PURPLE = "rgb(91, 60, 136)", GREEN = "rgb(30, 107, 69)", YELLOW = "rgb(232, 197, 71)";
+  const FR = ["/friends/", "/friends/crossword/", "/friends/whoami/", "/friends/lightning/", "/friends/scrambled/",
+    "/friends/vowels/", "/friends/wordsearch/", "/friends/quickfire/"];
+  for (const [where, dark] of [...FR.map((f) => [f, false]), ["/friends/crossword/", true], ["/football/crossword/", false], ["/football/wordsearch/", false]]) {
+    const context = await browser.newContext({ viewport: { width: 412, height: 860 }, deviceScaleFactor: 1 });
+    if (dark) await context.addInitScript(() => { try { localStorage.setItem("xi.theme", "dark"); } catch (e) {} });
+    const page = await context.newPage();
+    await page.goto(ORIGIN + where, { waitUntil: "domcontentloaded" });
+    const c = await page.evaluate(() => {
+      const probe = (cls, prop) => { const e = document.createElement("div"); e.className = cls; document.body.appendChild(e);
+        const v = getComputedStyle(e)[prop]; e.remove(); return v; };
+      const swatch = (v) => { const e = document.createElement("div"); e.style.color = "var(" + v + ")"; document.body.appendChild(e);
+        const c = getComputedStyle(e).color; e.remove(); return c; };
+      return { set: document.documentElement.getAttribute("data-xi-set"), theme: document.documentElement.getAttribute("data-theme"),
+        pitch: swatch("--pitch"), accent: swatch("--accent"), frame: swatch("--board-frame"), ok: swatch("--ok"),
+        /* The panel's own box where the page loads the panel's stylesheet
+           (a game); the token itself where it does not (the hub). */
+        got: [...document.styleSheets].some((x) => /xi-fulltime\.css/.test(x.href || "")) ? probe("xft-b g", "backgroundColor") : swatch("--got") };
+    });
+    const friends = where.startsWith("/friends/");
+    if (friends) {
+      t(`${where}${dark ? " (dark)" : ""}: stamped Friends; the pitch and the accent are purple, the frame yellow`,
+        c.set === "friends" && (dark ? c.theme === "dark" && c.pitch !== GREEN : c.pitch === PURPLE && c.accent === PURPLE) &&
+          c.frame === YELLOW, JSON.stringify(c));
+    } else {
+      /* The accent is the game's own kit colour on football (the word
+         search's is blue), so it is asked only not to be purple. */
+      t(`${where}: football stays football -- a green pitch, no purple accent, no yellow frame`,
+        c.set === "football" && c.pitch === GREEN && c.accent !== PURPLE && c.frame !== YELLOW, JSON.stringify(c));
+    }
+    t(`${where}${dark ? " (dark)" : ""}: and a right answer is green, a Full Time box as the panel draws it`,
+      dark ? c.got !== PURPLE && /^rgb\(44, 138, 92\)$/.test(c.got) : c.got === GREEN, JSON.stringify({ got: c.got, ok: c.ok }));
+    await context.close();
+  }
+}
+
 /* NOTHING THE BROWSER ASKED FOR WENT OVER A SOCKET. A route that sends a
    request to the network (route.continue, route.fetch) would bring back the
    hang serve() exists to end, and it would pass every check here on a quiet

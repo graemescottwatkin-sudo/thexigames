@@ -176,6 +176,17 @@
      which is why the grid read as a pitch with letters cut out of it. */
   --grid-cell:#FFFFFF; --grid-line:#DFE3DD; --grid-block:#1B211C;
   --grid-field:#E7EBE5; --grid-field-line:rgba(24,34,25,.10);
+
+  /* ---- A RIGHT ANSWER, as a filled surface: a Full Time box, a solved tile,
+     the pip of the clue that won a card. It was --pitch, which was the right
+     colour for the wrong reason -- the day a theme recoloured the pitch, its
+     right answers would have changed colour with it. The owner, 6 Oct 2026,
+     restyling Friends: "Correct stay green yes, I'm only referring to elements
+     outside of answers". So right has its own name, football green by
+     default and kept green wherever the pitch is not. */
+  --got:var(--pitch); --on-got:var(--on-pitch); --got-soft:var(--on-pitch-soft);
+  /* The frame round a board: its colour and its width. */
+  --board-frame:var(--pitch-deep); --board-frame-w:2px;
 }
 :root[data-theme="dark"]{
   --shadow-1:0 1px 2px rgba(0,0,0,.3),0 2px 8px rgba(0,0,0,.3);
@@ -191,6 +202,53 @@
   --revealed:#8AA0B6; --revealed-bg:#5C4E1E;
   --grid-cell:#5A6356; --grid-line:#8D9788; --grid-block:#070907;
   --grid-field:#182019; --grid-field-line:rgba(255,255,255,.08);
+}
+/* ---- FRIENDS: MONICA'S DOOR ---------------------------------------------
+   The owner, 6 Oct 2026, from the app: the Friends crossword "is still boring
+   looking, needs a friends makeover"; of three directions, "B it is" -- a
+   purple field with a yellow frame -- and then, for every Friends page,
+   "Anywhere with football themed colours like the green can be replaced with
+   this new colour theme", with "Correct stay green yes, I'm only referring to
+   elements outside of answers / I.e. background".
+   So on a page whose first path segment is friends (stamped by
+   shared/xi-theme.js before the first paint) the pitch family, the paper,
+   the lines, the selection and the grid's field turn purple, the frame
+   round a board turns yellow, and the answer colours do not move: --got is
+   pinned to football's green, and --ok, --correct and --wrong were never the
+   pitch. Declared on :root, as the defaults are, so every token that is
+   derived from --pitch there (--accent, --ring) follows. After the
+   [data-game] rules, and of equal or greater weight, because the crossword's
+   --accent is a literal there. No logos, stills or cast images: colour only. */
+:root[data-xi-set="friends"]:not([data-theme="dark"]){
+  --paper:#F7F3FA; --card:#FFFFFF; --line:#E2D9EE;
+  --ink:#2B1F3D; --ink-soft:#6E5F86; --ink-faint:#9C90AE;
+  --pitch:#5B3C88; --pitch-deep:#3E2766; --pitch-ink:#5B3C88;
+  --on-pitch:#FFFFFF; --pitch-hover:#3E2766; --on-pitch-soft:#DCCDF2;
+  --accent:#5B3C88; --accent-ink:#5B3C88; --accent-on:#FFFFFF;
+  --xi-ink:#B58A12;
+  --tint:rgba(62,39,102,.06); --tint-strong:rgba(62,39,102,.12);
+  --scrim:rgba(43,31,61,.6);
+  --shadow-1:0 1px 2px rgba(62,39,102,.07),0 2px 8px rgba(62,39,102,.07);
+  --sel:#D9C8F0; --sel-word:#E5DAF5; --sel-ring:#E8C547; --sel-line:#B79FD9;
+  --grid-cell:#FFFFFF; --grid-line:#E2D9EE; --grid-block:#3E2766;
+  --grid-field:#EEE6F6; --grid-field-line:rgba(62,39,102,.10);
+  --got:#1E6B45; --on-got:#FFFFFF; --got-soft:#9FE1CB;
+  --board-frame:#E8C547; --board-frame-w:8px;
+}
+:root[data-theme="dark"][data-xi-set="friends"]{
+  --paper:#16101F; --card:#211833; --line:#3A2D52;
+  --ink:#EEE8F6; --ink-soft:#B9AECB; --ink-faint:#857A99;
+  --pitch:#7A55B0; --pitch-deep:#2A1A45; --pitch-ink:#CDB8F0;
+  --on-pitch:#FFFFFF; --pitch-hover:#9470C8; --on-pitch-soft:#DCCDF2;
+  --accent:#7A55B0; --accent-ink:#CDB8F0; --accent-on:#FFFFFF;
+  --xi-ink:#E8C547;
+  --tint:rgba(238,232,246,.07); --tint-strong:rgba(238,232,246,.14);
+  --scrim:rgba(43,31,61,.6);
+  --sel:#4A3A66; --sel-word:#3A2D52; --sel-ring:#E8C547; --sel-line:#7E6AA0;
+  --grid-cell:#5E5470; --grid-line:#8F84A3; --grid-block:#0B0712;
+  --grid-field:#1E1630; --grid-field-line:rgba(255,255,255,.08);
+  --got:#2C8A5C; --on-got:#FFFFFF; --got-soft:#9FE1CB;
+  --board-frame:#E8C547; --board-frame-w:8px;
 }
 /* Motion collapses to nothing in ONE place. A game that uses the tokens gets
    reduced motion for free; one that hardcodes 200ms has to remember. */

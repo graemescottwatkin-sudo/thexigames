@@ -48,5 +48,16 @@
     media.addEventListener("change", function () { if (stored() === "auto") apply(); });
   }
   apply();
+  /* THE PAGE'S THEME, stamped with its light or dark: the first path segment
+     IS the theme (CLAUDE.md, 5 Sep 2026), so /friends/... carries
+     data-xi-set="friends" before the first paint and shared/xi-tokens.css
+     dresses it in that theme's colours -- the owner, 6 Oct 2026: "Anywhere
+     with football themed colours like the green can be replaced with this new
+     colour theme" (Monica's door). Read from the address, not from a list:
+     a segment no stylesheet knows changes nothing. */
+  try {
+    var seg = (location.pathname.split("/")[1] || "").toLowerCase();
+    if (/^[a-z][a-z0-9-]*$/.test(seg)) document.documentElement.setAttribute("data-xi-set", seg);
+  } catch (e) {}
   window.XITheme = { get: stored, set: set, cycle: cycle, apply: apply, CHOICES: CHOICES };
 })();

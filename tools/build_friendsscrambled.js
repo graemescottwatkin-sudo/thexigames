@@ -38,7 +38,7 @@ const CHECK = process.argv.includes("--check");
 const read = (p) => readText(path.join(ROOT, p));
 
 /* THE TAG LIVES HERE, written into both generated pages. Bump, regenerate. */
-const TAG = "v001b";
+const TAG = "v001c";
 
 /* Football Scrambled's own tag, read from its page: config.js and scoring.js
    are the engine's, loaded from football's folder at football's tag, the way
@@ -230,8 +230,16 @@ const LIST_CSS = `
   padding: 10px;
   border-radius: var(--radius);
   background: var(--pitch-deep);
-  border: 1px solid var(--pitch-deep);
+  /* The yellow frame of Monica's door (the owner, 6 Oct 2026), from the
+     family's tokens; a one-pixel edge in its own colour where no theme sets
+     one. */
+  border: var(--board-frame-w) solid var(--board-frame);
 }
+/* A RIGHT ANSWER STAYS GREEN on a purple board (the owner, 6 Oct 2026:
+   "Correct stay green"): the solved row and the quiet text on it read the
+   family's --got, not the pitch. */
+.slot.solved { background: var(--got); }
+.slot .clubs { color: var(--got-soft); }
 .xlist .listHead {
   margin: 0 0 2px;
   font-family: var(--disp);

@@ -88,7 +88,7 @@
 .xft-ring { position: relative; flex: none; width: 120px; height: 120px; }
 .xft-ring svg { display: block; width: 100%; height: 100%; }
 .xft-ring-bg { fill: none; stroke: var(--tint-strong); stroke-width: 10; }
-.xft-ring-fill { fill: none; stroke: var(--pitch); stroke-width: 10; stroke-linecap: round; }
+.xft-ring-fill { fill: none; stroke: var(--got); stroke-width: 10; stroke-linecap: round; }
 .xft-score { position: absolute; inset: 0; margin: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 0; }
 .xft-score b { font-family: var(--disp); font-weight: 700; font-size: 40px; line-height: .95; color: var(--ink); }
 .xft-score span { font-family: var(--disp); font-weight: 600; font-size: 16px; line-height: 1; color: var(--ink-soft); }
@@ -103,11 +103,11 @@
 @media (max-width: 360px) { .xft-ring { width: 100px; height: 100px; } .xft-score b { font-size: 32px; } }
 .xft-boxes { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(11, minmax(0, 1fr)); gap: 4px; }
 .xft-b { height: 30px; border-radius: var(--r-xs); display: flex; align-items: center; justify-content: center; font-family: var(--disp); font-weight: 600; font-size: 13px; }
-.xft-b.g { background: var(--pitch); color: var(--on-pitch); }
+.xft-b.g { background: var(--got); color: var(--on-got); }
 /* TWO COLOURS, RIGHT OR WRONG (the owner, 28 Sep 2026): a box right with
    help is still right, so it is green like the rest; the help is said beside
    the ring, not in the box's colour. */
-.xft-b.a { background: var(--pitch); color: var(--on-pitch); }
+.xft-b.a { background: var(--got); color: var(--on-got); }
 .xft-b.r { background: var(--danger); color: var(--card); font-family: var(--body); font-weight: 700; font-size: 14px; }
 .xft-b.x { background: var(--danger); color: var(--card); }
 .xft-door { display: flex; flex-direction: column; gap: 6px; padding: 10px 12px; border-radius: var(--r-md); background: var(--paper); border: 1px solid var(--line); }

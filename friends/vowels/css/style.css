@@ -823,8 +823,16 @@ body.locked #how:target .how-back{display:inline-flex;align-items:center;min-hei
   padding: 10px;
   border-radius: var(--radius);
   background: var(--pitch-deep);
-  border: 1px solid var(--pitch-deep);
+  /* The yellow frame of Monica's door (the owner, 6 Oct 2026), from the
+     family's tokens; a one-pixel edge in its own colour where no theme sets
+     one. */
+  border: var(--board-frame-w) solid var(--board-frame);
 }
+/* A RIGHT ANSWER STAYS GREEN on a purple board (the owner, 6 Oct 2026:
+   "Correct stay green"): the solved row and the quiet text on it read the
+   family's --got, not the pitch. */
+.slot.solved { background: var(--got); }
+.slot .clubs { color: var(--got-soft); }
 .xlist .listHead {
   margin: 0 0 2px;
   font-family: var(--disp);
