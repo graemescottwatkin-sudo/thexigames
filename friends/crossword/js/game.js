@@ -297,7 +297,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v003b";
+  var BUILD = "v003c";
   /* WHAT THIS GAME IS CALLED on its Full Time panel and in the tab, and whether it has a league to show.
      One line, so tools/build_friendscrossword.js rewrites it in one place:
      the Friends board has its own name, its own word for the end, and no
@@ -8000,6 +8000,42 @@
   function permalinkKey() {
     return window.XIChrome && window.XIChrome.permalink ? window.XIChrome.permalink.read() : null;
   }
+
+  /* ---------- Across / Down: one tap to either list ----------
+     The owner, 6 Oct 2026: the panel beside the board scrolls, and on an iPad
+     on its side the Down clues began below its visible part with no scrollbar
+     to say so. A tab scrolls the panel to its list; the tab for whichever list
+     is at the top of the panel is filled, and Down is filled once the panel is
+     scrolled to its end. */
+  (function clueTabs() {
+    var tabs = $("clueTabs"), panel = $("cluesBlock");
+    if (!tabs || !panel) return;
+    var btns = [].slice.call(tabs.querySelectorAll("button[data-to]"));
+    function colOf(id) { var l = $(id); return l && l.closest ? l.closest(".clue-col") : null; }
+    function mark() {
+      var down = colOf("downList");
+      var atDown = !!down && (panel.scrollTop + panel.clientHeight >= panel.scrollHeight - 2 ||
+        down.getBoundingClientRect().top - panel.getBoundingClientRect().top <= tabs.offsetHeight + 12);
+      btns.forEach(function (b) {
+        var on = (b.getAttribute("data-to") === "downList") === atDown;
+        b.classList.toggle("on", on);
+        b.setAttribute("aria-pressed", on ? "true" : "false");
+      });
+    }
+    btns.forEach(function (b) {
+      b.addEventListener("click", function () {
+        var col = colOf(b.getAttribute("data-to"));
+        if (!col) return;
+        var top = Math.max(0, col.getBoundingClientRect().top - panel.getBoundingClientRect().top +
+          panel.scrollTop - tabs.offsetHeight - 6);
+        if (panel.scrollTo) panel.scrollTo({ top: top, behavior: "smooth" });
+        else panel.scrollTop = top;
+        setTimeout(mark, 450);
+      });
+    });
+    panel.addEventListener("scroll", mark, { passive: true });
+    mark();
+  })();
 
   /* ---------- Boot: today's daily first; unfinished practice resumes ---------- */
   (function boot() {

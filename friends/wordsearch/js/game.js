@@ -21,7 +21,7 @@
 (function () {
   "use strict";
 
-  var BUILD = "v001a";
+  var BUILD = "v001b";
   var GAME = "wordsearch_fr", NAME = "Wordsearch XI: Friends", API = "/api/wordsearch_fr/";
   var PAGE = "https://www.thexigames.com/friends/wordsearch/";
   window.WORDSEARCHXI_FR_BUILD = BUILD;
@@ -233,7 +233,7 @@
   function timerTick() {
     var now = Date.now();
     if (varPauseUntil) {
-      if (now < varPauseUntil) { updateClock(); return; }
+      if (now < varPauseUntil) { if (bonusWindow) secretDue(); updateClock(); return; }
       if (bonusWindow) {
         bonusWindow = false; varPauseStart = 0; varPauseUntil = 0;
         finish("complete");
@@ -297,7 +297,9 @@
       d.className = "word"; d.dataset.n = i;
       d.style.setProperty("--c", WORD_COLOURS[i % WORD_COLOURS.length]);
       var num = document.createElement("span"); num.className = "wn"; num.textContent = (i + 1);
-      var clue = document.createElement("span"); clue.className = "wc"; clue.textContent = a.clue;
+      /* THE ANSWER, NOT A CLUE (the owner, 6 Oct 2026: "no clues just
+         answers"), as football's list is its eleven names. */
+      var clue = document.createElement("span"); clue.className = "wc"; clue.textContent = a.display;
       var ans = document.createElement("span"); ans.className = "wa"; ans.hidden = true;
       d.appendChild(num); d.appendChild(clue); d.appendChild(ans);
       d.onclick = function () { selected = i; updateUI(); };
@@ -616,7 +618,7 @@
       var rem = remaining(); if (!rem.length) return;
       var n = selected != null && !found.has(selected) ? selected : pick(rem), a = puzzle.answers[n];
       flash(placementCells(a.placement, a.grid.length)[0], "first-hint", 2200);
-      toast("First letter of clue " + (n + 1) + " flashed");
+      toast("First letter of word " + (n + 1) + " flashed");
     },
     live: function () {
       if (!useHelp("live")) return;
@@ -625,7 +627,7 @@
       var cs = placementCells(a.placement, a.grid.length);
       var mid = cs.filter(function (_, i) { return i > 0 && i < cs.length - 1; });
       flash(pick(mid.length ? mid : cs), "live-hint", 6200);
-      toast("A letter from clue " + (n + 1) + " highlighted");
+      toast("A letter from word " + (n + 1) + " highlighted");
     },
     var: function () {
       if (!useHelp("var")) return;
@@ -659,22 +661,21 @@
       x.style.order = (done ? 100 : 0) + n;
       var ans = x.querySelector(".wa");
       if (ans) {
-        ans.hidden = !done;
-        ans.textContent = done && known[n] ? known[n].display : "";
+        ans.hidden = true;
+        ans.textContent = "";
       }
-      x.setAttribute("aria-label", "Clue " + (n + 1) + ": " + puzzle.answers[n].clue +
-        (done && known[n] ? ". Found: " + known[n].display : ""));
+      x.setAttribute("aria-label", (n + 1) + ": " + puzzle.answers[n].display + (done ? ", found" : ""));
     });
     var now = puzzle.answers[selected];
     $("clueNow").innerHTML = "";
     if (now) {
       var b = document.createElement("b"); b.textContent = (selected + 1) + ".";
       $("clueNow").appendChild(b);
-      $("clueNow").appendChild(document.createTextNode(found.has(selected) && known[selected]
-        ? known[selected].display : now.clue));
+      $("clueNow").appendChild(document.createTextNode(now.display + (found.has(selected) ? " \u2713" : "")));
     }
     var bonusLen = (puzzle.bonus && (puzzle.bonus.len || (puzzle.bonus.grid || "").length)) || 0;
     $("bonusState").textContent = bonusFound && secret ? "★ " + secret.display
+      : secretShown ? "Look for: " + secretShown
       : (puzzle.bonus && puzzle.bonus.clue) || "Undiscovered";
     $("bonusSub").textContent = bonusFound ? "+10 points at the end."
       : (bonusLen ? bonusLen + " letters · " : "") + "Hidden in the grid · +10 points";
@@ -686,9 +687,45 @@
         varFrozenScore = finalScore();
         $("finishPrompt").classList.add("show");
         updateClock();
+        askSecretLater();
       }
     }
   }
+  /* THE SECRET WORD, PART-WAY THROUGH BONUS TIME (the owner, 6 Oct 2026:
+     "after 15 of those the word is revealed"). How long is the board's own
+     number, bonus.showAfter, sent by the server. The daily asks /secret, which
+     names it only once it is earned and says how long to wait if asked early;
+     any other board arrived whole, so the word is already here. A board that
+     says nothing about it shows nothing. */
+  /* ON THE GAME'S OWN CLOCK, checked by its tick, not a timer of its own:
+     the bonus time is counted the same way, so the two cannot drift. */
+  var secretShown = null, secretAt = 0, secretAsking = false;
+  function askSecretLater(ms) {
+    var after = puzzle && puzzle.bonus && typeof puzzle.bonus.showAfter === "number" ? puzzle.bonus.showAfter : null;
+    secretAt = after === null || bonusFound || secretShown ? 0
+      : Date.now() + (typeof ms === "number" ? ms : after * 1000);
+  }
+  function secretDue() {
+    if (!secretAt || secretAsking || Date.now() < secretAt) return;
+    secretAt = 0;
+    askSecret();
+  }
+  function askSecret() {
+    if (!bonusWindow || bonusFound || secretShown) return;
+    if (mode !== "daily") { if (puzzle.bonus.display) showSecret(puzzle.bonus.display); return; }
+    secretAsking = true;
+    post("secret", { playId: playIdOf() }).then(function (r) {
+      secretAsking = false;
+      if (r && r.secret) showSecret(r.secret);
+      else if (r && r.wait > 0) askSecretLater(r.wait + 50);
+    }).catch(function () { secretAsking = false; });
+  }
+  function showSecret(w) {
+    secretShown = w;
+    toast("The secret word is " + w);
+    updateUI();
+  }
+
   function toast(t) {
     clearTimeout(toastTimer);
     $("toast").textContent = t; $("toast").classList.add("show");
@@ -750,10 +787,10 @@
     var stats = n + " of " + WORDS + " found · " + o.minute + "'" +
       (o.bonus ? " · Bonus +10" : " · Bonus missed") + (o.verified ? " · Verified by the server" : "");
     var answers = puzzle.answers.map(function (a, i) {
-      var b = o.boxes[i], ans = answerOf(i);
-      var clue = a.clue.length > 70 ? a.clue.slice(0, 68).replace(/\s+\S*$/, "") + "…" : a.clue;
+      /* The eleven are the list now, so a line is just the answer. */
+      var b = o.boxes[i], ans = answerOf(i) || a.display;
       return { s: b.s, m: b.m != null ? b.m : null, points: "",
-               text: (i + 1) + ". " + (ans ? ans.toUpperCase() : "(shown when the round is over)") + " — " + clue };
+               text: (i + 1) + ". " + (ans ? ans.toUpperCase() : "") };
     });
     var sn = secretName();
     if (sn) answers.push({ s: o.bonus ? "g" : "x", m: null, text: "Secret bonus: " + sn, points: "" });
@@ -786,6 +823,7 @@
                   progress: "0/" + WORDS, clock: "0'", score: null, worth: null, subs: null });
     }
     found = new Set(); bonusFound = false; bonusWindow = false;
+    secretShown = null; secretAt = 0;
     elapsed = 0; penaltyMinutes = 0; wrongRun = 0; assisted = false;
     helpUsed = new Set(); varPauseStart = 0; varPauseUntil = 0; varFrozenScore = 114;
     $("prematch").classList.add("hidden");
@@ -1059,7 +1097,7 @@
     var note = $("helpNote");
     if (note) note.textContent = competitive()
       ? "Help is not available on today's board."
-      : "Each card once per board. First letter, live letter and auto-fill work on the selected clue.";
+      : "Each card once per board. First letter, live letter and auto-fill work on the selected word.";
     var ver = $("menuVer"); if (ver) ver.textContent = "build " + BUILD;
   }
 

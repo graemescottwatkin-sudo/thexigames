@@ -448,6 +448,36 @@ async function panelCheck(page, label, id) {
     });
     t(`${label}: the close puts it away -- the board is what is under a finger, and a "Full time" button is on screen, on top`,
       shut.gone && shut.pill && shut.pillTop && shut.under, JSON.stringify(shut));
+    /* AND IT COVERS NOTHING OF THE GAME, where nothing scrolls. On an iPad on
+       its side the button sat over the word search's bottom row and hid two
+       letters nobody could scroll to (the app, 6 Oct 2026). Every visible
+       piece of text the page draws, other than the sheet and the button, is
+       asked whether it lies under the button. */
+    const coveredByPill = await page.evaluate(() => {
+      const host = document.querySelector("#ftPanel").closest("[data-xft-host]");
+      const pill = document.querySelector(".xft-reopen");
+      if (!pill || pill.hidden || !document.body.classList.contains("locked")) return [];
+      const pr = pill.getBoundingClientRect();
+      const seen = (e) => { for (let n = e; n && n !== document.body; n = n.parentElement) {
+        const cs = getComputedStyle(n); if (cs.visibility === "hidden" || cs.display === "none" || Number(cs.opacity) === 0) return false; } return true; };
+      return [...document.body.querySelectorAll("*")].filter((e) => !e.children.length && e !== pill && !host.contains(e) &&
+        (e.textContent || "").trim() && seen(e) && (() => {
+          /* WHAT IS SHOWN, NOT WHERE IT IS LAID OUT: a box that clips its
+             contents (overflow other than visible) hides whatever runs past
+             its edge, so the element is cut to every such box above it. */
+          const r = e.getBoundingClientRect();
+          let l = r.left, t = r.top, rt = r.right, b = r.bottom;
+          for (let n = e.parentElement; n && n !== document.documentElement; n = n.parentElement) {
+            const cs = getComputedStyle(n);
+            if (cs.overflowX === "visible" && cs.overflowY === "visible") continue;
+            const c = n.getBoundingClientRect();
+            l = Math.max(l, c.left); t = Math.max(t, c.top); rt = Math.min(rt, c.right); b = Math.min(b, c.bottom);
+          }
+          return rt > l && b > t && l < pr.right && rt > pr.left && t < pr.bottom && b > pr.top; })())
+        .map((e) => e.tagName.toLowerCase() + "." + String(e.className).split(" ")[0] + " " + JSON.stringify((e.textContent || "").trim().slice(0, 12)));
+    });
+    t(`${label}: and on a locked screen that button covers nothing of the game`, coveredByPill.length === 0,
+      coveredByPill.slice(0, 4).join("; ") || "nothing under it");
     if (shut.pill) await page.click(".xft-reopen");
     await wait(250);
     const back = await page.evaluate(() => {
@@ -2879,6 +2909,48 @@ if (!ONLY || ONLY === "crossword") {
     /* And across: a keyboard in the middle of a wide screen is the same
        complaint turned sideways. The top row spans most of the width. */
     t(`${label}: and the top row spans at least 85% of the screen's width`, k.span >= 85, `${k.span}%`);
+    /* ACROSS / DOWN, ONE TAP APART (the owner, 6 Oct 2026). On a tablet on its
+       side the list is a panel beside the board that scrolls, and the Down
+       clues began below its visible part with no scrollbar to say so. A real
+       tap on DOWN must bring the first Down clue into the panel's visible
+       part, and fill the DOWN tab. */
+    if (!/upright/.test(label)) {
+      /* From ACROSS, by a tap on it -- the panel may open scrolled to the
+         clue in hand, which can be a Down one. */
+      const tabAt = (to) => page.evaluate((to) => {
+        const tabs = document.getElementById("clueTabs");
+        const b = tabs && tabs.querySelector('[data-to="' + to + '"]');
+        if (!b || getComputedStyle(tabs).display === "none") return null;
+        const r = b.getBoundingClientRect();
+        return { x: Math.round(r.left + r.width / 2), y: Math.round(r.top + r.height / 2) };
+      }, to);
+      const ac = await tabAt("acrossList");
+      if (ac) { await page.touchscreen.tap(ac.x, ac.y); await wait(700); }
+      const before = await page.evaluate(() => {
+        const tabs = document.getElementById("clueTabs"), panel = document.getElementById("cluesBlock");
+        if (!tabs || getComputedStyle(tabs).display === "none") return { tabs: false };
+        const li = document.querySelector("#downList li"), p = panel.getBoundingClientRect(), r = li.getBoundingClientRect();
+        return { tabs: true, overflows: panel.scrollHeight > panel.clientHeight + 1,
+          downSeen: r.top >= p.top && r.bottom <= p.bottom + 1,
+          acrossOn: tabs.querySelector('[data-to="acrossList"]').classList.contains("on"),
+          downOn: tabs.querySelector('[data-to="downList"]').classList.contains("on") };
+      });
+      const dn = await tabAt("downList");
+      if (dn) { await page.touchscreen.tap(dn.x, dn.y); await wait(700); }
+      const after = await page.evaluate(() => {
+        const panel = document.getElementById("cluesBlock"), tabs = document.getElementById("clueTabs");
+        const li = document.querySelector("#downList li");
+        if (!panel || !li) return { li: false };
+        const p = panel.getBoundingClientRect(), r = li.getBoundingClientRect(), t = tabs.getBoundingClientRect();
+        return { li: true, seen: r.top >= t.bottom - 1 && r.bottom <= p.bottom + 1,
+          downOn: tabs.querySelector('[data-to="downList"]').classList.contains("on"),
+          acrossOn: tabs.querySelector('[data-to="acrossList"]').classList.contains("on") };
+      });
+      t(`${label}: the clue panel has ACROSS and DOWN tabs, and a tap on DOWN shows the first Down clue, DOWN filled`,
+        before.tabs && before.acrossOn && !before.downOn && (!before.overflows || !before.downSeen) &&
+          after.li && after.seen && after.downOn && !after.acrossOn,
+        JSON.stringify({ before, after }));
+    }
     /* A tablet plays on its side; only a phone is asked to turn. */
     t(`${label}: and the board is played, not refused with "turn your phone upright"`, !k.rotate);
     /* The height comes out of the board, so the board is held to what the

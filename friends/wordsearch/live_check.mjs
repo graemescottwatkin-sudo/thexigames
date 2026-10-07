@@ -86,12 +86,16 @@ const p = daily.json && daily.json.puzzle;
 t("today's board is served: the tables and the boards are there", daily.status === 200 && !!p && /^FRWS-\d{4}$/.test(p.id),
   daily.text.slice(0, 120));
 t("with its day and its board number", !!daily.json && /^\d{4}-\d{2}-\d{2}$/.test(daily.json.day) && Number.isInteger(daily.json.no));
-t("eleven clues, each only its place, its clue and its length",
-  !!p && p.answers.length === 11 && p.answers.every((a, i) => a.n === i && typeof a.clue === "string" &&
-    Number.isInteger(a.len) && Object.keys(a).sort().join() === "clue,len,n"));
-t("THE BOARD CARRIES NO ANSWER: no word, no placement, no secret",
-  !!p && !/placement|start_row|"display"|"grid":"[A-Z]+"/.test(JSON.stringify({ ...p, grid: [] })) &&
-    !!p.bonus && !("display" in p.bonus) && !("grid" in p.bonus));
+/* THE ANSWERS ARE THE LIST since 6 Oct 2026 (the owner: "no clues just
+   answers"): each entry is its place, its word and its length, and nothing
+   else -- no clue, no placement. The secret word is still withheld; /secret
+   names it once it is earned. */
+t("eleven answers, each only its place, its word and its length",
+  !!p && p.answers.length === 11 && p.answers.every((a, i) => a.n === i && typeof a.display === "string" && a.display &&
+    Number.isInteger(a.len) && Object.keys(a).sort().join() === "display,len,n"));
+t("THE BOARD CARRIES NO PLACEMENT AND NO SECRET WORD",
+  !!p && !/placement|start_row/.test(JSON.stringify({ ...p, grid: [] })) &&
+    !!p.bonus && !("display" in p.bonus) && !("grid" in p.bonus) && Number.isInteger(p.bonus.showAfter));
 t("a 14 by 12 grid", !!p && p.grid.length === 14 && p.grid.every((r) => /^[A-Z]{12}$/.test(r)));
 
 const whole = p ? await get(API + "puzzle?id=" + p.id) : { status: 0 };

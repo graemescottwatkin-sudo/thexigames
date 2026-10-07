@@ -90,12 +90,15 @@ let p = await open(env);
   await p.click(p.$("homeDaily"));
   const words = [...p.w.document.querySelectorAll("#wordList .word")];
   t("eleven clues in the list", words.length === 11, String(words.length));
-  t("each is the SERVER'S clue text, numbered", p.text(words[0]).includes(BOARDS.today.answers[0].clue) &&
-    p.text(words[0]).startsWith("1"), p.text(words[0]));
+  /* THE ANSWERS ARE THE LIST since 6 Oct 2026 (the owner: "no clues just
+     answers"): each line is the server's word, and no clue is written. */
+  t("each is the SERVER'S answer, numbered, with no clue", p.text(words[0]).includes(BOARDS.today.answers[0].display) &&
+    p.text(words[0]).startsWith("1") && !p.text(p.$("side")).includes(BOARDS.today.answers[0].clue), p.text(words[0]));
   t("the board's title is the server's", p.text(p.$("themeTitle")) === BOARDS.today.theme);
   t("the grid is drawn, 14 by 12", p.cells().length === 168);
-  t("no answer is written anywhere in the list or the bonus box",
-    shows(p.text(p.$("side"))).length === 0, shows(p.text(p.$("side"))).join(", ") || "none shown");
+  t("all eleven are written in the list, and the secret word nowhere",
+    shows(p.text(p.$("side"))).length === 11 && !p.text(p.$("side")).includes(BOARDS.today.bonus.display),
+    shows(p.text(p.$("side"))).join(", ") || "none shown");
   t("the bonus shows its clue and its length",
     p.text(p.$("bonusState")) === BOARDS.today.bonus.clue && p.text(p.$("bonusSub")).startsWith("4 letters"));
   t("kick off told the server", p.calls.includes("/api/wordsearch_fr/round"));
@@ -118,7 +121,8 @@ console.log("\n=== A drag, judged by the server ===");
     p.text(p.$("clock")) === "1'" && before === "0'", `${before} -> ${p.text(p.$("clock"))}`);
   await p.dragWord(BOARDS.today, 3);
   t("a word written backwards is found", p.word(3).classList.contains("done"));
-  t("still no answer shown for a clue not found", shows(p.text(p.word(5))).length === 0);
+  t("a word not yet found is listed but not ticked", !p.word(5).classList.contains("done") &&
+    p.text(p.word(5)).includes(BOARDS.today.answers[5].display));
 }
 
 console.log("\n=== A reload resumes the same round ===");
@@ -139,6 +143,16 @@ console.log("\n=== All eleven and the secret: full time ===");
   for (let n = 0; n < 11; n++) { clock.advance(8000); if (!p.word(n).classList.contains("done")) await p.dragWord(BOARDS.today, n); }
   t("PRECONDITION: all eleven are ticked", p.text(p.$("count")) === "11");
   t("the free thirty seconds for the secret start", p.$("finishPrompt").classList.contains("show"));
+  /* THE SECRET WORD, HALFWAY THROUGH (the owner, 6 Oct 2026: "after 15 of
+     those the word is revealed"). Not at once; then, from the server. */
+  await new Promise((r) => setTimeout(r, 400)); await p.settle();
+  t("at first the bonus box still shows only its clue", !p.text(p.$("bonusState")).includes(BOARDS.today.bonus.display) &&
+    !p.calls.includes("/api/wordsearch_fr/secret"), p.text(p.$("bonusState")));
+  clock.advance(15100);
+  await new Promise((r) => setTimeout(r, 400)); await p.settle();
+  t("fifteen seconds in, the server names the word and the box shows it",
+    p.calls.includes("/api/wordsearch_fr/secret") && p.text(p.$("bonusState")) === "Look for: " + BOARDS.today.bonus.display,
+    p.text(p.$("bonusState")));
   await p.dragWord(BOARDS.today, "bonus");
   await p.settle();
   t("finding the secret ends the board", p.$("result").classList.contains("show"));
@@ -216,7 +230,7 @@ console.log("\n=== Free play judges on the page ===");
   await p.dragWord(BOARDS.yesterday, 6);
   t("a find in free play asks nobody", p.word(6).classList.contains("done") &&
     p.calls.filter((c) => c.endsWith("/find")).length === finds);
-  t("and free play still shows no answer until it is found", shows(p.text(p.word(7))).length === 0);
+  t("and free play lists its answers too", p.text(p.word(7)).includes(BOARDS.yesterday.answers[7].display));
   t("help is offered here, and not on the daily", !p.w.document.querySelector('#helpMenu [data-help="first"]').disabled);
   t("nothing is banked for a free-play board", !p.store()["xifws.results"]);
 }

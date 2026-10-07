@@ -5,17 +5,17 @@
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#F4F5F2">
 <title>Wordsearch XI: Friends — the daily Friends word search | The XI Games</title>
-<meta name="description" content="Eleven Friends clues, eleven answers hidden in the grid, and one secret bonus. A new Friends word search every day from The XI Games.">
+<meta name="description" content="Eleven Friends answers hidden in the grid, and one secret bonus. A new Friends word search every day from The XI Games.">
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='5' fill='%231E6B45'/%3E%3Cg fill='%23fff'%3E%3Crect x='6' y='6' width='5' height='5' opacity='.45'/%3E%3Crect x='13.5' y='6' width='5' height='5' opacity='.45'/%3E%3Crect x='21' y='6' width='5' height='5'/%3E%3Crect x='6' y='13.5' width='5' height='5' opacity='.45'/%3E%3Crect x='13.5' y='13.5' width='5' height='5'/%3E%3Crect x='21' y='13.5' width='5' height='5' opacity='.45'/%3E%3Crect x='6' y='21' width='5' height='5'/%3E%3Crect x='13.5' y='21' width='5' height='5' opacity='.45'/%3E%3Crect x='21' y='21' width='5' height='5' opacity='.45'/%3E%3C/g%3E%3Cpath d='M24 8 L8 24' stroke='%23fff' stroke-width='2.5' stroke-linecap='round' opacity='.9'/%3E%3C/svg%3E">
 <link rel="canonical" href="https://www.thexigames.com/friends/wordsearch/">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://www.thexigames.com/friends/wordsearch/">
 <meta property="og:title" content="Wordsearch XI: Friends — the daily Friends word search">
-<meta property="og:description" content="Eleven Friends clues, the answers hidden in the grid. A new board every day.">
+<meta property="og:description" content="Eleven Friends answers hidden in the grid. A new board every day.">
 <meta property="og:site_name" content="The XI Games">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Wordsearch XI: Friends — the daily Friends word search">
-<meta name="twitter:description" content="Eleven Friends clues, the answers hidden in the grid. A new board every day.">
+<meta name="twitter:description" content="Eleven Friends answers hidden in the grid. A new board every day.">
 <script type="application/ld+json">
 {"@context":"https://schema.org","@type":"WebApplication",
  "name":"Wordsearch XI: Friends","applicationCategory":"Game",
@@ -26,14 +26,14 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Public+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-<link rel="stylesheet" href="/shared/xi-tokens.css?v=v97">
-<link rel="stylesheet" href="/shared/xi-landing.css?v=v97">
-<link rel="stylesheet" href="/shared/xi-chrome.css?v=v97">
-<link rel="stylesheet" href="/shared/xi-matchbar.css?v=v97">
-<link rel="stylesheet" href="/shared/xi-share.css?v=v97">
-<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v97">
-<script src="/shared/xi-theme.js?v=v97"></script>
-<link rel="stylesheet" href="css/style.css?v=v001a">
+<link rel="stylesheet" href="/shared/xi-tokens.css?v=v98">
+<link rel="stylesheet" href="/shared/xi-landing.css?v=v98">
+<link rel="stylesheet" href="/shared/xi-chrome.css?v=v98">
+<link rel="stylesheet" href="/shared/xi-matchbar.css?v=v98">
+<link rel="stylesheet" href="/shared/xi-share.css?v=v98">
+<link rel="stylesheet" href="/shared/xi-fulltime.css?v=v98">
+<script src="/shared/xi-theme.js?v=v98"></script>
+<link rel="stylesheet" href="css/style.css?v=v001b">
 </head>
 <body>
 
@@ -57,7 +57,7 @@
     <div class="ident-say">
       <p class="site-crumb">Friends <span aria-hidden="true">/</span> <b>Wordsearch</b></p>
       <p class="site-mast">Wordsearch <span class="site-xi">XI</span></p>
-      <p class="ident-sub">Eleven clues. The answers are in the grid.</p>
+      <p class="ident-sub">Eleven answers, all hidden in the grid.</p>
     </div>
     <a class="ident-how" href="#how">How to play</a>
   </div>
@@ -232,11 +232,11 @@
     </section>
     <aside class="side" id="side">
       <div class="sideHead">
-        <h3>The clues</h3>
+        <h3>The XI</h3>
         <div class="foundCount"><strong id="count">0</strong><span>of 11</span></div>
       </div>
       <div class="progress"><div id="progress"></div></div>
-      <div class="words" id="wordList" tabindex="0" aria-label="Clues"></div>
+      <div class="words" id="wordList" tabindex="0" aria-label="The eleven answers"></div>
       <p class="clueNow" id="clueNow" aria-live="polite"></p>
       <div class="bonusBox" id="bonusBox">
         <div class="bonusTitle">★ Secret bonus</div>
@@ -248,18 +248,15 @@
   <section class="how" id="how">
     <a class="how-back" href="#play">&lsaquo; Back</a>
     <h2>How to play</h2>
-    <p><b>Eleven clues, eleven answers in the grid.</b> Work out each answer,
-       then find it: across, down or diagonally, forwards or backwards. Drag
-       from the first letter to the last. The number in brackets is how many
-       letters.</p>
-    <p><b>Episode boards</b> give you a title with a word missing &mdash;
-       &ldquo;The One with the _____&rdquo; &mdash; and the missing word is
-       the one to find.</p>
+    <p><b>Eleven answers, all in the grid.</b> Find each one: across, down
+       or diagonally, forwards or backwards. Drag from the first letter to the
+       last.</p>
     <p><b>Ninety minutes, in ten.</b> The clock runs ninety minutes while ten
        real minutes pass, and your score falls as it goes. A wrong drag adds
        a minute or more.</p>
     <p><b>A twelfth word is hidden too.</b> The secret bonus has its own clue
-       and is worth ten.</p>
+       and is worth ten. Find all eleven and you get thirty seconds of bonus
+       time; halfway through, the secret word is shown.</p>
     <p><b>114 is the ceiling</b>, the eleven and the bonus together. Help
        cards are for other boards only, not today&rsquo;s.</p>
   </section>
@@ -282,15 +279,15 @@
 <div class="toast" id="toast">Copied</div>
 
 <footer class="xic-foot"></footer>
-<script src="/shared/xi-chrome.js?v=v97"></script>
-<script src="/shared/xi-matchbar.js?v=v97"></script>
-<script src="/shared/xi-plays.js?v=v97"></script>
-<script src="/shared/xi-share.js?v=v97"></script>
-<script src="/shared/xi-played.js?v=v97"></script>
-<script src="/shared/xi-menu.js?v=v97"></script>
-<script src="/shared/xi-fulltime.js?v=v97"></script>
+<script src="/shared/xi-chrome.js?v=v98"></script>
+<script src="/shared/xi-matchbar.js?v=v98"></script>
+<script src="/shared/xi-plays.js?v=v98"></script>
+<script src="/shared/xi-share.js?v=v98"></script>
+<script src="/shared/xi-played.js?v=v98"></script>
+<script src="/shared/xi-menu.js?v=v98"></script>
+<script src="/shared/xi-fulltime.js?v=v98"></script>
 <!-- Football's scoring, the same file the server imports: one rule for both games. -->
 <script src="/football/wordsearch/js/scoring.js?v=v003e"></script>
-<script src="js/game.js?v=v001a"></script>
+<script src="js/game.js?v=v001b"></script>
 </body>
 </html>

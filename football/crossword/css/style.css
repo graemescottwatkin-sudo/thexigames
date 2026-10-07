@@ -983,6 +983,7 @@ table.history td.dim{color:var(--ink-faint)}
   border-bottom:2px solid var(--pitch-deep);padding-bottom:5px;margin-bottom:10px;
 }
 .clue-col ol{list-style:none}
+.clue-tabs{display:none}
 .clue-col li{
   display:flex;gap:9px;padding:8px 9px;border-radius:var(--r-sm);cursor:pointer;
   font-size:15px;line-height:1.45;border-left:3px solid transparent;
@@ -2230,6 +2231,22 @@ body.flex-layout .nudge-row{
   }
   body.flex-layout .clues-block .clues{grid-template-columns:1fr;gap:16px;max-width:none}
   body.flex-layout .clues-head{max-width:none;margin:0 0 4px}
+  /* ACROSS / DOWN at the top of the panel, held there while the list scrolls
+     under them; the one whose clues are in view is filled. */
+  body.flex-layout .clue-tabs{
+    display:flex;gap:6px;position:sticky;top:-8px;z-index:2;
+    background:var(--paper);padding:6px 0 8px;margin:0 0 4px;
+  }
+  body.flex-layout .clue-tabs button{
+    flex:1 1 0;min-height:var(--tap,44px);border:1.5px solid var(--pitch);border-radius:var(--r-md);
+    background:var(--card);color:var(--pitch-ink);font-family:var(--disp);font-weight:700;
+    font-size:15px;letter-spacing:.1em;text-transform:uppercase;cursor:pointer;
+  }
+  body.flex-layout .clue-tabs button.on{background:var(--pitch);color:var(--on-pitch)}
+  /* The tabs name the lists now, so the lists' own headings scroll with them
+     rather than sticking under the tabs. */
+  body.flex-layout .clue-tabs ~ .clues .clue-col h2,
+  body.flex-layout .clue-tabs ~ .clues .clue-col h3{position:static}
   /* Headings stay put while the list moves under them. */
   body.flex-layout .clue-col h2{
     position:sticky;top:-8px;background:var(--paper);z-index:1;padding:6px 0 4px;

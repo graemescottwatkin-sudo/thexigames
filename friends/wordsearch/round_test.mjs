@@ -30,7 +30,7 @@ import path from "node:path";
 import { clock, TODAY, YESTERDAY, LONG_AGO, BOARDS, WORDS, BONUS, freshEnv, call, dragFor, ROOT } from "./fixture.mjs";
 import { LAUNCHED } from "../../functions/_lib/games.js";
 import XIWS_SCORING from "../../football/wordsearch/js/scoring.js";
-import { publicPuzzle } from "../../functions/_lib/frws-public.js";
+import { publicPuzzle, SECRET_SHOWN_AFTER_S } from "../../functions/_lib/frws-public.js";
 
 let pass = 0, fail = 0;
 const t = (n, ok, d) => { ok ? pass++ : fail++; console.log(`${ok ? "  ok  " : "FAIL  "}${n}${d ? "  — " + d : ""}`); };
@@ -43,7 +43,11 @@ const leaks = (text, b) => secrets(b).filter((s) => text.includes(s));
    construction — so a leak is searched for in everything EXCEPT the grid. */
 const withoutGrid = (text) => { try { return JSON.stringify(JSON.parse(text), (k, v) => (k === "grid" && Array.isArray(v) ? undefined : v)); } catch (e) { return text; } };
 
-console.log("=== The daily is clues, not answers ===");
+/* THE LIST IS THE ANSWERS since 6 Oct 2026 (the owner: "no clues just
+   answers"). The eleven words are served; where they are and the secret word
+   are not, and the answers' clues are not sent at all. */
+const secretOnly = (b) => ({ answers: [], bonus: b.bonus });
+console.log("=== The daily is the eleven answers, not clues ===");
 {
   const env = freshEnv();
   const r = await call(env, "daily");
@@ -51,13 +55,15 @@ console.log("=== The daily is clues, not answers ===");
   t("today's board is served", r.status === 200 && p && p.id === BOARDS.today.id, p && p.id);
   t("PRECONDITION: the stored board does hold its answers", leaks(JSON.stringify(BOARDS.today), BOARDS.today).length > 0);
   t("PRECONDITION: the leak search can see a word (the grid spells them all)", leaks(r.text, BOARDS.today).length > 0);
-  t("the response names no answer and no secret, in any field but the grid", leaks(withoutGrid(r.text), BOARDS.today).length === 0,
-    leaks(withoutGrid(r.text), BOARDS.today).join(", ") || "none of " + secrets(BOARDS.today).length + " found");
+  t("the response names no secret word, in any field but the grid", leaks(withoutGrid(r.text), secretOnly(BOARDS.today)).length === 0,
+    leaks(withoutGrid(r.text), secretOnly(BOARDS.today)).join(", ") || "neither form found");
   t("and no placement", !/placement|start_row|direction/.test(r.text));
-  t("eleven clues, each with its place and its length",
-    p.answers.length === 11 && p.answers.every((a, i) => a.n === i && a.clue && a.len === WORDS[i].length),
-    p.answers.map((a) => a.len).join(","));
-  t("the bonus is a clue and a length", p.bonus && p.bonus.has && p.bonus.clue && p.bonus.len === BONUS.length);
+  t("eleven answers, each with its place, its word and its length, and no clue",
+    p.answers.length === 11 && p.answers.every((a, i) => a.n === i && a.display === BOARDS.today.answers[i].display &&
+      a.len === WORDS[i].length && !("clue" in a)),
+    p.answers.map((a) => a.display + "/" + a.len).join(","));
+  t("the bonus is a clue, a length and when its word is shown", p.bonus && p.bonus.has && p.bonus.clue &&
+    p.bonus.len === BONUS.length && p.bonus.showAfter === SECRET_SHOWN_AFTER_S, JSON.stringify(p.bonus));
   t("the grid is the grid", JSON.stringify(p.grid) === JSON.stringify(BOARDS.today.grid));
   t("never cached, never indexed", r.headers.get("Cache-Control") === "no-store" &&
     r.headers.get("X-Robots-Tag") === "noindex");
@@ -142,6 +148,35 @@ const find = (drag, playId = PLAY) => call(env, "find", { method: "POST", body: 
   const early = await call(env, "finish", { method: "POST", body: { playId: PLAY } });
   t("finishing early reveals nothing and verifies nothing", early.body.verified === false && !early.body.reveal &&
     leaks(withoutGrid(early.text), { answers: BOARDS.today.answers.slice(4), bonus: { grid: "#", display: "#" } }).length === 0, early.text);
+}
+
+console.log("\n=== The secret word, shown part-way through bonus time ===");
+{
+  /* The owner, 6 Oct 2026: all eleven found, thirty seconds of bonus time,
+     "after 15 of those the word is revealed". The server names it, from its
+     own record of the finds, and not a moment before. */
+  const SP = "fwsecret0000000001";
+  const ask = (playId = SP, csrf = true) => call(env, "secret", { method: "POST", body: { playId }, csrf });
+  await call(env, "round", { method: "POST", body: { playId: SP } });
+  for (let n = 0; n < 10; n++) { clock.advance(1000); await find(dragFor(BOARDS.today, n), SP); }
+  const ten = await ask();
+  t("ten found: not yet, and no wait offered", ten.body.secret === null && !ten.body.wait &&
+    leaks(withoutGrid(ten.text), secretOnly(BOARDS.today)).length === 0, ten.text);
+  clock.advance(1000);
+  await find(dragFor(BOARDS.today, 10), SP);
+  const now = await ask();
+  t("all eleven: still not the word, but how long until it is", now.body.secret === null &&
+    now.body.wait === SECRET_SHOWN_AFTER_S * 1000 && leaks(withoutGrid(now.text), secretOnly(BOARDS.today)).length === 0, now.text);
+  clock.advance(SECRET_SHOWN_AFTER_S * 1000 - 1);
+  const nearly = await ask();
+  t("a millisecond short is still not", nearly.body.secret === null && nearly.body.wait === 1, nearly.text);
+  clock.advance(1);
+  const shown = await ask();
+  t("then the word, and only the word", shown.body.secret === BOARDS.today.bonus.display &&
+    !/placement|start_row|direction/.test(shown.text), shown.text);
+  t("a POST without the family's header is refused", (await ask(SP, false)).status === 403);
+  t("a round nobody played names nothing", (await ask("fwnobodyplayedthis")).body.secret === null);
+  t("and no round at all is a question, not an answer", (await call(env, "secret", { method: "POST", body: {} })).status === 400);
 }
 
 console.log("\n=== Full time ===");

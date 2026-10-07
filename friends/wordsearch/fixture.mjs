@@ -115,7 +115,8 @@ import * as finish from "../../functions/api/wordsearch_fr/finish.js";
 import * as puzzle from "../../functions/api/wordsearch_fr/puzzle.js";
 import * as catalog from "../../functions/api/wordsearch_fr/catalog.js";
 import * as archive from "../../functions/api/wordsearch_fr/archive.js";
-export const ROUTES = { daily, round, find, finish, puzzle, catalog, archive };
+import * as secret from "../../functions/api/wordsearch_fr/secret.js";
+export const ROUTES = { daily, round, find, finish, puzzle, catalog, archive, secret };
 
 /* One request to one route, as Pages would make it. */
 export async function call(env, name, { method = "GET", body, query = "", csrf = true } = {}) {

@@ -7,6 +7,7 @@
 import { boardById, released, lastScheduledDay, isTodaysDaily } from "../../_lib/frws-data.js";
 import { mayOpenArchive, archiveRefusal, daysBack } from "../../_lib/archive.js";
 import { json } from "../../_lib/frws-http.js";
+import { withShowAfter } from "../../_lib/frws-public.js";
 import { clockFor } from "../../_lib/preview.js";
 
 export async function onRequestGet(context) {
@@ -25,5 +26,5 @@ export async function onRequestGet(context) {
     if (!(await mayOpenArchive(request, env, back))) return json(archiveRefusal(back), 401);
   }
   const puzzle = await boardById(env, id);
-  return puzzle ? json({ puzzle }) : none();
+  return puzzle ? json({ puzzle: { ...puzzle, bonus: withShowAfter(puzzle.bonus) } }) : none();
 }

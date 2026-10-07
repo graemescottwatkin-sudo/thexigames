@@ -115,15 +115,16 @@ const dummyPlayer = "0123456789abcdef0123456789abcdef";   // a UUID-shaped id, a
 /* ---- 1. the word search, both sets ---------------------------------------- */
 const NEARER = utcDay(NOW + 4 * DAY);
 /* A Friends board is football's shape with a clue per answer (migration 048's
-   payload comment), and its list is the clues: the names are the secret, so
-   `display` must not travel either. */
+   payload comment). Its list was the clues, and `display` was withheld; since
+   6 Oct 2026 its list is the answers (the owner: "no clues just answers"), so
+   like football's it withholds the placements and the secret, not the names. */
 const friendsOf = (p, id) => ({ ...p, id, answers: p.answers.map((a, i) => ({ ...a, clue: `Clue ${i + 1}` })) });
 const wordsearches = [
   { name: "Wordsearch XI", api: "functions/api/wordsearch", pre: "ws_", board: SAMPLE_PUZZLES[0], near: SAMPLE_PUZZLES[2],
     hidden: ["placement", '"GOLDEN"'] },
   { name: "Wordsearch XI: Friends", api: "functions/api/wordsearch_fr", pre: "fr_ws_",
     board: friendsOf(SAMPLE_PUZZLES[1], "FRWS-0001"), near: friendsOf(SAMPLE_PUZZLES[2], "FRWS-0002"),
-    hidden: ["placement", '"display"', '"FIFTH"'] },
+    hidden: ["placement", '"FIFTH"'] },
 ];
 for (const s of wordsearches) {
   console.log(`\n=== ${s.name}: a day ahead ===`);

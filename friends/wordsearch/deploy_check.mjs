@@ -38,7 +38,7 @@ const DIR = "friends/wordsearch";
 const NAME = "Wordsearch XI: Friends";     // what must appear nowhere else while in build
 const PREFIX = "xifws.";
 const API = "/api/wordsearch_fr/";
-const ROUTE_FILES = ["archive.js", "catalog.js", "daily.js", "find.js", "finish.js", "puzzle.js", "round.js"];
+const ROUTE_FILES = ["archive.js", "catalog.js", "daily.js", "find.js", "finish.js", "puzzle.js", "round.js", "secret.js"];
 
 /* WHAT IS LIVE. Bump both after a deploy with tools/post_deploy.mjs. */
 const LAST_SHIPPED = "v001a";      // the launch build, 30 Sep 2026
@@ -221,8 +221,14 @@ const BOARD = {
 };
 const sent = JSON.stringify(pub.publicPuzzle(BOARD));
 t("PRECONDITION: the board carries its answers", JSON.stringify(BOARD).includes("SECRET"));
-t("a served board has its clues and lengths, and no answer, no placement, no secret",
-  !/SECRET|Secret|HIDDEN|Hidden|placement/.test(sent) && sent.includes("Which? (6)") && /"len":6/.test(sent), sent);
+/* THE ANSWERS ARE THE LIST since 6 Oct 2026 (the owner: "no clues just
+   answers"), so the eleven words are served; where they are, and the secret
+   word, are not. The answer's clue is no longer sent at all. */
+t("a served board names its answers and their lengths, and no placement, no secret word, no answer clue",
+  sent.includes('"display":"Secret"') && /"len":6/.test(sent) &&
+  !/HIDDEN|Hidden|placement|Which\? \(6\)/.test(sent), sent);
+t("and its secret carries the seconds after which /secret will name it",
+  JSON.parse(sent).bonus && JSON.parse(sent).bonus.showAfter === pub.SECRET_SHOWN_AFTER_S && pub.SECRET_SHOWN_AFTER_S > 0, sent);
 
 /* ---- one rule, one place ------------------------------------------------ */
 

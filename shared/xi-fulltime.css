@@ -248,6 +248,17 @@
   cursor: pointer;
 }
 .xft-reopen[hidden] { display: none; }
+/* ROOM FOR IT WHERE NOTHING SCROLLS. A locked play screen is the height of
+   the screen, so the button drew over the foot of the board: on an iPad on
+   its side it hid two letters of the word search's bottom row, which nobody
+   could scroll to (the app, 6 Oct 2026). While it is up the locked page gives
+   it a strip of its own -- its height, its gap and a gap above -- and the board
+   fits into what is left. Pages that scroll are left alone: what is under the
+   button there can be scrolled out from under it. */
+html body.locked.xft-away {
+  box-sizing: border-box;
+  padding-bottom: calc(28px + var(--tap, 44px) + env(safe-area-inset-bottom));
+}
 /* A game's own way on from its Full Time (a replay, back to the board) sits
    under the panel, centred, like the panel's own last line. */
 .xft-sheet > button:not([hidden]) { display: block; margin: 12px auto 0; }

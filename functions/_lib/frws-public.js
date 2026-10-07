@@ -1,3 +1,10 @@
+/* THE LIST IS THE ANSWERS, since 6 Oct 2026. The owner, on No. 19: "it's
+ * giving clues, it's a wordsearch...no clues just answers". So the board sends
+ * the eleven words, as football's does, and what follows below about clues is
+ * the history it reverses. Placements are still withheld until found -- the
+ * words are the list, finding them is the game -- and the secret is still its
+ * clue and length, with the word itself named by /secret once it is earned.
+ */
 /* frws-public.js — what a Wordsearch XI: Friends board may tell a browser
  * while it is being played.
  *
@@ -17,6 +24,13 @@
  */
 const len = (a) => String((a && a.grid) || "").length;
 
+/* HOW LONG AFTER THE ELEVENTH FIND THE SECRET WORD IS SHOWN, in seconds of
+   the thirty-second bonus time (the owner, 6 Oct 2026: "after 15 of those the
+   word is revealed"). One number, here: /secret enforces it for the daily and
+   every board the page is sent carries it, so free play waits the same. */
+export const SECRET_SHOWN_AFTER_S = 15;
+export const withShowAfter = (bonus) => (bonus ? { ...bonus, showAfter: SECRET_SHOWN_AFTER_S } : null);
+
 export function publicPuzzle(p) {
   if (!p) return null;
   return {
@@ -24,8 +38,8 @@ export function publicPuzzle(p) {
     status: p.status, hash: p.hash, version: p.version,
     share_key: p.share_key,
     grid: p.grid,
-    answers: (p.answers || []).map((a, n) => ({ n, clue: a.clue, len: len(a) })),
-    bonus: p.bonus ? { has: true, clue: p.bonus.clue, category: p.bonus.category, len: len(p.bonus) } : null,
+    answers: (p.answers || []).map((a, n) => ({ n, display: a.display, len: len(a) })),
+    bonus: withShowAfter(p.bonus ? { has: true, clue: p.bonus.clue, category: p.bonus.category, len: len(p.bonus) } : null),
   };
 }
 
