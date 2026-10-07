@@ -1079,8 +1079,10 @@ t("and no game writes the link itself", (() => {
   return guilty.length === 0;
 })(), "the href lives once, in shared/xi-chrome.js");
 
-const SHARED_TAG = "v99";
-/* The bytes that ship AS v99, AND THE TAG HAD TO MOVE FOR THEM.
+const SHARED_TAG = "v100";
+/* The bytes that ship AS v100, AND THE TAG HAD TO MOVE FOR THEM.
+   v99 WAS LIVE when the account panel gained Delete account (6 Oct 2026), so v99 -> v100 across every page and site-page.js's constant.
+   The note below is the move before this one.
    v98 WAS LIVE when Friends pages took Monica's door, right answers got their own token, and boards their frame (6 Oct 2026), so v98 -> v99 across every page and site-page.js's constant.
    The note below is the move before this one.
    v97 WAS LIVE when the Full Time pill got its own strip on locked screens, so it covers nothing of the board (6 Oct 2026), so v97 -> v98 across every page and site-page.js's constant.
@@ -1185,7 +1187,7 @@ const SHARED_TAG = "v99";
    v53, which is this project's oldest fault in miniature: a measurement left
    standing after it stopped being true, in the comment that tells the next
    reader whether they may leave the tag alone. */
-const SHARED_HASH = "97488e36c556364e";
+const SHARED_HASH = "1243c900a8ed085d";
 /* MOVED AGAIN WITHOUT THE TAG MOVING, which is the other half of the rule
    above and is worth showing rather than only stating. xi-chrome.js changed a
    second time in the same unpushed run -- the Friends squad slot going from

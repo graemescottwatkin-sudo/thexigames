@@ -652,5 +652,65 @@ console.log("\nThe hub's assets resolve from BOTH of the addresses it is served 
   t("and the intro counts them", word === NUM[cards.length], `"${intro.trim().slice(0, 30)}" over ${cards.length} cards`);
 }
 
+/* DELETING THE ACCOUNT, DRIVEN THROUGH THE SHEET (the owner's go, 6 Oct
+   2026). The server's half is tools/account_delete_test.mjs; this is the
+   page's: two steps, the word DELETE, one request, the device cleared only
+   when asked, and an Apple account sent to the app rather than deleted
+   without Apple. */
+async function deleteRun({ provider = "google", clear = true, plugin = null, typed = "DELETE" } = {}) {
+  const dom = new JSDOM(fs.readFileSync("football/crossword/index.html", "utf8"),
+    { runScripts: "outside-only", url: "https://www.thexigames.com/football/crossword/" });
+  const w = dom.window, asked = [];
+  w.fetch = async (url, opts) => {
+    asked.push([String(url), opts && opts.body ? JSON.parse(opts.body) : null]);
+    const body = /auth\/session/.test(url) ? { user: { id: "u1", provider, displayName: "Rachel" }, googleClientId: "g" }
+      : /account\/delete/.test(url) ? { deleted: true } : {};
+    return { ok: true, status: 200, json: async () => body };
+  };
+  if (plugin) w.Capacitor = { isNativePlatform: () => true, isPluginAvailable: (n) => n === "XiAppleSignIn", Plugins: { XiAppleSignIn: plugin } };
+  ["fcw.results", "xiws.played", "xi.deviceCode", "xi.season.v1", "xifq.round", "other.site"].forEach((k) => w.localStorage.setItem(k, "1"));
+  w.eval(themeJs); w.eval(chromeJs); w.XIChrome.init();
+  const tick = () => new Promise((r) => setTimeout(r, 20));
+  await tick();
+  w.XIChrome.account.open();
+  const d = w.document, q = (sel) => d.querySelector(sel);
+  const before = { boxHidden: q(".xic-del-box").hidden, open: !!q(".xic-del-open") && !q(".xic-del-open").hidden };
+  q(".xic-del-open").click();
+  const step1 = { boxShown: !q(".xic-del-box").hidden, says: /permanent/i.test(q(".xic-del-what").textContent),
+    goDisabled: q(".xic-del-go").disabled };
+  const input = q(".xic-del-in");
+  input.value = typed; input.dispatchEvent(new w.Event("input"));
+  q(".xic-del-clear").checked = clear;
+  const enabled = !q(".xic-del-go").disabled;
+  q(".xic-del-go").click();
+  await tick(); await tick();
+  const keys = Object.keys(w.localStorage);
+  return { before, step1, enabled, asked: asked.filter((a) => /account\/delete/.test(a[0])), keys,
+    signedOut: w.XIChrome.account.user() === null, msg: q(".xic-del-msg").textContent, said: (q(".xic-msg") || {}).textContent };
+}
+{
+  const r = await deleteRun();
+  t("delete account: hidden until asked, then says what goes, with the button off", r.before.boxHidden && r.before.open &&
+    r.step1.boxShown && r.step1.says && r.step1.goDisabled, JSON.stringify(r.step1));
+  t("typing DELETE turns the button on, and one request is sent with the confirmation", r.enabled &&
+    r.asked.length === 1 && r.asked[0][1].confirm === "DELETE", JSON.stringify(r.asked));
+  t("afterwards the page is signed out and says the account has gone", r.signedOut && /deleted/i.test(r.said || ""), r.said);
+  t("and \"Also clear this device\" took every family key, identity included, and nothing else",
+    JSON.stringify(r.keys) === JSON.stringify(["other.site"]), r.keys.join(","));
+  const kept = await deleteRun({ clear: false });
+  t("unticked, the device keeps its keys", kept.keys.length === 6 && kept.asked.length === 1, kept.keys.join(","));
+  const half = await deleteRun({ typed: "delete" });
+  t("anything but DELETE sends nothing", !half.enabled && half.asked.length === 0);
+  const web = await deleteRun({ provider: "apple" });
+  t("an Apple account on the web is sent to the app, and nothing is sent", web.asked.length === 0 &&
+    /in the app/i.test(web.msg), web.msg);
+  const old = await deleteRun({ provider: "apple", plugin: { signIn: async () => ({ identityToken: "t", rawNonce: "n" }) } });
+  t("an older app with no code from Apple sends nothing and says to update", old.asked.length === 0 && /update the app/i.test(old.msg), old.msg);
+  const app = await deleteRun({ provider: "apple", plugin: { signIn: async () => ({ identityToken: "t", rawNonce: "n", authorizationCode: "c" }) } });
+  t("in the app, Apple's fresh code goes with the request", app.asked.length === 1 &&
+    app.asked[0][1].authorizationCode === "c" && app.asked[0][1].identityToken === "t" && app.asked[0][1].rawNonce === "n",
+    JSON.stringify(app.asked));
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);

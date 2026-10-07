@@ -458,6 +458,14 @@ body.flex-layout:not(.home-showing) .xic-aged-short {
   border: 1px solid var(--line); border-radius: var(--r-md); background: var(--card); padding: 9px 10px;
 }
 .xic-actions { display: flex; gap: 8px; justify-content: center; margin-bottom: 12px; flex-wrap: wrap; }
+/* Deleting the account: set apart by a rule, the confirm button in the
+   danger colour, and the device box a plain checkbox with its words. */
+.xic-del { border-top: 1px solid var(--line); margin-top: 8px; padding-top: 12px; }
+.xic-del-what { text-align: left; }
+.xic-del-dev { display: flex; gap: 8px; align-items: center; justify-content: center; margin: 0 0 12px; font-size: 14px; color: var(--ink); }
+.xic-del-dev input { width: 20px; height: 20px; }
+.xic-del-go:not([disabled]) { background: var(--danger); border-color: var(--danger); color: var(--on-pitch); }
+.xic-del-go[disabled] { opacity: .5; cursor: not-allowed; }
 .xic-sheet-close { width: 100%; margin-top: 14px; }
 
 /* The settings menu. */

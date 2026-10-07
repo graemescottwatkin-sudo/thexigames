@@ -592,6 +592,75 @@
     } catch (e) {}
   }
 
+  /* ---- DELETING THE ACCOUNT ------------------------------------------------
+     The server deletes (functions/_lib/account-delete.js has what and why).
+     A Sign in with Apple account is confirmed with Apple first: the app's
+     plugin (0.1.15 on) hands over a fresh code, which the server exchanges and
+     revokes before it deletes anything. Apple sign-in exists only in the app,
+     so an Apple account is deleted there. */
+  function delSay(text) {
+    var m = sheet && sheet.querySelector(".xic-del-msg");
+    if (m) m.textContent = text || "";
+  }
+  function delShow(on) {
+    if (!sheet) return;
+    sheet.querySelector(".xic-del-box").hidden = !on;
+    sheet.querySelector(".xic-del-open").hidden = !!on;
+    sheet.querySelector(".xic-del-in").value = "";
+    sheet.querySelector(".xic-del-go").disabled = true;
+    delSay("");
+    if (on) sheet.querySelector(".xic-del-in").focus();
+  }
+  /* "ALSO CLEAR THIS DEVICE": every key under the family's prefixes, the
+     identity ones too -- a deleted account leaves a device as if the family
+     had never been played on it. The prefixes are RECORD_PREFIXES, the list a
+     records reset uses and tools/aligned_test.mjs holds to every game's; what
+     a reset keeps (RECORD_KEEP: the device code, the entrant key, settings)
+     goes here as well, which is the difference between the two. */
+  function clearDevice() {
+    try {
+      var keys = [], i, j, k;
+      for (i = 0; i < localStorage.length; i++) {
+        k = localStorage.key(i);
+        for (j = 0; k && j < RECORD_PREFIXES.length; j++) {
+          if (k.indexOf(RECORD_PREFIXES[j]) === 0) { keys.push(k); break; }
+        }
+      }
+      keys.forEach(function (key) { localStorage.removeItem(key); });
+    } catch (e) {}
+  }
+  var deleting = false;
+  function deleteAccount() {
+    if (deleting || !sheet) return;
+    if (sheet.querySelector(".xic-del-in").value.trim() !== "DELETE") return;
+    var body = { confirm: "DELETE" };
+    var ready = Promise.resolve(body);
+    if (acct.user && acct.user.provider === "apple") {
+      var plugin = nativeApple();
+      if (!plugin) { delSay("An Apple account is deleted in the app: open The XI Games app and delete it there."); return; }
+      ready = plugin.signIn().then(function (r) {
+        if (!r || !r.identityToken || !r.rawNonce || !r.authorizationCode) throw { code: "nocode" };
+        body.identityToken = r.identityToken; body.rawNonce = r.rawNonce; body.authorizationCode = r.authorizationCode;
+        return body;
+      });
+    }
+    deleting = true;
+    delSay("Deleting\u2026");
+    var clear = sheet.querySelector(".xic-del-clear").checked;
+    ready.then(function (b) { return api("/api/account/delete", b); }).then(function () {
+      if (clear) clearDevice();
+      acct.user = null;
+      paintAccount();
+      emit("xi:account", { type: "deleted", user: null });
+      say("Your account has been deleted.");
+      delShow(false);
+    }).catch(function (e) {
+      if (e && e.code === "cancelled") { delSay(""); return; }
+      delSay(e && e.code === "nocode" ? "Could not confirm with Apple. Update the app, then try again."
+        : String((e && e.message) || "Could not delete the account. Nothing was deleted; try again."));
+    }).then(function () { deleting = false; }, function () { deleting = false; });
+  }
+
   function signOut() {
     api("/api/auth/signout", {}).then(function () {
       /* In the app, the plugin forgets the chosen account too, so the next
@@ -859,6 +928,25 @@
             '<button type="button" class="xic-btn outline" id="xicAcctSignOut">Sign out</button>' +
           '</div>' +
           '<div class="xic-small xic-msg" aria-live="polite"></div>' +
+          /* DELETING THE ACCOUNT (the owner's go, 6 Oct 2026, to what both app
+             stores require). Two steps: the first says what goes, the second
+             is the word DELETE, typed. Then it is gone at once. */
+          '<div class="xic-del">' +
+            '<button type="button" class="xic-btn outline xic-del-open">Delete account</button>' +
+            '<div class="xic-del-box" hidden>' +
+              '<p class="xic-small xic-del-what"><b>Deleting your account is permanent.</b> It removes your ' +
+                'sign-in, your results, your streaks and season, any boards in progress and reminders sent ' +
+                'to your account. In challenges you will show as &ldquo;Deleted player&rdquo;. It cannot be undone.</p>' +
+              '<label class="xic-field"><span>Type DELETE to confirm</span>' +
+                '<input class="xic-del-in" type="text" autocomplete="off" autocapitalize="characters" spellcheck="false"></label>' +
+              '<label class="xic-del-dev"><input type="checkbox" class="xic-del-clear" checked> Also clear this device</label>' +
+              '<div class="xic-actions">' +
+                '<button type="button" class="xic-btn xic-del-go" disabled>Delete my account</button>' +
+                '<button type="button" class="xic-btn outline xic-del-cancel">Cancel</button>' +
+              '</div>' +
+              '<div class="xic-small xic-del-msg" aria-live="polite"></div>' +
+            '</div>' +
+          '</div>' +
         '</div>' +
         /* TRUE AFTER THE ARCHIVE GATE, not before it. This read "Signing in
            is optional. Every game works without an account," which stopped
@@ -875,6 +963,12 @@
     sheet.addEventListener("click", function (ev) { if (ev.target === sheet) closeSheet(); });
     sheet.querySelector(".xic-sheet-close").addEventListener("click", closeSheet);
     sheet.querySelector("#xicAcctSignOut").addEventListener("click", signOut);
+    sheet.querySelector(".xic-del-open").addEventListener("click", function () { delShow(true); });
+    sheet.querySelector(".xic-del-cancel").addEventListener("click", function () { delShow(false); });
+    sheet.querySelector(".xic-del-in").addEventListener("input", function (ev) {
+      sheet.querySelector(".xic-del-go").disabled = ev.target.value.trim() !== "DELETE";
+    });
+    sheet.querySelector(".xic-del-go").addEventListener("click", deleteAccount);
     sheet.querySelector(".xic-save").addEventListener("click", saveName);
     sheet.querySelector(".xic-code-copy").addEventListener("click", copyCode);
     sheet.querySelector(".xic-code-go").addEventListener("click", claimCode);
@@ -909,6 +1003,7 @@
        on screen for somebody who went looking for it. */
     sheet.querySelector(".xic-code-mine").textContent = formatCode(deviceCode());
     sheet.querySelector(".xic-code-msg").textContent = "";
+    delShow(false);   // a delete half-typed last time is not still waiting
     sheet.hidden = false;
     if (!acct.user) renderGoogle();
     var first = sheet.querySelector(".xic-sheet-close");

@@ -399,6 +399,10 @@ jobs:
           # reaches the file, a line per question and reason, and a second week
           # sends only the second week even after triage empties the inbox.
           node tools/export_reports_test.mjs
+          # DELETING AN ACCOUNT (owner, 6 Oct 2026), against every migration: each
+          # table that can name a player is found from the schema and reached;
+          # the route refuses who it should; Apple is revoked before anything goes.
+          node tools/account_delete_test.mjs
           # THE OWNER'S PREVIEW OF THE DAYS TO COME (owner, 3 Oct 2026: every
           # game, "Record nothing"). Real handlers, middleware and admin route
           # over node:sqlite from every migration, and the page layer in jsdom:
@@ -841,6 +845,11 @@ jobs:
   render:
     name: Sixteen viewports, real browser
     runs-on: ubuntu-latest
+    # A CEILING, because there was none: on 7 Oct 2026 two runs sat in the
+    # Playwright install for over an hour each, and a job with no limit runs to
+    # GitHub's six hours on the account's minutes. The whole job is normally
+    # well under half an hour; the install step gets its own, shorter, limit.
+    timeout-minutes: 45
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
@@ -848,6 +857,7 @@ jobs:
           node-version: 22
 
       - name: Install Playwright and Chromium
+        timeout-minutes: 10
         run: |
           npm install -D playwright wrangler wait-on --no-audit --no-fund
           npx playwright install --with-deps chromium

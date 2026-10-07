@@ -226,7 +226,14 @@ console.log("\nReplaying a day");
   const walk = (d) => fsm.readdirSync(d, { withFileTypes: true }).flatMap((e) =>
     e.isDirectory() ? walk(path.join(d, e.name))
       : (e.name.endsWith(".js") ? [path.join(d, e.name)] : []));
+  /* LESS THE ACCOUNT DELETION (functions/_lib/account-delete.js, 7 Oct 2026),
+     which names every table that can hold a player one statement to a line,
+     by design -- so the 400-character window below reads its neighbours as
+     keyed by player too (fr_lr_answer, challenges...), and a deletion is not a
+     reset anyway. Excluded by name; its own suite, tools/account_delete_test,
+     proves its coverage against the schema. */
   const serverSrc = walk(SRC_ROOT)
+    .filter((f) => !/account-delete\.js$/.test(f))
     .map((f) => fsm.readFileSync(f, "utf8")).join(String.fromCharCode(10));
   /* Every SQL fragment that mentions user_id, and the table each one names. */
   const owned = [...new Set(
