@@ -226,7 +226,7 @@ and diagnose before anything ships. Never push past a red gate.
 - `results`/`plays` sanity via wrangler if relevant:
   `npx wrangler d1 execute crosswordxi --remote --command="..."`.
   **Never run a migration that is already applied** — `ALTER TABLE` is not
-  idempotent. Migration state: **001–055 all applied** (as of 3 Oct 2026 —
+  idempotent. Migration state: **001–056 all applied** (as of 11 Oct 2026 —
   check production; 024 only since 29 Sep, 048, 051, 052 and 053 since 30 Sep, see
   below; 050 `fr_sc_board` verified present 30 Sep) — 035 (QuickFire text
   ids), 036 and 038 (Codeword and its rounds), 037 and 039 (QuickFire rounds
@@ -336,6 +336,14 @@ and diagnose before anything ships. Never push past a red gate.
   from production the same minute: all ten columns and the index present. It
   is one `CREATE TABLE IF NOT EXISTS` and one `CREATE INDEX IF NOT EXISTS`, so
   it is safe to re-run.
+  056 (`play_finish` and `idx_play_finish_day`, `idx_play_finish_who`: who
+  finished, as a device -- the SHA-256 of a random key the device makes for
+  itself, never the key -- by the owner's request of 11 Oct 2026, "can tell if
+  1 person finished 13 games or 13 people did", and their choice "Across
+  days") was applied 11 Oct 2026 on the owner's go ("Yes, apply 056"), before
+  the code that reads it, and verified from production the same minute: the
+  table, both indexes and all seven columns present. It is one `CREATE TABLE
+  IF NOT EXISTS` and two `CREATE INDEX IF NOT EXISTS`, so it is safe to re-run.
   A STALE MIGRATION NUMBER IS THE MOST DANGEROUS FIGURE IN THIS FILE, because
   the sentence immediately before it tells you never to re-run an applied one
   and `ALTER TABLE` is not idempotent — so a reader trusting "034" could

@@ -194,12 +194,16 @@ export async function onRequest({ request, env, params }) {
     const gameAsked = url.searchParams.get("game");
     const game = gameAsked ? validPlayGame(gameAsked) : null;
     if (gameAsked && !game) return json({ error: "Unknown game." }, 400);
+    /* WHO FINISHED, as a device (056-play-finish.sql): the hash beside each
+       finished play, so "13 finishes" can be read as one device or thirteen. */
     const rows = await env.DB.prepare(
-      `SELECT game, board_key, mode, daily_no, phase, solved, total, completed, elapsed_secs,
-              ended_at, theme_key, by_owner, by_bot, by_dev, utm_campaign
-         FROM plays
-        WHERE started_at > datetime('now', ?) AND (? IS NULL OR game = ?)
-        ORDER BY started_at DESC LIMIT 5000`).bind("-" + hours + " hours", game, game).all();
+      `SELECT p.game, p.board_key, p.mode, p.daily_no, p.phase, p.solved, p.total, p.completed,
+              p.elapsed_secs, p.ended_at, p.theme_key, p.by_owner, p.by_bot, p.by_dev, p.utm_campaign, f.who
+         FROM plays p LEFT JOIN play_finish f ON f.play_id = p.play_id
+        WHERE p.started_at > datetime('now', ?) AND (? IS NULL OR p.game = ?)
+        ORDER BY p.started_at DESC LIMIT 5000`).bind("-" + hours + " hours", game, game).all();
+    const whoCounts = new Map();
+    let unknownWho = 0;
     const byDay = new Map();
     /* The owner's own testing, counted separately. Twenty passes over a layout
        is not twenty people, and while the site is being built most rows are
@@ -256,11 +260,16 @@ export async function onRequest({ request, env, params }) {
       if (!byDay.has(key)) {
         byDay.set(key, { key, game: g, boardKey: board, mode: r.mode, dailyNo: r.daily_no, phase: r.phase,
                          themeKey: r.theme_key || null,
-                         started: 0, finished: 0, times: [], stops: [] });
+                         started: 0, finished: 0, times: [], stops: [], who: new Set() });
       }
       const d = byDay.get(key);
       d.started++;
-      if (r.completed) { d.finished++; if (r.elapsed_secs) d.times.push(r.elapsed_secs); }
+      if (r.completed) {
+        d.finished++;
+        if (r.elapsed_secs) d.times.push(r.elapsed_secs);
+        if (r.who) { d.who.add(r.who); whoCounts.set(r.who, (whoCounts.get(r.who) || 0) + 1); }
+        else unknownWho++;
+      }
       else if (r.ended_at !== null) d.stops.push(r.solved || 0);
       d.total = r.total || d.total;
     }
@@ -272,7 +281,7 @@ export async function onRequest({ request, env, params }) {
     const days = [...byDay.values()].map((d) => ({
       key: d.key, game: d.game, boardKey: d.boardKey, mode: d.mode, dailyNo: d.dailyNo, phase: d.phase,
       themeKey: d.themeKey,
-      started: d.started, finished: d.finished, total: d.total,
+      started: d.started, finished: d.finished, total: d.total, finishers: d.who.size,
       medianSeconds: mid(d.times),
       /* Where the ones who gave up had got to. A median of 2 of 11 says the
          puzzle loses people at the start; 9 of 11 says it loses them at the
@@ -282,8 +291,15 @@ export async function onRequest({ request, env, params }) {
     })).sort((a, b) => (b.dailyNo || 0) - (a.dailyNo || 0));
     /* The window is reported, not implied. A panel showing "50 finished" with
        no period is a number nobody can act on. */
+    /* Finishes with a device behind them, how many devices, and the most by
+       any one -- "13 finishes, 1 device" against "13 finishes, 13 devices".
+       Finishes from before the table, or from a page too old to send a key,
+       are counted apart rather than guessed at. */
+    const finishes = [...whoCounts.values()].reduce((a, b) => a + b, 0);
     return json({ ownerPlays, ownerFinished, botPlays, botFinished,
-                  gatePlays, gateFinished, days, hours });
+                  gatePlays, gateFinished, days, hours,
+                  finishes, finishers: whoCounts.size,
+                  mostByOne: whoCounts.size ? Math.max(...whoCounts.values()) : 0, unknownWho });
   }
 
   /* ---- Clear my own record ----

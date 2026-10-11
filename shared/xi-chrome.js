@@ -1644,6 +1644,10 @@
     /* How it looks and plays. */
     "xi.theme", "fcw.theme", "fcw.pitch", "fcw.bank", "fcw.skip", "fcw.fxmode",
     "fcw.filter", "xiws.zoom", "xisc.zoom", "xihl.zoom",
+    /* The device's own key for counting who finishes (xi-plays.js). Clearing
+       history is not becoming somebody else. Deleting an account with "Also
+       clear this device" does clear it. */
+    "xi.visitor",
     /* Reminders on this phone, and the token the server knows it by. A setting,
        not a record: clearing history must not leave a phone that still gets
        notifications with no switch left to turn them off (xi-push.js). */

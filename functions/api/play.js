@@ -20,6 +20,7 @@ import { limited } from "../_lib/limit.js";
 import { validPlayGame, validMode, DEFAULT_GAME } from "../_lib/games.js";
 import { dailyKey, utcDay } from "../_lib/daily.js";
 import { noteStart, noteFinish, seasonUser } from "../_lib/season-store.js";
+import { PREVIEW_PREFIX } from "../_lib/preview.js";
 
 const int = (v, max = 100000) => {
   const n = Number(v);
@@ -50,6 +51,14 @@ function detailOf(v) {
   if (!v || typeof v !== "object" || Array.isArray(v)) return null;
   const s = JSON.stringify(v);
   return s.length <= 2000 ? s : null;
+}
+
+/* The device key's shape (shared/xi-plays.js visitorKey: 32 hex), and its
+   hash, prefixed so it cannot be confused with a hash of anything else. */
+const VISITOR = /^[0-9a-f]{32}$/;
+export async function visitorHash(key) {
+  const d = await crypto.subtle.digest("SHA-256", new TextEncoder().encode("xi.visitor:" + key));
+  return Array.from(new Uint8Array(d), (b) => b.toString(16).padStart(2, "0")).join("");
 }
 
 export async function onRequestPost({ request, env }) {
@@ -232,6 +241,21 @@ export async function onRequestPost({ request, env }) {
        finished_at null, which IS the loss condition — the season reads the
        absence, so there is nothing to write for it. */
     if (body.completed) await noteFinish(env, seasonPlayer, game);
+    /* WHO FINISHED, AS A DEVICE (056-play-finish.sql, the owner, 11 Oct 2026:
+       "can tell if 1 person finished 13 games or 13 people did"). The page
+       sends the device's own random key; what is kept is its SHA-256, never
+       the key. Copied from the play's own row, so a finish can only be filed
+       against a play the server already holds, and an admin preview's scratch
+       id is never filed at all. A key that is not the shape the page makes is
+       ignored rather than refused: the finish itself is already recorded. */
+    if (body.completed && VISITOR.test(String(body.visitor || "")) && !playId.startsWith(PREVIEW_PREFIX)) {
+      try {
+        await env.DB.prepare(
+          `INSERT OR IGNORE INTO play_finish (play_id, who, game, board_key, mode, day)
+           SELECT play_id, ?, game, board_key, mode, ? FROM plays WHERE play_id = ?`)
+          .bind(await visitorHash(body.visitor), day, playId).run();
+      } catch (e) { /* the table not yet applied: the finish stands without it */ }
+    }
     return json({ ok: true, day });
   }
 

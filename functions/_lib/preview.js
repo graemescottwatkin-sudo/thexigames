@@ -102,7 +102,7 @@ export const PREVIEW_ROUND_TABLES = [
 /* Tables with a play id that a preview NEVER writes, named so preview_test can
    tell "deliberately absent" from "forgotten": the play counter and the
    challenges are held in the page (shared/xi-preview.js, xi-plays.js). */
-export const PREVIEW_NEVER_WRITES = ["plays", "challenges", "challenge_entries", "challenge_starts"];
+export const PREVIEW_NEVER_WRITES = ["plays", "play_finish", "challenges", "challenge_entries", "challenge_starts"];
 
 /* Delete every scratch row. Run when the admin page opens, so a preview's
    rounds live only until the owner next goes back to the list. LIKE with the

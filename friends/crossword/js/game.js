@@ -297,7 +297,7 @@
   // falls outside it, dailyBans() returns null and the Daily plays as before.
   /* The build this file came from. Visible in the footer and on the console, so
      "is the new version actually live?" is a question with an answer. */
-  var BUILD = "v003d";
+  var BUILD = "v003e";
   /* WHAT THIS GAME IS CALLED on its Full Time panel and in the tab, and whether it has a league to show.
      One line, so tools/build_friendscrossword.js rewrites it in one place:
      the Friends board has its own name, its own word for the end, and no
@@ -3621,8 +3621,15 @@
         return;
       }
       $("adminReportList").innerHTML = "";
+      /* WHO FINISHED, as devices (the owner, 11 Oct 2026: "can tell if 1
+         person finished 13 games or 13 people did"). */
+      var who = typeof d.finishers === "number" && d.finishes
+        ? "\n" + d.finishes + " finish" + (d.finishes === 1 ? "" : "es") + " by " + d.finishers +
+          " device" + (d.finishers === 1 ? "" : "s") + " (most by one: " + d.mostByOne + ")" +
+          (d.unknownWho ? "; " + d.unknownWho + " more from before devices were counted" : "")
+        : "";
       adminMsg("How far players got \u2014 " + window +
-        ". The CSV covers everything." + mine + bot + gate);
+        ". The CSV covers everything." + who + mine + bot + gate);
       var lines = d.days.slice(0, 20).map(function (x) {
         /* Themed boards read as their own name and number, because that is how
            they are shared and how they will be talked about. "man-united-3"
@@ -3649,7 +3656,8 @@
              produced a label for at all. */
           name = FCW.dailyPhase(x.dailyNo).label;
         }
-        var out = name + ": " + x.started + " started, " + x.finished + " finished";
+        var out = name + ": " + x.started + " started, " + x.finished + " finished" +
+          (x.finishers ? " by " + x.finishers + " device" + (x.finishers === 1 ? "" : "s") : "");
         if (x.medianSeconds) out += ", median " + Math.round(x.medianSeconds / 60) + " min";
         if (x.abandoned) {
           out += "\n      " + x.abandoned + " stopped, typically after " +
@@ -3657,7 +3665,7 @@
         }
         return out;
       });
-      adminMsg(lines.join("\n") + mine + bot + gate);
+      adminMsg(lines.join("\n") + who + mine + bot + gate);
     }).catch(function (err) { adminMsg(String(err.message || err)); });
   });
 

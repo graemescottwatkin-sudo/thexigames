@@ -403,6 +403,10 @@ jobs:
           # table that can name a player is found from the schema and reached;
           # the route refuses who it should; Apple is revoked before anything goes.
           node tools/account_delete_test.mjs
+          # WHO FINISHED, AS A DEVICE (owner, 11 Oct 2026), against every migration:
+          # a finish files a hash and never the key; the admin report tells one
+          # device from many.
+          node tools/play_finish_test.mjs
           # THE OWNER'S PREVIEW OF THE DAYS TO COME (owner, 3 Oct 2026: every
           # game, "Record nothing"). Real handlers, middleware and admin route
           # over node:sqlite from every migration, and the page layer in jsdom:

@@ -187,6 +187,20 @@
   /* end: once per attempt. completed says the board was finished; the rest
      comes from progress(), read now. Sent by beacon when the page is leaving,
      because that is the send a closing tab would cancel. */
+  /* THE DEVICE'S OWN KEY, made here once and kept: 128 random bits, hex. Not
+     the transfer code (a secret that opens results) and not an account: a
+     name for this device that means nothing anywhere else. */
+  function visitorKey() {
+    try {
+      var k = localStorage.getItem("xi.visitor");
+      if (/^[0-9a-f]{32}$/.test(k || "")) return k;
+      var b = new Uint8Array(16);
+      (window.crypto || window.msCrypto).getRandomValues(b);
+      k = Array.prototype.map.call(b, function (x) { return ("0" + x.toString(16)).slice(-2); }).join("");
+      localStorage.setItem("xi.visitor", k);
+      return k;
+    } catch (e) { return null; }
+  }
   function end(completed, leaving) {
     if (!playId || sent || !meta) return;
     /* A finish is final. An abandon is not: a phone that switched apps and
@@ -211,6 +225,9 @@
          Optional on purpose. A game that says nothing here keeps the total it
          opened with, so this changes no existing game until it asks to. */
       total: typeof p.total === "number" && p.total > 0 ? p.total : null,
+      /* WHO FINISHED, as this device (the owner, 11 Oct 2026). Only with a
+         finish: an abandon says nothing about who. The server keeps a hash. */
+      visitor: completed ? visitorKey() : null,
     };
     var r = post(body, !!leaving);
     /* Only a FINISH is worth waiting for a reply to. An abandon is the absence
