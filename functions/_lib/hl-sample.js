@@ -525,311 +525,351 @@ export const HL_SAMPLE_BOARDS = [
   "maxCallFraction": 0.4
  },
  {
-  "id": "1000",
-  "category": "West Bromwich Albion Premier League goals",
-  "subtitle": "Most Premiership goals as at 14 September 2026",
+  "id": "1160",
+  "category": "Arsenal Premier League goals",
+  "subtitle": "Most Premiership goals as at 13 October 2026",
   "unit": "count",
   "valueClass": "snapshot",
-  "trueAsOf": "2026-09-14",
+  "trueAsOf": "2026-10-13",
   "chain": [
    {
-    "name": "Marc-Antoine Fortune",
-    "value": 11,
-    "context": "French forward, born 1981",
+    "name": "Emmanuel Adebayor",
+    "value": 46,
+    "context": "Togolese forward, born 1984",
     "detail": {
-     "nameRaw": "Marc-Antoine Fortuné",
-     "born": "2 July 1981",
-     "nationalTeam": "France",
+     "nameRaw": "Emmanuel Adebayor",
+     "born": "26 February 1984",
+     "nationalTeam": "Togo",
      "position": "F",
-     "leaguePlayerId": "3754",
-     "club": "West Bromwich Albion",
-     "sequence": 13,
+     "leaguePlayerId": "2845",
+     "club": "Arsenal",
+     "sequence": 12,
      "canMove": false,
-     "basis": "the league's own ranked list for the club as fetched on 14 September 2026; active players included, the value is fixed by its date"
+     "basis": "the league's own ranked list for the club as fetched on 13 October 2026; active players included, the value is fixed by its date"
     },
     "source": {
      "publisher": "Premier League",
-     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=36&pageSize=100&page=0",
-     "page": "the league feed, one hundred rows a page; this row is rank 13 on page 1",
-     "quote": "\"display\":\"Marc-Antoine Fortuné\",\"first\":\"Marc-Antoine\",\"last\":\"Fortuné\"},\"id\":3754,\"altIds\":{\"opta\":\"p14279\"}},\"rank\":13,\"name\":\"goals\",\"value\":11",
-     "accessed": "2026-09-14",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=1&pageSize=100&page=0",
+     "page": "the league feed, one hundred rows a page; this row is rank 12 on page 1",
+     "quote": "\"display\":\"Emmanuel Adebayor\",\"first\":\"Emmanuel\",\"last\":\"Adebayor\"},\"id\":2845,\"altIds\":{\"opta\":\"p17500\"}},\"rank\":12,\"name\":\"goals\",\"value\":46",
+     "accessed": "2026-10-13",
      "tier": "official"
     }
    },
    {
-    "name": "Gareth McAuley",
-    "value": 15,
-    "context": "Northern Irish defender, born 1979",
+    "name": "Mesut Ozil",
+    "value": 33,
+    "context": "German midfielder, born 1988",
     "detail": {
-     "nameRaw": "Gareth McAuley",
-     "born": "5 December 1979",
-     "nationalTeam": "Northern Ireland",
-     "position": "D",
-     "leaguePlayerId": "4437",
-     "club": "West Bromwich Albion",
-     "sequence": 8,
-     "canMove": false,
-     "basis": "the league's own ranked list for the club as fetched on 14 September 2026; active players included, the value is fixed by its date"
-    },
-    "source": {
-     "publisher": "Premier League",
-     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=36&pageSize=100&page=0",
-     "page": "the league feed, one hundred rows a page; this row is rank 8 on page 1",
-     "quote": "\"display\":\"Gareth McAuley\",\"first\":\"Gareth\",\"last\":\"McAuley\"},\"id\":4437,\"altIds\":{\"opta\":\"p19272\"}},\"rank\":8,\"name\":\"goals\",\"value\":15",
-     "accessed": "2026-09-14",
-     "tier": "official"
-    }
-   },
-   {
-    "name": "Chris Brunt",
-    "value": 24,
-    "context": "Northern Irish midfielder, born 1984",
-    "detail": {
-     "nameRaw": "Chris Brunt",
-     "born": "14 December 1984",
-     "nationalTeam": "Northern Ireland",
+     "nameRaw": "Mesut Özil",
+     "born": "15 October 1988",
+     "nationalTeam": "Germany",
      "position": "M",
-     "leaguePlayerId": "3744",
-     "club": "West Bromwich Albion",
-     "sequence": 3,
+     "leaguePlayerId": "4714",
+     "club": "Arsenal",
+     "sequence": 18,
      "canMove": false,
-     "basis": "the league's own ranked list for the club as fetched on 14 September 2026; active players included, the value is fixed by its date"
+     "basis": "the league's own ranked list for the club as fetched on 13 October 2026; active players included, the value is fixed by its date"
     },
     "source": {
      "publisher": "Premier League",
-     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=36&pageSize=100&page=0",
-     "page": "the league feed, one hundred rows a page; this row is rank 3 on page 1",
-     "quote": "\"display\":\"Chris Brunt\",\"first\":\"Chris\",\"last\":\"Brunt\"},\"id\":3744,\"altIds\":{\"opta\":\"p19151\"}},\"rank\":3,\"name\":\"goals\",\"value\":24",
-     "accessed": "2026-09-14",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=1&pageSize=100&page=0",
+     "page": "the league feed, one hundred rows a page; this row is rank 18 on page 1",
+     "quote": "\"display\":\"Mesut Özil\",\"first\":\"Mesut\",\"last\":\"Özil\"},\"id\":4714,\"altIds\":{\"opta\":\"p37605\"}},\"rank\":18,\"name\":\"goals\",\"value\":33",
+     "accessed": "2026-10-13",
      "tier": "official"
     }
    },
    {
-    "name": "Peter Odemwingie",
-    "value": 30,
-    "context": "Nigerian forward, born 1981",
+    "name": "Freddie Ljungberg",
+    "value": 46,
+    "context": "Swedish midfielder, born 1977",
     "detail": {
-     "nameRaw": "Peter Odemwingie",
-     "born": "15 July 1981",
-     "nationalTeam": "Nigeria",
-     "position": "F",
-     "leaguePlayerId": "4204",
-     "club": "West Bromwich Albion",
-     "sequence": 1,
-     "canMove": false,
-     "basis": "the league's own ranked list for the club as fetched on 14 September 2026; active players included, the value is fixed by its date"
-    },
-    "source": {
-     "publisher": "Premier League",
-     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=36&pageSize=100&page=0",
-     "page": "the league feed, one hundred rows a page; this row is rank 1 on page 1",
-     "quote": "\"display\":\"Peter Odemwingie\",\"first\":\"Peter\",\"middle\":\"Osaze\",\"last\":\"Odemwingie\"},\"id\":4204,\"altIds\":{\"opta\":\"p26900\"}},\"rank\":1,\"name\":\"goals\",\"value\":30",
-     "accessed": "2026-09-14",
-     "tier": "official"
-    }
-   },
-   {
-    "name": "Salomon Rondon",
-    "value": 24,
-    "context": "Venezuelan forward, born 1989",
-    "detail": {
-     "nameRaw": "Salomón Rondón",
-     "born": "16 September 1989",
-     "nationalTeam": "Venezuela",
-     "position": "F",
-     "leaguePlayerId": "6030",
-     "club": "West Bromwich Albion",
-     "sequence": 3,
-     "canMove": false,
-     "basis": "the league's own ranked list for the club as fetched on 14 September 2026; active players included, the value is fixed by its date"
-    },
-    "source": {
-     "publisher": "Premier League",
-     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=36&pageSize=100&page=0",
-     "page": "the league feed, one hundred rows a page; this row is rank 3 on page 1",
-     "quote": "\"display\":\"Salomón Rondón\",\"first\":\"Salomón\",\"last\":\"Rondón\"},\"id\":6030,\"altIds\":{\"opta\":\"p57134\"}},\"rank\":3,\"name\":\"goals\",\"value\":24",
-     "accessed": "2026-09-14",
-     "tier": "official"
-    }
-   },
-   {
-    "name": "James Morrison",
-    "value": 29,
-    "context": "Scottish midfielder, born 1986",
-    "detail": {
-     "nameRaw": "James Morrison",
-     "born": "25 May 1986",
-     "nationalTeam": "Scotland",
+     "nameRaw": "Freddie Ljungberg",
+     "born": "16 April 1977",
+     "nationalTeam": "Sweden",
      "position": "M",
-     "leaguePlayerId": "2529",
-     "club": "West Bromwich Albion",
-     "sequence": 2,
+     "leaguePlayerId": "1497",
+     "club": "Arsenal",
+     "sequence": 12,
      "canMove": false,
-     "basis": "the league's own ranked list for the club as fetched on 14 September 2026; active players included, the value is fixed by its date"
+     "basis": "the league's own ranked list for the club as fetched on 13 October 2026; active players included, the value is fixed by its date"
     },
     "source": {
      "publisher": "Premier League",
-     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=36&pageSize=100&page=0",
-     "page": "the league feed, one hundred rows a page; this row is rank 2 on page 1",
-     "quote": "\"display\":\"James Morrison\",\"first\":\"James\",\"last\":\"Morrison\"},\"id\":2529,\"altIds\":{\"opta\":\"p18008\"}},\"rank\":2,\"name\":\"goals\",\"value\":29",
-     "accessed": "2026-09-14",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=1&pageSize=100&page=0",
+     "page": "the league feed, one hundred rows a page; this row is rank 12 on page 1",
+     "quote": "\"display\":\"Freddie Ljungberg\",\"first\":\"Freddie\",\"last\":\"Ljungberg\"},\"id\":1497,\"altIds\":{\"opta\":\"p1602\"}},\"rank\":12,\"name\":\"goals\",\"value\":46",
+     "accessed": "2026-10-13",
      "tier": "official"
     }
    },
    {
-    "name": "Romelu Lukaku",
-    "value": 17,
-    "context": "Belgian forward, born 1993",
+    "name": "Theo Walcott",
+    "value": 65,
+    "context": "English forward, born 1989",
     "detail": {
-     "nameRaw": "Romelu Lukaku",
-     "born": "13 May 1993",
-     "nationalTeam": "Belgium",
+     "nameRaw": "Theo Walcott",
+     "born": "16 March 1989",
+     "nationalTeam": "England",
      "position": "F",
-     "leaguePlayerId": "4290",
-     "club": "West Bromwich Albion",
+     "leaguePlayerId": "2839",
+     "club": "Arsenal",
      "sequence": 7,
      "canMove": false,
-     "basis": "the league's own ranked list for the club as fetched on 14 September 2026; active players included, the value is fixed by its date"
+     "basis": "the league's own ranked list for the club as fetched on 13 October 2026; active players included, the value is fixed by its date"
     },
     "source": {
      "publisher": "Premier League",
-     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=36&pageSize=100&page=0",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=1&pageSize=100&page=0",
      "page": "the league feed, one hundred rows a page; this row is rank 7 on page 1",
-     "quote": "\"display\":\"Romelu Lukaku\",\"first\":\"Romelu\",\"last\":\"Lukaku\"},\"id\":4290,\"altIds\":{\"opta\":\"p66749\"}},\"rank\":7,\"name\":\"goals\",\"value\":17",
-     "accessed": "2026-09-14",
+     "quote": "\"display\":\"Theo Walcott\",\"first\":\"Theo\",\"last\":\"Walcott\"},\"id\":2839,\"altIds\":{\"opta\":\"p20467\"}},\"rank\":7,\"name\":\"goals\",\"value\":65",
+     "accessed": "2026-10-13",
      "tier": "official"
     }
    },
    {
-    "name": "Zoltan Gera",
-    "value": 12,
-    "context": "Hungarian midfielder, born 1979",
+    "name": "Robin van Persie",
+    "value": 96,
+    "context": "Dutch forward, born 1983",
     "detail": {
-     "nameRaw": "Zoltán Gera",
-     "born": "22 April 1979",
-     "nationalTeam": "Hungary",
-     "position": "M",
-     "leaguePlayerId": "2390",
-     "club": "West Bromwich Albion",
-     "sequence": 9,
+     "nameRaw": "Robin van Persie",
+     "born": "6 August 1983",
+     "nationalTeam": "Netherlands",
+     "position": "F",
+     "leaguePlayerId": "2616",
+     "club": "Arsenal",
+     "sequence": 3,
      "canMove": false,
-     "basis": "the league's own ranked list for the club as fetched on 14 September 2026; active players included, the value is fixed by its date"
+     "basis": "the league's own ranked list for the club as fetched on 13 October 2026; active players included, the value is fixed by its date"
     },
     "source": {
      "publisher": "Premier League",
-     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=36&pageSize=100&page=0",
-     "page": "the league feed, one hundred rows a page; this row is rank 9 on page 1",
-     "quote": "\"display\":\"Zoltán Gera\",\"first\":\"Zoltán\",\"last\":\"Gera\"},\"id\":2390,\"altIds\":{\"opta\":\"p18430\"}},\"rank\":9,\"name\":\"goals\",\"value\":12",
-     "accessed": "2026-09-14",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=1&pageSize=100&page=0",
+     "page": "the league feed, one hundred rows a page; this row is rank 3 on page 1",
+     "quote": "\"display\":\"Robin van Persie\",\"first\":\"Robin\",\"last\":\"van Persie\"},\"id\":2616,\"altIds\":{\"opta\":\"p12297\"}},\"rank\":3,\"name\":\"goals\",\"value\":96",
+     "accessed": "2026-10-13",
      "tier": "official"
     }
    },
    {
-    "name": "Saido Berahino",
-    "value": 23,
-    "context": "Burundian forward, born 1993",
+    "name": "Ian Wright",
+    "value": 104,
+    "context": "English forward, born 1963",
     "detail": {
-     "nameRaw": "Saido Berahino",
-     "born": "4 August 1993",
-     "nationalTeam": "Burundi",
+     "nameRaw": "Ian Wright",
+     "born": "3 November 1963",
+     "nationalTeam": "England",
      "position": "F",
-     "leaguePlayerId": "4205",
-     "club": "West Bromwich Albion",
+     "leaguePlayerId": "29",
+     "club": "Arsenal",
+     "sequence": 2,
+     "canMove": false,
+     "basis": "the league's own ranked list for the club as fetched on 13 October 2026; active players included, the value is fixed by its date"
+    },
+    "source": {
+     "publisher": "Premier League",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=1&pageSize=100&page=0",
+     "page": "the league feed, one hundred rows a page; this row is rank 2 on page 1",
+     "quote": "\"display\":\"Ian Wright\",\"first\":\"Ian\",\"last\":\"Wright\"},\"id\":29,\"altIds\":{\"opta\":\"p2070\"}},\"rank\":2,\"name\":\"goals\",\"value\":104",
+     "accessed": "2026-10-13",
+     "tier": "official"
+    }
+   },
+   {
+    "name": "Olivier Giroud",
+    "value": 73,
+    "context": "French forward, born 1986",
+    "detail": {
+     "nameRaw": "Olivier Giroud",
+     "born": "30 September 1986",
+     "nationalTeam": "France",
+     "position": "F",
+     "leaguePlayerId": "4481",
+     "club": "Arsenal",
      "sequence": 5,
      "canMove": false,
-     "basis": "the league's own ranked list for the club as fetched on 14 September 2026; active players included, the value is fixed by its date"
+     "basis": "the league's own ranked list for the club as fetched on 13 October 2026; active players included, the value is fixed by its date"
     },
     "source": {
      "publisher": "Premier League",
-     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=36&pageSize=100&page=0",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=1&pageSize=100&page=0",
      "page": "the league feed, one hundred rows a page; this row is rank 5 on page 1",
-     "quote": "\"display\":\"Saido Berahino\",\"first\":\"Saido\",\"last\":\"Berahino\"},\"id\":4205,\"altIds\":{\"opta\":\"p91972\"}},\"rank\":5,\"name\":\"goals\",\"value\":23",
-     "accessed": "2026-09-14",
+     "quote": "\"display\":\"Olivier Giroud\",\"first\":\"Olivier\",\"last\":\"Giroud\"},\"id\":4481,\"altIds\":{\"opta\":\"p44346\"}},\"rank\":5,\"name\":\"goals\",\"value\":73",
+     "accessed": "2026-10-13",
      "tier": "official"
     }
    },
    {
-    "name": "Craig Dawson",
-    "value": 12,
-    "context": "English defender, born 1990",
+    "name": "Alexis Sanchez",
+    "value": 60,
+    "context": "Chilean forward, born 1988",
     "detail": {
-     "nameRaw": "Craig Dawson",
-     "born": "6 May 1990",
-     "nationalTeam": "England",
-     "position": "D",
-     "leaguePlayerId": "4198",
-     "club": "West Bromwich Albion",
-     "sequence": 9,
-     "canMove": false,
-     "basis": "the league's own ranked list for the club as fetched on 14 September 2026; active players included, the value is fixed by its date"
-    },
-    "source": {
-     "publisher": "Premier League",
-     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=36&pageSize=100&page=0",
-     "page": "the league feed, one hundred rows a page; this row is rank 9 on page 1",
-     "quote": "\"display\":\"Craig Dawson\",\"first\":\"Craig\",\"last\":\"Dawson\"},\"id\":4198,\"altIds\":{\"opta\":\"p60232\"}},\"rank\":9,\"name\":\"goals\",\"value\":12",
-     "accessed": "2026-09-14",
-     "tier": "official"
-    }
-   },
-   {
-    "name": "Shane Long",
-    "value": 19,
-    "context": "Irish forward, born 1987",
-    "detail": {
-     "nameRaw": "Shane Long",
-     "born": "22 January 1987",
-     "nationalTeam": "Ireland",
+     "nameRaw": "Alexis Sánchez",
+     "born": "19 December 1988",
+     "nationalTeam": "Chile",
      "position": "F",
-     "leaguePlayerId": "3206",
-     "club": "West Bromwich Albion",
-     "sequence": 6,
+     "leaguePlayerId": "4973",
+     "club": "Arsenal",
+     "sequence": 10,
      "canMove": false,
-     "basis": "the league's own ranked list for the club as fetched on 14 September 2026; active players included, the value is fixed by its date"
+     "basis": "the league's own ranked list for the club as fetched on 13 October 2026; active players included, the value is fixed by its date"
     },
     "source": {
      "publisher": "Premier League",
-     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=36&pageSize=100&page=0",
-     "page": "the league feed, one hundred rows a page; this row is rank 6 on page 1",
-     "quote": "\"display\":\"Shane Long\",\"first\":\"Shane\",\"middle\":\"Patrick\",\"last\":\"Long\"},\"id\":3206,\"altIds\":{\"opta\":\"p20452\"}},\"rank\":6,\"name\":\"goals\",\"value\":19",
-     "accessed": "2026-09-14",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=1&pageSize=100&page=0",
+     "page": "the league feed, one hundred rows a page; this row is rank 10 on page 1",
+     "quote": "\"display\":\"Alexis Sánchez\",\"first\":\"Alexis\",\"last\":\"Sánchez\"},\"id\":4973,\"altIds\":{\"opta\":\"p37265\"}},\"rank\":10,\"name\":\"goals\",\"value\":60",
+     "accessed": "2026-10-13",
      "tier": "official"
     }
    },
    {
-    "name": "Robert Earnshaw",
-    "value": 12,
-    "context": "Welsh forward, born 1981",
+    "name": "Aaron Ramsey",
+    "value": 40,
+    "context": "Welsh midfielder, born 1990",
     "detail": {
-     "nameRaw": "Robert Earnshaw",
-     "born": "6 April 1981",
+     "nameRaw": "Aaron Ramsey",
+     "born": "26 December 1990",
      "nationalTeam": "Wales",
-     "position": "F",
-     "leaguePlayerId": "2819",
-     "club": "West Bromwich Albion",
-     "sequence": 9,
+     "position": "M",
+     "leaguePlayerId": "3548",
+     "club": "Arsenal",
+     "sequence": 15,
      "canMove": false,
-     "basis": "the league's own ranked list for the club as fetched on 14 September 2026; active players included, the value is fixed by its date"
+     "basis": "the league's own ranked list for the club as fetched on 13 October 2026; active players included, the value is fixed by its date"
     },
     "source": {
      "publisher": "Premier League",
-     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=36&pageSize=100&page=0",
-     "page": "the league feed, one hundred rows a page; this row is rank 9 on page 1",
-     "quote": "\"display\":\"Robert Earnshaw\",\"first\":\"Robert\",\"last\":\"Earnshaw\"},\"id\":2819,\"altIds\":{\"opta\":\"p3227\"}},\"rank\":9,\"name\":\"goals\",\"value\":12",
-     "accessed": "2026-09-14",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=1&pageSize=100&page=0",
+     "page": "the league feed, one hundred rows a page; this row is rank 15 on page 1",
+     "quote": "\"display\":\"Aaron Ramsey\",\"first\":\"Aaron\",\"last\":\"Ramsey\"},\"id\":3548,\"altIds\":{\"opta\":\"p41792\"}},\"rank\":15,\"name\":\"goals\",\"value\":40",
+     "accessed": "2026-10-13",
+     "tier": "official"
+    }
+   },
+   {
+    "name": "Paul Merson",
+    "value": 28,
+    "context": "English midfielder, born 1968",
+    "detail": {
+     "nameRaw": "Paul Merson",
+     "born": "20 March 1968",
+     "nationalTeam": "England",
+     "position": "M",
+     "leaguePlayerId": "23",
+     "club": "Arsenal",
+     "sequence": 21,
+     "canMove": false,
+     "basis": "the league's own ranked list for the club as fetched on 13 October 2026; active players included, the value is fixed by its date"
+    },
+    "source": {
+     "publisher": "Premier League",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=1&pageSize=100&page=0",
+     "page": "the league feed, one hundred rows a page; this row is rank 21 on page 1",
+     "quote": "\"display\":\"Paul Merson\",\"first\":\"Paul\",\"last\":\"Merson\"},\"id\":23,\"altIds\":{\"opta\":\"p1618\"}},\"rank\":21,\"name\":\"goals\",\"value\":28",
+     "accessed": "2026-10-13",
+     "tier": "official"
+    }
+   },
+   {
+    "name": "Leandro Trossard",
+    "value": 27,
+    "context": "Belgian forward, born 1994",
+    "detail": {
+     "nameRaw": "Leandro Trossard",
+     "born": "4 December 1994",
+     "nationalTeam": "Belgium",
+     "position": "F",
+     "leaguePlayerId": "20486",
+     "club": "Arsenal",
+     "sequence": 23,
+     "canMove": false,
+     "basis": "the league's own ranked list for the club as fetched on 13 October 2026; active players included, the value is fixed by its date"
+    },
+    "source": {
+     "publisher": "Premier League",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=1&pageSize=100&page=0",
+     "page": "the league feed, one hundred rows a page; this row is rank 23 on page 1",
+     "quote": "\"display\":\"Leandro Trossard\",\"first\":\"Leandro\",\"last\":\"Trossard\"},\"id\":20486,\"altIds\":{\"opta\":\"p116216\"}},\"rank\":23,\"name\":\"goals\",\"value\":27",
+     "accessed": "2026-10-13",
+     "tier": "official"
+    }
+   },
+   {
+    "name": "Marc Overmars",
+    "value": 25,
+    "context": "Dutch midfielder, born 1973",
+    "detail": {
+     "nameRaw": "Marc Overmars",
+     "born": "29 March 1973",
+     "nationalTeam": "Netherlands",
+     "position": "M",
+     "leaguePlayerId": "1299",
+     "club": "Arsenal",
+     "sequence": 25,
+     "canMove": false,
+     "basis": "the league's own ranked list for the club as fetched on 13 October 2026; active players included, the value is fixed by its date"
+    },
+    "source": {
+     "publisher": "Premier League",
+     "url": "https://footballapi.pulselive.com/football/stats/ranked/players/goals?comps=1&teams=1&pageSize=100&page=0",
+     "page": "the league feed, one hundred rows a page; this row is rank 25 on page 1",
+     "quote": "\"display\":\"Marc Overmars\",\"first\":\"Marc\",\"last\":\"Overmars\"},\"id\":1299,\"altIds\":{\"opta\":\"p1611\"}},\"rank\":25,\"name\":\"goals\",\"value\":25",
+     "accessed": "2026-10-13",
      "tier": "official"
     }
    }
   ],
-  "sourceLine": "Source: Premier League official statistics (premierleague.com), the club's ranked list, as at 14 September 2026.",
-  "sequenceStep": 5,
-  "nearTieMax": 0,
+  "sourceLine": "Source: Premier League official statistics (premierleague.com), the club's ranked list, as at 13 October 2026.",
+  "sequenceStep": 6,
   "flipGuard": {
-   "serve": "2026-10-12",
-   "trueAsOf": "2026-09-14",
-   "gamesBeforeServe": 2,
+   "serve": "2026-11-16",
+   "trueAsOf": "2026-10-13",
+   "gamesBeforeServe": 4,
    "perGame": 0.75,
-   "gain": 1
+   "gain": 3
+  },
+  "maxCallFraction": 0.4,
+  "difficulty": {
+   "sigma": 29.31,
+   "hardMax": 0.35,
+   "mediumMax": 1,
+   "calls": [
+    "medium",
+    "medium",
+    "medium",
+    "easy",
+    "hard",
+    "easy",
+    "medium",
+    "medium",
+    "medium",
+    "hard",
+    "hard"
+   ],
+   "counts": {
+    "easy": 2,
+    "medium": 6,
+    "hard": 3
+   },
+   "gaps": [
+    13,
+    13,
+    19,
+    31,
+    8,
+    31,
+    13,
+    20,
+    12,
+    1,
+    2
+   ],
+   "gapUnit": "",
+   "gapUnitOne": "",
+   "showGap": true,
+   "basis": "the gap between the two values in standard deviations of the category's pool: hard at or under 0.35, medium at or under 1, easy above"
   }
  }
 ];
