@@ -222,8 +222,14 @@ export async function wordsearchFrEnv(day) {
   db.prepare("INSERT INTO fr_ws_puzzles (id, theme, category, status, hash, version, share_key, payload) VALUES (?,?,?,?,?,?,?,?)")
     .run("FRWS-9001", "Fixture board with the longest clues", "Fixture", "ready", "fixture00000000", 1, "FRWS-9001-v1", payload);
   const prev = new Date(Date.parse(day + "T00:00:00Z") - 86400000).toISOString().slice(0, 10);
+  /* AND TOMORROW. The run reads the day once, at the start; a run that
+     starts before UTC midnight and reaches this game after it asked the
+     server for a day with no board, and the board never drew (CI, 14 Oct
+     2026, at 00:02). */
+  const next = new Date(Date.parse(day + "T00:00:00Z") + 86400000).toISOString().slice(0, 10);
   const sch = db.prepare("INSERT INTO fr_ws_schedule (day, puzzle_id) VALUES (?, ?)");
   sch.run(day, "FRWS-9001");
   sch.run(prev, "FRWS-9001");
+  sch.run(next, "FRWS-9001");
   return { DB: d1 };
 }

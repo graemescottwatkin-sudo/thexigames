@@ -147,8 +147,12 @@ function codewordStub(what, body) {
 const { utcDay } = await import(pathToFileURL(path.join(ROOT, "functions", "_lib", "daily.js")).href);
 /* One reading of the day, handed to the fixture and (through the real
    functions) to the page, so the two cannot disagree across midnight. */
-const QF_ENV = await quickfireEnv(utcDay());
-const QF_FR_ENV = await quickfireEnv(utcDay(), "fr_qf_");
+/* TODAY AND TOMORROW: a run that crosses UTC midnight must still find a
+   board on the server's new day (the Friends word search's fixture did not,
+   14 Oct 2026). */
+const DAYS_SEEDED = [utcDay(), utcDay(Date.now() + 86400000)];
+const QF_ENV = await quickfireEnv(DAYS_SEEDED);
+const QF_FR_ENV = await quickfireEnv(DAYS_SEEDED, "fr_qf_");
 /* LIGHTNING ROUND through its REAL routes over the real migration, seeded with
    a fixture pool (tools/lock_fixtures.mjs): the deal, the clock and the marking
    are the server's, so a stub would be testing a game that does not exist. */
