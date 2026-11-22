@@ -7,13 +7,46 @@
  * it, and so is this. publicQuestion() below is where it is enforced.
  *
  * WHAT A BROWSER IS HANDED: the question, its detail line, where the slider
- * starts and ends, its step, its unit, the WIDTH of the ballpark, and whether
- * the question is graded strictly. Not the answer.
+ * starts and ends, its step, its unit, the RULE for how wide a ballpark is, and
+ * whether the question is graded strictly. Not the answer, and not the width.
  *
- * `tolerance` IS SAFE TO SEND and the page needs it: it is the width of the
- * band, not where the band is, and the reference demo draws it around the
- * player's own knob to say how precise they must be. Without the answer it
- * locates nothing.
+ * `tolerance` IS NOT SAFE TO SEND, and this is where the comment saying it was
+ * used to be. The claim was that it is "the width of the band, not where the
+ * band is", so "without the answer it locates nothing" — true for the bank's 19
+ * FIXED kinds and false for its other 29, where
+ *
+ *     tolerance = max(floor, round(pct * |answer|))
+ *
+ * and therefore answer = tolerance / pct. The width WAS the answer, lightly
+ * encoded. Shipped in every daily payload until 21 November 2026: 135 of 2,321
+ * board rows pinned their answer to under 2% of their own slider, 83 more to
+ * under 10%, and the worst of them — capacity and attendance, pct 8% with a
+ * floor of 1000 — to a handful of people:
+ *
+ *     tolerance 4000 -> answer 49,994..50,006   (it was 50,000)
+ *     tolerance 3200 -> answer 39,994..40,006   (it was 40,000)
+ *     tolerance 5840 -> answer 72,994..73,006   (it was 73,000)
+ *
+ * one division in the network tab per question. The structural guard below did
+ * its job perfectly and could not have caught this: `tolerance` was on the
+ * allowlist on purpose, so nothing was leaking by accident — the allowlist was
+ * wrong. A projection is only as sound as the judgement about each field in it,
+ * and this one was made for the fixed kinds and then applied to all of them.
+ *
+ * WHAT GOES INSTEAD is `tolPct` and `tolFloor`: the KIND's rule rather than the
+ * question's width, looked up from the row's `kind` in functions/_lib/bp-tol.js.
+ * Neither number is a fact about any answer — the whole table could be printed
+ * in the page source — and the page solves for the bands from its own knob
+ * position. See rules.js zonesAround() for the geometry.
+ *
+ * WHY THE TABLE AND NOT A COLUMN: the rows in D1 were loaded in October and
+ * carry `kind` but no rule, and the owner's ruling of 3 October is to keep what
+ * is loaded. `kind` is already on every row, so this needs no rebuild, no
+ * re-import and no change to a single served day.
+ *
+ * THE TOLERANCE STILL COMES BACK WITH THE VERDICT, where the answer does too —
+ * after the lock there is nothing left to protect, and the page needs it to draw
+ * the real band around the real value.
  *
  * WHY THERE IS NO "DOES THE SERIALISED BOARD CONTAIN AN ANSWER" GREP HERE.
  * Grid XI ends its daily route with one, and it works there because answers are
@@ -35,6 +68,10 @@ import { BP_SAMPLE_BOARDS, BP_SAMPLE_SCHEDULE } from "./bp-sample.js";
    by the client. See football/ballpark/js/rules.js. */
 import XIBP_RULES from "../../football/ballpark/js/rules.js";
 import { keptBank } from "./bank-cache.js";
+/* The kind -> {pct, floor} table, generated from BallparkXI's tools/kinds.mjs.
+   It is reference data, not a second statement of a rule: the arithmetic that
+   uses it lives once, in rules.js. */
+import { tolRuleFor } from "./bp-tol.js";
 
 export function hasDB(env) { return !!(env && env.DB); }
 export function todayKey(now = Date.now()) { return utcDay(now); }
@@ -45,9 +82,12 @@ export function todayKey(now = Date.now()) { return utcDay(now); }
    different rounds look like one. */
 export const boardToken = (id) => "bp:" + id;
 
-/* THE FIELDS A QUESTION MAY SHOW. `answer` is not here and must never be. */
-const PUBLIC_KEYS = ["id", "question", "detail", "lo", "hi", "tolerance",
-  "step", "unit", "strict"];
+/* THE FIELDS A QUESTION MAY SHOW. `answer` is not here and must never be, and
+   neither is `tolerance` — see the top of the file for what that one cost.
+   The test for this list is not "could a player use it" but "is it a fact about
+   the answer": tolPct and tolFloor are facts about the KIND. */
+const PUBLIC_KEYS = ["id", "question", "detail", "lo", "hi",
+  "step", "unit", "strict", "tolPct", "tolFloor"];
 
 /* ---- the bank ---------------------------------------------------------- */
 
@@ -158,6 +198,19 @@ export function playable(bank, board, now) {
 export function publicQuestion(q) {
   const out = {};
   for (const k of PUBLIC_KEYS) if (q[k] !== undefined) out[k] = q[k];
+  /* THE RULE, ADDED HERE RATHER THAN READ OFF THE ROW, because the rows in D1
+     do not carry it and are not going to be rewritten to. Looked up from the
+     row's own kind, and the loop above cannot have copied these two across: a
+     row carrying its own tolPct would be overwritten here, which is the right
+     way round — the table decides, not the content.
+
+     A ROW WHOSE KIND IS NOT IN THE TABLE gets neither field, and the page then
+     draws no ballpark band at all. That is a worse page and not a leak, which
+     is the correct direction to fail in. tools/import_ballpark.js refuses such a
+     row, so it should not be reachable from the database. */
+  const rule = tolRuleFor(q.kind);
+  if (rule) { out.tolPct = rule.pct; out.tolFloor = rule.floor; }
+  else { delete out.tolPct; delete out.tolFloor; }
   return out;
 }
 
@@ -273,7 +326,7 @@ export function judge(q, guess, elapsedSeconds) {
     XIBP_RULES.pointsAt(elapsedSeconds, XIBP_RULES.CLOCK) * grade[1]);
   return {
     ballparks: bp, grade: grade[2], green: grade[3], spentSub: !!grade[4],
-    points, answer: Number(q.answer),
+    points, answer: Number(q.answer), tolerance: Number(q.tolerance),
   };
 }
 
@@ -283,7 +336,7 @@ export function judge(q, guess, elapsedSeconds) {
 export function judgeTimeout(q) {
   return {
     ballparks: Infinity, grade: "Out of time", green: false, spentSub: true,
-    points: 0, answer: Number(q.answer),
+    points: 0, answer: Number(q.answer), tolerance: Number(q.tolerance),
   };
 }
 

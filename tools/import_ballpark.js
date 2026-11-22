@@ -64,6 +64,9 @@
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
+/* The serving side's kind -> ballpark rule, so the gate can refuse a row whose
+   kind the page would not be able to draw a band for. */
+import { BP_TOL } from "../functions/_lib/bp-tol.js";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(HERE, "..");
@@ -90,7 +93,16 @@ const QUESTIONS = 11;
    refusal rather than a field to ignore. */
 const ALLOWED = new Set(["id", "question", "detail", "answer", "lo", "hi",
   "tolerance", "step", "unit", "kind", "family", "strict"]);
-const REQUIRED = ["id", "question", "answer", "lo", "hi", "tolerance", "step"];
+/* `kind` IS REQUIRED SINCE THE TOLERANCE STOPPED TRAVELLING. It used to be
+   optional metadata; it is now load-bearing, because the page looks the
+   ballpark's RULE up by it (functions/_lib/bp-tol.js) and a row without one is
+   served with no band drawn at all. The question still plays and still grades
+   correctly, so nothing fails — the player is simply never shown how close they
+   have to be, on a game whose whole premise is how close you have to be.
+   Safe to demand: 0 of 5,556 rows across the content side's boards and bank are
+   missing it, and all 46 kinds they use are in the table. */
+const REQUIRED = ["id", "question", "answer", "lo", "hi", "tolerance", "step",
+  "kind"];
 
 function gate(board, seenQuestionIds, warn = []) {
   const p = [];
@@ -148,6 +160,24 @@ function gate(board, seenQuestionIds, warn = []) {
     }
     if (!Number.isFinite(tol) || tol <= 0) p.push(`${at}: tolerance must be above zero`);
     if (!Number.isFinite(step) || step <= 0) p.push(`${at}: step must be above zero`);
+    /* A KIND THE SERVING SIDE CANNOT PRICE A BALLPARK FOR. Since the tolerance
+       stopped travelling to the browser, the page works its bands out from the
+       KIND's rule — functions/_lib/bp-tol.js, generated from the content side's
+       tools/kinds.mjs — looked up by this field. A row whose kind is not in that
+       table gets no rule, and the page then draws no ballpark band at all: the
+       question still plays and still grades correctly, but the player is never
+       shown how close they have to be.
+       Refused here rather than left to degrade, because it is a fault with no
+       symptom at the point it is introduced — eleven questions would simply look
+       slightly emptier. A new kind in the bank means re-emitting the table, and
+       this is the line that says so, at the moment it can still be acted on. */
+    /* Only when a kind is PRESENT and unrecognised. A missing one is already
+       reported by REQUIRED above, and saying `kind "undefined" is not in the
+       table — re-emit it` on top of that names a kind nobody wrote and
+       prescribes a fix that would not work. */
+    if (q.kind !== undefined && q.kind !== "" && !BP_TOL[String(q.kind)]) {
+      p.push(`${at}: kind "${q.kind}" is not in functions/_lib/bp-tol.js, so the page could not draw its ballpark — re-emit it from BallparkXI with: node tools/emit_tol_table.mjs`);
+    }
     if (q.strict !== undefined && q.strict !== true) {
       p.push(`${at}: strict may only be true or absent, not ${JSON.stringify(q.strict)}`);
     }

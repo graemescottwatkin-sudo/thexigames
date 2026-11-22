@@ -5,7 +5,7 @@
      it is yesterday's code. aligned_test asserts the two agree, and until
      this game launched it had no BUILD at all — three of its assets were on
      three different tags, which is the same fault with nobody checking. */
-  var BUILD = "v002d";
+  var BUILD = "v002e";
   if (window.XIPlays && document.documentElement) {
     document.documentElement.setAttribute("data-build", BUILD);
   }
@@ -159,6 +159,23 @@
     el.style.width = (pct(r) - pct(l)) + "%";
   }
 
+  /* ONE BALLPARK AROUND THE GUESS — the band the ghost draws before the lock.
+     It is the rung at exactly 1.00, which both ladders have and both call a good
+     answer; found FROM the ladder rather than by index, because the ordinary one
+     has five rungs and the strict one three.
+     Null when the question carries no rule, which happens only if its kind is
+     missing from the serving table. No band is then drawn, and that is the right
+     way to fail: the alternative was the band whose width gave the answer away. */
+  function ballparkAround(q, guess) {
+    var L = R.ladderFor(q);
+    var zones = R.zonesAround(q, guess, hi - lo);
+    if (!zones.length) return null;
+    for (var i = 0; i < L.length && i < zones.length; i++) {
+      if (L[i][0] === 1) return zones[i];
+    }
+    return null;
+  }
+
   function paint() {
     var q = board.questions[step];
     track.className = "track" + (touched || locked ? "" : " untouched");
@@ -173,13 +190,21 @@
     }
     $("lock").disabled = !touched || locked || over;
 
-    /* The ballpark's width, carried by the player's own knob: how precise, not
-       where. Safe to draw because tolerance is a WIDTH — without the answer it
-       locates nothing. */
+    /* THE BALLPARK, CARRIED BY THE PLAYER'S OWN KNOB: how precise, not where.
+       Still the same band, drawn a different way round, and the comment that was
+       here is why it had to change. It said this was "safe to draw because
+       tolerance is a WIDTH — without the answer it locates nothing", and for
+       the bank's 29 percentage kinds the width IS max(floor, round(pct*answer)),
+       so dividing it by the kind's percentage gave the answer. The page is no
+       longer sent it: it is sent the RULE, and asks which answers its own guess
+       would reach. See rules.js zonesAround() for the arithmetic and bp-board.js
+       for what it cost. */
     if (touched && !locked && !over) {
-      span(ghost, Number(slider.value) - Number(q.tolerance),
-                  Number(slider.value) + Number(q.tolerance));
-      ghost.className = "ghost on";
+      var ballpark = ballparkAround(q, slider.value);
+      if (ballpark) {
+        span(ghost, ballpark.lo, ballpark.hi);
+        ghost.className = "ghost on";
+      } else ghost.className = "ghost";
     } else ghost.className = "ghost";
 
     for (var i = 0; i < ladder.children.length; i++) {
@@ -424,9 +449,15 @@
   function drawResult(q, r, guess) {
     var answer = Number(r.answer);
     if (!isFinite(answer)) { $("result").hidden = true; return; }
-    var tol = Number(q.tolerance);
     var away = Math.abs(guess - answer);
-    var zones = R.zonesFor(q, hi - lo);
+    /* THE REAL BANDS, round the real value, from the tolerance the VERDICT
+       carries. The question no longer holds one: before the lock the width was a
+       function of the answer and sending it sent the answer. After the lock
+       there is nothing left to protect, so the server returns it beside the
+       answer itself and these are the bands the guess was actually judged
+       against — not a reconstruction of them. (`var tol` stood here, assigned
+       from q.tolerance and never read.) */
+    var zones = R.zonesFor({ tolerance: r.tolerance, strict: q.strict }, hi - lo);
 
     /* Painted outermost first so the closer, darker bands sit on top. */
     var html = "";
@@ -588,13 +619,19 @@
     if (r.answers) answers = r.answers;
 
     /* THE BAND AND THE TRUE VALUE, now that the question is finished — the
-       first moment either may be drawn, because until the lock the answer was
-       not in this page at all. */
+       first moment EITHER may be drawn, and the band is now the second of the
+       two: until the lock neither the answer nor its width was in this page.
+       Both arrive together, from the verdict. */
     if (typeof r.answer === "number") {
-      span($("band"), r.answer - Number(q.tolerance), r.answer + Number(q.tolerance));
-      $("band").className = "band on";
       $("mark").style.left = pct(r.answer) + "%";
       $("mark").className = "mark on";
+      /* The MARK goes up on the answer alone; the BAND needs the width too, and
+         an old server that sends no tolerance leaves the true value shown with
+         no band round it rather than a band of NaN. */
+      if (isFinite(Number(r.tolerance))) {
+        span($("band"), r.answer - Number(r.tolerance), r.answer + Number(r.tolerance));
+        $("band").className = "band on";
+      }
     }
 
     $("secs").innerHTML = lockedSecs + "<small>s</small>";

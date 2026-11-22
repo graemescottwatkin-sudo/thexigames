@@ -194,8 +194,38 @@ async function run() {
        what makes it hold for fields nobody has invented yet. */
     t("the shape the page needs did travel",
       b.board.questions.every((q) => q.question && q.lo !== undefined &&
-        q.hi !== undefined && q.tolerance !== undefined && q.step !== undefined),
+        q.hi !== undefined && q.step !== undefined &&
+        q.tolPct !== undefined && q.tolFloor !== undefined),
       "");
+    /* AND THE WIDTH DID NOT. This assertion used to be the line above, which
+       required `tolerance` to travel — the shape the page needed, until the
+       page needed a different one. For 29 of the bank's 48 kinds the tolerance
+       is max(floor, round(pct*|answer|)), so it is the answer divided by a
+       published constant; 135 of 2,321 board rows were readable to under 2% of
+       their own slider. The page is given the kind's RULE instead and solves for
+       the bands from the player's own knob. See bp-board.js.
+
+       WHY A NAMED-FIELD CHECK IS HONEST HERE where a value grep is not: the
+       objection recorded above is that 5 the answer and 5 the tolerance are
+       indistinguishable as numbers. A field NAME has no coincidences. */
+    t("and the width of the ballpark did not",
+      !/"tolerance"/.test(text),
+      /"tolerance"/.test(text) ? "the daily response carries a tolerance" : "");
+    /* THE PROPERTY UNDERNEATH ALL OF IT, tested directly rather than inferred
+       from the field list: change ONLY the answer, and nothing the browser is
+       handed may move. That is what "no answer reaches the browser" actually
+       means, and it is the check that would have caught the tolerance on the day
+       it was added — the allowlist could not, because `tolerance` was on it on
+       purpose. */
+    const { publicQuestion } = await import("../../functions/_lib/bp-board.js");
+    const sample = b.board.questions[0] && { id: "x", question: "q", answer: 100,
+      lo: 0, hi: 200, tolerance: 8, step: 1, kind: "capacity", family: "grounds" };
+    if (sample) {
+      const other = { ...sample, answer: 173, tolerance: 14 };
+      t("changing only the answer changes nothing the browser is handed",
+        JSON.stringify(publicQuestion(sample)) === JSON.stringify(publicQuestion(other)),
+        JSON.stringify(publicQuestion(sample)) + " vs " + JSON.stringify(publicQuestion(other)));
+    }
     t("it says which bank it came from", b.source === "sample", String(b.source));
   }
 

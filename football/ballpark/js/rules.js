@@ -16,13 +16,38 @@
  *   other way round because of it.
  *
  *   So the split is: the page knows the SHAPE of a question — its text, its
- *   slider ends, its step, its unit, its tolerance and whether it is strict —
- *   and the server knows the answer. The page can draw the ladder and count the
- *   clock down without ever holding the number. Grading happens on a locked
- *   guess, server-side, and the answer comes back with the verdict.
+ *   slider ends, its step, its unit, the RULE for how wide a ballpark is, and
+ *   whether it is strict — and the server knows the answer. The page can draw
+ *   the ladder and count the clock down without ever holding the number.
+ *   Grading happens on a locked guess, server-side, and the answer comes back
+ *   with the verdict.
  *
- *   `tolerance` is safe to send: it is the WIDTH of a ballpark, not where the
- *   ballpark is. Without the answer it locates nothing.
+ * `tolerance` IS NOT SAFE TO SEND, and the line that used to sit here said it
+ * was. It read: "it is the WIDTH of a ballpark, not where the ballpark is.
+ * Without the answer it locates nothing." That is true of a FIXED band and
+ * false of a DERIVED one, and 29 of the bank's 48 kinds derive it:
+ *
+ *     tolerance = max(floor, round(pct * |answer|))
+ *
+ * so the answer is tolerance / pct. The payload shipped it. On 21 November 2026
+ * 135 of 2,321 board rows were readable to under 2% of their own slider, and
+ * four capacity questions — pct 8%, floor 1000 — to within six people:
+ *
+ *     tolerance 4000 -> answer 49,994..50,006   (it was 50,000)
+ *     tolerance 5840 -> answer 72,994..73,006   (it was 73,000)
+ *
+ * A player reading one number out of the network tab had the question. The
+ * sentence was not careless about the mechanism; it was written for the 19 fixed
+ * kinds and then applied to all 48, which is how a true clause comes to license
+ * a false one. live_check.mjs holds the matching half of the story: its first
+ * version refused `tolerance` as "the answer's neighbour", was overruled for
+ * imagining a rule this game did not have, and was right.
+ *
+ * WHAT THE PAGE GETS INSTEAD is `tolPct` and `tolFloor` — the kind's rule, not
+ * the question's width. Both are constants of the kind and neither is a fact
+ * about any answer, so the whole 48-row table could be printed in the page
+ * source without giving anything away. zonesAround() below turns them into
+ * bands, from the player's own knob. See functions/_lib/bp-tol.js.
  *
  * OWNER'S CONSTANTS, 6 September 2026, and the strict ladder of the 8th.
  */
@@ -185,6 +210,119 @@
     return out;
   }
 
+  /* THE SAME LADDER, DRAWN BEFORE THE ANSWER IS KNOWN — from the knob instead
+   * of from the answer. This is what replaces sending `tolerance`; the header
+   * says why it had to.
+   *
+   * THE QUESTION IT ANSWERS is not "how wide is the band" but "which answers
+   * would grade at this rung, if my guess is g" — and that has an exact answer
+   * from the RULE alone, with no knowledge of the true value:
+   *
+   *     g grades at rung k   <->   |g - a| <= k * max(floor, pct * a)
+   *
+   * Both sides of the <= move with a, so solve it rather than assume a width.
+   * Write the condition as two one-sided ones. The lower edge L solves
+   * a + k*max(floor, pct*a) = g; the left side is max(a + k*floor, a*(1+k*pct)),
+   * a maximum of two increasing functions, so its root is the SMALLER of the two
+   * individual roots. The upper edge U solves a - k*max(floor, pct*a) = g, whose
+   * left side is a MINIMUM of two increasing functions, so its root is the
+   * LARGER. Hence, exactly:
+   *
+   *     L = min(g - k*floor,  g / (1 + k*pct))
+   *     U = max(g + k*floor,  g / (1 - k*pct))
+   *
+   * and because max(floor, pct*a) is non-decreasing in a, each rung is a single
+   * interval rather than two pieces — which is why this can be drawn as one band
+   * at all.
+   *
+   * A FIXED KIND ARRIVES AS pct 0 and falls out of this as g +/- k*floor: the
+   * symmetric band it has always had, not a special case in the code.
+   *
+   * IT LEANS UPWARD for a percentage kind, and that is the rule showing through
+   * rather than a bug. A ballpark is a share of the ANSWER, so a guess that is
+   * too low is nearer in absolute terms to a small answer than to a large one.
+   * At a 30,000 guess on an 8% kind one ballpark reaches 27,778..32,609 — down
+   * 2,222 and up 2,609. On a track 63,000 wide that lopsidedness is about half a
+   * percent of its length, so the band still reads as the band.
+   *
+   * BOTH OF THE ABOVE WERE PUT TO THE OWNER AND RULED ON, 22 November 2026:
+   * "Acceptable" — the upward lean and the drawing error below both ship as
+   * built, and explicitly "don't round it". So neither is an open question or a
+   * tidying job for later: a future reader who straightens the lean into
+   * symmetry, or rounds the edges to match the graded band exactly, is undoing a
+   * decision rather than fixing an oversight. Change either only on a new
+   * ruling, not on reading this function and finding it odd.
+   *
+   * WHERE IT IS NOT EXACT, stated because the file next door promises the player
+   * sees the band they are judged against. The stored tolerance is
+   * max(floor, ROUND(pct*a)) and this drops the round(), so an edge here can sit
+   * up to k/2 units from the graded edge. Measured on the live board set: it
+   * moves a grade on 493 of 1,415 percentage rows, over 2.38% of slider
+   * positions, always within a step or two of a rung's own boundary. Rounding
+   * here instead would make the band JUMP by a whole unit as the knob crossed a
+   * rounding point, which is worse in a band that redraws on every drag: a
+   * smooth edge half a unit out beats a correct edge that twitches.
+   *
+   * kp >= 1 would send U to infinity or negative. No kind reaches it today — the
+   * widest is cup-finals at 15%, so four ballparks make 0.60 — but a kind added
+   * later could, so it is clamped to the reach rather than left to produce a
+   * band running the wrong way.
+   */
+  function zonesAround(q, guess, span) {
+    var L = ladderFor(q);
+    var g = Number(guess);
+    var pct = Number(q && q.tolPct);
+    var floor = Number(q && q.tolFloor);
+    if (!isFinite(g)) return [];
+    if (!isFinite(floor) || floor <= 0) return [];
+    if (!isFinite(pct) || pct < 0) pct = 0;
+    var reach = Math.max(Number(span) || 0, floor);
+    var out = [], prevLo = g, prevHi = g;
+    for (var i = 0; i < L.length; i++) {
+      var at = L[i][0];
+      var lo, hi;
+      if (at === Infinity) {
+        lo = g - reach; hi = g + reach;
+      } else {
+        var kp = at * pct;
+        /* THE RATIO EDGES, AND THE SIGN OF THE GUESS DECIDES WHICH IS WHICH.
+           A ballpark is pct * |answer|, so the function being inverted is
+           f(a) = a + k*pct*|a| — increasing, but with a different slope either
+           side of zero. Inverting it piecewise: for g >= 0 the lower edge is
+           g/(1+kp) and the upper g/(1-kp); below zero the two denominators
+           swap. Written out rather than assumed, because the first version
+           assumed a positive guess and the min/max then collapsed onto the
+           floor term for a negative one — drawing a band too NARROW, telling
+           the player they must be more precise than they must. Grading was
+           never affected, so there would have been no symptom.
+           No kind can reach it today: 0 of 5,556 bank and board rows have a
+           negative lo, hi or answer, and the smallest percentage-kind lo is 0.
+           It is handled anyway because the first kind that counts something
+           signed — a goal difference, a net spend, a points swing — arrives
+           without anyone rereading this function. The XI session asked the
+           question that found it. */
+        var ratioLo = g >= 0 ? g / (1 + kp) : g / (1 - kp);
+        var ratioHi = g >= 0 ? g / (1 - kp) : g / (1 + kp);
+        lo = Math.min(g - at * floor, ratioLo);
+        hi = kp < 1 ? Math.max(g + at * floor, ratioHi) : g + reach;
+        if (!isFinite(lo)) lo = g - reach;
+        if (!isFinite(hi)) hi = g + reach;
+        lo = Math.max(lo, g - reach);
+        hi = Math.min(hi, g + reach);
+      }
+      out.push({
+        label: L[i][2],
+        mult: L[i][1],
+        scoring: L[i][1] > 0,
+        innerLo: prevLo, innerHi: prevHi,
+        lo: lo, hi: hi,
+        depth: i,
+      });
+      if (at !== Infinity) { prevLo = lo; prevHi = hi; }
+    }
+    return out;
+  }
+
   var api = {
     MAX_SCORE: MAX_SCORE, QUESTIONS: QUESTIONS, PTS: PTS, SUBS: SUBS,
     CLOCK: CLOCK, GRACE: GRACE, NARROW_SECS: NARROW_SECS, BONUS_CAP: BONUS_CAP,
@@ -192,7 +330,7 @@
     GRADES: GRADES, STRICT_GRADES: STRICT_GRADES,
     ladderFor: ladderFor, ballparksOut: ballparksOut, gradeFor: gradeFor,
     pointsAt: pointsAt, pointsFor: pointsFor, score: score,
-    narrowCost: narrowCost, zonesFor: zonesFor,
+    narrowCost: narrowCost, zonesFor: zonesFor, zonesAround: zonesAround,
   };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   root.XIBP = api;

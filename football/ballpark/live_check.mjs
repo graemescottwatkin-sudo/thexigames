@@ -75,16 +75,32 @@ if (daily.json && daily.json.board) {
   t("no answer anywhere in the payload, under any key",
     !/"answer"\s*:/.test(daily.text),
     "the true value arrives only when a question is over");
+  /* AND NOT THE WIDTH OF THE BAND EITHER, which is the half of this the file
+     got wrong for two months.
+     THE FIRST VERSION OF THIS BLOCK REFUSED `tolerance` and `step` as "the
+     answer's neighbours". It was overruled — by me — as having asserted a rule
+     this game does not have, on the grounds that both are in PUBLIC_KEYS on
+     purpose because the page has to draw the slider and show how close counts.
+     The reasoning was right about `step` and wrong about `tolerance`, and the
+     note recording the correction is what kept it wrong: for 29 of the bank's 48
+     kinds the tolerance is max(floor, round(pct*|answer|)), so it is the answer
+     divided by a published constant. On 21 November 2026, 135 of 2,321 board
+     rows were readable from it to under 2% of their own slider — four capacity
+     questions to within six people. The crude check was closer to right than
+     the careful argument that replaced it.
+     The lesson is not "trust the first draft". It is that "it is in the
+     allowlist on purpose" answers a question about INTENT, and the check was
+     asking about CONSEQUENCE. Those come apart exactly here. */
+  t("no tolerance in the payload, which for most kinds IS the answer scaled",
+    !/"tolerance"\s*:/.test(daily.text),
+    "the page is sent tolPct and tolFloor — the kind's rule, not the question's width");
   /* JUDGED BY THE GAME'S OWN LEAK CHECKER, against the bytes production
-     actually served.
-     THE FIRST VERSION OF THIS BLOCK ASSERTED A RULE THIS GAME DOES NOT HAVE. It
-     refused `tolerance` and `step` as "the answer's neighbours" — and they are
-     in PUBLIC_KEYS on purpose, because the page has to draw the slider and show
-     how close counts. The live payload was correct and my check was wrong, on
-     its first execution, because I wrote down what I imagined the rule to be
-     instead of asking the file that states it.
-     leaks() IS that file's statement, so this now asks it rather than a second
-     copy of my idea of it — and if PUBLIC_KEYS ever changes, this follows. */
+     actually served. leaks() IS bp-board.js's own statement of the allowlist, so
+     this asks it rather than keeping a second copy of my idea of it — and if
+     PUBLIC_KEYS changes again, this follows. It is not a substitute for the
+     assertion above: a field removed from the allowlist stops being a leak by
+     that measure the moment it is removed, so the thing that actually went wrong
+     here needs naming in its own right. */
   const { leaks } = await import("../../functions/_lib/bp-board.js");
   const leaked = leaks(b);
   t("no field outside the game's own PUBLIC_KEYS reaches the browser",

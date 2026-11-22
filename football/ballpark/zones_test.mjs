@@ -171,5 +171,115 @@ console.log("\nA close guess that scores nothing is still a close guess");
     !landedFor(16.001).scoring && landedFor(16.001).label === "Way out");
 }
 
+/* ---- the bands drawn BEFORE the lock -----------------------------------
+ *
+ * zonesAround() is what replaced sending the tolerance, and its whole claim is
+ * that the page can draw the right bands without the answer. The claim is not
+ * "a plausible band" but that the band and the grade agree, so this does not
+ * check the formula against itself: it grades every pair with the server's own
+ * ballparksOut/gradeFor from the REAL tolerance, then asks whether the zone the
+ * page would have drawn from the knob alone contains the answer exactly when
+ * the grade says it should.
+ *
+ * THE ONE ALLOWED DISAGREEMENT is the round() in the stored tolerance, which the
+ * page cannot apply because it has no answer to apply it to: the server's band
+ * is max(floor, round(pct*a)) wide and the page solves max(floor, pct*a). An
+ * edge can sit up to half a ballpark out. Those pairs are COUNTED and reported
+ * rather than absorbed by widening what the test will accept — a check that
+ * loosens until nothing fails is the vacuous kind this project keeps finding.
+ */
+console.log("\nThe pre-lock bands agree with the grade, from the knob alone");
+{
+  const SET = [
+    { name: "capacity", pct: 0.08, floor: 1000, answers: [12000, 40000, 50000, 73000] },
+    { name: "cup-finals, widest pct", pct: 0.15, floor: 1, answers: [3, 11, 40] },
+    { name: "law-measure, narrowest", pct: 0.02, floor: 1, answers: [12, 100, 5000] },
+    { name: "event-year, fixed", pct: 0, floor: 1, answers: [1966, 2004] },
+    { name: "match-minute, fixed", pct: 0, floor: 3, answers: [45, 90] },
+    { name: "below the pct, on the floor", pct: 0.08, floor: 1000, answers: [900, 4000] },
+    /* NO KIND IS SIGNED TODAY — 0 of 5,556 bank and board rows have a negative
+       lo, hi or answer — but a ballpark is pct * |answer|, so the function
+       zonesAround inverts has a kink at zero and the first signed kind to be
+       added (a goal difference, a net spend, a points swing) would otherwise be
+       drawn a band too NARROW with nothing failing. Swept so that kind arrives
+       to a function that already handles it. */
+    { name: "signed, straddling zero", pct: 0.06, floor: 2, answers: [-40, -3, 0, 3] },
+    { name: "signed, large and negative", pct: 0.1, floor: 1, answers: [-250, -31] },
+  ];
+  let checked = 0, wrong = 0, rounding = 0;
+  const worst = [];
+  for (const k of SET) {
+    for (const answer of k.answers) {
+      /* Math.abs, because that is what the bank's rule uses — and a test that
+         wrote k.pct * answer would compute a NEGATIVE tolerance for the signed
+         cases and then agree with a function that had the same bug. */
+      const tolerance = k.pct
+        ? Math.max(k.floor, Math.round(k.pct * Math.abs(answer))) : k.floor;
+      const q = { tolPct: k.pct, tolFloor: k.floor };
+      const L = R.ladderFor(q);
+      const span = Math.max(tolerance * 20, 40);
+      const stepBy = Math.max(1, Math.round(span / 300));
+      /* the sweep runs through zero for the signed kinds rather than stopping
+         at it, because zero is where the two branches meet */
+      for (let g = answer - span; g <= answer + span; g += stepBy) {
+        const zones = R.zonesAround(q, g, span * 3);
+        const grade = R.gradeFor(R.ballparksOut(g, answer, tolerance), q);
+        const rung = L.findIndex((row) => row[2] === grade[2]);
+        const drawn = zones.findIndex((z) => answer >= z.lo && answer <= z.hi);
+        checked++;
+        if (rung === drawn) continue;
+        /* within half a ballpark of the rung's own edge, it is the round() */
+        const at = L[Math.min(rung, drawn < 0 ? rung : drawn)][0];
+        const edge = isFinite(at)
+          ? Math.abs(Math.abs(g - answer) - at * tolerance) : Infinity;
+        if (isFinite(at) && edge <= at / 2 + 1e-9) { rounding++; continue; }
+        wrong++;
+        if (worst.length < 4) {
+          worst.push(`${k.name} a=${answer} g=${g}: server "${grade[2]}", page "${
+            drawn < 0 ? "none" : zones[drawn].label}"`);
+        }
+      }
+    }
+  }
+  t("the zone holding the answer is the rung the server grades on",
+    wrong === 0,
+    `${checked - rounding - wrong} of ${checked} pairs agree exactly` +
+      (worst.length ? "; " + worst.join("; ") : ""));
+  t("and the only disagreements are the rounding, at a rung's own edge",
+    rounding * 20 < checked,
+    `${rounding} of ${checked} pairs sat within half a ballpark of a boundary`);
+
+  /* THE LEAN IS THE RULE, NOT A BUG — pinned so nobody straightens it into
+     symmetry. A ballpark is a share of the ANSWER, so from a fixed guess a
+     large answer is further away in absolute terms than a small one, and the
+     band therefore reaches further up than down. */
+  const one = R.zonesAround({ tolPct: 0.08, tolFloor: 1000 }, 30000, 80000)[1];
+  t("a percentage kind's band leans upward from the guess",
+    one.hi - 30000 > 30000 - one.lo,
+    `one ballpark at a 30,000 guess: ${Math.round(one.lo)}..${Math.round(one.hi)}`);
+  const fixedOne = R.zonesAround({ tolPct: 0, tolFloor: 2 }, 1966, 40)[1];
+  t("and a fixed kind's does not lean at all",
+    (fixedOne.hi - 1966) === 2 && (1966 - fixedOne.lo) === 2,
+    "one ballpark of a fixed kind is the floor, both ways");
+
+  /* The failure direction. A row whose kind the serving table does not know
+     carries no rule, and the page must then draw NOTHING rather than guess a
+     width — a page without a band, not a band that lies. */
+  t("no rule means no bands, never a guessed one",
+    R.zonesAround({}, 100, 50).length === 0 &&
+    R.zonesAround({ tolPct: 0.08 }, 100, 50).length === 0,
+    "a missing floor yields no zones");
+
+  /* AND IT MUST NOT BE ABLE TO USE AN ANSWER, which is the point of all of it:
+     the same knob on the same rule gives the same bands whatever answer is put
+     beside them, because the answer is not an input and cannot become one by
+     someone passing the whole row in. */
+  const withoutIt = JSON.stringify(R.zonesAround({ tolPct: 0.06, tolFloor: 3 }, 55, 200));
+  const withIt = JSON.stringify(R.zonesAround(
+    { tolPct: 0.06, tolFloor: 3, answer: 900, tolerance: 54 }, 55, 200));
+  t("the bands do not move when an answer is put in front of them",
+    withoutIt === withIt, "the answer is not an input");
+}
+
 console.log(`\n${pass} passed, ${fail} failed`);
 process.exit(fail ? 1 : 0);
