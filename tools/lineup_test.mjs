@@ -31,6 +31,14 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { JSDOM } from "jsdom";
 import { localResources } from "./local_resources.js";
+import { namedSlots } from "./squad.mjs";
+
+/* THE LINE-UP IS THE SQUAD'S, NOT A NUMBER WRITTEN HERE. This suite said "ten
+   cards", "the shirts run 1 to 10" and "2 of 10 completed" until 26 Nov 2026,
+   when the owner scaled the site back to three games and every one of those
+   was a literal defending a fact that had stopped being true. */
+const SQUAD = namedSlots("football");
+const N = SQUAD.length;
 
 const ROOT = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
 const HUB_FILE = themeHubFile("football");
@@ -64,22 +72,26 @@ console.log("The markup, with JavaScript off");
   const d = new JSDOM(HTML).window.document;
   const shirts = [...d.querySelectorAll(".xi-strip a.shirt")];
   const cards = [...d.querySelectorAll("#lineup .gcard")];
-  t("ten cards and ten shirts, in the file, not built by script",
-    cards.length === 10 && shirts.length === 10, `${cards.length} cards, ${shirts.length} shirts`);
+  t("PRECONDITION: the football squad offers at least two games", N >= 2, `${N} named slots`);
+  t("a card and a shirt for every game the squad offers, in the file, not built by script",
+    cards.length === N && shirts.length === N, `${cards.length} cards, ${shirts.length} shirts, ${N} in the squad`);
   const shirtIds = shirts.map((s) => (s.getAttribute("href").match(/^\/football\/([a-z]+)\/$/) || [])[1]);
   const nums = shirts.map((s) => Number(s.querySelector(".dot").textContent));
-  t("the shirts run 1 to 10", nums.every((n, i) => n === i + 1), nums.join(","));
+  t("the shirts are the squad's own numbers, in shirt order",
+    nums.join() === SQUAD.map((g) => g.n).join(), nums.join(","));
+  t("and each shirt links the game the squad puts on that number",
+    shirts.map((sh) => sh.getAttribute("href")).join() === SQUAD.map((g) => g.href).join());
   t("the cards are in shirt order: the same games, the same order, as the shirts",
     cards.map((c) => c.getAttribute("data-game")).join() === shirtIds.join(), shirtIds.join(" "));
   const oneLink = cards.filter((c) => {
     const links = [...c.querySelectorAll("a")];
     return links.length === 1 && links[0].getAttribute("href") === "/football/" + c.getAttribute("data-game") + "/";
   });
-  t("every card is ONE link, to its own game's home", oneLink.length === 10, `${oneLink.length} of 10`);
+  t("every card is ONE link, to its own game's home", N > 0 && oneLink.length === N, `${oneLink.length} of ${N}`);
   t("no card starts a board: nothing links ?play=1", !HTML.includes("?play=1"));
   t("every card shows its shirt number and its name",
-    cards.every((c, i) => c.querySelector(".gcard-num").textContent.trim() === String(i + 1) &&
-      /XI$/.test(c.querySelector(".gcard-title").textContent.trim())));
+    cards.length === N && cards.every((c, i) => c.querySelector(".gcard-num").textContent.trim() === String(SQUAD[i].n) &&
+      c.querySelector(".gcard-title").textContent.trim() === SQUAD[i].name));
   t("every card's completed badge is in the markup and hidden until it is true",
     cards.every((c) => { const b = c.querySelector(".gcard-done"); return b && b.hidden && /Completed/.test(b.textContent); }));
   const today = d.getElementById("todayXI");
@@ -178,7 +190,7 @@ console.log("\nA newcomer, and nothing played");
   DAY = "2026-09-23"; NO = 6; apiDown = false;
   const h = await hub({}, counted);
   t("the introduction is shown", !h.d.getElementById("hubIntro").hidden);
-  t("the count says 0 of 10: every game was read, and nothing is done", h.text("xiCount") === "0 of 10 completed", h.text("xiCount"));
+  t("the count says 0 of every game offered: each was read, and nothing is done", h.text("xiCount") === `0 of ${N} completed`, h.text("xiCount"));
   t("no card is marked completed", !h.d.querySelector(".gcard.done"));
   h.dom.window.close();
 }
@@ -186,21 +198,30 @@ console.log("\nA newcomer, and nothing played");
 console.log("\nA returning player who has finished two games today");
 {
   DAY = "2026-09-23"; NO = 6; apiDown = false;
+  /* TWO GAMES THE SQUAD OFFERS, and a third it offers that was not played.
+     HiLo was the second until it left the line-up; QuickFire's record is keyed
+     on the day the same way. Stated as a precondition, so the day either game
+     leaves the squad this says which, rather than failing somewhere below. */
+  const offered = SQUAD.map((g) => g.dir);
+  const idle = SQUAD.find((g) => g.dir !== "crossword" && g.dir !== "quickfire");
+  t("PRECONDITION: the squad offers Crossword, QuickFire and a third game",
+    offered.includes("crossword") && offered.includes("quickfire") && !!idle, offered.join(","));
+  const shirtOf = (dir) => h.d.getElementById("shirt" + SQUAD.find((g) => g.dir === dir).n);
   const h = await hub({
     "fcw.results.v1": [{ dailyNo: 6, complete: true, score: 86 }],
-    "xihl.results": [{ day: "2026-09-23", score: 70 }],
+    "qfx.results.v1": [{ day: "2026-09-23", score: 70 }],
   }, counted);
   t("the introduction is hidden: this device has played before", h.d.getElementById("hubIntro").hidden);
   const done = [...h.d.querySelectorAll(".gcard.done")].map((c) => c.getAttribute("data-game"));
-  t("exactly those two cards are completed", done.join() === "crossword,hilo", done.join());
+  t("exactly those two cards are completed", done.join() === "crossword,quickfire", done.join());
   const c = h.card("crossword");
   t("in words, not colour alone: the badge shows and the action says so",
     !c.querySelector(".gcard-done").hidden && c.querySelector(".gcard-act").textContent === "View today’s result");
   t("and the card still opens its game's home, where the result is",
     c.querySelector("a").getAttribute("href") === "/football/crossword/");
-  t("the shirts in Today's XI agree", h.d.getElementById("shirt1").classList.contains("done") &&
-    h.d.getElementById("shirt4").classList.contains("done") && !h.d.getElementById("shirt2").classList.contains("done"));
-  t("the count reads 2 of 10 completed", h.text("xiCount") === "2 of 10 completed", h.text("xiCount"));
+  t("the shirts in Today's XI agree", shirtOf("crossword").classList.contains("done") &&
+    shirtOf("quickfire").classList.contains("done") && !shirtOf(idle.dir).classList.contains("done"));
+  t("the count reads 2 of every game offered", h.text("xiCount") === `2 of ${N} completed`, h.text("xiCount"));
   t("and the disclosure is still collapsed", !h.d.getElementById("todayXI").open);
   h.dom.window.close();
 }
@@ -232,7 +253,10 @@ console.log("\n/football/archive/, run");
   const hidden = Object.keys(PERMA_GAMES).filter((g) => !isListed(g));
   t("it answers 200, and it is a page a crawler may index", r.status === 200 && !/noindex/.test(page));
   t("it links every listed football game's own archive",
-    listed.length >= 10 && listed.every((g) => page.includes(`href="${gamePath(g)}archive/"`)), `${listed.length} games`);
+    listed.length >= 2 && listed.every((g) => page.includes(`href="${gamePath(g)}archive/"`)), `${listed.length} games`);
+  const benched = hidden.filter((g) => themeOf(g) === "football");
+  t("and no unlisted football game's, by address or by name",
+    benched.every((g) => !page.includes(gamePath(g)) && !page.includes(PERMA_GAMES[g].name)), benched.join(", ") || "none unlisted");
   /* NEVER ANOTHER THEME'S GAME. This asked for "never an unlisted game" while
      today's unlisted games were the Friends ones; they went public on 27 Sep
      2026 (the owner: "only /Friends shows frineds games"), so the Friends
@@ -247,13 +271,17 @@ console.log("\n/football/archive/, run");
      27 Sep 2026 no game is unlisted at all. So a FOOTBALL game is made
      unlisted, through the real UNLISTED table that isListed reads, and the
      page is run again. */
+  /* WHICH GAME IS HIDDEN IS TAKEN FROM THE LISTED SET, not named: this hid
+     Ballpark and looked for HiLo, and HiLo left the line-up on 26 Nov 2026. */
   const games = await import("../functions/_lib/games.js");
-  games.UNLISTED.ballpark = true;
+  const victim = listed[listed.length - 1], keeper = listed[0];
+  games.UNLISTED[victim] = true;
   let again = "";
   try { again = await (await themeArchiveRoute({ env: {} }, "football")).text(); }
-  finally { delete games.UNLISTED.ballpark; }
+  finally { delete games.UNLISTED[victim]; }
   t("an unlisted FOOTBALL game is left off too: the page asks isListed itself",
-    !again.includes("/football/ballpark/") && !again.includes("Ballpark XI") && again.includes("/football/hilo/archive/"));
+    victim !== keeper && isListed(victim) && !again.includes(gamePath(victim)) && !again.includes(PERMA_GAMES[victim].name) &&
+    again.includes(gamePath(keeper) + "archive/"), `hid ${victim}, kept ${keeper}`);
   const { onRequestGet: sitemap } = await import("../functions/sitemap.xml.js");
   const xml = await (await sitemap({ env: {}, request: new Request("https://www.thexigames.com/sitemap.xml") })).text();
   t("the sitemap offers it", xml.includes("https://www.thexigames.com/football/archive/"));
@@ -265,22 +293,59 @@ console.log("\n/football/archive/, run");
 console.log("\n/friends/archive/, run");
 {
   const { onRequestGet } = await import("../functions/friends/archive/index.js");
-  const { PERMA_GAMES, gamePath, themeOf } = await import("../functions/_lib/permalink.js");
-  const r = await onRequestGet({ env: {}, request: new Request("https://www.thexigames.com/friends/archive/") });
-  const page = await r.text();
+  const { onRequest: hubRoute } = await import("../functions/friends/index.js");
+  const { PERMA_GAMES, gamePath, themeOf, THEMES, themeHubPath } = await import("../functions/_lib/permalink.js");
+  const games = await import("../functions/_lib/games.js");
+  const { onRequestGet: sitemap } = await import("../functions/sitemap.xml.js");
   const mine = Object.keys(PERMA_GAMES).filter((g) => themeOf(g) === "friends");
   const theirs = Object.keys(PERMA_GAMES).filter((g) => themeOf(g) === "football");
-  t("it answers 200 and links both Friends games' archives",
-    r.status === 200 && mine.length >= 2 && mine.every((g) => page.includes(`href="${gamePath(g)}archive/"`)),
-    `${r.status}, ${mine.join(", ")}`);
-  t("and no football game, by address",
-    theirs.length >= 10 && theirs.every((g) => !page.includes(gamePath(g))));
-  const { onRequestGet: sitemap } = await import("../functions/sitemap.xml.js");
-  const xml = await (await sitemap({ env: {}, request: new Request("https://www.thexigames.com/sitemap.xml") })).text();
-  /* /football/ IS LISTED SINCE 29 SEP 2026: the root is the theme picker, and
-     the football hub is a page in its own right, canonical at its address. */
-  t("the sitemap offers the picker, both theme hubs and the Friends games",
-    ["/", "/football/", "/friends/", "/friends/crossword/", "/friends/whoami/"].every((u) => xml.includes("https://www.thexigames.com" + u + "<")));
+  const ask = () => onRequestGet({ env: {}, request: new Request("https://www.thexigames.com/friends/archive/") });
+  const askHub = () => hubRoute({ env: { ASSETS: { fetch: () => new Response("the friends hub") } },
+    request: new Request("https://www.thexigames.com/friends/") });
+  const askMap = async () => (await (await sitemap({ env: {}, request: new Request("https://www.thexigames.com/sitemap.xml") })).text());
+  const SITE = "https://www.thexigames.com";
+
+  /* BOTH STATES, WHATEVER THE TREE HOLDS. Friends was two public games when
+     this was written, seven by October, and none from 26 Nov 2026 (the owner:
+     "0 friends for now"). A check of only the state the tree happens to be in
+     proves half the route, so each state is MADE through the real UNLISTED
+     table, the routes are run, and the table is put back. */
+  const was = { ...games.UNLISTED };
+  const restore = () => { for (const k of Object.keys(games.UNLISTED)) delete games.UNLISTED[k]; Object.assign(games.UNLISTED, was); };
+  t("PRECONDITION: Friends has games to list and to hide", mine.length >= 2 && theirs.length >= 2, mine.join(", "));
+  try {
+    /* 1. Friends with listed games: all of them. */
+    for (const g of mine) delete games.UNLISTED[g];
+    let r = await ask(); let page = await r.text();
+    t("with Friends listed, its archive answers 200 and links every Friends game's archive",
+      r.status === 200 && mine.every((g) => page.includes(`href="${gamePath(g)}archive/"`)), `${r.status}, ${mine.join(", ")}`);
+    t("and no football game, by address", theirs.every((g) => !page.includes(gamePath(g))));
+    r = await askHub();
+    t("and its hub is served as the static page", r.status === 200 && (await r.text()) === "the friends hub", String(r.status));
+    let xml = await askMap();
+    t("and the sitemap offers the picker, both theme hubs and every Friends game",
+      ["/", "/football/", "/friends/", ...mine.map(gamePath)].every((u) => xml.includes(SITE + u + "<")));
+
+    /* 2. Friends with none: every one hidden. */
+    for (const g of mine) games.UNLISTED[g] = true;
+    r = await ask(); page = await r.text();
+    t("with no Friends game listed, its archive goes to the front door, temporarily, saying nothing",
+      r.status === 302 && r.headers.get("Location") === "/" && page === "" && /noindex/.test(r.headers.get("X-Robots-Tag") || ""),
+      `${r.status} ${r.headers.get("Location")}`);
+    r = await askHub();
+    t("and so does its hub: the static page that names every Friends game is not served",
+      r.status === 302 && r.headers.get("Location") === "/" && (await r.text()) === "", `${r.status} ${r.headers.get("Location")}`);
+    xml = await askMap();
+    t("and the sitemap offers no Friends address at all",
+      !xml.includes(SITE + "/friends/") && xml.includes(SITE + "/football/<") && xml.includes(SITE + "/<"));
+  } finally { restore(); }
+
+  /* AND THE TREE AS IT STANDS: every theme with a listed game has its hub in
+     the sitemap, and no other theme has. */
+  const xml = await askMap();
+  const live = THEMES.filter((th) => games.GAMES.some((g) => themeOf(g) === th && games.isListed(g)));
+  t("as the tree stands, the sitemap offers the hub of each theme with a listed game, and of no other",
+    live.length >= 1 && THEMES.every((th) => xml.includes(SITE + themeHubPath(th) + "<") === live.includes(th)), live.join(", "));
 }
 
 /* THE ROOT IS THE THEME PICKER (the owner, 29 Sep 2026: "make the theme
@@ -288,24 +353,56 @@ console.log("\n/friends/archive/, run");
    Run, not read: the real route, and what it answers. */
 console.log("\n/, run");
 {
-  const { onRequest, listedThemes } = await import("../functions/index.js");
-  const { GAMES, isListed } = await import("../functions/_lib/games.js");
-  const { themeOf } = await import("../functions/_lib/permalink.js");
+  const { onRequest, listedThemes, picker, themeCardPath } = await import("../functions/index.js");
+  const games = await import("../functions/_lib/games.js");
+  const { GAMES, isListed, LABELS } = games;
+  const { themeOf, gamePath } = await import("../functions/_lib/permalink.js");
   let asked = null;
   const r = await onRequest({ env: { ASSETS: { fetch: (u) => { asked = String(u); return new Response("the football hub"); } } },
     request: new Request("https://www.thexigames.com/") });
   const page = await r.text();
-  t("the root answers the picker itself, not a theme's hub", r.status === 200 && asked === null && page.includes('class="pk-themes"'),
+  t("the root answers the picker itself, not a theme's hub", r.status === 200 && asked === null && /class="pk-themes[ "]/.test(page),
     asked ? "served " + asked : String(r.status));
   const themes = listedThemes();
-  t("PRECONDITION: two themes are listed, football and friends", themes.join() === "football,friends", themes.join());
-  const hrefs = [...page.matchAll(/class="pk-card pk-([a-z]+)" href="([^"]+)"/g)].map((m) => m[1] + " " + m[2]);
-  t("a card for each theme, pointing at its hub", hrefs.join(" | ") === "football /football/ | friends /friends/", hrefs.join(" | "));
+  t("PRECONDITION: at least one theme is listed, and football is first", themes.length >= 1 && themes[0] === "football", themes.join());
+  /* A CARD IS A SECTION WHOSE BUTTON IS ITS LINK, since 26 Nov 2026: the games
+     on it are links of their own, and a link cannot sit inside a link. */
+  const cardsOf = (html) => [...html.matchAll(/<section class="pk-card pk-([a-z]+)"[\s\S]*?<a class="pk-go" href="([^"]+)"/g)].map((m) => m[1] + " " + m[2]);
+  const hrefs = cardsOf(page);
+  t("a card for each listed theme, its button pointing where the theme's card should",
+    hrefs.join(" | ") === themes.map((th) => th + " " + themeCardPath(th)).join(" | "), hrefs.join(" | "));
+  /* THE FRONT DOOR SHOWS EVERY GAME (the owner, 26 Nov 2026: "id like an home
+     page that shows all + /football shows only football or click football on
+     the root page"). Each listed game is a link to its own address, and a game
+     the site does not advertise is neither linked nor named. */
+  const listed = GAMES.filter(isListed), benched = GAMES.filter((g) => !isListed(g));
+  t("every listed game is one click from the front door, at its own address",
+    listed.length >= 2 && listed.every((g) => page.includes(`<a href="${gamePath(g)}">`)), listed.join(", "));
+  /* A card drops its theme from a game's name, so "Crossword XI: Friends" would
+     read "Crossword XI" -- the same words as football's. A hidden game's name
+     is looked for only where no listed game legitimately shows those words. */
+  const bare = (g) => String(LABELS[g]).replace(/: [A-Z][a-z]+$/, "");
+  const shown = new Set(listed.map(bare));
+  t("and no unlisted game is linked or named there",
+    benched.every((g) => !page.includes(gamePath(g)) && (shown.has(bare(g)) || !page.includes(">" + bare(g) + "<"))),
+    benched.join(", ") || "none unlisted");
   const counts = themes.map((th) => GAMES.filter((g) => themeOf(g) === th && isListed(g)).length);
   t("each card counts its theme's listed games, from the games list",
     themes.every((th, i) => page.includes(counts[i] + " daily game")), counts.join(", "));
-  t("and names them without repeating the theme", page.includes("<span>Lightning Round XI</span>") &&
-    !page.includes("Crossword XI: Friends</span>"));
+  /* TWO THEMES, MADE RATHER THAN ASSUMED: with a Friends game listed through
+     the real table, there are two cards and the Friends one names its game
+     without repeating the theme. And with one theme, the lone card is centred. */
+  const was = { ...games.UNLISTED };
+  let two = "";
+  try { delete games.UNLISTED.lightning_fr; two = picker(listedThemes()); }
+  finally { for (const k of Object.keys(games.UNLISTED)) delete games.UNLISTED[k]; Object.assign(games.UNLISTED, was); }
+  t("with a Friends game listed there are two cards, football first",
+    cardsOf(two).map((c) => c.split(" ")[0]).join() === "football,friends", cardsOf(two).join(" | "));
+  t("and a game is named without repeating its theme", two.includes('<a href="/friends/lightning/">Lightning Round XI</a>') &&
+    !two.includes("Lightning Round XI: Friends</a>"));
+  const one = picker(["football"]);
+  t("a lone theme's card is marked to sit centred, and two are not",
+    one.includes('class="pk-themes pk-one"') && two.includes('class="pk-themes"'));
   t("it is canonical at the root, and indexable", page.includes('<link rel="canonical" href="https://www.thexigames.com/">') &&
     !page.includes("noindex"));
   t("and it shows no show imagery: no image at all", !/<img|url[(]/.test(page));

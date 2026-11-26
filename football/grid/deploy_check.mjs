@@ -31,6 +31,7 @@
 /* The football hub moved to football/index.html on 21 Sep 2026, when the
    root became the theme picker. Asked, never assembled: see permalink.js. */
 import { themeHubFile } from "../../functions/_lib/permalink.js";
+import { listingChecks, said, benched } from "../../tools/listing.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -267,13 +268,27 @@ const squad = (() => {
    them pass on an empty string. The slice must have found the football squad
    AND must be narrower than the file it came from — a slice that silently
    returned everything is the bug being fixed here wearing a different hat. */
+/* LISTED OR UNLISTED, AND THE GATE HOLDS IN BOTH (26 Nov 2026). The owner scaled
+   the site back to three games that day -- "bring them back one at a time when
+   ready" -- and this gate had only ever described a public game. The four
+   things that move together are asked of tools/listing.mjs, which knows both
+   columns; what is this game's alone (its shirt, its card) follows below, said
+   for whichever state it is in. Deleting this game's line from UNLISTED turns
+   these red on the LISTED side, which is the list of what bringing it back
+   still needs. */
+console.log("\nListed or unlisted, and the tree agrees");
+const LISTING = await listingChecks(t, "grid");
 t("PRECONDITION: the football squad was found, and it is not the whole map", (() => {
   const whole = read("shared/xi-chrome.js");
+  /* A named football game, and Grid itself while Grid is listed: the squad
+     names no unlisted game, so its own name cannot be the landmark then. */
   return squad.length > 200 && squad.length < whole.length &&
-         !/friends:/.test(squad) && /name: "Grid XI"/.test(squad);
+         !/friends:/.test(squad) && (LISTING.listed ? /name: "Grid XI"/ : /name: "[A-Za-z ]+ XI"/).test(squad);
 })(), `${squad.length} chars, football only`);
-t("it wears the sixth shirt", /n: 6,[^}]*name: "Grid XI"/.test(squad),
-  "a launched game takes the next free number");
+t(LISTING.listed ? "it wears the sixth shirt" : "it is unlisted: the six says a status, and no slot names it",
+  LISTING.listed ? /n: 6,[^}]*name: "Grid XI"/.test(squad)
+                 : /\{\s*n: 6,\s*status: "[^"]+"\s*\}/.test(squad) && !/name: "Grid XI"/.test(squad),
+  "a launched game takes the next free number, and keeps it while unlisted");
 /* AND THE TAIL MOVED DOWN, which is the rule rather than a fact about any one
    game. This asserted `n: 7 ... "In testing"` — true on 7 September, when the
    seven was the next unsigned slot behind Grid. Codeword XI launched on
@@ -290,16 +305,22 @@ t("and no game in testing sits on a shirt at or below Grid's", (() => {
      boundary — so it reported an unsigned game sitting on shirt one and failed
      a squad that was correct. A check that cannot parse the thing it judges
      fails honest data, which is how a check gets deleted rather than fixed. */
-  return squad.split("{").slice(1).every((entry) => {
+  /* AN UNLISTED GAME'S SLOT SAYS A STATUS TOO, since 26 Nov 2026, and the squad
+     does not say whose it is. So "no status at or below the six" became a
+     count: the status slots there may number no more than football's launched
+     games that are unlisted. One more than that is a game in build sitting on
+     a shirt it has not earned, which is the thing this refuses. */
+  const below = squad.split("{").slice(1).filter((entry) => {
     const n = Number((entry.match(/n:\s*(\d+)\s*,/) || [])[1]);
-    if (!Number.isInteger(n)) return true;
-    return n > 6 || !/status:/.test(entry.split("}")[0]);
-  });
+    return Number.isInteger(n) && n <= 6 && /status:/.test(entry.split("}")[0]);
+  }).length;
+  return below <= benched("football").length;
 })(), "a game that is not out does not hold a shirt, and moves when one ships past it");
 t("its own page still says its name", /Grid XI/.test(html));
-t("and the hub says it too, now that it is out", (() => {
+t(LISTING.listed ? "and the hub says it too, now that it is out" : "and it is unlisted, so the hub neither names it nor wears its shirt", (() => {
   const hub = read(themeHubFile("football"));
-  return /Grid XI/.test(hub) && /id="shirt6"/.test(hub);
+  return LISTING.listed ? /Grid XI/.test(hub) && /id="shirt6"/.test(hub)
+                        : !/Grid XI/.test(said(hub)) && !/id="shirt6"/.test(hub);
 })(), "the front door is where a launch is visible");
 
 

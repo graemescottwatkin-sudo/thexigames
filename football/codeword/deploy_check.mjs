@@ -21,6 +21,7 @@
 /* The football hub moved to football/index.html on 21 Sep 2026, when the
    root became the theme picker. Asked, never assembled: see permalink.js. */
 import { themeHubFile } from "../../functions/_lib/permalink.js";
+import { listingChecks, said, benched } from "../../tools/listing.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -261,6 +262,16 @@ console.log("\nAnd it is NOT launched, which is the point of this gate");
     /codeword: "2026-09-18"/.test(games),
     "nothing counts from before the queue starts");
 }
+/* LISTED OR UNLISTED, AND THE GATE HOLDS IN BOTH (26 Nov 2026). The owner scaled
+   the site back to three games that day -- "bring them back one at a time when
+   ready" -- and this gate had only ever described a public game. The four
+   things that move together are asked of tools/listing.mjs, which knows both
+   columns; what is this game's alone (its shirt, its card) follows below, said
+   for whichever state it is in. Deleting this game's line from UNLISTED turns
+   these red on the LISTED side, which is the list of what bringing it back
+   still needs. */
+console.log("\nListed or unlisted, and the tree agrees");
+const LISTING = await listingChecks(t, "codeword");
 {
   const squad = (() => {
     const s = read("shared/xi-chrome.js");
@@ -274,8 +285,10 @@ console.log("\nAnd it is NOT launched, which is the point of this gate");
      Ballpark was sitting on the seven as the owner's ORDERING of what came next
      and moves down — that was never a shirt, and the squad's own comment says
      so. */
-  t("codeword wears the seventh shirt", /n: 7,\s*name: "Codeword XI"/.test(squad),
-    "a launched game takes the next free number");
+  t(LISTING.listed ? "codeword wears the seventh shirt" : "codeword is unlisted: the seven says a status, and no slot names it",
+    LISTING.listed ? /n: 7,\s*name: "Codeword XI"/.test(squad)
+                   : /\{\s*n: 7,\s*status: "[^"]+"\s*\}/.test(squad) && !/name: "Codeword XI"/.test(squad),
+    "a launched game takes the next free number, and keeps it while unlisted");
   /* AND NOTHING UNRELEASED SITS ABOVE IT. This asked for `n: 8, status: "In
      testing"` — Ballpark's slot on the day Codeword launched — and went red the
      moment QuickFire launched on the eight and pushed Ballpark to the nine.
@@ -309,10 +322,12 @@ console.log("\nAnd it is NOT launched, which is the point of this gate");
     read(p).replace(/<!--[\s\S]*?-->/g, " ").includes("Codeword"));
   /* IT MAY BE NAMED NOW. The rule forbids naming an UNRELEASED game; this one
      is out, so the hub names it and so does its own page. */
-  t("the hub names it, now that it is out", named.includes(themeHubFile("football")),
+  t(LISTING.listed ? "the hub names it, now that it is out" : "it is unlisted, so no served page names it: not the hub, not the 404",
+    LISTING.listed ? named.includes(themeHubFile("football")) : named.length === 0,
     named.join(", ") || "named nowhere");
-  const map = read("functions/sitemap.xml.js");
-  t("and it is in the sitemap, offered to a crawler", /football\/codeword/.test(map));
+  /* THE SITEMAP IS ASKED BY listingChecks ABOVE, RUN. This grepped the
+     generator's source for the game's path, which is there whether or not the
+     sitemap offers it: advertisedPath() filters the page list at run time. */
 }
 /* THE PAGE IS IN THE TREE AND THE GAME IS STILL NOT LAUNCHED, which is a state
    worth asserting rather than a contradiction. A game may be playable in the

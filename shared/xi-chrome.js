@@ -62,20 +62,20 @@
   var SQUADS = {
     football: [
       { n: 1,  name: "Crossword XI",   href: "/football/crossword/" },
-      { n: 2,  name: "Wordsearch XI",  href: "/football/wordsearch/" },
-      { n: 3,  name: "Scrambled XI",   href: "/football/scrambled/" },
-      { n: 4,  name: "HiLo XI",        href: "/football/hilo/" },
+      { n: 2, status: "Back soon" },
+      { n: 3, status: "Back soon" },
+      { n: 4, status: "Back soon" },
       /* Vowels XI launched on 4 Sep 2026 and took the next free number, which
          is what launching does. QuickFire was sitting at 5 while in testing and
          moves down: a game that is not out does not hold a shirt, and the rule
          says so — "only a launched game holds a number ... and moves down when a
          game ships past it". */
-      { n: 5,  name: "Vowels XI",      href: "/football/vowels/" },
+      { n: 5, status: "Back soon" },
       /* Grid XI launched on 7 Sep 2026 and took the next free number, which is
          what launching does. QuickFire moves from 6 to 7 for the same reason it
          moved from 5 to 6 when Vowels went out: a game in testing does not hold
          a shirt, and it moves down when a game ships past it. */
-      { n: 6,  name: "Grid XI",        href: "/football/grid/" },
+      { n: 6, status: "Back soon" },
       /* A GAME IN TESTING DOES NOT HOLD A SHIRT. Where one sits in this list
          while it is unreleased is the OWNER'S ORDERING of what comes next, not a
          number it owns — it says a status and nothing else, and its name stays
@@ -85,7 +85,7 @@
          which is what launching does. Ballpark was sitting on the seven as the
          owner's ORDERING of what came next and moves down: that was never a
          shirt, and the comment above says so. */
-      { n: 7,  name: "Codeword XI",   href: "/football/codeword/" },
+      { n: 7, status: "Back soon" },
       /* QUICKFIRE XI LAUNCHED ON 15 SEPTEMBER 2026 and takes the eight, the next
          free number. It had sat on the eleven as the owner's ordering since
          9 September; Ballpark moves from eight to nine for the same reason
@@ -111,7 +111,7 @@
          kit goes with the GAME rather than the number.
          Eleven shirts, so the tail loses its last unsigned slot rather than the
          squad growing a twelfth. */
-      { n: 9,  name: "Who Am I XI",   href: "/football/whoami/" },
+      { n: 9, status: "Back soon" },
       { n: 10, name: "Ballpark XI",   href: "/football/ballpark/" },
       { n: 11, status: "In build" }
     ],
@@ -162,7 +162,7 @@
        football page lists them, which is the other half of the ruling: "only
        /Friends shows frineds games". */
     friends: [
-      { n: 1,  name: "Crossword XI: Friends", href: "/friends/crossword/" },
+      { n: 1, status: "Back soon" },
       /* WHO AM I, FRIENDS — LAUNCHED 22 September 2026 and UNLISTED, so it
          takes the two: the next free number, which is what launching does.
 
@@ -182,21 +182,21 @@
 
          The name AND the href both go in when functions/_lib/games.js stops
          calling this game UNLISTED, and the gates refuse the three disagreeing. */
-      { n: 2,  name: "Who Am I XI: Friends", href: "/friends/whoami/" },
+      { n: 2, status: "Back soon" },
       /* LIGHTNING ROUND, launched 28 September 2026 on the owner's "launch
          Lightning Round": the next free number, which is what launching does. */
-      { n: 3,  name: "Lightning Round XI: Friends", href: "/friends/lightning/" },
+      { n: 3, status: "Back soon" },
       /* SCRAMBLED AND VOWELS, FRIENDS, launched together on the owner's "start
          the Friends Scrambled and Vowels build" and "Straight to public"
          (29 Sep 2026): the next two free numbers. */
-      { n: 4,  name: "Scrambled XI: Friends", href: "/friends/scrambled/" },
-      { n: 5,  name: "Vowels XI: Friends", href: "/friends/vowels/" },
+      { n: 4, status: "Back soon" },
+      { n: 5, status: "Back soon" },
       /* WORDSEARCH, FRIENDS, launched 30 September 2026 on the owner's go:
          the next free number. */
-      { n: 6,  name: "Wordsearch XI: Friends", href: "/friends/wordsearch/" },
+      { n: 6, status: "Back soon" },
       /* QuickFire XI: Friends, the owner's "yes and yes" of 30 Sep 2026:
          the next free number after Wordsearch XI: Friends' 6. */
-      { n: 7,  name: "QuickFire XI: Friends", href: "/friends/quickfire/" },
+      { n: 7, status: "Back soon" },
     ],
   };
 

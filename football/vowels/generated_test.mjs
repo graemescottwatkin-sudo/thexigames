@@ -18,7 +18,7 @@ import fs from "node:fs";
 import { gamePath } from "../../functions/_lib/permalink.js";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { entryKey, GAMES, LABELS } from "../../functions/_lib/games.js";
+import { entryKey, GAMES, LABELS, isListed } from "../../functions/_lib/games.js";
 import { PERMA_GAMES } from "../../functions/_lib/permalink.js";
 
 /* Two levels: this suite lives at football/vowels/ and the repository is its
@@ -150,13 +150,19 @@ t("its permalink is a board number, like every game's now",
   Object.values(PERMA_GAMES).every((g) => !("kind" in g)));
 t("and the route that serves that permalink exists",
   fs.existsSync(path.join(ROOT, "functions/football/vowels/daily/[[path]].js")));
-t("the squad list gives it the fifth shirt, and QuickFire is no longer wearing it",
+/* LISTED, IT IS NAMED ON THE FIVE; UNLISTED, THE FIVE SAYS A STATUS AND NO
+   SLOT NAMES IT (26 Nov 2026: the owner scaled the site back to three games).
+   An unlisted game keeps its number and loses its name, so the shirt is asked
+   for in whichever state the game is in. */
+t(isListed("vowels") ? "the squad list gives it the fifth shirt, and QuickFire is no longer wearing it"
+                     : "it is unlisted: the fifth shirt says a status, no slot names it, and QuickFire is not wearing it",
   (() => {
     const squad = read("shared/xi-chrome.js");
     const at = squad.indexOf("var SQUAD");
     const list = squad.slice(at, squad.indexOf("];", at));
-    return /\{\s*n:\s*5,\s*name:\s*"Vowels XI"/.test(list) &&
-      !/\{\s*n:\s*5,[^}]*quickfire/.test(list);
+    const five = isListed("vowels") ? /\{\s*n:\s*5,\s*name:\s*"Vowels XI"/.test(list)
+      : /\{\s*n:\s*5,\s*status:\s*"[^"]+"\s*\}/.test(list) && !/name:\s*"Vowels XI"/.test(list);
+    return five && !/\{\s*n:\s*5,[^}]*quickfire/.test(list);
   })());
 
 console.log("\n=== It shares the rules rather than copying them ===");

@@ -27,13 +27,33 @@ how a noindex outlives a launch and a live game never appears in a search
 result. DELETING A LINE FROM `UNLISTED` IS THE PUBLICATION: it turns the tree
 red in three places at once, so the gates say what is left to do.
 
-`UNLISTED` IS EMPTY, since 27 Sep 2026, when both Friends games went public by
-the owner's ruling: "yes go public with friends" and "go public but
-TheXIGames.com still shows Football only, only /Friends shows frineds games".
-So the table and `isListed` stay, and every guard that asks them is proved by a
-suite that marks a game unlisted FOR THE CHECK and puts it back (`push_test`,
-`lineup_test`), not by whatever the tree happens to hold. The Friends
-generators add the noindex only while their game is in `UNLISTED`.
+**`UNLISTED` HOLDS MOST OF THE FAMILY, since 26 Nov 2026**, and who is in it is
+that table, not a list here. The owner that day: "i think i want to scale back
+the games and bring them back one at a time when ready / start with just;
+Quickfire Crossword Ball park", and of Friends, "0 friends for now, lets get
+Football up to scratch". So every game but those three is live and unlisted:
+it plays for anyone holding its link, and nothing advertises it. It was empty
+from 27 Sep 2026, when the Friends games went public, until then.
+
+BRINGING A GAME BACK IS DELETING ITS LINE, and its own gate then says what is
+left: each gate asks `tools/listing.mjs`, which holds both columns (the squad
+slot, the sitemap as run, the noindex, the theme's hub) and asserts whichever
+one the game is in. What a return needs by hand is the squad slot's name and
+address in `shared/xi-chrome.js` (and the shared tag), and for a football game
+its shirt and card on `football/index.html`. The rest follows `isListed` with
+no edit: the sitemap and the noindex header ask `advertisedPath()` in
+`permalink.js`, the front door and the archives ask `isListed`, and the
+Friends generators add the page's own noindex only while their game is
+unlisted. A THEME WITH NO LISTED GAME IS NOT SERVED A HUB: `/friends/` answers
+a 302 to `/` (`themeHubRoute`), because `friends/index.html` names every
+Friends game and still holds all its cards for the day one returns.
+
+Every guard that asks the table is proved in BOTH states, by a suite that
+makes the other state FOR THE CHECK and puts it back (`push_test`,
+`lineup_test`, `aligned_test`, `chrome_test`), not by whatever the tree holds.
+The suites read the line-up from the squad (`tools/squad.mjs`) and never as a
+number: "ten cards" and "2 of 10 completed" were literals defending a fact
+that stopped being true the day the site went to three.
 
 This line said FIVE for eight days after it stopped being true, and named the
 five. Four games launched in the week it went stale, and a session on 16 Sep
@@ -79,6 +99,12 @@ front door with no edit there, and an unlisted game never appears. Each card
 carries its theme's colour (`--pitch`; `--friends` in `shared/xi-tokens.css`)
 and a motif drawn in CSS. There is no image, and never show imagery. The
 all-in-one Quizzes app opens `/`; the football app opens `/football/`.
+EVERY GAME IS A LINK ON ITS THEME'S CARD, since 26 Nov 2026 (the owner: "id
+like an home page that shows all + /football shows only football or click
+football on the root page"). The card's own link is one layer stretched over
+the whole card, so the games' row has to sit above it; on the first build
+every game's name opened `/football/`, with every href correct. `lock_test`'s
+"the front door" asks a real browser where a click on each name lands.
 
 ## The tag law (non-negotiable)
 
@@ -524,8 +550,9 @@ Where facts live — extend these, never copy them:
   Eleven shirts PER THEME, since 21 Sep 2026: `SQUADS` in `shared/xi-chrome.js`
   is one list per theme and `themeHere()` picks the reader's. A launch pushes
   that theme's tail down one and its squad loses an unsigned slot rather than
-  growing a twelfth. Football wears ten with one slot unsigned; Friends wears
-  two, both named, since 27 Sep 2026. A NUMBER IS ONLY UNIQUE WITHIN ITS THEME — there are two number 1s and
+  growing a twelfth. How many slots are named is the squad list's to say, not
+  this sentence's: since 26 Nov 2026 most carry a status, because an unlisted
+  game KEEPS its number and loses its name. A NUMBER IS ONLY UNIQUE WITHIN ITS THEME — there are two number 1s and
   `aligned_test` checks uniqueness per squad, not across the family.
   An UNLISTED game's slot carries NEITHER a name NOR an href — only its shirt
   number and a status, the same shape as a game in build. `shared/xi-chrome.js`

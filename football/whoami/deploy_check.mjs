@@ -20,6 +20,7 @@
 /* The football hub moved to football/index.html on 21 Sep 2026, when the
    root became the theme picker. Asked, never assembled: see permalink.js. */
 import { themeHubFile } from "../../functions/_lib/permalink.js";
+import { listingChecks, said, benched } from "../../tools/listing.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -287,8 +288,19 @@ console.log("\nAnd it IS launched, which every one of these makes true");
   const sitemap = readRoot("functions/sitemap.xml.js");
   const games = readRoot("functions/_lib/games.js");
 
-  t("it wears the ninth shirt", /n: 9,[^}]*name: "Who Am I XI"/.test(chrome),
-    "a launched game takes the next free number");
+/* LISTED OR UNLISTED, AND THE GATE HOLDS IN BOTH (26 Nov 2026). The owner scaled
+     the site back to three games that day -- "bring them back one at a time when
+     ready" -- and this gate had only ever described a public game. The four
+     things that move together are asked of tools/listing.mjs, which knows both
+     columns; what is this game's alone (its shirt, its card) follows below, said
+     for whichever state it is in. Deleting this game's line from UNLISTED turns
+     these red on the LISTED side, which is the list of what bringing it back
+     still needs. */
+  const LISTING = await listingChecks(t, "whoami");
+  t(LISTING.listed ? "it wears the ninth shirt" : "it is unlisted: the nine says a status, and no slot names it",
+    LISTING.listed ? /n: 9,[^}]*name: "Who Am I XI"/.test(chrome)
+                   : /\{\s*n: 9,\s*status: "[^"]+"\s*\}/.test(chrome) && !/name: "Who Am I XI"/.test(chrome),
+    "a launched game takes the next free number, and keeps it while unlisted");
   t("and every slot is a launched name or a status, never both", (() => {
     /* FOOTBALL'S ELEVEN, not every slot in the file. The squad became one list
        PER THEME when the Friends crossword launched on 21 September 2026, and
@@ -304,7 +316,8 @@ console.log("\nAnd it IS launched, which every one of these makes true");
     return rows.every(([, , body]) => /name:/.test(body) !== /status:/.test(body));
   })(), "an unreleased game is named nowhere until it launches");
 
-  t("the hub names it, now that it is out", /Who Am I XI/.test(hub));
+  t(LISTING.listed ? "the hub names it, now that it is out" : "it is unlisted, so the hub does not name it",
+    /Who Am I XI/.test(said(hub)) === LISTING.listed);
   /* THREE DESTINATIONS, AND THEY MUST STAY THREE. The picture opens the
      game's own home, "Play today" skips the cover and starts the daily
      (the landing reads ?play=1 — see shared/xi-chrome.js), and "Past
@@ -329,8 +342,8 @@ console.log("\nAnd it IS launched, which every one of these makes true");
     const end = hub.indexOf("</article>", at);
     return start < 0 || end < 0 ? "" : hub.slice(start, end);
   })();
-  t("the hub carries a card for it, found by its id",
-    cardWhoami.length > 0, cardWhoami.length + " chars");
+  t(LISTING.listed ? "the hub carries a card for it, found by its id" : "it is unlisted, so the hub carries no card for it",
+    (cardWhoami.length > 0) === LISTING.listed, cardWhoami.length + " chars");
   /* THE CARD, AS THE HUB REDESIGN OF 24 SEP 2026 MADE IT. It carried three
      links (a picture to the home, a Play today straight to the board, and
      its own Past puzzles) and each had a check here. The owner's decisions
@@ -341,18 +354,22 @@ console.log("\nAnd it IS launched, which every one of these makes true");
      picture; the name on it; nothing on it that starts a board; and the
      archive reachable, proven by RUNNING the page the hub links to. */
   const links = [...cardWhoami.matchAll(/<a\s[^>]*href="([^"]+)"/g)].map((m) => m[1]);
-  t("its card is ONE link, to its home",
-    links.length === 1 && links[0] === "/football/whoami/", links.join(" ") || "no link");
-  t("and that link carries the picture and the name",
-    /<a[^>]+href="\/football\/whoami\/"[^>]*>[\s\S]*<img[\s\S]*Who\s*Am\s*I\s*XI[\s\S]*<\/a>/.test(cardWhoami));
+  t(LISTING.listed ? "its card is ONE link, to its home" : "and so nothing on the hub links its home",
+    LISTING.listed ? links.length === 1 && links[0] === "/football/whoami/"
+                   : links.length === 0 && !hub.includes('href="/football/whoami/"'), links.join(" ") || "no link");
+  t(LISTING.listed ? "and that link carries the picture and the name" : "nor shows its picture",
+    LISTING.listed ? /<a[^>]+href="\/football\/whoami\/"[^>]*>[\s\S]*<img[\s\S]*Who\s*Am\s*I\s*XI[\s\S]*<\/a>/.test(cardWhoami)
+                   : !/assets\/games\/whoami\./.test(hub));
   t("and nothing on it starts a board: a card must not start a clock",
     !cardWhoami.includes("?play=1"), "a plain compare: ? is a regex quantifier");
   {
     const { themeArchiveRoute } = await import("../../functions/_lib/archive-page.js");
     const page = await (await themeArchiveRoute({ env: {} }, "football")).text();
-    t("and its archive is reachable from the hub's Browse previous dailies",
-      hub.includes('href="/football/archive/"') && page.includes('href="/football/whoami/archive/"'),
-      "the hub links /football/archive/, and that page, run, lists Who Am I XI's archive");
+    t(LISTING.listed ? "and its archive is reachable from the hub's Browse previous dailies"
+                     : "and the previous-dailies page the hub links, run, does not list its archive",
+      hub.includes('href="/football/archive/"') && page.includes('href="/football/') &&
+        page.includes('href="/football/whoami/archive/"') === LISTING.listed,
+      "the hub links /football/archive/, and that page is run");
   }    /* THE TABLE MOVED to shared/xi-played.js on 21 September 2026, out of
        index.html, because the full-time panel needs the same fact and a
        second copy is this project's oldest fault. The hub reads it now, so

@@ -247,9 +247,20 @@
   }
   /* A THEME'S TWO STREAKS: this game's, and any game of the theme's, where one
      game played on a day is enough. */
+  /* EVERY GAME OF THE THEME THAT HAS RESULTS TO READ, not every game the squad
+     NAMES. This joined through list(), which is the squad's named slots, and
+     that was the same set until 26 Nov 2026, when most of the family was
+     unlisted: an unlisted game's slot states neither its name nor its address,
+     so the join found nothing and a Friends player still playing by their own
+     link would have been shown a run of 0. A streak is a fact about what was
+     PLAYED, and the probe table is where that is read; what the site
+     advertises is a different question and does not get a vote. */
   function themeStreaks(theme, gameId, today) {
     var any = {};
-    list(theme).forEach(function (g) { playedDays(g.id).forEach(function (d) { any[d] = true; }); });
+    PROBE.forEach(function (p) {
+      if ((p.theme || "football") !== theme) return;
+      playedDays(p.id).forEach(function (d) { any[d] = true; });
+    });
     return { game: gameId ? runOf(playedDays(gameId), today) : 0, daily: runOf(Object.keys(any), today) };
   }
 

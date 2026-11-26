@@ -154,6 +154,12 @@ export async function themeArchiveRoute({ env }, theme) {
   const games = Object.keys(PERMA_GAMES)
     .filter((g) => isListed(g) && themeOf(g) === theme)
     .sort((a, b) => PERMA_GAMES[a].name.localeCompare(PERMA_GAMES[b].name));
+  /* A THEME WITH NO LISTED GAME HAS NO ARCHIVE TO INDEX. An empty list under
+     the theme's name would still say the theme is there; the address goes to
+     the front door until a game comes back (26 Nov 2026). */
+  if (!games.length) {
+    return new Response(null, { status: 302, headers: { Location: "/", "Cache-Control": "no-store", "X-Robots-Tag": "noindex" } });
+  }
   const rows = [];
   for (const g of games) {
     const keys = await boardKeys(env, g);

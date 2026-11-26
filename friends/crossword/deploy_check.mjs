@@ -33,6 +33,7 @@ import { fileURLToPath } from "node:url";
 import { publicPuzzle } from "../../functions/_lib/puzzle.js";
 import { LAUNCHED, GAMES, isListed } from "../../functions/_lib/games.js";
 import { THEME_OF, SLUG_OF, gamePath, gameDir } from "../../functions/_lib/permalink.js";
+import { listingChecks, said, benched } from "../../tools/listing.mjs";
 import { makeBoard, answersOf } from "./fixture.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -227,11 +228,25 @@ t("but the theme still HAS a squad, so its own pages do not show football's", ((
   const chrome = noComments(read("shared/xi-chrome.js"));
   return /friends:\s*\[\s*\{[^{}]*n:\s*1[^{}]*\}/.test(chrome);
 })(), "themeHere() falls back to football for a theme with no squad");
-t(listed ? "its front page is among the sitemap's static pages"
-         : "its front page is not among the sitemap's static pages", (() => {
+/* LISTED OR UNLISTED, AND THE GATE HOLDS IN BOTH (26 Nov 2026). The owner scaled
+   the site back to three games that day -- "bring them back one at a time when
+   ready" -- and this gate had only ever described a public game. The four
+   things that move together are asked of tools/listing.mjs, which knows both
+   columns; what is this game's alone (its shirt, its card) follows below, said
+   for whichever state it is in. Deleting this game's line from UNLISTED turns
+   these red on the LISTED side, which is the list of what bringing it back
+   still needs. */
+const LISTING = await listingChecks(t, GAME);
+t("isListed is what the listing was read from", LISTING.listed === listed);
+/* THE SITEMAP IS RUN, in listingChecks. This read the generator's STATIC block
+   for "/friends/", which is there whether or not the sitemap offers it now
+   that advertisedPath() filters the list at run time. What stays here is that
+   the page LIST still holds the address, so listing the game again needs no
+   edit to it. */
+t("its front page is in the sitemap's page list, for the day it is listed", (() => {
   const sm = read("functions/sitemap.xml.js");
   const block = (sm.match(/const STATIC\s*=\s*\[[\s\S]*?\n\]/) || [""])[0];
-  return listed ? block.includes("/friends/") : !block.includes("/friends/");
+  return block.includes('"' + gamePath(GAME) + '"');
 })());
 /* AND ITS BOARDS, WHICH ARE THE BIGGER HALF AND THE EASIER ONE TO MISS. The
    static block is one line; the board loop and the archive index are derived

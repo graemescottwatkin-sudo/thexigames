@@ -230,6 +230,14 @@ async function handle(req, res) {
       res.writeHead(200, { "Content-Type": TYPES[".html"] });
       return res.end(html);
     }
+    /* THE SITE ROOT IS A FUNCTION, not a file: the theme picker, as
+       functions/index.js answers it. */
+    if (p === "/") {
+      const { onRequest } = await import(pathToFileURL(path.join(ROOT, "functions", "index.js")).href);
+      const out = await onRequest({ request: new Request(url.href), env: {}, params: {}, waitUntil() {}, next() {} });
+      res.writeHead(out.status, Object.fromEntries(out.headers));
+      return res.end(Buffer.from(await out.arrayBuffer()));
+    }
     let file = path.join(ROOT, p);
     if (fs.existsSync(file) && fs.statSync(file).isDirectory()) file = path.join(file, "index.html");
     if (!fs.existsSync(file)) { res.writeHead(404); return res.end(); }
@@ -3218,6 +3226,48 @@ if (!ONLY || ONLY === "theme") {
     }
     t(`${where}${dark ? " (dark)" : ""}: and a right answer is green, a Full Time box as the panel draws it`,
       dark ? c.got !== PURPLE && /^rgb\(44, 138, 92\)$/.test(c.got) : c.got === GREEN, JSON.stringify({ got: c.got, ok: c.ok }));
+    await context.close();
+  }
+}
+
+/* ---- THE FRONT DOOR: EVERY GAME TAKES ITS OWN CLICK -----------------------
+   The owner, 26 Nov 2026: "id like an home page that shows all + /football
+   shows only football or click football on the root page". So a theme's card
+   lists its games as links, and the rest of the card leads to the theme. The
+   card's own link is one stretched layer over the whole card, and a link under
+   that layer looks right and opens the wrong page: on the first build every
+   game's name opened /football/. Nothing that reads the markup can see that --
+   the hrefs were all correct -- so it is asked of the browser, by where a
+   click at each link's centre actually lands. */
+if (!ONLY || ONLY === "door") {
+  console.log(`\nthe front door`);
+  for (const [vp, size] of [["phone-360", { width: 360, height: 640 }], ["desktop", { width: 1440, height: 900 }]]) {
+    const context = await browser.newContext({ viewport: size, deviceScaleFactor: 1 });
+    const page = await context.newPage();
+    await page.goto(ORIGIN + "/", { waitUntil: "domcontentloaded" });
+    const d = await page.evaluate(() => {
+      const hrefAt = (x, y) => { const e = document.elementFromPoint(x, y); const a = e && e.closest("a"); return a ? a.getAttribute("href") : null; };
+      return [...document.querySelectorAll(".pk-card")].map((card) => {
+        const go = card.querySelector("a.pk-go"), box = card.getBoundingClientRect(), name = card.querySelector(".pk-name").getBoundingClientRect();
+        return {
+          go: go.getAttribute("href"),
+          title: hrefAt(name.left + 10, name.top + name.height / 2),
+          button: hrefAt(go.getBoundingClientRect().left + 12, go.getBoundingClientRect().top + 12),
+          games: [...card.querySelectorAll(".pk-games a")].map((a) => { const b = a.getBoundingClientRect();
+            a.scrollIntoView({ block: "center" }); const c = a.getBoundingClientRect();
+            return { href: a.getAttribute("href"), lands: hrefAt(c.left + c.width / 2, c.top + c.height / 2), h: Math.round(b.height) }; }),
+          wide: Math.round(box.width),
+        };
+      }).concat([{ overflow: document.documentElement.scrollWidth - innerWidth }]);
+    });
+    const cards = d.filter((c) => c.games), games = cards.flatMap((c) => c.games);
+    t(`${vp}: the front door drew a card with games on it`, cards.length >= 1 && games.length >= 2, `${cards.length} cards, ${games.length} games`);
+    t(`${vp}: a click on each game's name lands on that game, not on its theme`,
+      games.length >= 2 && games.every((g) => g.lands === g.href), games.filter((g) => g.lands !== g.href).map((g) => g.href + " -> " + g.lands).join(", "));
+    t(`${vp}: and a click on the card's title or its button goes to the theme`,
+      cards.every((c) => c.title === c.go && c.button === c.go), cards.map((c) => c.title + " " + c.button).join(", "));
+    t(`${vp}: each game's link is a finger tall`, games.every((g) => g.h >= 44), games.map((g) => g.h).join(","));
+    t(`${vp}: and nothing runs off the side`, d[d.length - 1].overflow <= 0, String(d[d.length - 1].overflow));
     await context.close();
   }
 }

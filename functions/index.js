@@ -73,21 +73,27 @@ function gamesOf(theme) {
   const name = (THEME[theme] || {}).name || "";
   return GAMES.filter((g) => themeOf(g) === theme && isListed(g))
     .sort((x, y) => String(LAUNCHED[x] || "").localeCompare(String(LAUNCHED[y] || "")))
-    .map((g) => String(LABELS[g] || g).replace(": " + name, ""));
+    .map((g) => ({ name: String(LABELS[g] || g).replace(": " + name, ""), path: gamePath(g) }));
 }
 
+/* EVERY GAME IS ONE CLICK FROM THE FRONT DOOR, since 26 Nov 2026. The owner:
+   "id like an home page that shows all + /football shows only football or
+   click football on the root page". So each theme's games are LINKS on its
+   card, not labels, and the card itself still leads to the theme. A card is a
+   <section>, because links cannot nest: its button carries a stretched ::after
+   over the whole card, and the game links sit above that layer. */
 export function picker(themes) {
   const cards = themes.map((t) => {
     const th = THEME[t] || { name: t.charAt(0).toUpperCase() + t.slice(1), line: "", go: "Play" };
     const games = gamesOf(t);
-    return `<a class="pk-card pk-${esc(t)}" href="${esc(themeCardPath(t))}">
+    return `<section class="pk-card pk-${esc(t)}" aria-label="${esc(th.name)}">
   <span class="pk-art" aria-hidden="true"><i></i><i></i><i></i></span>
   <span class="pk-kick">${games.length} daily game${games.length === 1 ? "" : "s"}</span>
-  <span class="pk-name">${esc(th.name)}</span>
+  <h2 class="pk-name">${esc(th.name)}</h2>
   ${th.line ? `<span class="pk-line">${esc(th.line)}</span>` : ""}
-  <span class="pk-games">${games.map((n) => `<span>${esc(n)}</span>`).join("")}</span>
-  <span class="pk-go">${esc(th.go)} <span aria-hidden="true">&rarr;</span></span>
-</a>`;
+  <span class="pk-games">${games.map((g) => `<a href="${esc(g.path)}">${esc(g.name)}</a>`).join("")}</span>
+  <a class="pk-go" href="${esc(themeCardPath(t))}">${esc(th.go)} <span aria-hidden="true">&rarr;</span></a>
+</section>`;
   }).join("\n");
   const names = themes.map((t) => (THEME[t] || { name: t }).name);
   const list = names.length > 1 ? names.slice(0, -1).join(", ") + " and " + names[names.length - 1] : names.join("");
@@ -100,9 +106,9 @@ export function picker(themes) {
     body: `<section class="pk-hero">
   <p class="pk-eyebrow">Daily puzzle games</p>
   <h1 class="pk-title">The <span class="pk-xi">XI</span> Games</h1>
-  <p class="pk-sub">Eleven clues. A new board every day. Pick your side.</p>
+  <p class="pk-sub">Eleven clues. A new board every day.${themes.length > 1 ? " Pick your side." : " Pick your game."}</p>
 </section>
-<div class="pk-themes">
+<div class="pk-themes${themes.length === 1 ? " pk-one" : ""}">
 ${cards}
 </div>
 <p class="pk-note">Free to play. Unofficial fan puzzles, not affiliated with or endorsed by any club, league, broadcaster or studio.</p>`,
@@ -123,7 +129,7 @@ const PICKER_CSS = `
 .pk-xi{display:inline-block;padding:0 .12em;border-radius:.12em;background:var(--gold);color:var(--gold-ink)}
 .pk-sub{margin:0 auto;max-width:36ch;font-size:17px;line-height:1.5;color:var(--ink-soft)}
 .pk-themes{display:grid;grid-template-columns:1fr;gap:16px;margin:26px 0 12px}
-@media (min-width:720px){.pk-themes{grid-template-columns:1fr 1fr;gap:20px}}
+@media (min-width:720px){.pk-themes{grid-template-columns:1fr 1fr;gap:20px}.pk-themes.pk-one{grid-template-columns:minmax(0,640px);justify-content:center}}
 .pk-card{position:relative;overflow:hidden;isolation:isolate;display:flex;flex-direction:column;gap:8px;
   min-height:330px;padding:24px 24px 22px;border-radius:20px;text-decoration:none;color:#fff;
   box-shadow:0 1px 2px rgba(0,0,0,.06),0 12px 32px rgba(0,0,0,.10);
@@ -133,12 +139,26 @@ const PICKER_CSS = `
 .pk-kick{font-family:var(--disp);font-weight:700;font-size:12.5px;letter-spacing:.18em;text-transform:uppercase;opacity:.85}
 .pk-name{font-family:var(--disp);font-weight:700;font-size:clamp(46px,7vw,60px);line-height:.9}
 .pk-line{max-width:28ch;font-size:15.5px;line-height:1.45;opacity:.92}
-.pk-games{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 4px;max-width:34ch}
-.pk-games span{padding:4px 10px;border-radius:999px;background:rgba(255,255,255,.14);font-size:13px;font-weight:600;white-space:nowrap}
+.pk-games{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 4px;max-width:34ch}
+.pk-games a{position:relative;z-index:2;display:inline-flex;align-items:center;min-height:44px;box-sizing:border-box;padding:7px 15px;border-radius:999px;background:rgba(255,255,255,.16);color:#fff;font-size:14px;font-weight:600;white-space:nowrap;text-decoration:none;transition:background var(--t-base,.18s) ease}
+.pk-games a:hover{background:rgba(255,255,255,.30)}
+.pk-games a:focus-visible{outline:2px solid #fff;outline-offset:2px}
 .pk-go{margin-top:auto;align-self:flex-start;display:inline-flex;align-items:center;gap:8px;
   padding:11px 18px;border-radius:999px;background:#fff;font-family:var(--disp);font-weight:700;
   font-size:16px;letter-spacing:.06em;text-transform:uppercase}
-.pk-card > span:not(.pk-art){position:relative;z-index:1}
+.pk-card > :not(.pk-art){position:relative;z-index:1}
+/* The button is the card's own link, stretched over the whole card; the game
+   links above sit at z-index 2 so each still takes its own click. */
+.pk-card .pk-go{position:static;text-decoration:none}
+.pk-card .pk-go::after{content:"";position:absolute;inset:0;z-index:1;border-radius:inherit}
+/* THE GAMES' ROW SITS ABOVE THAT LAYER, as a row: its own z-index, not only
+   its links'. Every child of the card is a stacking context at 1, so a link
+   inside the row at 2 is still under the button's layer, which comes later in
+   the card -- and every game's name opened the theme instead of the game
+   (found in a browser on 26 Nov 2026, before it shipped). */
+.pk-card .pk-games{z-index:2}
+.pk-card .pk-go:focus-visible{outline:3px solid var(--gold);outline-offset:3px}
+.pk-card h2.pk-name{margin:0}
 .pk-art{position:absolute;inset:0;z-index:0;pointer-events:none}
 .pk-art i{position:absolute;display:block}
 /* FOOTBALL: the pitch, mown in stripes, with its halfway line and centre
@@ -162,9 +182,11 @@ const PICKER_CSS = `
 /* THE SITE PAGE'S OWN RULES WIN OTHERWISE: .site-page a colours every link
    green, and .site-page h1 sets its own size and capitals -- found on the
    first render, where the cards' white text came out green on green. */
-.site-page a.pk-card{color:#fff}
-.site-page a.pk-football .pk-go{color:var(--pitch-deep)}
-.site-page a.pk-friends .pk-go{color:var(--friends-deep)}
+.site-page .pk-card{color:#fff}
+.site-page .pk-football a.pk-go{color:var(--pitch-deep)}
+.site-page .pk-friends a.pk-go{color:var(--friends-deep)}
+.site-page .pk-card .pk-games a{color:#fff}
+.site-page .pk-card h2.pk-name{font-size:clamp(46px,7vw,60px);text-transform:none;letter-spacing:normal;color:#fff;margin:0}
 .site-page h1.pk-title{font-size:clamp(44px,9vw,78px);text-transform:none;letter-spacing:.01em;margin:6px 0 8px}
 `;
 

@@ -29,6 +29,7 @@ import crypto from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { LAUNCHED, GAMES } from "../../functions/_lib/games.js";
+import { listingChecks, said, benched } from "../../tools/listing.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(HERE, "..", "..");
@@ -177,15 +178,28 @@ if (!launched) {
 } else {
   const { isListed } = await import(pathToFileURL(path.join(ROOT, "functions/_lib/games.js")).href);
   const { gamePath, gameDir, THEME_OF } = await import(pathToFileURL(path.join(ROOT, "functions/_lib/permalink.js")).href);
-  t("launched and listed", GAMES.includes(GAME) && isListed(GAME), LAUNCHED[GAME]);
+  t("launched: in GAMES, with a launch day", GAMES.includes(GAME) && !!LAUNCHED[GAME], LAUNCHED[GAME]);
+  /* LISTED OR UNLISTED, AND THE GATE HOLDS IN BOTH (26 Nov 2026). The owner scaled
+     the site back to three games that day -- "bring them back one at a time when
+     ready" -- and this gate had only ever described a public game. The four
+     things that move together are asked of tools/listing.mjs, which knows both
+     columns; what is this game's alone (its shirt, its card) follows below, said
+     for whichever state it is in. Deleting this game's line from UNLISTED turns
+     these red on the LISTED side, which is the list of what bringing it back
+     still needs. */
+  const LISTING = await listingChecks(t, GAME);
+  t("isListed is what the listing was read from", LISTING.listed === isListed(GAME));
   t("its address is asked, not assembled, and is where this file is",
     gameDir(GAME) === DIR && gamePath(GAME) === "/" + DIR + "/" && THEME_OF[GAME] === "friends", gamePath(GAME));
   t("the noindex is gone", !/<meta[^>]+name="robots"[^>]+noindex/i.test(markup));
   t("and the page states its own address", markup.includes('rel="canonical" href="https://www.thexigames.com' + gamePath(GAME) + '"'));
   const chrome = read("shared/xi-chrome.js");
   const squad = (chrome.match(/friends:\s*\[([\s\S]*?)\n\s*\],/) || [])[1] || "";
-  t("the Friends squad names this game and links to it",
-    !!NAME_IN_JS && squad.includes('name: "' + NAME_IN_JS + '"') && squad.includes('href: "' + gamePath(GAME) + '"'));
+  t(LISTING.listed ? "the Friends squad names this game and links to it"
+                   : "it is unlisted: the Friends squad's bytes carry neither its name nor its address",
+    !!NAME_IN_JS && squad.length > 0 &&
+      (LISTING.listed ? squad.includes('name: "' + NAME_IN_JS + '"') && squad.includes('href: "' + gamePath(GAME) + '"')
+                      : !squad.includes('name: "' + NAME_IN_JS + '"') && !chrome.includes(gamePath(GAME))));
   t("the chrome's reset sweeps its storage prefix", chrome.includes('"' + PREFIX + '"'));
   t("the Friends streaks probe it, under the key the page banks to", (() => {
     const played = read("shared/xi-played.js");

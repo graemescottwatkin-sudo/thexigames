@@ -60,11 +60,25 @@ console.log("=== A game's id, by its address and theme ===");
   t("while football's Scrambled and Vowels keep theirs", P.idOf("/football/scrambled/") === "scrambled" &&
     P.idOf("/football/vowels/") === "vowels");
   t("football's keep their own ids", P.idOf("/football/crossword/") === "crossword" && P.idOf("/football/whoami/") === "whoami");
-  const ids = P.list("friends").map((g) => g.id).join(",");
-  t("the Friends squad joins to the Friends probes, and their own results",
-    ids === "crossword_fr,whoami_fr,lightning_fr,scrambled_fr,vowels_fr,wordsearch_fr,quickfire_fr" &&
-      P.list("friends").map((g) => g.key).join(",") ===
-        "xifc.results,xifw.results.v1,xifl.results.v1,xifs.results,xifv.results,xifws.results,xifq.results.v1", ids);
+  /* THE PROBES ARE THE GAMES THAT HAVE RESULTS; THE SQUAD IS THE GAMES THE SITE
+     OFFERS. They were one list until 26 Nov 2026, when every Friends game was
+     unlisted, and this asserted both in one line. The probes are still seven,
+     each under its own key; what list() returns is whatever the squad names,
+     joined to those probes -- asked of the squad as it stands, and of football's
+     too so the join is exercised on a day Friends names nothing. */
+  const fr = P.PROBE.filter((p) => p.theme === "friends");
+  t("the Friends probes are the seven Friends games, each under its own key",
+    fr.map((p) => p.id).join(",") === "crossword_fr,whoami_fr,lightning_fr,scrambled_fr,vowels_fr,wordsearch_fr,quickfire_fr" &&
+      fr.map((p) => p.key).join(",") ===
+        "xifc.results,xifw.results.v1,xifl.results.v1,xifs.results,xifv.results,xifws.results,xifq.results.v1",
+    fr.map((p) => p.id).join(","));
+  const offered = (theme) => (w.XIChrome.squads[theme] || []).filter((g) => g.name && g.href);
+  for (const theme of ["friends", "football"]) {
+    const want = offered(theme).map((g) => P.idOf(g.href)).join(","), got = P.list(theme).map((g) => g.id).join(",");
+    t(`list("${theme}") is the games its squad offers, joined to their probes`,
+      got === want && P.list(theme).every((g) => g.key && g.href && g.name), got || "none offered");
+  }
+  t("and the join was exercised: football's squad offers games", offered("football").length >= 1 && P.list("football").length >= 1);
 }
 
 console.log("\n=== Which days count ===");
@@ -93,7 +107,12 @@ console.log("\n=== Which days count ===");
 
   const st = P.themeStreaks("friends", "whoami_fr", TODAY);
   t("this game's streak: today and yesterday, 2", st.game === 2, String(st.game));
+  /* WHATEVER THE SQUAD NAMES. The run is read from the probes, so it is the
+     same 3 while every Friends game is unlisted as it was while all were
+     named -- and that it does not come from the squad is the point. */
   t("any Friends game: the crossword two days ago joins the run, 3", st.daily === 3, String(st.daily));
+  t("and that holds with no Friends game named on the squad: a run is what was played, not what is advertised",
+    P.list("friends").length === 0 ? st.daily === 3 : true, P.list("friends").length + " named");
   t("and football's results on day 3 do not reach it", st.daily === 3, String(st.daily));
 }
 

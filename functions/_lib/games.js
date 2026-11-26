@@ -213,7 +213,8 @@ export const NO_SEASON = {
 
 export const inSeason = (game) => !NO_SEASON[game];
 
-/* EMPTY SINCE 27 SEP 2026: THE FRIENDS GAMES ARE PUBLIC. The owner, that
+/* EMPTY FROM 27 SEP TO 26 NOV 2026, WHILE THE FRIENDS GAMES WERE PUBLIC -- see
+   the note below it for what it holds now. The owner, that
    day: "yes go public with friends" -- and, of where they are found, "go
    public but TheXIGames.com still shows Football only, only /Friends shows
    frineds games". Both Friends games were here from their launch (live, no
@@ -221,7 +222,30 @@ export const inSeason = (game) => !NO_SEASON[game];
    named what else it needed: the sitemap, the noindex, the Friends squad's
    names. The root staying football is functions/index.js's, not this
    object's. A game launched unlisted in future goes back in here. */
-export const UNLISTED = {};
+/* FOOTBALL ONLY, AND THREE OF IT, since 26 Nov 2026. The owner: "i think i
+   want to scale back the games and bring them back one at a time when ready /
+   start with just; Quickfire Crossword Ball park / The rest should be visible
+   to me in a Dev version of the site for testing", and of Friends, "0 friends
+   for now, lets get Football up to scratch". Every game below is still live --
+   it serves, banks and counts a streak for anyone holding a link -- and nothing
+   on the site advertises it. Bringing one back is deleting its line; the gates
+   then say what else that takes. */
+export const UNLISTED = {
+  wordsearch: true,
+  scrambled: true,
+  hilo: true,
+  vowels: true,
+  whoami: true,
+  codeword: true,
+  grid: true,
+  crossword_fr: true,
+  whoami_fr: true,
+  lightning_fr: true,
+  scrambled_fr: true,
+  vowels_fr: true,
+  wordsearch_fr: true,
+  quickfire_fr: true,
+};
 
 /* Launched AND advertised, which is the question every list on the site is
    actually asking. One function, because two lookups joined at each call site

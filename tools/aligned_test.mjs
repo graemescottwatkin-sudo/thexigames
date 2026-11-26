@@ -512,10 +512,53 @@ t("every LISTED game is named there, and no unlisted one is",
    file. The file it replaced held thirteen URLs and not one board, months
    after the permalinks shipped — a hand-kept list of pages that appear daily
    was never going to hold them. */
-t("the sitemap lists every LISTED game, and no unlisted one",
-  GAMES.every((g) =>
-    read("functions/sitemap.xml.js").indexOf(`"/${g.dir}/"`) > -1 === LISTED(g)),
+/* RUN, NOT READ, since 26 Nov 2026. This looked for each game's path in the
+   generator's SOURCE, which answered the question while the page list was the
+   only thing deciding. That day fourteen games were unlisted at once, and the
+   generator began asking advertisedPath() of every page it lists -- so the
+   source names every game's address whether or not the sitemap offers it, and
+   a grep of it would call all seventeen advertised. What a crawler is handed
+   is what the route answers, so that is what is asked. */
+const SITEMAP_XML = await (await (await import("../functions/sitemap.xml.js"))
+  .onRequestGet({ env: {}, request: new Request("https://www.thexigames.com/sitemap.xml") })).text();
+t("the sitemap, run, offers every LISTED game's front page, and no unlisted one's",
+  SITEMAP_XML.includes("<urlset") && GAMES.some(LISTED) &&
+  GAMES.every((g) => SITEMAP_XML.includes(`https://www.thexigames.com/${g.dir}/<`) === LISTED(g)),
+  GAMES.filter((g) => SITEMAP_XML.includes(`https://www.thexigames.com/${g.dir}/<`) !== LISTED(g)).map((g) => g.dir).join(", ") ||
   "a game can be live and unadvertised; the sitemap is the advertising");
+t("and nothing under an unlisted game's address is offered either: no answers index, no archive, no board",
+  GAMES.filter((g) => !LISTED(g)).every((g) => !SITEMAP_XML.includes(`https://www.thexigames.com/${g.dir}/`)),
+  GAMES.filter((g) => !LISTED(g) && SITEMAP_XML.includes(`https://www.thexigames.com/${g.dir}/`)).map((g) => g.dir).join(", "));
+/* AND A SEARCH ENGINE THAT ALREADY KNOWS THE ADDRESS IS TOLD TO DROP IT. The
+   fourteen games unlisted on 26 Nov 2026 had been public for two months, so
+   leaving them out of the sitemap does not take them out of a search result;
+   a noindex does. functions/_middleware.js sets it on every response under an
+   address advertisedPath() refuses, and the middleware is RUN here, around a
+   stand-in page, for both answers. The unlisted answer is MADE on a listed
+   game through the real table, so it is proved even on a day nothing is. */
+{
+  const { onRequest: middleware } = await import("../functions/_middleware.js");
+  const gamesLib = await import("../functions/_lib/games.js");
+  const robots = async (p) => (await middleware({ env: {}, request: new Request("https://www.thexigames.com" + p),
+    next: async () => new Response("a page", { headers: { "Content-Type": "text/html" } }) })).headers.get("X-Robots-Tag") || "";
+  const under = (g) => [`/${g.dir}/`, `/${g.dir}/archive/`, `/${g.dir}/daily/3`];
+  const shown = GAMES.filter(LISTED), hiddenNow = GAMES.filter((g) => !LISTED(g));
+  const leaked = [];
+  for (const g of hiddenNow) for (const p of under(g)) if (!/noindex/.test(await robots(p))) leaked.push(p);
+  t("the middleware, run, sends noindex on every response under an unlisted game's address",
+    leaked.length === 0, leaked.join(", ") || hiddenNow.length + " unlisted games");
+  const wrongly = [];
+  for (const g of shown) for (const p of under(g)) if (/noindex/.test(await robots(p))) wrongly.push(p);
+  if (/noindex/.test(await robots("/"))) wrongly.push("/");
+  t("and on none under a listed game's, nor on the front door",
+    shown.length >= 1 && wrongly.length === 0, wrongly.join(", ") || shown.length + " listed games");
+  const probe = shown[0];
+  let made = "";
+  gamesLib.UNLISTED[probe.id] = true;
+  try { made = await robots(`/${probe.dir}/`); } finally { delete gamesLib.UNLISTED[probe.id]; }
+  t("and it follows the table: a listed game, unlisted for the check, is sent noindex and then is not",
+    /noindex/.test(made) && !/noindex/.test(await robots(`/${probe.dir}/`)), probe.id);
+}
 t("and there is no static sitemap left to be served instead",
   !has("sitemap.xml"),
   "two answers to one URL is the fault this file exists to catch");
@@ -1079,8 +1122,10 @@ t("and no game writes the link itself", (() => {
   return guilty.length === 0;
 })(), "the href lives once, in shared/xi-chrome.js");
 
-const SHARED_TAG = "v101";
-/* The bytes that ship AS v101, AND THE TAG HAD TO MOVE FOR THEM.
+const SHARED_TAG = "v102";
+/* The bytes that ship AS v102, AND THE TAG HAD TO MOVE FOR THEM.
+   v101 WAS LIVE when fourteen games were unlisted and their squad slots lost their names and addresses (the owner, 26 Nov 2026: scale back to three, bring them back one at a time), so v101 -> v102 across every page and site-page.js's constant.
+   The note below is the move before this one.
    v100 WAS LIVE when the play counter began sending a device key with a finish, and the chrome keeps it through a reset (11 Oct 2026), so v100 -> v101 across every page and site-page.js's constant.
    The note below is the move before this one.
    v99 WAS LIVE when the account panel gained Delete account (6 Oct 2026), so v99 -> v100 across every page and site-page.js's constant.
@@ -1189,7 +1234,7 @@ const SHARED_TAG = "v101";
    v53, which is this project's oldest fault in miniature: a measurement left
    standing after it stopped being true, in the comment that tells the next
    reader whether they may leave the tag alone. */
-const SHARED_HASH = "c3fe92c60a822817";
+const SHARED_HASH = "649fd8d15450174a";
 /* MOVED AGAIN WITHOUT THE TAG MOVING, which is the other half of the rule
    above and is worth showing rather than only stating. xi-chrome.js changed a
    second time in the same unpushed run -- the Friends squad slot going from

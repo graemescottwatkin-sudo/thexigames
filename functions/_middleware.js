@@ -22,6 +22,7 @@
  * specific (the answers pages' own Cache-Control) is never overruled.
  */
 import { PREVIEW_HEADER, clockFor, isPreviewId } from "./_lib/preview.js";
+import { advertisedPath } from "./_lib/permalink.js";
 
 export async function onRequest(context) {
   const { request, next } = context;
@@ -129,5 +130,13 @@ export async function onRequest(context) {
   if (url.pathname.startsWith("/api/") && !h.has("X-Robots-Tag")) {
     h.set("X-Robots-Tag", "noindex");
   }
+  /* AN UNLISTED GAME IS PLAYABLE AND NOT FINDABLE, and "not findable" has to
+     reach a search engine that already knows the address. Fourteen games were
+     public for two months before 26 Nov 2026, so their pages are in the index:
+     leaving them out of the sitemap does not take them out of a search result,
+     a noindex does. Set here, on every response under an address the site may
+     not advertise -- static page, answers, archive or board -- so it follows
+     isListed with no page edited, and goes again the moment a game is listed. */
+  if (!h.has("X-Robots-Tag") && !advertisedPath(url.pathname)) h.set("X-Robots-Tag", "noindex");
   return new Response(response.body, { status: response.status, headers: h });
 }

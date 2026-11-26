@@ -24,7 +24,7 @@
  * day — and this calls it rather than keeping a second copy that would drift
  * the first time either changed.
  */
-import { PERMA_GAMES, boardKeys, permalinkPath, gamePath, themeOf, themeHubPath, ROOT_THEME }
+import { PERMA_GAMES, boardKeys, permalinkPath, gamePath, themeOf, themeHubPath, ROOT_THEME, advertisedPath }
   from "./_lib/permalink.js";
 import { isListed } from "./_lib/games.js";
 
@@ -104,6 +104,13 @@ const STATIC = [
   ["/football/crossword/privacy", "yearly", "0.3"],
 ];
 
+/* A STATIC PAGE BELONGS TO THE GAME WHOSE ADDRESS IT SITS UNDER, and an unlisted
+   game's front page, answers index and clubs page are as much an advertisement
+   as its boards. The list above is every page a game HAS; each is asked of
+   advertisedPath (permalink.js), so unlisting a game takes all of them out at
+   once and listing it again puts them back, with no edit here. Since 26 Nov
+   2026 that is fourteen games. */
+
 /* AND EVERY GAME'S ARCHIVE INDEX, derived rather than listed. The five rows
    above for the answers indexes are hand-kept and that is defensible for a
    fixed set — but a page that exists for every game in PERMA_GAMES should be
@@ -134,7 +141,7 @@ const esc = (s) => String(s).replace(/&/g, "&amp;").replace(/</g, "&lt;").replac
 
 export async function onRequestGet({ env }) {
   const rows = [
-    ...[...STATIC, ...THEME_HUBS(), ...ARCHIVES()].map(([path, freq, pri]) =>
+    ...[...STATIC.filter(([path]) => advertisedPath(path)), ...THEME_HUBS(), ...ARCHIVES()].map(([path, freq, pri]) =>
       `  <url><loc>${esc(SITE + path)}</loc><changefreq>${freq}</changefreq><priority>${pri}</priority></url>`),
     /* A board never changes once it has run — that is the entire promise of a
        permalink — so a crawler is told not to come back for it. */

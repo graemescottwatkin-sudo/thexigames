@@ -20,6 +20,7 @@ import crypto from "node:crypto";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath, pathToFileURL } from "node:url";
 import { LAUNCHED, GAMES, isListed, entryKey, inSeason } from "../../functions/_lib/games.js";
+import { listingChecks, said, benched } from "../../tools/listing.mjs";
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const ROOT = path.join(HERE, "..", "..");
@@ -110,14 +111,32 @@ t("skips, not substitutions", /<span>Skip<\/span>/.test(markup) && !/Sub it off|
 
 console.log("\nLaunched: the five things, together");
 t("in GAMES and in LAUNCHED", GAMES.includes(GAME) && !!LAUNCHED[GAME], LAUNCHED[GAME]);
-t("listed", isListed(GAME));
+/* LISTED OR UNLISTED, AND THE GATE HOLDS IN BOTH (26 Nov 2026). The owner scaled
+   the site back to three games that day -- "bring them back one at a time when
+   ready" -- and this gate had only ever described a public game. The four
+   things that move together are asked of tools/listing.mjs, which knows both
+   columns; what is this game's alone (its shirt, its card) follows below, said
+   for whichever state it is in. Deleting this game's line from UNLISTED turns
+   these red on the LISTED side, which is the list of what bringing it back
+   still needs. */
+const LISTING = await listingChecks(t, GAME);
+t("isListed is what the listing was read from", LISTING.listed === isListed(GAME));
 t("its results have a key of their own", String(entryKey(GAME, { day: "2026-09-29" }) || "") === "frqf:2026-09-29");
 const chrome = read("shared/xi-chrome.js");
-t("named on the Friends team sheet, with its address", chrome.includes(`name: "${NAME}", href: "/${DIR}/"`));
-t("in the sitemap", read("functions/sitemap.xml.js").includes(`["/${DIR}/", "daily"`));
-t("indexed, with an address of its own", !/name="robots"[^>]+noindex/.test(markup) &&
+t(LISTING.listed ? "named on the Friends team sheet, with its address"
+                 : "it is unlisted: the team sheet's bytes carry neither its name nor its address",
+  LISTING.listed ? chrome.includes(`name: "${NAME}", href: "/${DIR}/"`)
+                 : !chrome.includes(`name: "${NAME}"`) && !chrome.includes(`/${DIR}/`));
+/* The page LIST holds every game's front page; whether the sitemap OFFERS it
+   is advertisedPath()'s, and listingChecks above ran the sitemap to ask. */
+t("in the sitemap's page list, for the day it is listed", read("functions/sitemap.xml.js").includes(`["/${DIR}/", "daily"`));
+t(LISTING.listed ? "indexed, with an address of its own"
+                 : "it is unlisted: the generated page says noindex, and still states its own address",
+  /name="robots"[^>]+noindex/.test(markup) !== LISTING.listed &&
   markup.includes(`rel="canonical" href="https://www.thexigames.com/${DIR}/"`));
-t("on the Friends hub", read("friends/index.html").includes(`href="/${DIR}/"`));
+/* The hub FILE keeps its card either way; functions/friends/index.js decides
+   whether the hub is served, and listingChecks ran that route. */
+t("its card is in the Friends hub's file", read("friends/index.html").includes(`href="/${DIR}/"`));
 
 console.log("\nThe answers never leave the server, and the sets never meet");
 /* EXECUTED, NOT GREPPED: the real Friends daily route over a real SQLite

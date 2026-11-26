@@ -30,13 +30,13 @@ const tokens = fs.readFileSync("shared/xi-tokens.css", "utf8");
 
 /* Render a page the way a browser does: the shared script, then look at what
    it built. Reading the HTML alone would only prove a placeholder exists. */
-function render(path, url, userAgent) {
+function render(path, url, userAgent, chromeSrc = chromeJs) {
   const dom = new JSDOM(fs.readFileSync(path, "utf8"),
     { runScripts: "outside-only", url });
   /* WHICH APP, when a check is about one: the user agent the app sends. */
   if (userAgent) Object.defineProperty(dom.window.navigator, "userAgent", { value: userAgent, configurable: true });
   dom.window.eval(themeJs);
-  dom.window.eval(chromeJs);
+  dom.window.eval(chromeSrc);
   dom.window.XIChrome.init();
   const doc = dom.window.document;
   /* The DECLARED squad, carried on the document alongside the markup it just
@@ -102,13 +102,50 @@ t("the crossword carries a bar in BOTH its views, so a board is never a dead end
    "Yes, both games for now"): a column per theme, headed with its name, and
    every other page still lists its own theme's alone. */
 {
-  const at = render(themeHubFile("football"), "https://www.thexigames.com/");
-  const heads = [...at.querySelectorAll(".xic-foot-in h2")].map((h) => h.textContent);
-  const cols = [...at.querySelectorAll(".xic-foot-in > div")].filter((d) => d.querySelector("h2") && ["Football", "Friends"].includes(d.querySelector("h2").textContent));
-  const fr = cols.find((d) => d.querySelector("h2").textContent === "Friends");
-  t("on the picker the footer has a Football column and a Friends column, each with its games",
-    heads.includes("Football") && heads.includes("Friends") && !heads.includes("The XI Games") &&
-      !!fr && fr.querySelectorAll("a[href^='/friends/']").length >= 2, heads.join(", "));
+  /* A COLUMN FOR EACH THEME THAT OFFERS A GAME, AND NONE FOR ONE THAT DOES NOT.
+     This pinned "a Football column and a Friends column" until 26 Nov 2026,
+     when every Friends game was unlisted (the owner: "0 friends for now") and
+     a Friends heading over no games would have been the footer announcing a
+     theme the site no longer advertises. So the squad is asked, and BOTH
+     states are made rather than whichever the tree holds: the shipped script
+     with one Friends slot named, and with none. */
+  const friendsBlock = (src) => {
+    const from = src.indexOf("friends: [", src.indexOf("var SQUADS"));
+    let to = from, depth = 0;
+    for (let i = src.indexOf("[", from); i < src.length; i++) {
+      if (src[i] === "[") depth++;
+      if (src[i] === "]" && --depth === 0) { to = i; break; }
+    }
+    return [from, to];
+  };
+  const withFriends = (named) => {
+    const [from, to] = friendsBlock(chromeJs);
+    let block = chromeJs.slice(from, to).replace(/\{\s*n:\s*(\d+)\s*,[^}]*\}/g, '{ n: $1, status: "Back soon" }');
+    if (named) block = block.replace('{ n: 1, status: "Back soon" }', '{ n: 1, name: "Crossword XI: Friends", href: "/friends/crossword/" }');
+    return chromeJs.slice(0, from) + block + chromeJs.slice(to);
+  };
+  const footer = (src) => {
+    const d = render(themeHubFile("football"), "https://www.thexigames.com/", undefined, src);
+    const heads = [...d.querySelectorAll(".xic-foot-in h2")].map((h) => h.textContent);
+    const col = (name) => [...d.querySelectorAll(".xic-foot-in > div")].find((x) => x.querySelector("h2") && x.querySelector("h2").textContent === name);
+    return { d, heads, col };
+  };
+  const offered = (d, theme) => (d.chrome.squads[theme] || []).filter((g) => g.name && g.href);
+  const one = footer(withFriends(true)), none = footer(withFriends(false));
+  t("PRECONDITION: the two made squads differ only in a named Friends game",
+    offered(one.d, "friends").length === 1 && offered(none.d, "friends").length === 0 &&
+      offered(one.d, "football").length === offered(none.d, "football").length && offered(one.d, "football").length >= 1);
+  t("on the picker, with a Friends game offered, the footer has a Football and a Friends column, each with its games",
+    one.heads.includes("Football") && one.heads.includes("Friends") && !one.heads.includes("The XI Games") &&
+      !!one.col("Friends") && one.col("Friends").querySelectorAll("a[href='/friends/crossword/']").length === 1 &&
+      offered(one.d, "football").every((g) => one.col("Football").querySelector(`a[href='${g.href}']`)), one.heads.join(", "));
+  t("and with no Friends game offered there is no Friends column, and no Friends address in the footer",
+    none.heads.includes("Football") && !none.heads.includes("Friends") &&
+      ![...none.d.querySelectorAll(".xic-foot a")].some((a) => (a.getAttribute("href") || "").startsWith("/friends/")), none.heads.join(", "));
+  const at = footer(chromeJs);
+  t("as shipped, each theme has a column exactly when its squad offers a game",
+    ["football", "friends"].every((th) => at.heads.includes(th === "football" ? "Football" : "Friends") === (offered(at.d, th).length > 0)),
+    at.heads.join(", "));
   const game = render("football/crossword/index.html", "https://www.thexigames.com/football/crossword/");
   const gh = [...game.querySelectorAll(".xic-foot-in h2")].map((h) => h.textContent);
   t("and a game page's footer still lists its own theme's games alone",
@@ -164,7 +201,12 @@ t("both games get the same eleven slots from it",
 t("and the same released games, in the same order", (() => {
   const named = (d) => [...d.querySelectorAll("a.xic-slot span:last-child")]
     .map((e) => e.textContent).join("|");
-  return named(cw) === named(ws) && named(cw).indexOf("Crossword XI|Wordsearch XI") === 0;
+  /* THE SQUAD'S OWN NAMED GAMES, in its order. This looked for the first two
+     by name, and the second left the line-up on 26 Nov 2026. */
+  const declared = cw.chrome.squads.football.filter((g) => g.name && g.href).map((g) => g.name).join("|");
+  /* The same selector also reaches the footer's page links, which follow the
+     squad: so the squad is what the list must BEGIN with, whole. */
+  return declared.length > 0 && named(cw) === named(ws) && (named(cw) + "|").indexOf(declared + "|") === 0;
 })());
 
 console.log("\nAn unreleased game is never named");
@@ -640,7 +682,22 @@ console.log("\nThe hub's assets resolve from BOTH of the addresses it is served 
   const squad = (frh.chrome.squads.friends || []).filter((g) => g.name && g.href);
   const cards = [...frh.querySelectorAll(".fr-games a.fr-card")].map((a) => ({
     href: a.getAttribute("href"), k: (a.querySelector(".k") || {}).textContent || "" }));
-  t("the Friends squad has named games to check the hub against", squad.length >= 2, squad.length + " named");
+  /* WHILE THE SQUAD OFFERS NO FRIENDS GAME THE HUB IS NOT SERVED AT ALL, and
+     that is the check then (26 Nov 2026: "0 friends for now"). The file keeps
+     its cards for the day a game returns; functions/friends/index.js is what
+     stops it announcing them, so the route is RUN here. The moment a Friends
+     slot is named again this falls through to the card checks below, which
+     will refuse a hub still carrying cards for games that have not come back. */
+  if (!squad.length) {
+    const { onRequest } = await import("../../functions/friends/index.js");
+    let served = false;
+    const r = await onRequest({ env: { ASSETS: { fetch: () => { served = true; return new Response(fs.readFileSync("friends/index.html", "utf8")); } } },
+      request: new Request("https://www.thexigames.com/friends/") });
+    t("the squad offers no Friends game, so the Friends hub is not served: its address goes to the front door",
+      r.status === 302 && r.headers.get("Location") === "/" && !served && (await r.text()) === "",
+      `${r.status} ${r.headers.get("Location")}`);
+    t("and the file it is not serving does hold cards, so this was a real page to withhold", cards.length >= 1, cards.length + " cards");
+  } else {
   const missing = squad.filter((g) => !cards.some((c) => c.href === g.href && c.k.startsWith(g.n + " \u00b7")));
   t("every named Friends game has a card on the Friends hub, wearing its shirt number",
     missing.length === 0, missing.map((g) => g.n + " " + g.href).join(", ") || squad.length + " cards");
@@ -650,6 +707,7 @@ console.log("\nThe hub's assets resolve from BOTH of the addresses it is served 
   const intro = (frh.querySelector(".hub-intro") || {}).textContent || "";
   const word = intro.trim().split(/\s+/)[0].toLowerCase();
   t("and the intro counts them", word === NUM[cards.length], `"${intro.trim().slice(0, 30)}" over ${cards.length} cards`);
+  }
 }
 
 /* DELETING THE ACCOUNT, DRIVEN THROUGH THE SHEET (the owner's go, 6 Oct

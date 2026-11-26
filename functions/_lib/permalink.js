@@ -48,7 +48,7 @@ import { dailyNumber, dailyDayKey, dailyNoForDay } from "./daily.js";
 /* WHEN EACH GAME LAUNCHED lives in games.js, with the family list. A URL file
    should not be the place that knows it, and boardKeys is the one thing here
    that has to ask. */
-import { launchNumber } from "./games.js";
+import { launchNumber, GAMES, isListed } from "./games.js";
 
 /* THE GAMES. Every one of them is addressed by a BOARD NUMBER counted from the
    family's day one, 26 August 2026 — /football/<game>/daily/12 is 6 September
@@ -434,6 +434,44 @@ export const themeHubFile = (theme) => theme + "/index.html";
 /* EVERY THEME THAT HAS A GAME, derived from THEME_OF rather than listed again.
    Order is first-seen, which is launch order, so football stays first. */
 export const THEMES = [...new Set(Object.values(THEME_OF))];
+
+/* MAY THE SITE ADVERTISE THIS ADDRESS? One answer, asked by every surface that
+ * could hand an address to a crawler or a stranger: the sitemap's page list,
+ * the noindex header in functions/_middleware.js, a theme hub's own route and
+ * the theme archive.
+ *
+ * An address under a GAME belongs to that game, and is advertised only while
+ * the game is listed -- its front page, its answers, its archive and every
+ * board alike. An address under a THEME (its hub, its archive index) is
+ * advertised only while the theme has a listed game: a theme whose every game
+ * is unlisted is not a theme the site has, as far as anybody who has not been
+ * told about it is concerned. Anything else is the site's own and is.
+ *
+ * Since 26 Nov 2026 this matters to fourteen games and one whole theme (the
+ * owner: "scale back the games and bring them back one at a time when ready",
+ * "0 friends for now"). It says NOTHING about whether an address is SERVED:
+ * an unlisted game still plays for anyone holding its link. */
+export function advertisedPath(pathname) {
+  const p = String(pathname || "");
+  const owner = GAMES.find((g) => p.startsWith(gamePath(g)));
+  if (owner) return isListed(owner);
+  const theme = THEMES.find((t) => p.startsWith(themeHubPath(t)));
+  if (theme) return GAMES.some((g) => themeOf(g) === theme && isListed(g));
+  return true;
+}
+
+/* A THEME'S HUB, SERVED ONLY WHILE THE THEME HAS A LISTED GAME. The hub is a
+   static page that names and links every game of its theme, so while none is
+   listed it is the one page that would announce all of them at once. Until
+   one comes back the address answers a TEMPORARY redirect to the front door:
+   302, because the target changes the day a game returns. */
+export function themeHubRoute(ctx) {
+  const url = new URL(ctx.request.url);
+  if (!advertisedPath(url.pathname)) {
+    return new Response(null, { status: 302, headers: { Location: "/", "Cache-Control": "no-store", "X-Robots-Tag": "noindex" } });
+  }
+  return ctx.env.ASSETS.fetch(ctx.request);
+}
 
 /* THE ID AND THE ADDRESS ARE TWO FACTS, and they were one until 20 Sep 2026.
  *

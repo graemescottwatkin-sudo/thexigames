@@ -42,6 +42,7 @@ import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { LAUNCHED, GAMES, isListed, inSeason, entryKey } from "../../functions/_lib/games.js";
 import { THEME_OF, SLUG_OF, gamePath, gameDir } from "../../functions/_lib/permalink.js";
+import { listingChecks, said, benched } from "../../tools/listing.mjs";
 import { WHOAMIS, whoamiOf, FR_LADDER } from "../../functions/_lib/wa-registry.js";
 import * as frwa from "../../functions/_lib/frwa-data.js";
 
@@ -192,13 +193,23 @@ t("nothing here assembles a path by hand", (() => {
 console.log("\nPublic: listed, named and indexed");
 
 t("the game is launched", launched, LAUNCHED[GAME] || "not launched");
-t("and it is listed, by the owner's ruling of 27 Sep 2026",
-  launched && listed, listed ? "listed" : "UNLISTED -- the owner made it public on 27 Sep 2026");
+/* LISTED OR UNLISTED, AND THE GATE HOLDS IN BOTH (26 Nov 2026). The owner scaled
+   the site back to three games that day -- "bring them back one at a time when
+   ready" -- and this gate had only ever described a public game. The four
+   things that move together are asked of tools/listing.mjs, which knows both
+   columns; what is this game's alone (its shirt, its card) follows below, said
+   for whichever state it is in. Deleting this game's line from UNLISTED turns
+   these red on the LISTED side, which is the list of what bringing it back
+   still needs. */
+const LISTING = await listingChecks(t, GAME);
+t("isListed is what the listing was read from", launched && LISTING.listed === listed, listed ? "listed" : "unlisted");
 
 const chrome = read("shared/xi-chrome.js");
 const squad = (chrome.match(/friends:\s*\[([\s\S]*?)\n\s*\],/) || [])[1] || "";
-t("the Friends squad names this game and links to it",
-  squad.includes('name: "Who Am I XI: Friends"') && squad.includes('href: "' + gamePath(GAME) + '"'),
+t(listed ? "the Friends squad names this game and links to it"
+          : "it is unlisted: the Friends squad's bytes carry neither its name nor its address",
+  squad.length > 0 && (listed ? squad.includes('name: "Who Am I XI: Friends"') && squad.includes('href: "' + gamePath(GAME) + '"')
+                              : !squad.includes('name: "Who Am I XI: Friends"') && !chrome.includes(gamePath(GAME))),
   squad ? "" : "no friends squad found");
 
 /* THE THEME STILL HAS A SQUAD. themeHere() falls back to football for an
@@ -207,8 +218,9 @@ t("the Friends squad names this game and links to it",
 t("and the theme HAS a squad, so its own pages do not show football's",
   /friends:\s*\[/.test(chrome));
 
-t("the page is not noindexed now that the game is public",
-  !/<meta[^>]+name="robots"[^>]+noindex/i.test(markup));
+t(listed ? "the page is not noindexed while the game is public"
+          : "it is unlisted: the generated page says noindex",
+  /<meta[^>]+name="robots"[^>]+noindex/i.test(markup) !== listed);
 
 t("the sitemap lists its front page", (() => {
   const sm = has("functions/sitemap.xml.js") ? read("functions/sitemap.xml.js") : "";
