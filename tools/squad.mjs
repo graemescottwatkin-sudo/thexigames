@@ -23,7 +23,13 @@ const stripped = (s) => s.replace(/\/\*[\s\S]*?\*\//g, " ");
 
 /* Every slot of one theme's squad, in shirt order: { n, name, href, status }. */
 export function squadSlots(theme) {
-  const src = stripped(fs.readFileSync(path.join(ROOT, "shared", "xi-chrome.js"), "utf8"));
+  return slotsIn(fs.readFileSync(path.join(ROOT, "shared", "xi-chrome.js"), "utf8"), theme);
+}
+
+/* The same, of any copy of the script's text: the tree's, or the bytes a live
+   page actually downloads (tools/live_listing.mjs). */
+export function slotsIn(text, theme) {
+  const src = stripped(text);
   const from = src.indexOf("var SQUADS");
   const start = src.indexOf(theme + ": [", from);
   if (from === -1 || start === -1) throw new Error(`no ${theme} squad in shared/xi-chrome.js`);

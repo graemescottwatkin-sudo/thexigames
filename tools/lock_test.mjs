@@ -2667,6 +2667,16 @@ if (!ONLY || ONLY === "landing") {
       };
     });
     const football = g.startsWith("football/");
+    /* WITH NO OTHER GAME TO OFFER THERE IS NO BOX, and that is the check then.
+       Since 26 Nov 2026 a theme's sheet can name no other game at all -- every
+       Friends game was unlisted that day -- and a "More games" heading over
+       nothing would be the page offering what the site no longer advertises.
+       This demanded a box with at least one chip, went red on a page that was
+       right, and then crashed measuring a box that was correctly not there. */
+    if (mg.want === 0) {
+      t(`${g}: its theme's sheet offers no other game, so there is no More games box and no empty heading`,
+        !mg.present && mg.got === 0, JSON.stringify(mg));
+    } else {
     t(`${g}: More games lists every other listed game of this theme, not this one, under the rest of the page${football ? ", each with its picture" : ", with no borrowed pictures"}`,
       mg.present && mg.same && !mg.self && mg.below && (football ? mg.pictures === mg.got : mg.pictures === 0),
       JSON.stringify(mg));
@@ -2690,6 +2700,7 @@ if (!ONLY || ONLY === "landing") {
     });
     t(`${g}: More games with long names stays inside the phone -- the page and every chip`,
       fits.doc <= fits.vw + 1 && fits.chipsRight <= fits.boxRight + 1, JSON.stringify(fits));
+    }
     await page.click("#homeOther");
     await wait(200);
     const open = await page.evaluate(() => ({

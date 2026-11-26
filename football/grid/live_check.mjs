@@ -18,6 +18,7 @@
  * a game with a live API is a game that can leak before anybody has heard of
  * it, and the sitemap and the hub are where that would show.
  */
+import { liveListing } from "../../tools/live_listing.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
@@ -46,7 +47,12 @@ const w = (n, d) => { warn++; console.log(`  ??  ${n}${d ? "  — " + d : ""}`);
    under the same condition as the key-list check above it, so leaving the floor
    where it was would have widened the gap by one and quietly cost this net a
    little of its power. Raised by exactly one, and by one only. */
-const MIN_ASSERTIONS = 19;
+/* 19 UNTIL 26 NOV 2026. tools/live_listing.mjs adds FIVE assertions to every run
+   (a precondition and four for whichever state the game is in), and they count
+   toward the same total -- so an unmoved floor would have let five assertions
+   of this file's own go quiet behind them. Raised by five, less the 2 of its own that
+   run only while the game is listed. */
+const MIN_ASSERTIONS = 22;
 
 const get = (url) => fetch(url, { headers: { accept: "application/json" } });
 
@@ -167,11 +173,18 @@ console.log("\nAnd Grid XI is launched");
 {
   const map = await (await fetch(HUB + "/sitemap.xml")).text();
   const boards = map.split("/football/grid/daily/").length - 1;
-  t("the sitemap carries its boards", boards > 0, boards + " grid boards listed");
-  t("and its front page and its archive",
+  /* LISTED OR UNLISTED, ASKED OF PRODUCTION (tools/live_listing.mjs). What this
+     file used to assert as a fact -- the hub links it, the sitemap lists it --
+     is one of two states since 26 Nov 2026, and is asserted for whichever the
+     game is in. The checks that follow it run only while the game is listed. */
+  console.log("\nListed or unlisted, as production serves it");
+  const LISTING = await liveListing(t, "grid");
+  if (LISTING.listed) t("the sitemap carries its boards", boards > 0, boards + " grid boards listed");
+  if (LISTING.listed) t("and its front page and its archive",
     map.indexOf("/football/grid/</loc>") > -1 && map.indexOf("/football/grid/archive/") > -1);
   const hub = await (await fetch(HUB + "/")).text();
-  t("the hub names it, now that it is out", hub.indexOf("Grid XI") > -1);
+  t(LISTING.listed ? "the front door names it, now that it is out" : "it is unlisted, so the front door does not name it",
+    (hub.indexOf("Grid XI") > -1) === LISTING.listed && hub.length > 500);
   const no = daily && daily.no ? daily.no : 1;
   const perma = await fetch(SITE + "/daily/" + no, { redirect: "manual" });
   t("and today's board has a permanent address", perma.status === 200,

@@ -19,6 +19,7 @@
  * run's real count by the assertions that can legitimately skip (the --expect
  * one), and reviewed, not raised by reflex, when checks are added.
  */
+import { liveListing } from "../../tools/live_listing.mjs";
 import { gamePath } from "../../functions/_lib/permalink.js";
 import { LAUNCHED } from "../../functions/_lib/games.js";
 
@@ -26,7 +27,12 @@ const BASE = "https://www.thexigames.com";
 const GAME = "quickfire_fr";
 const NAME = "QuickFire XI: Friends";
 const PATH = gamePath(GAME);
-const MIN_ASSERTIONS = 20;
+/* 20 UNTIL 26 NOV 2026. tools/live_listing.mjs adds FIVE assertions to every run
+   (a precondition and four for whichever state the game is in), and they count
+   toward the same total -- so an unmoved floor would have let five assertions
+   of this file's own go quiet behind them. Raised by five, less the 3 of its own that
+   run only while the game is listed. */
+const MIN_ASSERTIONS = 22;
 
 const expectAt = process.argv.indexOf("--expect");
 const EXPECT = expectAt > -1 ? process.argv[expectAt + 1] : null;
@@ -52,15 +58,21 @@ t("the page answers", page.status === 200, String(page.status));
 if (EXPECT) t("the build tag is what was expected", new RegExp(`js/game\\.js\\?v=${EXPECT}\\b`).test(page.text), EXPECT);
 const tags = [...page.text.matchAll(/(?:href|src)="(?:css|js)\/[^"?]+\?v=([^"]+)"/g)].map((m) => m[1]);
 t("every one of this game's own assets carries the same tag", tags.length >= 3 && new Set(tags).size === 1, tags.join(" "));
-t("the page is indexable, and is this game's page",
-  !/<meta[^>]+name="robots"[^>]+noindex/i.test(page.text) && page.text.includes(`<link rel="canonical" href="${BASE}${PATH}">`));
+/* LISTED OR UNLISTED, ASKED OF PRODUCTION (tools/live_listing.mjs). What this
+   file used to assert as a fact -- the hub links it, the sitemap lists it --
+   is one of two states since 26 Nov 2026, and is asserted for whichever the
+   game is in. The checks that follow it run only while the game is listed. */
+console.log("\nListed or unlisted, as production serves it");
+const LISTING = await liveListing(t, "quickfire_fr");
+t(LISTING.listed ? "the page is indexable, and is this game's page" : "the page says noindex while unlisted, and is this game's page",
+  /<meta[^>]+name="robots"[^>]+noindex/i.test(page.text) !== LISTING.listed && page.text.includes(`<link rel="canonical" href="${BASE}${PATH}">`));
 const sitemap = await get("/sitemap.xml");
-t("the sitemap advertises it", sitemap.status === 200 && sitemap.text.includes(BASE + PATH + "<"));
+if (LISTING.listed) t("the sitemap advertises it", sitemap.status === 200 && sitemap.text.includes(BASE + PATH + "<"));
 const hub = await get("/friends/");
-t("the Friends hub links it", hub.status === 200 && hub.text.includes(`href="${PATH}"`));
+if (LISTING.listed) t("the Friends hub links it", hub.status === 200 && hub.text.includes(`href="${PATH}"`));
 const chromeRef = (page.text.match(/src="(\/shared\/xi-chrome\.js\?v=[^"]+)"/) || [])[1];
 const chrome = chromeRef ? await get(chromeRef) : { status: 0, text: "" };
-t("the shipped chrome names it on the Friends team sheet, with its address",
+if (LISTING.listed) t("the shipped chrome names it on the Friends team sheet, with its address",
   chrome.status === 200 && chrome.text.includes(`name: "${NAME}", href: "${PATH}"`), chromeRef || "no chrome reference");
 
 console.log("\nThe board");

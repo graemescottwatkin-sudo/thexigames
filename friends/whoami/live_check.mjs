@@ -37,6 +37,7 @@
  * calendar. How many days that is, the calendar generator prints when it
  * deals; it is not written here, because it changed twice in two days.
  */
+import { liveListing } from "../../tools/live_listing.mjs";
 import { gamePath } from "../../functions/_lib/permalink.js";
 
 const BASE = "https://www.thexigames.com";
@@ -54,7 +55,12 @@ const PATH = gamePath(GAME);
    would flap the first time the deck runs out; left alone for five releases it
    stops being able to refuse anything, so it is REVIEWED when assertions are
    added rather than raised by reflex. */
-const MIN_ASSERTIONS = 14;
+/* 14 UNTIL 26 NOV 2026. tools/live_listing.mjs adds FIVE assertions to every run
+   (a precondition and four for whichever state the game is in), and they count
+   toward the same total -- so an unmoved floor would have let five assertions
+   of this file's own go quiet behind them. Raised by five, less the 1 of its own that
+   run only while the game is listed. */
+const MIN_ASSERTIONS = 18;
 
 const expectAt = process.argv.indexOf("--expect");
 const EXPECT = expectAt > -1 ? process.argv[expectAt + 1] : null;
@@ -95,9 +101,16 @@ t("every one of this game's assets carries the same tag",
    unlisted version of this check once PASSED on a 404 because the 404 page is
    noindexed too; the public version would pass on any page with no noindex,
    so it also demands this page's own canonical. */
+/* LISTED OR UNLISTED, ASKED OF PRODUCTION (tools/live_listing.mjs). What this
+   file used to assert as a fact -- the hub links it, the sitemap lists it --
+   is one of two states since 26 Nov 2026, and is asserted for whichever the
+   game is in. The checks that follow it run only while the game is listed. */
+console.log("\nListed or unlisted, as production serves it");
+const LISTING = await liveListing(t, "whoami_fr");
 if (page.status === 200) {
-  t("the served page is indexable, and is this game's page",
-    !/<meta[^>]+name="robots"[^>]+noindex/i.test(page.text)
+  t(LISTING.listed ? "the served page is indexable, and is this game's page"
+                   : "the served page says noindex while unlisted, and is this game's page",
+    /<meta[^>]+name="robots"[^>]+noindex/i.test(page.text) !== LISTING.listed
       && page.text.includes('<link rel="canonical" href="' + BASE + PATH + '">'));
 } else {
   console.log("  --  indexing NOT checked: the page did not answer 200, so there " +
@@ -106,7 +119,7 @@ if (page.status === 200) {
 
 const sitemap = await get("/sitemap.xml");
 t("the sitemap answers", sitemap.status === 200, String(sitemap.status));
-t("and it advertises this game's front page and archive",
+if (LISTING.listed) t("and it advertises this game's front page and archive",
   sitemap.text.includes(BASE + PATH + "<") && sitemap.text.includes(BASE + PATH + "archive/<"));
 
 /* THE SHIPPED CHROME, AS THE BROWSER RECEIVES IT. Not the file in the tree —
@@ -124,9 +137,11 @@ const chromeSrc = at > -1 ? page.text.slice(at, page.text.indexOf('"', at)) : ""
 const chrome = chromeSrc ? await get(chromeSrc) : { status: 0, text: "" };
 t("the shared chrome is served, at the version the page loads",
   chrome.status === 200 && chromeSrc.length > CHROME.length, chromeSrc || "the page loads no versioned chrome");
-t("and it names this game and links to it, on the Friends team sheet",
-  chrome.text.indexOf('href: "' + PATH + '"') > -1 &&
-  chrome.text.indexOf('name: "Who Am I XI: Friends"') > -1);
+t(LISTING.listed ? "and it names this game and links to it, on the Friends team sheet"
+                 : "and, unlisted, its bytes carry neither this game's name slot nor its address",
+  chrome.text.length > 1000 && (chrome.text.indexOf('href: "' + PATH + '"') > -1 &&
+  chrome.text.indexOf('name: "Who Am I XI: Friends"') > -1) === LISTING.listed &&
+  (LISTING.listed || chrome.text.indexOf(PATH) === -1));
 
 /* ---- the board ---- */
 const daily = await get("/api/whoami/whoami_fr/daily");

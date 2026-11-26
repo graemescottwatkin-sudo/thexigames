@@ -1,3 +1,4 @@
+import { liveListing } from "../../tools/live_listing.mjs";
 /* friends/crossword/live_check.mjs — Crossword XI: Friends, proved against
  * production.
  *
@@ -52,7 +53,11 @@ const EXPECT = (() => {
    set BELOW the real count on purpose, by the number of assertions that can
    legitimately skip — so when assertions are added, REVIEW it rather than
    raising it by reflex. A floor equal to the count flaps on the first skip. */
-const MIN_ASSERTIONS = 23;
+/* 23 UNTIL 26 NOV 2026. tools/live_listing.mjs adds FIVE assertions to every run
+   (a precondition and four for whichever state the game is in), and they count
+   toward the same total -- so an unmoved floor would have let five assertions
+   of this file's own go quiet behind them. Raised by five. */
+const MIN_ASSERTIONS = 28;
 /* REVIEWED, NOT RAISED BY REFLEX, on 21 September 2026 when the unlisted launch
    added six assertions, and again on 27 September 2026 when the game went
    public: the two inside `if (links.length)` became reachable, and the
@@ -110,10 +115,17 @@ if (EXPECT) t("the build is " + EXPECT, tag === EXPECT, "serving " + tag);
    appears in a search result.
    PAIRED WITH A POSITIVE: the absence of a noindex is also true of an empty
    page or an error, so the page must answer AND carry its own canonical. */
-t("the page is indexable, because the game is public",
-  page.status === 200 && !/<meta[^>]+name="robots"[^>]+noindex/i.test(html)
+/* LISTED OR UNLISTED, ASKED OF PRODUCTION (tools/live_listing.mjs). What this
+   file used to assert as a fact -- the hub links it, the sitemap lists it --
+   is one of two states since 26 Nov 2026, and is asserted for whichever the
+   game is in. The checks that follow it run only while the game is listed. */
+console.log("\nListed or unlisted, as production serves it");
+const LISTING = await liveListing(t, "crossword_fr");
+t(LISTING.listed ? "the page is indexable, because the game is public"
+                 : "the page says noindex, because the game is unlisted",
+  page.status === 200 && /<meta[^>]+name="robots"[^>]+noindex/i.test(html) !== LISTING.listed
     && html.includes('<link rel="canonical" href="' + BASE + '/friends/crossword/">'),
-  "no noindex, and the canonical is this page");
+  "and the canonical is this page");
 t("and it names itself the same way everywhere",
   (html.match(/Crossword XI: Friends/g) || []).length >= 3,
   "title, og:title and h1");
@@ -180,9 +192,10 @@ if (d) {
      CHECKED AGAINST THE SERVED XML, not against the generator. The generator is
      what deploy_check reads; a filter that is right in the tree and a sitemap
      that is stale in the CDN are the same page to a crawler. */
-  t("the sitemap advertises the front page, the archive and the boards",
-    xml.includes(BASE + "/friends/crossword/<") && xml.includes(BASE + "/friends/crossword/archive/<")
-      && links.length > 0,
+  t(LISTING.listed ? "the sitemap advertises the front page, the archive and the boards"
+                   : "the sitemap advertises none of it while unlisted: no front page, no archive, no board",
+    LISTING.listed ? xml.includes(BASE + "/friends/crossword/<") && xml.includes(BASE + "/friends/crossword/archive/<") && links.length > 0
+                   : !xml.includes(BASE + "/friends/crossword/") && links.length === 0,
     `${links.length} board link(s)`);
   t("PRECONDITION: the sitemap is a real one, not a page that happens to mention us",
     /\/football\/crossword\/daily\//.test(xml) && xml.length > 2000,
@@ -196,8 +209,10 @@ if (d) {
   const arch = await get("/friends/crossword/archive/");
   const archHtml = arch.status === 200 ? await arch.text() : "";
   t("the archive page is served", arch.status === 200, "HTTP " + arch.status);
-  t("and a crawler may read it, by both routes, and it lists boards",
-    !/noindex/.test(archHtml) && !/noindex/.test(arch.headers.get("x-robots-tag") || "")
+  t(LISTING.listed ? "and a crawler may read it, by both routes, and it lists boards"
+                   : "and a crawler is told to leave it, by the header, while it still lists boards",
+    (LISTING.listed ? !/noindex/.test(archHtml) && !/noindex/.test(arch.headers.get("x-robots-tag") || "")
+                    : /noindex/.test(arch.headers.get("x-robots-tag") || ""))
       && archHtml.includes('href="/friends/crossword/daily/'),
     `meta ${/noindex/.test(archHtml)}, header ${arch.headers.get("x-robots-tag")}`);
 

@@ -17,6 +17,7 @@
  * Assertions only ever READ. Nothing here plays, finishes, or writes.
  */
 
+import { liveListing } from "../../tools/live_listing.mjs";
 import { execSync } from "node:child_process";
 
 import fs from "node:fs";
@@ -73,7 +74,11 @@ const w = (n, d) => { warn++; console.log(`  ??  ${n}${d ? "  — " + d : ""}`);
    and the headroom this floor deliberately keeps is unchanged. The floor sits
    BELOW the run's real count on purpose, by the number of assertions that can
    legitimately skip; one set to the exact count flaps the first time one does. */
-const MIN_ASSERTIONS = 60;
+/* 60 UNTIL 26 NOV 2026. tools/live_listing.mjs adds FIVE assertions to every run
+   (a precondition and four for whichever state the game is in), and they count
+   toward the same total -- so an unmoved floor would have let five assertions
+   of this file's own go quiet behind them. Raised by five. */
+const MIN_ASSERTIONS = 65;
 let reachedEnd = false, announced = false;
 function incomplete() {
   if (announced) return;
@@ -451,8 +456,16 @@ if (d && d.puzzle) {
 const themesIndex = await get("/football/wordsearch/themes/");
 const themesText = themesIndex.status === 200 ? await themesIndex.text() : "";
 t("the themes index is served", themesIndex.status === 200, "HTTP " + themesIndex.status);
-t("and it is indexable",
-  themesIndex.status === 200 && !/noindex/.test(themesText) && !themesIndex.headers.get("x-robots-tag"));
+/* LISTED OR UNLISTED, ASKED OF PRODUCTION (tools/live_listing.mjs). What this
+   file used to assert as a fact -- the hub links it, the sitemap lists it --
+   is one of two states since 26 Nov 2026, and is asserted for whichever the
+   game is in. The checks that follow it run only while the game is listed. */
+console.log("\nListed or unlisted, as production serves it");
+const LISTING = await liveListing(t, "wordsearch");
+t(LISTING.listed ? "and it is indexable" : "and, the game being unlisted, it is sent noindex like every page under it",
+  themesIndex.status === 200 && (LISTING.listed
+    ? !/noindex/.test(themesText) && !themesIndex.headers.get("x-robots-tag")
+    : /noindex/.test(themesIndex.headers.get("x-robots-tag") || "")));
 const firstGroup = (themesText.match(/href="\/football\/wordsearch\/theme\/([a-z0-9-]+)\/"/) || [])[1];
 /* The themes pages are rendered FROM the catalogue, so on the launch day there
    is no category to link — the same emptiness as free play, one page further

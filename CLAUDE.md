@@ -38,7 +38,13 @@ from 27 Sep 2026, when the Friends games went public, until then.
 BRINGING A GAME BACK IS DELETING ITS LINE, and its own gate then says what is
 left: each gate asks `tools/listing.mjs`, which holds both columns (the squad
 slot, the sitemap as run, the noindex, the theme's hub) and asserts whichever
-one the game is in. What a return needs by hand is the squad slot's name and
+one the game is in. EACH `live_check.mjs` ASKS `tools/live_listing.mjs`, the
+same two columns read from production. That half was missed on the day: the
+gates held in both states before the push, the live checks did not because
+nothing runs them offline, and the first `post_deploy` refused fourteen games
+at once, each one failing because the deploy had WORKED. A change to what a
+game's listing means is made in both files or it is half made. What a return
+needs by hand is the squad slot's name and
 address in `shared/xi-chrome.js` (and the shared tag), and for a football game
 its shirt and card on `football/index.html`. The rest follows `isListed` with
 no edit: the sitemap and the noindex header ask `advertisedPath()` in

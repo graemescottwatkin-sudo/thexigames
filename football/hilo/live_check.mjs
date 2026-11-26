@@ -1,4 +1,5 @@
 
+import { liveListing } from "../../tools/live_listing.mjs";
 import { themeHubPath } from "../../functions/_lib/permalink.js";/* hilo/live_check.mjs — what production is actually serving.
  *
  *   node hilo/live_check.mjs --expect v001
@@ -36,7 +37,12 @@ const w = (n, d) => { warn++; console.log(`  ??  ${n}${d ? "  — " + d : ""}`);
    club block, so the worst legitimate run — no --expect, no club linked —
    skips four there and one tag, and 25 - 5 is the number below. Raising it to
    22 by reflex would flap on any day the clubs index came back empty. */
-const MIN_ASSERTIONS = 34;
+/* 34 UNTIL 26 NOV 2026. tools/live_listing.mjs adds FIVE assertions to every run
+   (a precondition and four for whichever state the game is in), and they count
+   toward the same total -- so an unmoved floor would have let five assertions
+   of this file's own go quiet behind them. Raised by five, less the 2 of its own that
+   run only while the game is listed. */
+const MIN_ASSERTIONS = 37;
 let finished = false;
 process.on("exit", () => {
   if (!finished) { console.log("\nTHE RUN DID NOT REACH THE END."); process.exit(1); }
@@ -207,9 +213,15 @@ t("the shared chrome is loaded, not a copy of it", html.indexOf("/shared/xi-chro
 t("the page names the game once, as itself", /HiLo XI/.test(html));
 /* THE FOOTBALL HUB AT ITS OWN ADDRESS: since 29 Sep 2026 the site root is the theme picker (the owner: "make the theme selector now"). */
 const hub = await get(themeHubPath("football"));
-t("the hub links to it", (await hub.text()).indexOf('href="/football/hilo/"') > -1);
+/* LISTED OR UNLISTED, ASKED OF PRODUCTION (tools/live_listing.mjs). What this
+   file used to assert as a fact -- the hub links it, the sitemap lists it --
+   is one of two states since 26 Nov 2026, and is asserted for whichever the
+   game is in. The checks that follow it run only while the game is listed. */
+console.log("\nListed or unlisted, as production serves it");
+const LISTING = await liveListing(t, "hilo");
+if (LISTING.listed) t("the hub links to it", (await hub.text()).indexOf('href="/football/hilo/"') > -1);
 const map = await get("/sitemap.xml");
-t("the sitemap lists it", (await map.text()).indexOf("/football/hilo/</loc>") > -1);
+if (LISTING.listed) t("the sitemap lists it", (await map.text()).indexOf("/football/hilo/</loc>") > -1);
 
 console.log("\nHeaders");
 const head = await get("/api/hilo/daily", { method: "HEAD" });

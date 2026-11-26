@@ -1,4 +1,5 @@
 
+import { liveListing } from "../../tools/live_listing.mjs";
 import { themeHubPath } from "../../functions/_lib/permalink.js";/* scrambled/live_check.mjs — what production is actually serving.
  *
  *   node scrambled/live_check.mjs --expect v001k
@@ -34,7 +35,12 @@ const w = (n, d) => { warn++; console.log(`  ??  ${n}${d ? "  — " + d : ""}`);
    seventeen for a run of twenty-six — eleven below, which could not refuse a
    block going quiet, and that is the floor's whole job. Reviewed on 4 Sep when
    two assertions were added, rather than raised by reflex. */
-const MIN_ASSERTIONS = 27;
+/* 27 UNTIL 26 NOV 2026. tools/live_listing.mjs adds FIVE assertions to every run
+   (a precondition and four for whichever state the game is in), and they count
+   toward the same total -- so an unmoved floor would have let five assertions
+   of this file's own go quiet behind them. Raised by five, less the 2 of its own that
+   run only while the game is listed. */
+const MIN_ASSERTIONS = 30;
 let finished = false;
 const done = () => {
   if (!finished) {
@@ -128,9 +134,15 @@ t("the page names the game once, as itself", /Scrambled XI/.test(html));
 /* THE FOOTBALL HUB AT ITS OWN ADDRESS: since 29 Sep 2026 the site root is the theme picker (the owner: "make the theme selector now"). */
 const hub = await get(themeHubPath("football"));
 const hubHtml = await hub.text();
-t("the hub links to it", hubHtml.indexOf('href="/football/scrambled/"') > -1);
+/* LISTED OR UNLISTED, ASKED OF PRODUCTION (tools/live_listing.mjs). What this
+   file used to assert as a fact -- the hub links it, the sitemap lists it --
+   is one of two states since 26 Nov 2026, and is asserted for whichever the
+   game is in. The checks that follow it run only while the game is listed. */
+console.log("\nListed or unlisted, as production serves it");
+const LISTING = await liveListing(t, "scrambled");
+if (LISTING.listed) t("the hub links to it", hubHtml.indexOf('href="/football/scrambled/"') > -1);
 const map = await get("/sitemap.xml");
-t("the sitemap lists it", (await map.text()).indexOf("/football/scrambled/</loc>") > -1);
+if (LISTING.listed) t("the sitemap lists it", (await map.text()).indexOf("/football/scrambled/</loc>") > -1);
 
 console.log("\nNo unreleased game is named anywhere it is served");
 const UNRELEASED = ["QuickFire", "Missing XI", "Transfer XI",

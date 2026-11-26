@@ -9,6 +9,7 @@
  * not status), and does the page leak what it should not.
  */
 
+import { liveListing } from "../../tools/live_listing.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import crypto from "node:crypto";
@@ -25,7 +26,11 @@ const w = (n, d) => { warn++; console.log(`  ??  ${n}${d ? "  — " + d : ""}`);
 /* A crash mid-file and a clean run differ only by an exit code nobody reads.
    Two nets: the marker catches a crash anywhere above the last line, the floor
    catches a block that goes quiet without crashing. */
-const MIN_ASSERTIONS = 27;
+/* 27 UNTIL 26 NOV 2026. tools/live_listing.mjs adds FIVE assertions to every run
+   (a precondition and four for whichever state the game is in), and they count
+   toward the same total -- so an unmoved floor would have let five assertions
+   of this file's own go quiet behind them. Raised by five. */
+const MIN_ASSERTIONS = 32;
 let reachedEnd = false, announced = false;
 function incomplete() {
   if (announced) return;
@@ -257,6 +262,13 @@ for (const [p, wants] of [["/api/account/results?game=quickfire", 401]]) {
     `HTTP ${r.status}${r.status === 500 ? " — the query is broken, check the schema" : ""}`);
 }
 
+/* LISTED OR UNLISTED, ASKED OF PRODUCTION (tools/live_listing.mjs). What this
+   file used to assert as a fact -- the hub links it, the sitemap lists it --
+   is one of two states since 26 Nov 2026, and is asserted for whichever the
+   game is in. The checks that follow it run only while the game is listed. */
+console.log("\nListed or unlisted, as production serves it");
+const LISTING = await liveListing(t, "quickfire");
+/* Counted AFTER the listing checks, so they are inside the floor. */
 const ran = pass + fail + warn;
 if (ran < MIN_ASSERTIONS) {
   fail++;

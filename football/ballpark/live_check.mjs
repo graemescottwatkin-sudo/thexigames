@@ -1,3 +1,4 @@
+import { liveListing } from "../../tools/live_listing.mjs";
 /* football/ballpark/live_check.mjs — Ballpark XI, proved against production.
  *
  *   node football/ballpark/live_check.mjs [--expect v001d]
@@ -21,7 +22,12 @@
  * It is set BELOW the real count by the number that can legitimately skip.
  */
 const BASE = "https://www.thexigames.com";
-const MIN_ASSERTIONS = 18;
+/* 18 UNTIL 26 NOV 2026. tools/live_listing.mjs adds FIVE assertions to every run
+   (a precondition and four for whichever state the game is in), and they count
+   toward the same total -- so an unmoved floor would have let five assertions
+   of this file's own go quiet behind them. Set to 22 by the Ballpark session's
+   count: 24 run without --expect, less the two archive assertions that may skip. */
+const MIN_ASSERTIONS = 22;
 
 const expectAt = process.argv.indexOf("--expect");
 const EXPECT = expectAt > -1 ? process.argv[expectAt + 1] : null;
@@ -160,6 +166,12 @@ t("and /api/* is marked noindex",
 
 console.log(`\n${pass} passed, ${fail} failed`);
 t("the run reached the end", true);
+/* LISTED OR UNLISTED, ASKED OF PRODUCTION (tools/live_listing.mjs). What this
+   file used to assert as a fact -- the hub links it, the sitemap lists it --
+   is one of two states since 26 Nov 2026, and is asserted for whichever the
+   game is in. The checks that follow it run only while the game is listed. */
+console.log("\nListed or unlisted, as production serves it");
+const LISTING = await liveListing(t, "ballpark");
 if (ran < MIN_ASSERTIONS) {
   console.log(`FLOOR  only ${ran} assertions ran, fewer than ${MIN_ASSERTIONS} — ` +
     "a block went quiet without crashing");

@@ -30,6 +30,7 @@
  * MIN_ASSERTIONS is the second net under the completion marker: the marker
  * catches a crash, the floor catches a block that goes quiet without crashing.
  */
+import { liveListing } from "../../tools/live_listing.mjs";
 import { gamePath } from "../../functions/_lib/permalink.js";
 import CONFIG from "./js/config.js";
 
@@ -37,7 +38,17 @@ const BASE = "https://www.thexigames.com";
 const GAME = "lightning_fr";
 const PATH = gamePath(GAME);
 /* Every assertion below runs on a healthy deploy; none skips by design. */
-const MIN_ASSERTIONS = 22;
+/* 22 UNTIL 26 NOV 2026. tools/live_listing.mjs adds FIVE assertions to every run
+   (a precondition and four for whichever state the game is in), and they count
+   toward the same total -- so an unmoved floor would have let five assertions
+   of this file's own go quiet behind them. Raised by five, less the 2 of its own that
+   run only while the game is listed. */
+/* AND ONE LOWER, FOR A RUN WITHOUT --expect. The flag is optional and its one
+   assertion runs only when it is given, so a bare run is a legitimate run one
+   shorter -- and the floor before this (and the one before 26 Nov 2026) sat at
+   the with-flag count, so every bare run was reported short. Measured against
+   production: 24 bare, 25 with the flag. Raised by the Ballpark session. */
+const MIN_ASSERTIONS = 24;
 
 const expectAt = process.argv.indexOf("--expect");
 const EXPECT = expectAt > -1 ? process.argv[expectAt + 1] : null;
@@ -80,14 +91,20 @@ if (page.status === 200) {
 }
 
 const sitemap = await get("/sitemap.xml");
-t("the sitemap advertises this game's front page", sitemap.status === 200 && sitemap.text.includes(BASE + PATH + "<"));
+/* LISTED OR UNLISTED, ASKED OF PRODUCTION (tools/live_listing.mjs). What this
+   file used to assert as a fact -- the hub links it, the sitemap lists it --
+   is one of two states since 26 Nov 2026, and is asserted for whichever the
+   game is in. The checks that follow it run only while the game is listed. */
+console.log("\nListed or unlisted, as production serves it");
+const LISTING = await liveListing(t, "lightning_fr");
+if (LISTING.listed) t("the sitemap advertises this game's front page", sitemap.status === 200 && sitemap.text.includes(BASE + PATH + "<"));
 
 /* THE SHIPPED CHROME, at the address the page asks for, ?v= and all: the
    CDN holds each version for a year, so an unversioned fetch reads bytes no
    page downloads. */
 const chromeRef = (page.text.match(/src="(\/shared\/xi-chrome\.js\?v=[^"]+)"/) || [])[1];
 const chrome = chromeRef ? await get(chromeRef) : { status: 0, text: "" };
-t("the shipped chrome puts it on the Friends team sheet, named and linked",
+if (LISTING.listed) t("the shipped chrome puts it on the Friends team sheet, named and linked",
   chrome.status === 200 && chrome.text.includes('name: "Lightning Round XI: Friends", href: "' + PATH + '"'),
   chromeRef || "no chrome reference on the page");
 

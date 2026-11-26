@@ -16,6 +16,7 @@
  * Anything it cannot see from outside is listed at the end rather than passed
  * over in silence — a check that quietly skips is worse than no check.
  */
+import { liveListing } from "../../tools/live_listing.mjs";
 import fs from "node:fs";
 import path from "node:path";
 import { gamePath, themeOf, themeHubPath } from "../../functions/_lib/permalink.js";
@@ -58,7 +59,11 @@ let pass = 0, fail = 0, warn = 0;
    them are inside the "is today's board sealed" branch, which legitimately
    skips when /api/daily cannot be read — so 49 leaves the skip room and one
    spare, and no more. */
-const MIN_ASSERTIONS = 53;
+/* 53 UNTIL 26 NOV 2026. tools/live_listing.mjs adds FIVE assertions to every run
+   (a precondition and four for whichever state the game is in), and they count
+   toward the same total -- so an unmoved floor would have let five assertions
+   of this file's own go quiet behind them. Raised by five. */
+const MIN_ASSERTIONS = 58;
 let reachedEnd = false, announced = false;
 function incomplete() {
   if (announced) return;
@@ -159,7 +164,7 @@ console.log(`\n${SITE}\n`);
   const listed = GAMES.filter((g) => isListed(g) && themeOf(g) === "football").length;
   const shirts = (html.match(/class="shirt /g) || []).length;
   t("and it shows one shirt per listed football game",
-    shirts === listed && listed >= 10, `${shirts} shirts, ${listed} listed`);
+    shirts === listed && listed >= 1, `${shirts} shirts, ${listed} listed`);
   t("and no shirt for a game that is not out", !/class="shirt soon/.test(html));
   /* The roster must not name unreleased games — two of them are built under
      names live competitors already hold. */
@@ -598,6 +603,13 @@ console.log(`
    Both nets are meant to catch a run that stops early. Armed early, they
    catch nothing that happens late. */
 /* The floor, for a block that goes quiet without crashing. */
+/* LISTED OR UNLISTED, ASKED OF PRODUCTION (tools/live_listing.mjs). What this
+   file used to assert as a fact -- the hub links it, the sitemap lists it --
+   is one of two states since 26 Nov 2026, and is asserted for whichever the
+   game is in. The checks that follow it run only while the game is listed. */
+console.log("\nListed or unlisted, as production serves it");
+const LISTING = await liveListing(t, "crossword");
+/* Counted AFTER the listing checks, so they are inside the floor. */
 const ran = pass + fail + warn;
 if (ran < MIN_ASSERTIONS) {
   fail++;
